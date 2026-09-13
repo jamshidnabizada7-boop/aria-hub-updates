@@ -12,6 +12,7 @@ import { useT } from '@/hooks/use-t';
 import { useToast } from '@/hooks/use-toast';
 import { useLangStore } from '@/lib/lang-store';
 import { useLangHref } from '@/hooks/use-lang-href';
+import { resolveAnchorUrl } from '@/lib/anchor-routes';
 import { getLocalizedContent } from '@/lib/i18n-content';
 import type { SiteSettings, SocialLink, FooterLink } from '@/lib/types';
 import { Confetti } from './confetti';
@@ -192,7 +193,7 @@ export function Footer({
               <ul className="space-y-2.5">
                 {footer[c.key]?.map((link) => (
                   <li key={link.id}>
-                    <a href={hrefFn(link.url)} className="text-sm text-muted-foreground transition-colors hover:text-primary">
+                    <a href={hrefFn(resolveAnchorUrl(link.url, link.label))} className="text-sm text-muted-foreground transition-colors hover:text-primary">
                       {getLocalizedContent(link.label, link.labelI18n, lang)}
                     </a>
                   </li>
@@ -243,7 +244,7 @@ export function Footer({
             {footer['legal'] && footer['legal'].length > 0 ? (
               footer['legal'].map((link, idx, arr) => (
                 <React.Fragment key={link.id}>
-                  <Link href={hrefFn(link.url)} className="p-2 transition-colors hover:text-foreground">
+                  <Link href={hrefFn(resolveAnchorUrl(link.url, link.label))} className="p-2 transition-colors hover:text-foreground">
                     {getLocalizedContent(link.label, link.labelI18n, lang)}
                   </Link>
                   {idx < arr.length - 1 && <span className="text-border">·</span>}

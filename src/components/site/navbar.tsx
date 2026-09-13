@@ -14,6 +14,7 @@ import { useLangStore } from '@/lib/lang-store';
 import { useLangContext } from '@/components/site/lang-context';
 import { useT } from '@/hooks/use-t';
 import { useLangHref } from '@/hooks/use-lang-href';
+import { resolveAnchorUrl } from '@/lib/anchor-routes';
 import { LANGS, sanitizeLangPath, withLangPrefix } from '@/lib/lang-route';
 import type { MenuItem, Language } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -51,10 +52,14 @@ function DesktopMenuItem({ item }: { item: MenuItem }) {
   // Get localized label - correct parameter order: (baseValue, i18nValue, lang)
   const label = getLocalizedContent(item.label, item.labelI18n, code);
 
-  // #anchors point at the current-language home; internal /routes get a lang prefix
-  const href = item.url?.startsWith('#')
-    ? `/${code}${item.url}`
-    : hrefFn(item.url || '#');
+  // Legacy #anchor menu rows resolve to the page route that serves the
+  // content; unmapped anchors keep the old language-home fallback; internal
+  // /routes get a lang prefix.
+  const raw = item.url ?? '';
+  const resolved = resolveAnchorUrl(raw, item.label);
+  const href = raw.startsWith('#') && resolved === raw
+    ? `/${code}${raw}`
+    : hrefFn(resolved);
 
   if (!hasChildren) {
     return (
@@ -93,11 +98,13 @@ function NestedMenuItem({ item }: { item: MenuItem }) {
   const hrefFn = useLangHref();
   const hasChildren = item.children && item.children.length > 0;
   const label = getLocalizedContent(item.label, item.labelI18n, code);
-  
-  const href = item.url?.startsWith('#')
-    ? `/${code}${item.url}`
-    : hrefFn(item.url || '#');
-  
+
+  const raw = item.url ?? '';
+  const resolved = resolveAnchorUrl(raw, item.label);
+  const href = raw.startsWith('#') && resolved === raw
+    ? `/${code}${raw}`
+    : hrefFn(resolved);
+
   if (!hasChildren) {
     return (
       <a
@@ -134,11 +141,13 @@ function MobileMenuItem({ item, depth = 0, onNavigate }: { item: MenuItem; depth
   const [open, setOpen] = useState(false);
   const hasChildren = item.children && item.children.length > 0;
   const label = getLocalizedContent(item.label, item.labelI18n, code);
-  
-  const href = item.url?.startsWith('#')
-    ? `/${code}${item.url}`
-    : hrefFn(item.url || '#');
-  
+
+  const raw = item.url ?? '';
+  const resolved = resolveAnchorUrl(raw, item.label);
+  const href = raw.startsWith('#') && resolved === raw
+    ? `/${code}${raw}`
+    : hrefFn(resolved);
+
   if (!hasChildren) {
     return (
       <a

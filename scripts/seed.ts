@@ -68,14 +68,14 @@ async function main() {
   // ── Menu items (nested) ────────────────────────────────────
   // await db.menuItem.deleteMany({});
   const menus = [
-    { label: 'Home', url: '#home', order: 0, labelI18n: { en: 'Home', fa: 'خانه', ps: 'کور' } },
-    { label: 'Services', url: '#services', order: 1, labelI18n: { en: 'Services', fa: 'خدمات', ps: 'خدمات' } },
-    { label: 'Visas', url: '#visas', order: 2, labelI18n: { en: 'Visas', fa: 'ویزه‌ها', ps: 'ویزې' } },
-    { label: 'Opportunities', url: '#opportunities', order: 3, labelI18n: { en: 'Opportunities', fa: 'فرصت‌ها', ps: 'فرصتونه' } },
-    { label: 'Promote', url: '#promote', order: 4, labelI18n: { en: 'Promote', fa: 'تبلیغات', ps: 'اعلانات' } },
-    { label: 'Gallery', url: '#gallery', order: 5, labelI18n: { en: 'Gallery', fa: 'گالری', ps: 'ګالري' } },
-    { label: 'Payments', url: '#payments', order: 6, labelI18n: { en: 'Payments', fa: 'پرداخت‌ها', ps: 'تادیات' } },
-    { label: 'Contact', url: '#contact', order: 7, labelI18n: { en: 'Contact', fa: 'تماس', ps: 'اړیکه' } },
+    { label: 'Home', url: '/', order: 0, labelI18n: { en: 'Home', fa: 'خانه', ps: 'کور' } },
+    { label: 'Services', url: '/services', order: 1, labelI18n: { en: 'Services', fa: 'خدمات', ps: 'خدمات' } },
+    { label: 'Visas', url: '/visas', order: 2, labelI18n: { en: 'Visas', fa: 'ویزه‌ها', ps: 'ویزې' } },
+    { label: 'Opportunities', url: '/opportunities', order: 3, labelI18n: { en: 'Opportunities', fa: 'فرصت‌ها', ps: 'فرصتونه' } },
+    { label: 'Promote', url: '/advertise', order: 4, labelI18n: { en: 'Promote', fa: 'تبلیغات', ps: 'اعلانات' } },
+    { label: 'Gallery', url: '/#gallery', order: 5, labelI18n: { en: 'Gallery', fa: 'گالری', ps: 'ګالري' } },
+    { label: 'Payments', url: '/#payments', order: 6, labelI18n: { en: 'Payments', fa: 'پرداخت‌ها', ps: 'تادیات' } },
+    { label: 'Contact', url: '/contact', order: 7, labelI18n: { en: 'Contact', fa: 'تماس', ps: 'اړیکه' } },
   ];
   for (const m of menus) {
     await db.menuItem.create({ data: m });
@@ -83,30 +83,41 @@ async function main() {
   // Add a sample nested dropdown under Services
   const servicesMenu = await db.menuItem.findFirst({ where: { label: 'Services' } });
   if (servicesMenu) {
-    await db.menuItem.create({ data: { label: 'Business Setup', url: '#services', parentId: servicesMenu.id, order: 0, labelI18n: { en: 'Business Setup', fa: 'راه‌اندازی کسب‌وکار', ps: 'د سوداګرۍ جوړول' } } });
-    await db.menuItem.create({ data: { label: 'Legal Services', url: '#services', parentId: servicesMenu.id, order: 1, labelI18n: { en: 'Legal Services', fa: 'خدمات حقوقی', ps: 'قانوني خدمات' } } });
-    await db.menuItem.create({ data: { label: 'Travel & Visa', url: '#services', parentId: servicesMenu.id, order: 2, labelI18n: { en: 'Travel & Visa', fa: 'سفر و ویزا', ps: 'سفر او ویزه' } } });
-    const nested = await db.menuItem.create({ data: { label: 'Translation', url: '#services', parentId: servicesMenu.id, order: 3, labelI18n: { en: 'Translation', fa: 'ترجمه', ps: 'ژباړه' } } });
-    await db.menuItem.create({ data: { label: 'Document Translation', url: '#services', parentId: nested.id, order: 0, labelI18n: { en: 'Document Translation', fa: 'ترجمه اسناد', ps: 'د اسنادو ژباړه' } } });
-    await db.menuItem.create({ data: { label: 'Interpretation', url: '#services', parentId: nested.id, order: 1, labelI18n: { en: 'Interpretation', fa: 'ترجمه شفاهی', ps: 'شفاهي ژباړه' } } });
+    await db.menuItem.create({ data: { label: 'Business Setup', url: '/services', parentId: servicesMenu.id, order: 0, labelI18n: { en: 'Business Setup', fa: 'راه‌اندازی کسب‌وکار', ps: 'د سوداګرۍ جوړول' } } });
+    await db.menuItem.create({ data: { label: 'Legal Services', url: '/services', parentId: servicesMenu.id, order: 1, labelI18n: { en: 'Legal Services', fa: 'خدمات حقوقی', ps: 'قانوني خدمات' } } });
+    await db.menuItem.create({ data: { label: 'Travel & Visa', url: '/visas', parentId: servicesMenu.id, order: 2, labelI18n: { en: 'Travel & Visa', fa: 'سفر و ویزا', ps: 'سفر او ویزه' } } });
+    const nested = await db.menuItem.create({ data: { label: 'Translation', url: '/services', parentId: servicesMenu.id, order: 3, labelI18n: { en: 'Translation', fa: 'ترجمه', ps: 'ژباړه' } } });
+    await db.menuItem.create({ data: { label: 'Document Translation', url: '/services', parentId: nested.id, order: 0, labelI18n: { en: 'Document Translation', fa: 'ترجمه اسناد', ps: 'د اسنادو ژباړه' } } });
+    await db.menuItem.create({ data: { label: 'Interpretation', url: '/services', parentId: nested.id, order: 1, labelI18n: { en: 'Interpretation', fa: 'ترجمه شفاهی', ps: 'شفاهي ژباړه' } } });
   }
   // Opportunities dropdown
   const oppMenu = await db.menuItem.findFirst({ where: { label: 'Opportunities' } });
   if (oppMenu) {
-    const opps: { label: string; fa: string; ps: string }[] = [
-      { label: 'Jobs', fa: 'کارها', ps: 'دندې' },
-      { label: 'Scholarships', fa: 'بورسیه‌ها', ps: 'بورسونه' },
-      { label: 'Internships', fa: 'کارآموزی', ps: 'انټرنشپ' },
-      { label: 'Competitions', fa: 'مسابقات', ps: 'سیالۍ' },
-      { label: 'Conferences', fa: 'کنفرانس‌ها', ps: 'کنفرانسونه' },
-      { label: 'Volunteer', fa: 'رضاکارانه', ps: 'رضاکار' },
-      { label: 'Exchange Programs', fa: 'برنامه‌های تبادلاتی', ps: 'د تبادلې پروګرامونه' },
-      { label: 'Training', fa: 'آموزش', ps: 'روزنه' }
+    const opps: { label: string; fa: string; ps: string; url: string }[] = [
+      { label: 'Jobs', fa: 'کارها', ps: 'دندې', url: '/opportunities?category=job' },
+      { label: 'Scholarships', fa: 'بورسیه‌ها', ps: 'بورسونه', url: '/opportunities?category=scholarship' },
+      { label: 'Internships', fa: 'کارآموزی', ps: 'انټرنشپ', url: '/opportunities?category=internship' },
+      { label: 'Competitions', fa: 'مسابقات', ps: 'سیالۍ', url: '/opportunities?category=competition' },
+      { label: 'Conferences', fa: 'کنفرانس‌ها', ps: 'کنفرانسونه', url: '/opportunities?category=conference' },
+      { label: 'Volunteer', fa: 'رضاکارانه', ps: 'رضاکار', url: '/opportunities?category=volunteer' },
+      { label: 'Exchange Programs', fa: 'برنامه‌های تبادلاتی', ps: 'د تبادلې پروګرامونه', url: '/opportunities?category=exchange-program' },
+      { label: 'Training', fa: 'آموزش', ps: 'روزنه', url: '/opportunities?category=training' }
     ];
     for (let i = 0; i < opps.length; i++) {
-      const { label, fa, ps } = opps[i];
-      await db.menuItem.create({ data: { label, url: '#opportunities', parentId: oppMenu.id, order: i, labelI18n: { en: label, fa, ps } } });
+      const { label, fa, ps, url } = opps[i];
+      await db.menuItem.create({ data: { label, url, parentId: oppMenu.id, order: i, labelI18n: { en: label, fa, ps } } });
     }
+  }
+
+  // Heal menu rows still holding legacy dead #anchors (older databases).
+  // Mirrors src/lib/anchor-routes.ts — kept in sync by the repair script.
+  const menuAnchorRoutes: Record<string, string> = {
+    '#home': '/', '#services': '/services', '#visas': '/visas',
+    '#opportunities': '/opportunities', '#promote': '/advertise',
+    '#gallery': '/#gallery', '#payments': '/#payments', '#contact': '/contact',
+  };
+  for (const [anchor, route] of Object.entries(menuAnchorRoutes)) {
+    await db.menuItem.updateMany({ where: { url: anchor }, data: { url: route } });
   }
 
   // ── Service categories ─────────────────────────────────────
@@ -280,15 +291,42 @@ async function main() {
 
   // ── Footer links ───────────────────────────────────────────
   // await db.footerLink.deleteMany({});
-  const footerCols: Record<string, string[]> = {
-    quickLinks: ['Home', 'About Us', 'Services', 'Gallery', 'Contact'],
-    services: ['Business Setup', 'Legal Services', 'Visa & Travel', 'Translation', 'Consulting'],
-    opportunities: ['Jobs', 'Scholarships', 'Internships', 'Conferences', 'Exchange Programs'],
+  const footerCols: Record<string, { label: string; url: string }[]> = {
+    quickLinks: [
+      { label: 'Home', url: '/' },
+      { label: 'About Us', url: '/about' },
+      { label: 'Services', url: '/services' },
+      { label: 'Gallery', url: '/#gallery' },
+      { label: 'Contact', url: '/contact' },
+    ],
+    services: [
+      { label: 'Business Setup', url: '/services' },
+      { label: 'Legal Services', url: '/services' },
+      { label: 'Visa & Travel', url: '/visas' },
+      { label: 'Translation', url: '/services' },
+      { label: 'Consulting', url: '/services' },
+    ],
+    opportunities: [
+      { label: 'Jobs', url: '/opportunities?category=job' },
+      { label: 'Scholarships', url: '/opportunities?category=scholarship' },
+      { label: 'Internships', url: '/opportunities?category=internship' },
+      { label: 'Conferences', url: '/opportunities?category=conference' },
+      { label: 'Exchange Programs', url: '/opportunities?category=exchange-program' },
+    ],
   };
-  for (const [col, labels] of Object.entries(footerCols)) {
-    labels.forEach((label, i) => {
-      db.footerLink.create({ data: { column: col, label, url: `#${label.toLowerCase().replace(/\s/g, '')}`, order: i } });
-    });
+  for (const [col, links] of Object.entries(footerCols)) {
+    for (let i = 0; i < links.length; i++) {
+      const { label, url } = links[i];
+      const existing = await db.footerLink.findFirst({ where: { column: col, label } });
+      if (existing) {
+        // Heal the legacy dead-anchor URL on already-seeded databases.
+        if (existing.url !== url) {
+          await db.footerLink.update({ where: { id: existing.id }, data: { url, order: i } });
+        }
+      } else {
+        await db.footerLink.create({ data: { column: col, label, url, order: i } });
+      }
+    }
   }
 
   // ── Departments ────────────────────────────────────────────

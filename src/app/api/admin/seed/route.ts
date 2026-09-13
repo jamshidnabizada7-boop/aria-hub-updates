@@ -112,10 +112,14 @@ export async function GET() {
     ];
     let legalSeeded = 0;
     for (const link of legalLinks) {
-      const existing = await db.footerLink.findFirst({ where: { url: link.url, column: link.column } });
+      // Match by column+label: URL-based matching would create duplicates
+      // whenever a link's URL is corrected (e.g. legacy #anchor rows).
+      const existing = await db.footerLink.findFirst({ where: { label: link.label, column: link.column } });
       if (!existing) {
         await db.footerLink.create({ data: link });
         legalSeeded++;
+      } else if (existing.url !== link.url) {
+        await db.footerLink.update({ where: { id: existing.id }, data: { url: link.url } });
       }
     }
     logs.push(`Legal footer links: ${legalSeeded} seeded, ${legalLinks.length - legalSeeded} already exist.`);
