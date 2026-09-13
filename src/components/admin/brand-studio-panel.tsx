@@ -762,22 +762,24 @@ export function BrandStudioPanel() {
                       />
                     ))}
                   </div>
-                  <div className="flex items-center gap-1" role="group" aria-label="Layout">
-                    {LAYOUTS.map((l) => (
-                      <button
-                        key={l.id}
-                        type="button"
-                        onClick={() => setLayout(l.id)}
-                        aria-pressed={layout === l.id}
-                        className={cn(
-                          'rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-colors',
-                          layout === l.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground',
-                        )}
-                      >
-                        {l.label}
-                      </button>
-                    ))}
-                  </div>
+                  {activePost.template !== 'spotlight' && (
+                    <div className="flex items-center gap-1" role="group" aria-label="Layout">
+                      {LAYOUTS.map((l) => (
+                        <button
+                          key={l.id}
+                          type="button"
+                          onClick={() => setLayout(l.id)}
+                          aria-pressed={layout === l.id}
+                          className={cn(
+                            'rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-colors',
+                            layout === l.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground',
+                          )}
+                        >
+                          {l.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <Button
                     size="sm" variant="outline" className="h-8 gap-1 text-[11px]"
                     disabled={savingDesign}

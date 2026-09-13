@@ -176,19 +176,35 @@ export function resolveTheme(id: string | null | undefined): StudioTheme {
   return STUDIO_THEMES[DEFAULT_THEME_ID];
 }
 
-/** Layout variants per canvas. */
-export type StudioLayout = 'classic' | 'minimal' | 'bold';
+/**
+ * Layout variants per canvas — genuinely different compositions, not recolors.
+ * classic/minimal/bold are the originals; the rest are distinct design
+ * families (split side-panel, framed classic, Swiss big-type, glass card,
+ * top banner, perforated ticket). Every family shares the brand chrome
+ * (logo lockup, accent word, QR/CTA) but composes it differently.
+ */
+export type StudioLayout =
+  | 'classic' | 'minimal' | 'bold'
+  | 'split' | 'frame' | 'stack' | 'glass' | 'banner' | 'ticket';
 
 export const LAYOUTS: { id: StudioLayout; label: string }[] = [
   { id: 'classic', label: 'Classic card' },
   { id: 'minimal', label: 'Minimal editorial' },
   { id: 'bold', label: 'Bold display' },
+  { id: 'split', label: 'Split panel' },
+  { id: 'frame', label: 'Framed' },
+  { id: 'stack', label: 'Big-type stack' },
+  { id: 'glass', label: 'Glass card' },
+  { id: 'banner', label: 'Top banner' },
+  { id: 'ticket', label: 'Ticket stub' },
 ];
 
 export const DEFAULT_LAYOUT: StudioLayout = 'classic';
 
+const LAYOUT_IDS = new Set<string>(LAYOUTS.map((l) => l.id));
+
 export function resolveLayout(id: string | null | undefined): StudioLayout {
-  if (id === 'minimal' || id === 'bold') return id;
+  if (id && LAYOUT_IDS.has(id)) return id as StudioLayout;
   return DEFAULT_LAYOUT;
 }
 

@@ -15,7 +15,8 @@
  * pre-localized by the caller; small UI labels come from `social.post.*`.
  */
 
-import type { ReactNode } from 'react';
+import { cloneElement, isValidElement } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import {
   AlarmClock, BarChart3, CalendarDays, CheckCircle2, GraduationCap,
   Lightbulb, Newspaper, Quote as QuoteGlyph, Sparkles,
@@ -172,6 +173,505 @@ function KickerChip({ icon, label, theme, layout }: { icon: ReactNode; label: st
   );
 }
 
+// ─── distinct composition shells ─────────────────────────────────────────────
+// Each shell is a genuinely different poster composition (side panel, frame,
+// big-type stack, glass card, top banner, perforated ticket). They share the
+// brand chrome — logo lockup, kicker, ONE accent word, QR/CTA — but place it
+// differently. All colors come from StudioTheme tokens so every palette works.
+
+interface ShellProps {
+  lang: Lang;
+  size: PosterSize;
+  theme: StudioTheme;
+  layout: StudioLayout;
+  kicker: string;
+  kickerIcon?: ReactNode;
+  cta: string;
+  tagline: string;
+  qrDataUrl?: string | null;
+  children: ReactNode;
+}
+
+const SHELL_LAYOUTS = new Set<StudioLayout>(['split', 'frame', 'stack', 'glass', 'banner', 'ticket']);
+
+function ShellRoot({ lang, size, theme, style, children }: {
+  lang: Lang; size: PosterSize; theme: StudioTheme; style?: CSSProperties; children: ReactNode;
+}) {
+  const rtl = lang !== 'en';
+  return (
+    <div
+      data-studio-canvas="1"
+      dir={rtl ? 'rtl' : 'ltr'}
+      style={{
+        width: W, height: H[size], position: 'relative', overflow: 'hidden',
+        background: `linear-gradient(168deg, ${theme.bgTop} 0%, ${theme.bgMid} 46%, ${theme.bgBottom} 100%)`,
+        fontFamily: 'var(--font-vazirmatn), sans-serif',
+        color: theme.text, flexShrink: 0, flexGrow: 0,
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function Dots({ theme, opacity = 0.28 }: { theme: StudioTheme; opacity?: number }) {
+  return (
+    <div
+      style={{
+        position: 'absolute', inset: 0,
+        backgroundImage: `radial-gradient(${theme.dots} 1.4px, transparent 1.4px)`,
+        backgroundSize: '36px 36px', opacity, pointerEvents: 'none',
+      }}
+    />
+  );
+}
+
+function Watermark({ portrait, theme }: { portrait: boolean; theme: StudioTheme }) {
+  return (
+    <img
+      src="/images/logo-mark.png" alt="" aria-hidden="true"
+      style={{
+        position: 'absolute', bottom: portrait ? -150 : -130, insetInlineEnd: -140,
+        width: 640, height: 640, opacity: 0.05, pointerEvents: 'none',
+      }}
+    />
+  );
+}
+
+function QrChip({ qrDataUrl, theme, size = 84, radius = 16 }: {
+  qrDataUrl?: string | null; theme: StudioTheme; size?: number; radius?: number;
+}) {
+  if (qrDataUrl) {
+    return (
+      <div style={{ background: theme.qrLight, borderRadius: radius, padding: 8, flexShrink: 0, boxShadow: `inset 0 0 0 1.5px ${theme.surfaceBorder}` }}>
+        <img src={qrDataUrl} alt="QR" style={{ width: size, height: size, display: 'block' }} />
+      </div>
+    );
+  }
+  return (
+    <div style={{ width: size, height: size, borderRadius: radius - 2, overflow: 'hidden', flexShrink: 0, background: theme.logoBg, outline: `2px solid ${theme.surfaceBorder}`, outlineOffset: -2 }}>
+      <img src="/images/logo-mark.png" alt="ARIA HUB" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+    </div>
+  );
+}
+
+function Lockup({ theme, rtl, tagline, logoSize = 76, nameSize = 38, taglineSize = 20, center = false }: {
+  theme: StudioTheme; rtl: boolean; tagline: string;
+  logoSize?: number; nameSize?: number; taglineSize?: number; center?: boolean;
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: Math.round(logoSize * 0.26), justifyContent: center ? 'center' : 'flex-start' }}>
+      <div
+        style={{
+          width: logoSize, height: logoSize, borderRadius: Math.round(logoSize * 0.28), overflow: 'hidden', flexShrink: 0,
+          background: theme.logoBg,
+          boxShadow: theme.dark ? '0 12px 30px rgba(0,0,0,0.4)' : '0 10px 26px rgba(0,0,0,0.16)',
+          outline: `2px solid ${theme.accentLine}`, outlineOffset: -2,
+        }}
+      >
+        <img src="/images/logo-mark.png" alt="ARIA HUB" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0, alignItems: center ? 'center' : 'flex-start' }}>
+        <div style={{ fontSize: nameSize, fontWeight: 800, letterSpacing: 3, lineHeight: 1, direction: 'ltr', textAlign: rtl ? 'right' : 'left', color: theme.text }}>
+          ARIA HUB
+        </div>
+        <div style={{ fontSize: taglineSize, color: theme.textDim, fontWeight: 500 }}>{tagline}</div>
+      </div>
+    </div>
+  );
+}
+
+/** Content flow inside a shell (ContentFrame steps aside for shell layouts). */
+function ShellFlow({ children, justify = 'center', align = 'stretch', pad = '0', gap = 26 }: {
+  children: ReactNode;
+  justify?: 'center' | 'start';
+  align?: 'stretch' | 'start' | 'center';
+  pad?: string;
+  gap?: number;
+}) {
+  return (
+    <div
+      style={{
+        flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column',
+        justifyContent: justify === 'start' ? 'flex-start' : 'center',
+        alignItems: align === 'start' ? 'flex-start' : align === 'center' ? 'center' : 'stretch',
+        gap, padding: pad,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function bigGlyph(icon: ReactNode, px: number, color: string, opacity = 1): ReactNode {
+  if (!isValidElement(icon)) return null;
+  return (
+    <span style={{ lineHeight: 1, opacity, color, pointerEvents: 'none' }}>
+      {cloneElement(icon as React.ReactElement<{ width?: number | string; height?: number | string; strokeWidth?: number }>, {
+        width: px, height: px, strokeWidth: 1,
+      })}
+    </span>
+  );
+}
+
+// ── Split panel: solid accent side column + content column ──────────────────
+
+function SplitShell({ lang, size, theme, kicker, kickerIcon, cta, tagline, qrDataUrl, children }: ShellProps) {
+  const rtl = lang !== 'en';
+  const story = size === 'story';
+  const portrait = size === 'portrait';
+  const panelW = story ? 316 : 282;
+  const pad = story ? 84 : portrait ? 70 : 58;
+  return (
+    <ShellRoot lang={lang} size={size} theme={theme} style={{ display: 'flex', flexDirection: 'row' }}>
+      {/* accent side panel — flips sides automatically under dir=rtl */}
+      <div
+        style={{
+          width: panelW, flexShrink: 0, position: 'relative', overflow: 'hidden',
+          background: `linear-gradient(180deg, ${theme.ctaFrom} 0%, ${theme.ctaTo} 100%)`,
+          color: theme.ctaText,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between',
+          padding: `${story ? 72 : 54}px 34px`,
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute', inset: 0,
+            backgroundImage: `radial-gradient(${theme.dark ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.28)'} 1.6px, transparent 1.6px)`,
+            backgroundSize: '30px 30px',
+          }}
+        />
+        <div style={{ position: 'relative', width: 96, height: 96, borderRadius: 26, overflow: 'hidden', background: theme.deep, flexShrink: 0, boxShadow: '0 16px 38px rgba(0,0,0,0.35)' }}>
+          <img src="/images/logo-mark.png" alt="ARIA HUB" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        </div>
+        <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18 }}>
+          <div style={{ writingMode: 'vertical-rl', fontSize: 52, fontWeight: 900, letterSpacing: 12, direction: 'ltr', lineHeight: 1 }}>
+            ARIA HUB
+          </div>
+          <div style={{ width: 56, height: 5, borderRadius: 999, background: theme.ctaText, opacity: 0.75 }} />
+        </div>
+        <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, textAlign: 'center' }}>
+          <div style={{ fontSize: 19, fontWeight: 700, opacity: 0.85 }}>{tagline}</div>
+          <div style={{ fontSize: 18, fontWeight: 800, direction: 'ltr', letterSpacing: 1 }}>{BRAND.site}</div>
+        </div>
+      </div>
+
+      {/* content column */}
+      <div style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex', flexDirection: 'column' }}>
+        <Watermark portrait={portrait} theme={theme} />
+        <Dots theme={theme} opacity={0.2} />
+        <div style={{ position: 'relative', padding: `${story ? 72 : 56}px ${pad}px 0` }}>
+          <KickerChip icon={kickerIcon} label={kicker} theme={theme} layout="classic" />
+        </div>
+        <ShellFlow pad={`${26}px ${pad}px 0`}>{children}</ShellFlow>
+        <div
+          style={{
+            position: 'relative', margin: `0 ${pad}px ${story ? 78 : 60}px`,
+            background: theme.deep, border: `1.5px solid ${theme.accentLine}`, borderRadius: 22,
+            padding: '20px 26px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18,
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+            <span style={{ fontSize: 30, fontWeight: 800, direction: 'ltr', textAlign: rtl ? 'right' : 'left', letterSpacing: 0.5, color: theme.accent }}>{BRAND.site}</span>
+            <span style={{ fontSize: 20, fontWeight: 700, color: theme.textDim }}>{cta}</span>
+          </div>
+          <QrChip qrDataUrl={qrDataUrl} theme={theme} size={78} />
+        </div>
+      </div>
+    </ShellRoot>
+  );
+}
+
+// ── Framed: double-line frame, corner ticks, centered composition ───────────
+
+function FrameShell({ lang, size, theme, kicker, kickerIcon, cta, tagline, qrDataUrl, children }: ShellProps) {
+  const rtl = lang !== 'en';
+  const story = size === 'story';
+  const margin = story ? 84 : size === 'portrait' ? 72 : 62;
+  const corner = 46;
+  const tick = (pos: 'ts' | 'te' | 'bs' | 'be') => {
+    const base: CSSProperties = { position: 'absolute', width: corner, height: corner };
+    if (pos[0] === 't') { base.top = margin - 13; base.borderTop = `6px solid ${theme.accent}`; }
+    else { base.bottom = margin - 13; base.borderBottom = `6px solid ${theme.accent}`; }
+    if (pos[1] === 's') { base.insetInlineStart = margin - 13; base.borderInlineStart = `6px solid ${theme.accent}`; }
+    else { base.insetInlineEnd = margin - 13; base.borderInlineEnd = `6px solid ${theme.accent}`; }
+    return <div key={pos} style={base} />;
+  };
+  return (
+    <ShellRoot lang={lang} size={size} theme={theme}>
+      <Dots theme={theme} opacity={0.15} />
+      <div style={{ position: 'absolute', inset: margin, border: `2.5px solid ${theme.accentLine}`, borderRadius: 8, pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', inset: margin + 14, border: `1px solid ${theme.accentFaint}`, borderRadius: 3, pointerEvents: 'none' }} />
+      {tick('ts')}{tick('te')}{tick('bs')}{tick('be')}
+      <div style={{ position: 'absolute', inset: margin, display: 'flex', flexDirection: 'column', padding: `${story ? 56 : 42}px ${story ? 62 : 52}px` }}>
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <Lockup theme={theme} rtl={rtl} tagline={tagline} center logoSize={70} nameSize={34} taglineSize={18} />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: story ? 46 : 32 }}>
+          <KickerChip icon={kickerIcon} label={kicker} theme={theme} layout="classic" />
+        </div>
+        <ShellFlow pad="18px 6px 0">{children}</ShellFlow>
+        <div
+          style={{
+            alignSelf: 'center', width: '84%',
+            background: `linear-gradient(135deg, ${theme.ctaFrom} 0%, ${theme.ctaTo} 100%)`, color: theme.ctaText,
+            borderRadius: 18, padding: '17px 26px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18,
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+            <span style={{ fontSize: 28, fontWeight: 800, direction: 'ltr', textAlign: rtl ? 'right' : 'left', letterSpacing: 0.5, color: theme.ctaText }}>{BRAND.site}</span>
+            <span style={{ fontSize: 19, fontWeight: 700, color: theme.ctaText, opacity: 0.78 }}>{cta}</span>
+          </div>
+          <QrChip qrDataUrl={qrDataUrl} theme={theme} size={70} radius={14} />
+        </div>
+      </div>
+    </ShellRoot>
+  );
+}
+
+// ── Big-type stack: Swiss poster, oversized glyph, rule lines ────────────────
+
+function StackShell({ lang, size, theme, kicker, kickerIcon, cta, tagline, qrDataUrl, children }: ShellProps) {
+  const rtl = lang !== 'en';
+  const story = size === 'story';
+  const portrait = size === 'portrait';
+  const pad = story ? 96 : portrait ? 84 : 72;
+  return (
+    <ShellRoot lang={lang} size={size} theme={theme}>
+      <div style={{ position: 'absolute', top: -190, insetInlineEnd: -260, width: 560, height: 330, background: theme.accentFaint, transform: 'rotate(-18deg)', borderRadius: 44 }} />
+      <div style={{ position: 'absolute', top: -110, insetInlineEnd: -310, width: 560, height: 54, background: theme.accentSoft, transform: 'rotate(-18deg)', borderRadius: 999 }} />
+      <div style={{ position: 'absolute', bottom: story ? 320 : 160, insetInlineEnd: -70, opacity: 0.55, pointerEvents: 'none' }}>
+        {bigGlyph(kickerIcon, 320, theme.accentSoft)}
+      </div>
+      <div style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', padding: `${story ? 88 : 64}px ${pad}px ${story ? 82 : 58}px` }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+          <div style={{ width: 64, height: 64, borderRadius: 18, overflow: 'hidden', flexShrink: 0, background: theme.logoBg, outline: `2px solid ${theme.accentLine}`, outlineOffset: -2 }}>
+            <img src="/images/logo-mark.png" alt="ARIA HUB" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          </div>
+          <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: 3, direction: 'ltr', textAlign: rtl ? 'right' : 'left' }}>ARIA HUB</div>
+          <div style={{ flex: 1 }} />
+          <div style={{ fontSize: 18, color: theme.textDim, fontWeight: 600 }}>{tagline}</div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginTop: story ? 62 : 44 }}>
+          <span style={{ fontSize: 25, fontWeight: 800, letterSpacing: 2.5, textTransform: 'uppercase', color: theme.accent, whiteSpace: 'nowrap' }}>{kicker}</span>
+          <div style={{ flex: 1, height: 2, background: theme.accentLine }} />
+        </div>
+
+        <ShellFlow justify="center" align="stretch" pad="26px 0 0" gap={24}>{children}</ShellFlow>
+
+        <div style={{ borderTop: `2px solid ${theme.accentLine}`, paddingTop: 22, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+            <span style={{ fontSize: 38, fontWeight: 900, direction: 'ltr', textAlign: rtl ? 'right' : 'left', letterSpacing: 0.5, color: theme.text }}>{BRAND.site}</span>
+            <span style={{ fontSize: 20, fontWeight: 700, color: theme.textDim }}>{cta}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <QrChip qrDataUrl={qrDataUrl} theme={theme} size={76} />
+            <div style={{ width: 62, height: 62, borderRadius: 18, background: theme.accent, color: theme.onAccent, display: 'grid', placeItems: 'center', fontSize: 30, fontWeight: 900 }}>
+              {rtl ? '←' : '→'}
+            </div>
+          </div>
+        </div>
+      </div>
+    </ShellRoot>
+  );
+}
+
+// ── Glass card: floating panel with overlapping badge ────────────────────────
+
+function GlassShell({ lang, size, theme, kicker, kickerIcon, cta, tagline, qrDataUrl, children }: ShellProps) {
+  const rtl = lang !== 'en';
+  const story = size === 'story';
+  const portrait = size === 'portrait';
+  const pad = story ? 88 : portrait ? 76 : 64;
+  return (
+    <ShellRoot lang={lang} size={size} theme={theme}>
+      <div style={{ position: 'absolute', top: -200, insetInlineEnd: -170, width: 560, height: 560, borderRadius: '50%', background: `radial-gradient(circle, ${theme.glowA} 0%, rgba(0,0,0,0) 68%)` }} />
+      <div style={{ position: 'absolute', bottom: -240, insetInlineStart: -190, width: 660, height: 660, borderRadius: '50%', background: `radial-gradient(circle, ${theme.glowB} 0%, rgba(0,0,0,0) 70%)` }} />
+      <Dots theme={theme} opacity={0.24} />
+      <div style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', padding: `${story ? 82 : 60}px ${pad}px ${story ? 78 : 56}px` }}>
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <Lockup theme={theme} rtl={rtl} tagline={tagline} center logoSize={68} nameSize={32} taglineSize={17} />
+        </div>
+        <div style={{ position: 'relative', flex: 1, minHeight: 0, marginTop: story ? 78 : 58 }}>
+          <div
+            style={{
+              position: 'absolute', inset: 0, borderRadius: 44,
+              background: theme.dark ? 'rgba(255,255,255,0.075)' : 'rgba(255,255,255,0.62)',
+              border: `1.5px solid ${theme.surfaceBorder}`,
+              boxShadow: theme.dark ? '0 40px 90px rgba(0,0,0,0.45)' : '0 34px 80px rgba(31,27,18,0.14)',
+            }}
+          />
+          <div style={{ position: 'absolute', top: -30, insetInlineStart: 0, width: '100%', display: 'flex', justifyContent: 'center' }}>
+            <span
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 12,
+                fontSize: 23, fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase',
+                padding: '13px 32px', borderRadius: 999,
+                background: theme.accent, color: theme.onAccent,
+                boxShadow: '0 16px 40px rgba(0,0,0,0.3)',
+              }}
+            >
+              {kickerIcon}
+              {kicker}
+            </span>
+          </div>
+          <div style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', padding: `${story ? 74 : 54}px ${story ? 60 : 46}px ${story ? 54 : 40}px` }}>
+            <ShellFlow>{children}</ShellFlow>
+            <div
+              style={{
+                background: `linear-gradient(135deg, ${theme.ctaFrom} 0%, ${theme.ctaTo} 100%)`,
+                color: theme.ctaText, borderRadius: 20, padding: '18px 26px',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18,
+                boxShadow: theme.dark ? '0 20px 50px rgba(0,0,0,0.4)' : '0 16px 40px rgba(0,0,0,0.16)',
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+                <span style={{ fontSize: 28, fontWeight: 800, direction: 'ltr', textAlign: rtl ? 'right' : 'left', letterSpacing: 0.5, color: theme.ctaText }}>{BRAND.site}</span>
+                <span style={{ fontSize: 19, fontWeight: 700, color: theme.ctaText, opacity: 0.78 }}>{cta}</span>
+              </div>
+              <QrChip qrDataUrl={qrDataUrl} theme={theme} size={72} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </ShellRoot>
+  );
+}
+
+// ── Top banner: solid header band + flush CTA strip ──────────────────────────
+
+function BannerShell({ lang, size, theme, kicker, kickerIcon, cta, tagline, qrDataUrl, children }: ShellProps) {
+  const rtl = lang !== 'en';
+  const story = size === 'story';
+  const portrait = size === 'portrait';
+  const pad = story ? 96 : portrait ? 84 : 72;
+  const band = story ? 470 : portrait ? 384 : 330;
+  return (
+    <ShellRoot lang={lang} size={size} theme={theme} style={{ display: 'flex', flexDirection: 'column' }}>
+      <div
+        style={{
+          height: band, flexShrink: 0, position: 'relative', overflow: 'hidden',
+          background: `linear-gradient(135deg, ${theme.ctaFrom} 0%, ${theme.ctaTo} 100%)`, color: theme.ctaText,
+          display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+          padding: `${story ? 64 : 46}px ${pad}px`,
+        }}
+      >
+        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(0,0,0,0.10) 1.6px, transparent 1.6px)', backgroundSize: '30px 30px' }} />
+        <div style={{ position: 'absolute', insetInlineEnd: -44, bottom: -66, opacity: 0.16, pointerEvents: 'none' }}>
+          {bigGlyph(kickerIcon, story ? 300 : 240, theme.ctaText)}
+        </div>
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ width: 58, height: 58, borderRadius: 16, overflow: 'hidden', flexShrink: 0, background: theme.deep, boxShadow: '0 12px 30px rgba(0,0,0,0.3)' }}>
+            <img src="/images/logo-mark.png" alt="ARIA HUB" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: 3, direction: 'ltr', textAlign: rtl ? 'right' : 'left', lineHeight: 1 }}>ARIA HUB</div>
+            <div style={{ fontSize: 17, fontWeight: 600, opacity: 0.82 }}>{tagline}</div>
+          </div>
+        </div>
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 20 }}>
+          <div style={{ fontSize: story ? 42 : 33, fontWeight: 900, letterSpacing: 2, textTransform: 'uppercase', lineHeight: 1.15 }}>{kicker}</div>
+        </div>
+      </div>
+
+      <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: `${story ? 56 : 40}px ${pad}px 0` }}>
+        <ShellFlow>{children}</ShellFlow>
+      </div>
+
+      <div
+        style={{
+          position: 'relative', flexShrink: 0, height: story ? 170 : 138, background: theme.deep,
+          borderTop: `5px solid ${theme.accent}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: `0 ${pad}px`,
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+          <span style={{ fontSize: 36, fontWeight: 900, direction: 'ltr', textAlign: rtl ? 'right' : 'left', letterSpacing: 0.5, color: theme.accent }}>{BRAND.site}</span>
+          <span style={{ fontSize: 20, fontWeight: 700, color: theme.textDim }}>{cta}</span>
+        </div>
+        <QrChip qrDataUrl={qrDataUrl} theme={theme} size={92} radius={18} />
+      </div>
+    </ShellRoot>
+  );
+}
+
+// ── Ticket stub: perforated card with QR stub ────────────────────────────────
+
+function TicketShell({ lang, size, theme, kicker, kickerIcon, cta, tagline, qrDataUrl, children }: ShellProps) {
+  const rtl = lang !== 'en';
+  const story = size === 'story';
+  const inset = story ? 76 : 56;
+  const pad = story ? 64 : 50;
+  const stubW = 196;
+  const hole = (top: boolean): ReactNode => (
+    <div
+      style={{
+        position: 'absolute', [top ? 'top' : 'bottom']: -19, insetInlineEnd: stubW - 19,
+        width: 38, height: 38, borderRadius: '50%',
+        background: top ? theme.bgTop : theme.bgBottom,
+        border: `1.5px solid ${theme.surfaceBorder}`,
+      }}
+    />
+  );
+  return (
+    <ShellRoot lang={lang} size={size} theme={theme}>
+      <Dots theme={theme} opacity={0.2} />
+      <Watermark portrait={size === 'portrait'} theme={theme} />
+      <div
+        style={{
+          position: 'absolute', top: inset, bottom: inset, insetInlineStart: inset, insetInlineEnd: inset,
+          borderRadius: 30, overflow: 'visible',
+          background: theme.dark ? theme.deep : 'rgba(255,255,255,0.72)',
+          border: `1.5px solid ${theme.surfaceBorder}`,
+          boxShadow: theme.dark ? '0 34px 80px rgba(0,0,0,0.45)' : '0 30px 70px rgba(31,27,18,0.12)',
+          display: 'flex',
+        }}
+      >
+        {hole(true)}
+        {hole(false)}
+        {/* main panel */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', padding: `${story ? 60 : 44}px ${pad}px` }}>
+          <Lockup theme={theme} rtl={rtl} tagline={tagline} logoSize={62} nameSize={31} taglineSize={17} />
+          <div style={{ marginTop: story ? 44 : 30 }}>
+            <KickerChip icon={kickerIcon} label={kicker} theme={theme} layout="classic" />
+          </div>
+          <ShellFlow pad="16px 0 0">{children}</ShellFlow>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingTop: 16, borderTop: `1px solid ${theme.accentFaint}` }}>
+            <span style={{ fontSize: 26, fontWeight: 800, direction: 'ltr', color: theme.accent, letterSpacing: 0.5 }}>{BRAND.site}</span>
+            <span style={{ fontSize: 19, fontWeight: 700, color: theme.textDim }}>{cta}</span>
+          </div>
+        </div>
+        {/* stub */}
+        <div
+          style={{
+            width: stubW, flexShrink: 0, borderInlineStart: `3px dashed ${theme.accentLine}`,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between',
+            padding: `${story ? 54 : 40}px 22px`, textAlign: 'center',
+          }}
+        >
+          <div style={{ fontSize: 17, fontWeight: 900, letterSpacing: 2, direction: 'ltr', color: theme.accent }}>ARIA HUB</div>
+          <QrChip qrDataUrl={qrDataUrl} theme={theme} size={124} radius={20} />
+          <div style={{ fontSize: 15, fontWeight: 600, color: theme.textDim, lineHeight: 1.35 }}>{tagline}</div>
+        </div>
+      </div>
+    </ShellRoot>
+  );
+}
+
+function StudioShell(props: ShellProps) {
+  switch (props.layout) {
+    case 'split': return <SplitShell {...props} />;
+    case 'frame': return <FrameShell {...props} />;
+    case 'stack': return <StackShell {...props} />;
+    case 'glass': return <GlassShell {...props} />;
+    case 'banner': return <BannerShell {...props} />;
+    case 'ticket': return <TicketShell {...props} />;
+    default: return null;
+  }
+}
+
 /** Shared brand shell: canvas + ambience + header lockup + footer CTA band. */
 export function BrandShell({
   lang, size, kicker, kickerIcon, ctaLabel, qrDataUrl, theme, layout, children,
@@ -186,6 +686,22 @@ export function BrandShell({
   layout: StudioLayout;
   children: ReactNode;
 }) {
+  // Distinct composition families — each is its own shell, not a reskin.
+  if (layout === 'split' || layout === 'frame' || layout === 'stack'
+    || layout === 'glass' || layout === 'banner' || layout === 'ticket') {
+    return (
+      <StudioShell
+        lang={lang} size={size} theme={theme} layout={layout}
+        kicker={String(kicker)} kickerIcon={kickerIcon}
+        cta={ctaLabel ?? translate(lang, 'poster.cta')}
+        tagline={translate(lang, 'poster.tagline')}
+        qrDataUrl={qrDataUrl}
+      >
+        {children}
+      </StudioShell>
+    );
+  }
+
   const t = (key: string, params?: Record<string, string | number>) => translate(lang, key, params);
   const rtl = lang !== 'en';
   const h = H[size];
@@ -340,6 +856,10 @@ export function BrandShell({
 function ContentFrame({
   size, layout, align = 'center', children,
 }: { size: PosterSize; layout: StudioLayout; align?: 'center' | 'start'; children: ReactNode }) {
+  if (SHELL_LAYOUTS.has(layout)) {
+    // Shell layouts own the content container geometry — step aside entirely.
+    return <div style={{ display: 'contents' }}>{children}</div>;
+  }
   const pad = size === 'story' ? 96 : size === 'portrait' ? 84 : 72;
   const minimal = layout === 'minimal';
   return (
