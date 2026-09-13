@@ -3,7 +3,10 @@ import type { NextConfig } from "next";
 const isDev = process.env.NODE_ENV === "development" || process.env.__NEXT_DEV === "true";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  // Standalone output packs a deployable server bundle — for the Linux
+  // container. Set STANDALONE=1 there; on Windows the build fails at the
+  // copy step because chunk filenames contain ":" (e.g. node:fs/promises).
+  ...(process.env.STANDALONE === "1" ? { output: "standalone" as const } : {}),
   compress: true,
   // Type errors now fail the build — the codebase compiles clean under
   // `tsc --noEmit` (scripts/ and examples/ are excluded from type-checking).
