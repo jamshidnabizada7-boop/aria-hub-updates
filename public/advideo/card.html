@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ARIA HUB — ad card</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  /* ARIA HUB brand card renderer — 1920×1080 stage, captured at 2× DPR.
+     Variants (query params): intro | scene | stats | cta  */
+  :root {
+    --bg-top: #141F3D; --bg-mid: #283868; --bg-bottom: #16223F;
+    --accent: #F8D898; --accent-soft: rgba(248, 216, 152, 0.14);
+    --accent-line: rgba(248, 216, 152, 0.45);
+    --text: #ffffff; --text-dim: rgba(255, 255, 255, 0.74);
+    --deep: #1B2440; --cta-from: #F3D08A; --cta-to: #F8D898; --cta-text: #1B2440;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; }
+  body {
+    font-family: 'Vazirmatn', 'Segoe UI', sans-serif;
+    background: linear-gradient(168deg, var(--bg-top) 0%, var(--bg-mid) 46%, var(--bg-bottom) 100%);
+    color: var(--text); position: relative;
+  }
+  .dots {
+    position: absolute; inset: 0; pointer-events: none;
+    background-image: radial-gradient(rgba(255,255,255,0.05) 1.8px, transparent 1.8px);
+    background-size: 42px 42px;
+  }
+  .glow-a, .glow-b { position: absolute; border-radius: 50%; pointer-events: none; }
+  .glow-a { top: -280px; right: -240px; width: 900px; height: 900px;
+    background: radial-gradient(circle, rgba(248,216,152,0.16) 0%, rgba(0,0,0,0) 68%); }
+  .glow-b { bottom: -340px; left: -260px; width: 1000px; height: 1000px;
+    background: radial-gradient(circle, rgba(96,130,255,0.13) 0%, rgba(0,0,0,0) 70%); }
+  .hairline { position: absolute; top: 0; left: 0; width: 100%; height: 10px;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent) 34%, rgba(248,216,152,0.55) 70%, var(--accent-soft) 100%); }
+  .logo-chip {
+    width: 96px; height: 96px; border-radius: 26px; overflow: hidden;
+    background: var(--accent); outline: 3px solid var(--accent-line); outline-offset: -3px;
+    box-shadow: 0 22px 55px rgba(0,0,0,0.45); flex-shrink: 0;
+  }
+  .logo-chip img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .corner-lock {
+    position: absolute; top: 56px; left: 72px; display: flex; align-items: center; gap: 22px;
+  }
+  .corner-lock .logo-chip { width: 78px; height: 78px; border-radius: 21px; }
+  .corner-lock .name { font-size: 34px; font-weight: 800; letter-spacing: 6px; line-height: 1; direction: ltr; }
+  .corner-lock .tag { font-size: 20px; color: var(--text-dim); font-weight: 500; margin-top: 6px; }
+
+  /* ── intro ── */
+  .intro { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 44px; }
+  .intro .logo-chip { width: 250px; height: 250px; border-radius: 62px; }
+  .intro h1 { font-size: 168px; font-weight: 800; letter-spacing: 30px; line-height: 1; direction: ltr; text-indent: 30px; /* balance letterspacing */ }
+  .intro h1 .gold { color: var(--accent); }
+  .intro .rule { width: 130px; height: 8px; border-radius: 999px; background: linear-gradient(90deg, var(--accent), rgba(248,216,152,0.4)); }
+  .intro .tagline { font-size: 52px; font-weight: 600; color: var(--text-dim); }
+  .intro .tagline-fa { font-size: 38px; font-weight: 500; color: rgba(255,255,255,0.5); }
+
+  /* ── scene (site screenshot + lower third) ── */
+  .scene-bg { position: absolute; inset: 0; background-size: cover; background-position: center top; }
+  .scene-scrim { position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(20,31,61,0.42) 0%, rgba(20,31,61,0) 26%, rgba(20,31,61,0) 52%, rgba(16,24,48,0.88) 88%, rgba(16,24,48,0.96) 100%); }
+  .lower-third { position: absolute; left: 96px; right: 96px; bottom: 74px; display: flex; flex-direction: column; gap: 20px; }
+  .kicker {
+    align-self: flex-start; display: inline-flex; align-items: center; gap: 14px;
+    font-size: 27px; font-weight: 800; letter-spacing: 5px; text-transform: uppercase;
+    color: var(--accent); background: var(--accent-soft);
+    border: 2px solid var(--accent-line); border-radius: 999px; padding: 12px 30px;
+  }
+  .lower-third h2 { font-size: 84px; font-weight: 800; line-height: 1.12; max-width: 1500px;
+    text-shadow: 0 8px 40px rgba(0,0,0,0.5); }
+  .lower-third h2 .gold { color: var(--accent); }
+  .site-strip { position: absolute; right: 96px; bottom: 84px; display: flex; align-items: center; gap: 16px;
+    font-size: 30px; font-weight: 800; letter-spacing: 1px; direction: ltr;
+    color: var(--accent); background: rgba(27,36,64,0.72); border: 2px solid var(--accent-line);
+    border-radius: 18px; padding: 16px 28px; }
+
+  /* ── stats ── */
+  .stats { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 70px; padding: 0 130px; }
+  .stats .kicker-big { font-size: 34px; font-weight: 800; letter-spacing: 10px; text-transform: uppercase; color: var(--accent); }
+  .stats .row { display: flex; gap: 110px; }
+  .stat { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  .stat .num { font-size: 190px; font-weight: 900; line-height: 1; color: var(--accent);
+    text-shadow: 0 14px 60px rgba(0,0,0,0.45); direction: ltr; }
+  .stat .lbl { font-size: 36px; font-weight: 700; color: var(--text-dim); }
+  .stats .foot { font-size: 24px; font-weight: 600; color: rgba(255,255,255,0.45); direction: ltr; letter-spacing: 1px; }
+
+  /* ── cta ── */
+  .cta { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 52px; }
+  .cta .logo-chip { width: 190px; height: 190px; border-radius: 48px; }
+  .cta h2 { font-size: 96px; font-weight: 800; line-height: 1.15; text-align: center; max-width: 1500px; }
+  .cta h2 .gold { color: var(--accent); }
+  .cta .band {
+    display: flex; align-items: center; gap: 44px; margin-top: 8px;
+    background: linear-gradient(135deg, var(--cta-from) 0%, var(--cta-to) 100%);
+    color: var(--cta-text); border-radius: 34px; padding: 34px 60px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+  }
+  .cta .band .site { font-size: 66px; font-weight: 900; direction: ltr; letter-spacing: 0.5px; }
+  .cta .band .sub { font-size: 30px; font-weight: 700; opacity: 0.78; margin-top: 4px; }
+  .cta .band img.qr { width: 158px; height: 158px; border-radius: 22px; display: block; box-shadow: 0 10px 30px rgba(0,0,0,0.25); }
+  .cta .tagline { font-size: 34px; font-weight: 600; color: rgba(255,255,255,0.55); }
+</style>
+</head>
+<body>
+  <div class="dots"></div>
+  <div class="glow-a"></div>
+  <div class="glow-b"></div>
+  <div id="stage"></div>
+<script>
+  const q = Object.fromEntries(new URLSearchParams(location.search).entries());
+  const stage = document.getElementById('stage');
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const chip = (cls) => `<div class="logo-chip ${cls || ''}"><img src="/images/logo-mark.png" alt=""/></div>`;
+  const v = q.v || 'intro';
+
+  if (v === 'intro') {
+    stage.innerHTML = `
+      <div class="hairline"></div>
+      <div class="intro">
+        ${chip()}
+        <h1>ARIA <span class="gold">HUB</span></h1>
+        <div class="rule"></div>
+        <div class="tagline">${esc(q.tagline || 'Every opportunity, in your language')}</div>
+        <div class="tagline-fa">${esc(q.taglineFa || 'همهٔ فرصت‌ها، به زبان شما')}</div>
+      </div>`;
+  } else if (v === 'scene') {
+    stage.innerHTML = `
+      <div class="scene-bg" style="background-image:url('${esc(q.bg)}')"></div>
+      <div class="scene-scrim"></div>
+      <div class="hairline"></div>
+      <div class="corner-lock">${chip('')}<div><div class="name">ARIA HUB</div><div class="tag">${esc(q.tagline || '')}</div></div></div>
+      <div class="lower-third">
+        <span class="kicker">${esc(q.kicker || '')}</span>
+        <h2>${esc(q.title || '').replace(/\*\*(.+?)\*\*/g, '<span class="gold">$1</span>')}</h2>
+      </div>
+      <div class="site-strip">myariahub.com</div>`;
+  } else if (v === 'stats') {
+    const s = JSON.parse(q.stats || '[]');
+    stage.innerHTML = `
+      <div class="hairline"></div>
+      <div class="corner-lock">${chip('')}<div><div class="name">ARIA HUB</div><div class="tag">${esc(q.tagline || '')}</div></div></div>
+      <div class="stats">
+        <div class="kicker-big">${esc(q.kicker || 'The platform in numbers')}</div>
+        <div class="row">
+          ${s.map((x) => `<div class="stat"><div class="num">${esc(x.num)}</div><div class="lbl">${esc(x.lbl)}</div></div>`).join('')}
+        </div>
+        <div class="foot">live counts · myariahub.com</div>
+      </div>`;
+  } else if (v === 'cta') {
+    stage.innerHTML = `
+      <div class="hairline"></div>
+      <div class="cta">
+        ${chip()}
+        <h2>${esc(q.title || 'Your next opportunity is **waiting**').replace(/\*\*(.+?)\*\*/g, '<span class="gold">$1</span>')}</h2>
+        <div class="band">
+          <div><div class="site">myariahub.com</div><div class="sub">${esc(q.sub || 'Jobs · Scholarships · Visas · CV tools')}</div></div>
+          <img class="qr" src="/advideo/qr.png" alt="QR"/>
+        </div>
+        <div class="tagline">${esc(q.taglineFa || 'همهٔ فرصت‌ها، به زبان شما')}</div>
+      </div>`;
+  }
+  window.__cardReady = true;
+</script>
+</body>
+</html>

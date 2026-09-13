@@ -71,3 +71,16 @@ server.log
 
 # original Linux postgres data dir (renamed during Windows DB setup)
 /.localpg-linux/
+
+# Ad-video pipeline: regenerable artifacts (scripts are tracked, outputs are not)
+_advideo/tools/
+_advideo/shots/
+_advideo/cards/
+_advideo/vcards/
+_advideo/clips/
+_advideo/rclips/
+_advideo/aud/
+_advideo/spot/
+_advideo/rspot/
+public/advideo/shots/
+public/advideo/vshots/
