@@ -52,13 +52,13 @@ describe('normalizeForCompare', () => {
 
 describe('computeHash (dedupe key)', () => {
   test('stable for identical listings', async () => {
-    const a = { sourceUrl: 'https://x/1', title: 'Job A', organization: 'Org', deadline: '2026-10-01', description: 'desc' };
-    const b = { sourceUrl: 'https://x/1', title: 'Job A', organization: 'Org', deadline: '2026-10-01', description: 'desc' };
+    const a = { sourceUrl: 'https://x/1', sourceName: 'Test', title: 'Job A', organization: 'Org', deadline: '2026-10-01', description: 'desc' };
+    const b = { sourceUrl: 'https://x/1', sourceName: 'Test', title: 'Job A', organization: 'Org', deadline: '2026-10-01', description: 'desc' };
     expect(await computeHash(a)).toBe(await computeHash(b));
   });
   test('changes when the deadline changes (source-site edits must register)', async () => {
-    const a = { sourceUrl: 'https://x/1', title: 'Job A', organization: 'Org', deadline: '2026-10-01', description: 'desc' };
-    const b = { sourceUrl: 'https://x/1', title: 'Job A', organization: 'Org', deadline: '2026-11-01', description: 'desc' };
+    const a = { sourceUrl: 'https://x/1', sourceName: 'Test', title: 'Job A', organization: 'Org', deadline: '2026-10-01', description: 'desc' };
+    const b = { sourceUrl: 'https://x/1', sourceName: 'Test', title: 'Job A', organization: 'Org', deadline: '2026-11-01', description: 'desc' };
     expect(await computeHash(a)).not.toBe(await computeHash(b));
   });
 });

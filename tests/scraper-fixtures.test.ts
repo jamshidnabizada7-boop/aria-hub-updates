@@ -16,8 +16,11 @@ const FIXTURES = join(import.meta.dir, 'fixtures');
 const readFixture = (name: string) => Bun.file(join(FIXTURES, name)).text();
 
 /** A scraper whose network transport is replaced by a fixture. */
-function withFixture(scraper: { fetchText: (url: string, o?: unknown) => Promise<string> }, html: string) {
-  (scraper as unknown as { fetchText: () => Promise<string> }).fetchText = async () => html;
+function withFixture<T extends { parseDetail: (l: RawListing) => Promise<RawListing> }>(
+  scraper: T,
+  html: string,
+): T {
+  (scraper as unknown as { fetchText: (url: string) => Promise<string> }).fetchText = async () => html;
   return scraper;
 }
 
