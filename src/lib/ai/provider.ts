@@ -51,85 +51,61 @@ export interface AIProvider {
 
 let cachedProvider: AIProvider | null | undefined; // undefined = not checked yet
 
-export async function getAIProvider(): Promise<AIProvider | null> {
-  if (cachedProvider !== undefined) return cachedProvider;
-
-  // Priority order: zai (ambient SDK auth) > groq > cerebras > gemini > openrouter
-  const provider = (process.env.AI_PROVIDER || 'zai').toLowerCase();
-
+/**
+ * Build ONE provider instance by name. Returns null when the provider's key
+ * is missing (no-AI mode) or the name is unknown.
+ */
+export async function buildProvider(name: string): Promise<AIProvider | null> {
   try {
-    switch (provider) {
+    switch (name) {
       case 'cerebras': {
-        if (!process.env.CEREBRAS_API_KEY) {
-          console.warn('[ai] CEREBRAS_API_KEY not set — running in no-AI mode.');
-          cachedProvider = null;
-          return null;
-        }
+        if (!process.env.CEREBRAS_API_KEY) return null;
         const { CerebrasProvider } = await import('./providers/cerebras');
-        cachedProvider = new CerebrasProvider();
-        console.log('[ai] Using Cerebras provider');
-        break;
+        return new CerebrasProvider();
       }
       case 'gemini': {
-        if (!process.env.GEMINI_API_KEY) {
-          console.warn('[ai] GEMINI_API_KEY not set — running in no-AI mode.');
-          cachedProvider = null;
-          return null;
-        }
+        if (!process.env.GEMINI_API_KEY) return null;
         const { GeminiProvider } = await import('./providers/gemini');
-        cachedProvider = new GeminiProvider();
-        console.log('[ai] Using Gemini provider');
-        break;
+        return new GeminiProvider();
       }
       case 'groq': {
-        if (!process.env.GROQ_API_KEY) {
-          console.warn('[ai] GROQ_API_KEY not set — running in no-AI mode.');
-          cachedProvider = null;
-          return null;
-        }
+        if (!process.env.GROQ_API_KEY) return null;
         const { GroqProvider } = await import('./providers/groq');
-        cachedProvider = new GroqProvider();
-        console.log('[ai] Using Groq provider (consider llama-3.1-8b-instant for better rate limits)');
-        break;
+        return new GroqProvider();
       }
       case 'openrouter': {
-        if (!process.env.OPENROUTER_API_KEY) {
-          console.warn('[ai] OPENROUTER_API_KEY not set — running in no-AI mode.');
-          cachedProvider = null;
-          return null;
-        }
+        if (!process.env.OPENROUTER_API_KEY) return null;
         const { OpenRouterProvider } = await import('./providers/openrouter');
-        cachedProvider = new OpenRouterProvider();
-        console.log('[ai] Using OpenRouter provider');
-        break;
+        return new OpenRouterProvider();
       }
       case 'zai': {
         // z-ai-web-dev-sdk authenticates ambiently (no key required) in the
         // sandbox environment; on other hosts set ZAI_API_KEY to be explicit.
         const { ZAIProvider } = await import('./providers/zai');
-        cachedProvider = new ZAIProvider();
-        console.log('[ai] Using ZAI provider');
-        break;
+        return new ZAIProvider();
       }
       case 'openai': {
-        if (!process.env.OPENAI_API_KEY) {
-          console.warn('[ai] OPENAI_API_KEY not set — running in no-AI mode.');
-          cachedProvider = null;
-          return null;
-        }
+        if (!process.env.OPENAI_API_KEY) return null;
         const { OpenAIProvider } = await import('./providers/openai');
-        cachedProvider = new OpenAIProvider();
-        break;
+        return new OpenAIProvider();
       }
       default:
-        console.warn(`[ai] Unknown AI_PROVIDER "${provider}" — running in no-AI mode.`);
-        cachedProvider = null;
+        console.warn(`[ai] Unknown AI provider "${name}" — skipped.`);
+        return null;
     }
   } catch (e) {
-    console.error('[ai] Failed to initialize AI provider:', e);
-    cachedProvider = null;
+    console.error(`[ai] Failed to initialize ${name} provider:`, e);
+    return null;
   }
+}
 
+export async function getAIProvider(): Promise<AIProvider | null> {
+  if (cachedProvider !== undefined) return cachedProvider;
+  const provider = (process.env.AI_PROVIDER || 'zai').toLowerCase().trim();
+  const built = await buildProvider(provider);
+  if (built) console.log(`[ai] Using ${provider} provider`);
+  else console.warn(`[ai] AI provider "${provider}" unavailable (missing key?) — running in no-AI mode.`);
+  cachedProvider = built;
   return cachedProvider ?? null;
 }
 

@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { getState, patchState, DEFAULT_SLOTS_AFT, composeCaptionWithLimit, deepLinkOf } from '@/lib/social/publisher';
 import { publishToPlatform } from '@/lib/social/channels';
 import { decryptCredentials, encryptCredentials, maskCredentials } from '@/lib/social/credentials';
+import { getProviderHealth } from '@/lib/ai/failover';
 
 /**
  * GET  /api/admin/automation — status snapshot for the Automation panel:
@@ -69,6 +70,7 @@ export async function GET() {
     queue,
     runs,
     untranslated: counts,
+    aiProviders: getProviderHealth(),
   });
 }
 

@@ -12,8 +12,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   Activity, Bot, CalendarClock, Check, Clock, Facebook, Instagram, Loader2,
-  Play, RefreshCw, Send, Settings2, Twitter, X as XIcon, Zap,
-} from 'lucide-react';
+  Play, RefreshCw, Send, Settings2, Twitter, X as XIcon, Zap, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -48,6 +47,7 @@ interface Status {
   queue: QueueRow[];
   runs: RunRow[];
   untranslated: { opportunities: number; news: number };
+  aiProviders?: { name: string; configured: boolean; cooling: boolean; cooldownSecondsLeft: number; lastError: string | null; usedCount: number }[];
 }
 
 const PLATFORM_META: Record<string, { icon: React.ComponentType<{ className?: string }>; credFields: { key: string; label: string }[] }> = {
@@ -167,6 +167,16 @@ export function AutomationPanel() {
         <div className="mt-3 flex flex-wrap gap-2 text-xs">
           <Badge variant="outline" className="gap-1"><Activity className="h-3 w-3" /> {status.untranslated.opportunities} {t('admin.automation.oppPending')}</Badge>
           <Badge variant="outline" className="gap-1"><Activity className="h-3 w-3" /> {status.untranslated.news} {t('admin.automation.newsPending')}</Badge>
+          {(status.aiProviders ?? []).map((p) => (
+            <Badge
+              key={p.name}
+              variant="outline"
+              className={cn('gap-1', p.configured ? (p.cooling ? 'border-amber-400/60 text-amber-600 dark:text-amber-400' : 'border-emerald-400/60 text-emerald-600 dark:text-emerald-400') : 'text-muted-foreground')}
+              title={p.lastError ?? undefined}
+            >
+              <Sparkles className="h-3 w-3" /> {p.name}: {p.configured ? (p.cooling ? `cooling ${p.cooldownSecondsLeft}s` : 'ready') : 'no key'}
+            </Badge>
+          ))}
           {backoffActive ? (
             <Badge variant="outline" className="border-amber-400/60 text-amber-600 dark:text-amber-400">
               {t('admin.automation.backoffUntil')} {backoffUntil?.toLocaleTimeString?.() ?? ''}
