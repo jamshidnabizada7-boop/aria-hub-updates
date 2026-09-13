@@ -461,6 +461,7 @@ export default async function OpportunitiesPage({
             </div>
           ) : (
             <OpportunityFeed
+              key={[category, q, location, deadlineDays ?? '', sort, showParam ?? '', currentPage].join('|')}
               lang={lang}
               initialItems={effectiveList.items}
               initialTotalPages={effectiveList.totalPages}

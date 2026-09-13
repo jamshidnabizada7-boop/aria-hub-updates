@@ -96,6 +96,8 @@ export function OpportunityFormPanel() {
   const [pageSize] = useState(50);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [sourceFilter, setSourceFilter] = useState('all');
+  const [sources, setSources] = useState<string[]>([]);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -109,19 +111,20 @@ export function OpportunityFormPanel() {
     });
     if (search) params.set('search', search);
     if (categoryFilter !== 'all') params.set('category', categoryFilter);
+    if (statusFilter !== 'all') params.set('status', statusFilter);
+    if (sourceFilter !== 'all') params.set('source', sourceFilter);
     fetch(`/api/admin/crud?${params.toString()}`)
       .then((r) => r.json())
       .then((d) => {
         if (cancelled) return;
-        let rows: Item[] = d.items || [];
-        if (statusFilter !== 'all') rows = rows.filter((x) => x.status === statusFilter);
-        setItems(rows);
-        setTotal(d.total ?? rows.length);
+        setItems(d.items || []);
+        setTotal(d.total ?? (d.items || []).length);
+        if (Array.isArray(d.sources)) setSources(d.sources);
       })
       .catch(() => { if (!cancelled) toast({ title: t('admin.toast.failedLoad'), variant: 'destructive' }); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [page, pageSize, search, categoryFilter, statusFilter, reloadKey, t, toast]);
+  }, [page, pageSize, search, categoryFilter, statusFilter, sourceFilter, reloadKey, t, toast]);
 
   useEffect(() => {
     fetch('/api/admin/crud?model=opportunityCategory&pageSize=100')
@@ -160,6 +163,15 @@ export function OpportunityFormPanel() {
               <SelectItem value="archived">archived</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={sourceFilter} onValueChange={(v) => { setSourceFilter(v); setPage(1); }}>
+            <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All sources</SelectItem>
+              {sources.map((src) => (
+                <SelectItem key={src} value={src}>{src}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setPage(1); }}>
             <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -188,20 +200,24 @@ export function OpportunityFormPanel() {
             <table className="w-full text-sm">
               <thead className="border-b border-border/60 bg-muted/40">
                 <tr>
-                  {['Title', 'Category', 'Status', 'Deadline', 'EN/FA/PS', ''].map((h) => (
+                  {['#', 'Title', 'Source', 'Category', 'Status', 'Deadline', 'EN/FA/PS', ''].map((h) => (
                     <th key={h} className="px-3 py-2.5 text-start font-semibold text-muted-foreground">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {items.map((item) => {
+                {items.map((item, idx) => {
                   const i18n = (item.titleI18n || {}) as Record<string, string>;
                   const coverage = ['en', 'fa', 'ps'].map((l) => (typeof i18n[l] === 'string' && i18n[l].trim() ? l : null));
                   return (
                     <tr key={item.id} className="border-b border-border/40 transition-colors hover:bg-accent/30">
+                      <td className="px-3 py-2.5 text-xs text-muted-foreground">{(page - 1) * pageSize + idx + 1}</td>
                       <td className="max-w-[22rem] px-3 py-2.5">
                         <p dir="auto" className="truncate font-medium">{String(item.title || '')}</p>
                         <p dir="auto" className="truncate text-xs text-muted-foreground">{String(item.organization || '')}</p>
+                      </td>
+                      <td className="max-w-[10rem] truncate px-3 py-2.5 text-xs text-muted-foreground" title={String(item.sourceName || '')}>
+                        {String(item.sourceName || '—')}
                       </td>
                       <td className="px-3 py-2.5 text-xs text-muted-foreground">
                         {(item.category as Category | null)?.name || '—'}
@@ -249,7 +265,7 @@ export function OpportunityFormPanel() {
                   );
                 })}
                 {items.length === 0 && (
-                  <tr><td colSpan={6} className="px-3 py-10 text-center text-sm text-muted-foreground">No opportunities match.</td></tr>
+                  <tr><td colSpan={8} className="px-3 py-10 text-center text-sm text-muted-foreground">No opportunities match.</td></tr>
                 )}
               </tbody>
             </table>

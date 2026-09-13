@@ -257,8 +257,17 @@ export async function GET(req: NextRequest) {
   const pageSize = Math.min(10000, Math.max(1, parseInt(req.nextUrl.searchParams.get('pageSize') || '100', 10)));
   const search = req.nextUrl.searchParams.get('search')?.trim();
   const category = req.nextUrl.searchParams.get('category')?.trim();
+  const status = req.nextUrl.searchParams.get('status')?.trim();
+  const source = req.nextUrl.searchParams.get('source')?.trim();
 
   const where: any = {};
+
+  // Server-side status/source filters — the UI used to filter client-side
+  // over the current page only, which produced empty pages and wrong totals.
+  if (model === 'opportunity') {
+    if (status && status !== 'all' && fields.includes('status')) where.status = status;
+    if (source && source !== 'all' && fields.includes('sourceName')) where.sourceName = source;
+  }
 
   if (model === 'opportunity' && category && category !== 'all') {
     // Category FAMILIES: the UI labels are broad, the DB slugs are granular.
@@ -285,12 +294,14 @@ export async function GET(req: NextRequest) {
 
   if (search) {
     const searchConditions: any[] = [];
-    if (fields.includes('title')) searchConditions.push({ title: { contains: search } });
-    if (fields.includes('name')) searchConditions.push({ name: { contains: search } });
-    if (fields.includes('organization')) searchConditions.push({ organization: { contains: search } });
-    if (fields.includes('email')) searchConditions.push({ email: { contains: search } });
-    if (fields.includes('country')) searchConditions.push({ country: { contains: search } });
-    if (fields.includes('slug')) searchConditions.push({ slug: { contains: search } });
+    const ci = { contains: search, mode: 'insensitive' as const };
+    if (fields.includes('title')) searchConditions.push({ title: ci });
+    if (fields.includes('name')) searchConditions.push({ name: ci });
+    if (fields.includes('organization')) searchConditions.push({ organization: ci });
+    if (fields.includes('email')) searchConditions.push({ email: ci });
+    if (fields.includes('country')) searchConditions.push({ country: ci });
+    if (fields.includes('slug')) searchConditions.push({ slug: ci });
+    if (fields.includes('sourceName')) searchConditions.push({ sourceName: ci });
 
     if (searchConditions.length > 0) {
       if (where.OR) {
@@ -313,11 +324,24 @@ export async function GET(req: NextRequest) {
       }),
       delegate.count({ where: Object.keys(where).length ? where : undefined }),
     ]);
+    // Distinct scrape sources for the opportunity source filter dropdown.
+    let sources: string[] | undefined;
+    if (model === 'opportunity') {
+      const srcRows = await db.opportunity.findMany({
+        where: { sourceName: { not: null } },
+        select: { sourceName: true },
+        distinct: ['sourceName'],
+        orderBy: { sourceName: 'asc' },
+      });
+      sources = srcRows.map((r) => r.sourceName).filter((v): v is string => Boolean(v));
+    }
+
     return NextResponse.json({
       items,
       fields: MODELS[model].fields,
       label: MODELS[model].label,
       statusOptions: MODELS[model].statusOptions,
+      sources,
       total,
       page,
       pageSize,

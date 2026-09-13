@@ -284,8 +284,46 @@ export default async function OpportunityDetailPage({
   const shownFactKeys = new Set([
     'location', 'city', 'category', 'employment type', 'type', 'salary',
     'education', 'experience', 'closing date', 'deadline', 'published',
-    'organization', 'company', 'job type',
+    'organization', 'company', 'job type', 'slug', 'url', 'link',
+    'source', 'sourceurl', 'source name',
   ]);
+  // Raw scraper keys (workType, functionalAreas, …) → human labels.
+  const FACT_LABELS: Record<string, string> = {
+    worktype: 'Work type',
+    functionalareas: 'Functional areas',
+    'functional area': 'Functional areas',
+    probationperiod: 'Probation period',
+    contracttype: 'Contract type',
+    contractduration: 'Contract duration',
+    contractextension: 'Contract extension',
+    referencenumber: 'Reference number',
+    reference: 'Reference number',
+    numberofvacancies: 'Vacancies',
+    vacancies: 'Vacancies',
+    announcementtype: 'Announcement type',
+    salaryrange: 'Salary range',
+    experiencerequired: 'Experience required',
+    'yearsofexperience': 'Years of experience',
+    languages: 'Languages',
+    nationality: 'Nationality',
+    travelrequired: 'Travel required',
+    gender: 'Gender',
+    'education level': 'Education level',
+    submission: 'Submission',
+    submissionemail: 'Submission email',
+    opportunityid: 'Opportunity ID',
+    degree: 'Degree',
+    'no. of opportunity': 'No. of opportunities',
+    'no. of jobs': 'No. of vacancies',
+    'number of fellowships': 'Number of fellowships',
+    duration: 'Duration',
+    languageofinstruction: 'Language of instruction',
+    'application fee required': 'Application fee',
+    fundingtype: 'Funding type',
+    studylevel: 'Study level',
+    hostcountry: 'Host country',
+    hostinstitution: 'Host institution',
+  };
   const keyFactValues = new Set(
     keyFacts.map((f) => f.value.trim().toLowerCase()).filter(Boolean),
   );
@@ -298,9 +336,10 @@ export default async function OpportunityDetailPage({
         ? String(value).trim()
         : '';
     if (!v || v.length > 300) continue;
-    if (shownFactKeys.has(label.trim().toLowerCase())) continue;
+    const key = label.trim().toLowerCase();
+    if (shownFactKeys.has(key)) continue;
     if (keyFactValues.has(v.toLowerCase())) continue;
-    extraFacts.push({ label: label.trim(), value: v });
+    extraFacts.push({ label: FACT_LABELS[key] ?? label.trim(), value: v });
   }
 
   const catLabel = categoryLabel(
@@ -433,6 +472,37 @@ export default async function OpportunityDetailPage({
                 </Card>
               )}
 
+              {/* Scraped fact sheet — remaining import-captured fields, merged
+                  into the top Key Information area per the redesigned layout */}
+              {extraFacts.length > 0 && (
+                <Card className="mt-5 overflow-hidden border-border/70 p-0">
+                  <div className="flex items-center gap-2 border-b border-border/70 bg-muted/40 px-4 py-2.5">
+                    <ListChecks className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+                    <h2 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                      {t('opportunities.keyDetails')}
+                    </h2>
+                  </div>
+                  <dl className="grid grid-cols-1 gap-x-8 px-4 py-2 sm:grid-cols-2">
+                    {extraFacts.map((fact) => (
+                      <div
+                        key={fact.label}
+                        className="flex gap-3 border-b border-border/40 py-2 text-sm last:border-b-0"
+                      >
+                        <dt
+                          dir="auto"
+                          className="w-2/5 shrink-0 font-medium text-foreground/55"
+                        >
+                          {fact.label}
+                        </dt>
+                        <dd dir="auto" className="flex-1 break-words text-foreground/85">
+                          {fact.value}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                </Card>
+              )}
+
               {/* Deadline countdown */}
               {opp.deadline && !expired && daysLeft !== null && countdownTone && (
                 <div className={cn('mt-5 rounded-xl border p-4', countdownTone)} role="status">
@@ -516,37 +586,6 @@ export default async function OpportunityDetailPage({
                     </section>
                   ))}
                 </div>
-              )}
-
-              {/* Scraped fact sheet — every extra field the import captured */}
-              {extraFacts.length > 0 && (
-                <section className="mt-8">
-                  <h2
-                    dir="auto"
-                    className="flex items-center gap-2 text-lg font-bold tracking-tight"
-                  >
-                    <ListChecks className="h-5 w-5 text-primary" aria-hidden="true" />
-                    {t('opportunities.keyDetails')}
-                  </h2>
-                  <dl className="mt-3 grid grid-cols-1 gap-x-8 sm:grid-cols-2">
-                    {extraFacts.map((fact) => (
-                      <div
-                        key={fact.label}
-                        className="flex gap-3 border-b border-border/40 py-2 text-sm"
-                      >
-                        <dt
-                          dir="auto"
-                          className="w-2/5 shrink-0 font-medium text-foreground/55"
-                        >
-                          {fact.label}
-                        </dt>
-                        <dd dir="auto" className="flex-1 text-foreground/85">
-                          {fact.value}
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
-                </section>
               )}
 
               {/* End-of-content ad — after content, before share bar (policy-safe:

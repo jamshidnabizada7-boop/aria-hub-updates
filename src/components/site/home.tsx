@@ -74,6 +74,7 @@ export interface HomeData {
   weeklyScholarship: OpportunityCardData | null;
   /** Latest/featured community success story (homepage social proof teaser). */
   featuredStory: StoryCard | null;
+  liveCounters?: { id: string; label: string; value: number; suffix: string; icon: string }[];
   stats: {
     activeOpportunities: number;
     organizations: number;
@@ -409,7 +410,20 @@ export function Home({ data, lang, home }: { data: SiteData; lang: Lang; home: H
         </section>
 
         {/* C2 — Impact counters (DB: Counter) */}
-        {on('counters') && data.counters.length > 0 && <CountersSection counters={data.counters} />}
+        {on('counters') && (
+          <CountersSection
+            counters={
+              home.liveCounters?.length
+                ? home.liveCounters.map((c) => ({
+                    ...c,
+                    labelI18n: null,
+                    icon: c.icon,
+                    order: 0,
+                  }))
+                : data.counters
+            }
+          />
+        )}
 
         {/* D — Services strip (6 cards) */}
         <ServicesSection

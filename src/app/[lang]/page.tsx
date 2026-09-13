@@ -1,4 +1,5 @@
 import { getSiteData } from '@/lib/get-site';
+import { translate } from '@/lib/i18n';
 import { db } from '@/lib/db';
 import { Home } from '@/components/site/home';
 import { JsonLd } from '@/components/site/json-ld';
@@ -27,7 +28,7 @@ export default async function Page({
     OR: [{ deadline: null }, { deadline: { gte: today } }],
   };
 
-  const [latest, facets, orgRows, closingSoon, spotlight, weeklyScholarship, featuredStory] = await Promise.all([
+  const [latest, facets, orgRows, closingSoon, spotlight, weeklyScholarship, featuredStory, newsCount, countryRows] = await Promise.all([
     listOpportunities({ lang, sort: 'newest', perPage: 8 }),
     getFacets(lang),
     db.opportunity.findMany({
@@ -39,6 +40,12 @@ export default async function Page({
     getDailySpotlight(lang),
     getWeeklyScholarship(lang),
     getFeaturedStoryCard(lang),
+    db.news.count({ where: { status: 'published' } }),
+    db.opportunity.findMany({
+      where: activeWhere,
+      select: { country: true },
+      distinct: ['country'],
+    }),
   ]);
 
   const organizations = orgRows.filter((o) => o.organization?.trim()).length;
@@ -61,6 +68,36 @@ export default async function Page({
             organizations,
             categories: facets.categories.length,
           },
+          liveCounters: [
+            {
+              id: 'live-opps',
+              label: translate(lang, 'home.statOpportunities', { count: facets.totalActive }),
+              value: facets.totalActive,
+              suffix: '+',
+              icon: 'Briefcase',
+            },
+            {
+              id: 'live-orgs',
+              label: translate(lang, 'home.statOrganizations', { count: orgRows.length }),
+              value: orgRows.length,
+              suffix: '+',
+              icon: 'Building2',
+            },
+            {
+              id: 'live-countries',
+              label: translate(lang, 'home.statCountries', { count: countryRows.filter((r) => r.country).length }),
+              value: countryRows.filter((r) => r.country).length,
+              suffix: '',
+              icon: 'MapPin',
+            },
+            {
+              id: 'live-news',
+              label: translate(lang, 'home.statNews', { count: newsCount }),
+              value: newsCount,
+              suffix: '+',
+              icon: 'Newspaper',
+            },
+          ],
         }}
       />
     </>
