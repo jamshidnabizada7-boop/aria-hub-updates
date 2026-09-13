@@ -3,6 +3,7 @@ import { translate } from '@/lib/i18n';
 import { formatDateLong, toEasternDigits } from '@/lib/date-format';
 import { getLocalizedContent } from '@/lib/i18n-content';
 import type { Lang } from '@/lib/lang-route';
+import { resolveTheme } from '@/lib/social/themes';
 
 /**
  * OpportunityPoster — branded 1080×1080 / 1080×1350 social graphic.
@@ -32,25 +33,44 @@ export interface PosterData {
   featured: boolean;
 }
 
-export type PosterSize = 'square' | 'portrait';
+export type PosterSize = 'square' | 'portrait' | 'story';
 
-/** Palette — extracted from the real logo mark. */
-const C = {
-  bgTop: '#141F3D',
-  bgMid: '#283868', // logo navy
-  bgBottom: '#16223F',
-  navyDeep: '#1B2440',
-  gold: '#F8D898', // logo cream-gold
-  goldSoft: 'rgba(248,216,152,0.80)',
-  goldLine: 'rgba(248,216,152,0.42)',
-  goldFaint: 'rgba(248,216,152,0.13)',
-  white: '#FFFFFF',
-  textDim: 'rgba(255,255,255,0.72)',
-  logoSrc: '/images/logo-mark.png',
-};
+/** Hex → rgba() with the original alpha of each legacy token. */
+function rgbaOf(hex: string, alpha: number): string {
+  const n = hex.replace('#', '');
+  const r = parseInt(n.slice(0, 2), 16);
+  const g = parseInt(n.slice(2, 4), 16);
+  const b = parseInt(n.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+/**
+ * Palette for this poster instance — derived from the Studio theme system so
+ * spotlight posters respond to the same theme picker as every other canvas.
+ * Key names match the original hardcoded palette (zero call-site churn).
+ */
+function paletteOf(themeId?: string) {
+  const t = resolveTheme(themeId);
+  return {
+    bgTop: t.bgTop,
+    bgMid: t.bgMid,
+    bgBottom: t.bgBottom,
+    navyDeep: t.deep,
+    gold: t.accent,
+    goldSoft: rgbaOf(t.accent, 0.8),
+    goldLine: rgbaOf(t.accent, 0.42),
+    goldFaint: rgbaOf(t.accent, 0.13),
+    glowA: rgbaOf(t.accent, 0.14),
+    white: t.text,
+    textDim: t.textDim,
+    ctaFrom: t.ctaFrom,
+    ctaTo: t.ctaTo,
+    logoSrc: '/images/logo-mark.png',
+  };
+}
 
 const W = 1080;
-const H: Record<PosterSize, number> = { square: 1080, portrait: 1350 };
+const H: Record<PosterSize, number> = { square: 1080, portrait: 1350, story: 1920 };
 
 function titleSize(title: string): number {
   const n = title.length;
@@ -66,17 +86,20 @@ export function OpportunityPoster({
   lang,
   size = 'square',
   qrDataUrl,
+  themeId,
 }: {
   data: PosterData;
   lang: Lang;
   size?: PosterSize;
   qrDataUrl?: string | null;
+  themeId?: string;
 }) {
   const t = (key: string, params?: Record<string, string | number>) => translate(lang, key, params);
   const rtl = lang !== 'en';
   const h = H[size];
-  const portrait = size === 'portrait';
-  const pad = portrait ? 84 : 72;
+  const portrait = size !== 'square'; // story behaves like portrait-plus
+  const pad = size === 'story' ? 96 : portrait ? 84 : 72;
+  const C = paletteOf(themeId);
 
   const deadline = data.deadline ? new Date(data.deadline) : null;
   const daysLeft = deadline
@@ -127,7 +150,7 @@ export function OpportunityPoster({
           width: 560,
           height: 560,
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(248,216,152,0.14) 0%, rgba(248,216,152,0) 68%)',
+          background: `radial-gradient(circle, ${C.glowA} 0%, rgba(0,0,0,0) 68%)`,
         }}
       />
       <div
@@ -174,7 +197,7 @@ export function OpportunityPoster({
           insetInlineStart: 0,
           width: '100%',
           height: 10,
-          background: `linear-gradient(90deg, ${C.gold} 0%, ${C.gold} 34%, rgba(248,216,152,0.25) 70%, rgba(248,216,152,0.08) 100%)`,
+          background: `linear-gradient(90deg, ${C.gold} 0%, ${C.gold} 34%, ${C.goldSoft} 70%, ${C.goldFaint} 100%)`,
         }}
       />
 
@@ -398,7 +421,7 @@ export function OpportunityPoster({
         style={{
           position: 'relative',
           margin: `0 ${pad}px ${portrait ? 66 : 54}px`,
-          background: `linear-gradient(135deg, ${C.gold} 0%, #F3D08A 100%)`,
+          background: `linear-gradient(135deg, ${C.ctaFrom} 0%, ${C.ctaTo} 100%)`,
           color: C.navyDeep,
           borderRadius: 24,
           padding: '22px 30px',
@@ -452,7 +475,7 @@ export function OpportunityPoster({
           insetInlineStart: 0,
           width: '100%',
           height: 12,
-          background: `linear-gradient(90deg, ${C.gold} 0%, ${C.gold} 55%, rgba(248,216,152,0.35) 100%)`,
+          background: `linear-gradient(90deg, ${C.gold} 0%, ${C.gold} 55%, ${C.goldSoft} 100%)`,
         }}
       />
     </div>

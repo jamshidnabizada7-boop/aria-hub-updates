@@ -7,8 +7,9 @@
  */
 import { useMemo, useEffect, useState } from 'react';
 import QRCode from 'qrcode';
-import { OpportunityPoster, buildPosterData, type PosterSize as _PS } from '@/components/site/opportunity-poster';
+import { OpportunityPoster, buildPosterData } from '@/components/site/opportunity-poster';
 import { SocialCanvas, type PosterSize } from '@/lib/social/templates';
+import { resolveTheme } from '@/lib/social/themes';
 import type { Lang } from '@/lib/i18n-config';
 import type { PostTemplate } from '@/lib/social/brand';
 
@@ -16,6 +17,8 @@ interface RenderProps {
   template: PostTemplate;
   lang: Lang;
   size: PosterSize;
+  themeId?: string;
+  layout?: string;
   title?: string;
   note?: string;
   seriesNo?: number;
@@ -52,7 +55,8 @@ export default function StudioRenderCanvas({ p }: { p?: string }) {
     const url = slug
       ? `https://www.myariahub.com/${props.lang}/opportunities/${slug}`
       : 'https://www.myariahub.com';
-    QRCode.toDataURL(url, { margin: 0, width: 168, color: { dark: '#1B2440', light: '#FFFBF2' } })
+    const th = resolveTheme(props.themeId);
+    QRCode.toDataURL(url, { margin: 0, width: 168, color: { dark: th.qrDark, light: th.qrLight } })
       .then(setQr)
       .catch(() => setQr(null));
   }, [props]);
@@ -69,6 +73,7 @@ export default function StudioRenderCanvas({ p }: { p?: string }) {
             data={buildPosterData(props.posterData, props.lang)}
             lang={props.lang}
             size={props.size || 'square'}
+            themeId={props.themeId}
             qrDataUrl={qr}
           />
         ) : (
@@ -76,6 +81,8 @@ export default function StudioRenderCanvas({ p }: { p?: string }) {
             template={props.template}
             lang={props.lang}
             size={props.size || 'square'}
+            themeId={props.themeId}
+            layout={props.layout}
             title={String(props.title ?? '')}
             note={props.note}
             seriesNo={props.seriesNo}

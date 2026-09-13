@@ -103,6 +103,8 @@ export async function POST(req: NextRequest) {
         }
         if (typeof body.autoImport === 'boolean') patch.autoImport = body.autoImport;
         if (typeof body.autoPublish === 'boolean') patch.autoPublish = body.autoPublish;
+        if (typeof body.studioTheme === 'string' && body.studioTheme) patch.studioTheme = body.studioTheme;
+        if (typeof body.studioLayout === 'string' && body.studioLayout) patch.studioLayout = body.studioLayout;
         const next = await patchState(patch);
         return NextResponse.json({ ok: true, state: next });
       }

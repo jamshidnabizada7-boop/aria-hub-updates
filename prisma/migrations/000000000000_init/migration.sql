@@ -1038,6 +1038,7 @@ CREATE TABLE "VisaCountry" (
     "embassyInfo" TEXT,
     "embassyInfoI18n" JSONB,
     "successRate" TEXT,
+    "guideContent" TEXT,
     "status" TEXT NOT NULL DEFAULT 'published',
     "order" INTEGER NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1220,6 +1221,23 @@ CREATE TABLE "SocialPostQueue" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "SocialPostQueue_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "StudioDesign" (
+    "id" TEXT NOT NULL,
+    "contentRef" TEXT NOT NULL,
+    "forDate" TEXT NOT NULL,
+    "templateType" TEXT NOT NULL,
+    "themeId" TEXT NOT NULL DEFAULT 'midnight',
+    "layout" TEXT NOT NULL DEFAULT 'classic',
+    "size" TEXT NOT NULL DEFAULT 'square',
+    "overrides" JSONB,
+    "captionOverride" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "StudioDesign_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -1566,6 +1584,12 @@ CREATE INDEX "SocialPostQueue_status_idx" ON "SocialPostQueue"("status");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "SocialPostQueue_contentRef_scheduledFor_key" ON "SocialPostQueue"("contentRef", "scheduledFor");
+
+-- CreateIndex
+CREATE INDEX "StudioDesign_forDate_idx" ON "StudioDesign"("forDate");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "StudioDesign_contentRef_forDate_key" ON "StudioDesign"("contentRef", "forDate");
 
 -- CreateIndex
 CREATE INDEX "PipelineRun_kind_startedAt_idx" ON "PipelineRun"("kind", "startedAt");

@@ -1283,6 +1283,23 @@ model SocialPostQueue {
   @@index([status])
 }
 
+model StudioDesign {
+  id            String   @id @default(cuid())
+  contentRef    String // slug / id of the source content
+  forDate       String // YYYY-MM-DD plan date the design applies to
+  templateType  String
+  themeId       String   @default("midnight")
+  layout        String   @default("classic")
+  size          String   @default("square")
+  overrides     Json? // { title?, note?, items?, statValue?, statLabel?, personName?, personMeta?, deadlineDate? }
+  captionOverride Json? // { fa?, ps?, en? } — manual caption text per language
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([contentRef, forDate])
+  @@index([forDate])
+}
+
 model PipelineRun {
   id         String    @id @default(cuid())
   kind       String // tick | import | translate | publish

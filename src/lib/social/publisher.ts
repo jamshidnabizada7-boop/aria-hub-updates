@@ -59,6 +59,8 @@ type AutomationStateShape = {
   translateBatch?: number;
   autoImport?: boolean;
   autoPublish?: boolean;
+  studioTheme?: string;
+  studioLayout?: string;
   translateBackoffUntil?: string | null;
   lastQueueBuildDate?: string | null;
   tickRunning?: boolean;
@@ -99,12 +101,19 @@ function deadlineText(iso: string | null, lang: Lang): string {
   }
 }
 
-export function buildCanvasProps(post: PlanPost, lang: Lang, size: PosterSize): CanvasProps {
+export function buildCanvasProps(
+  post: PlanPost,
+  lang: Lang,
+  size: PosterSize,
+  design?: { themeId?: string; layout?: string },
+): CanvasProps {
   const tr = (key: string, params?: Record<string, string | number>) => translate(lang, key, params);
   const base: CanvasProps = {
     template: post.template,
     lang,
     size,
+    themeId: design?.themeId,
+    layout: design?.layout,
     title: post.title,
     note: post.meta,
   };
@@ -180,10 +189,27 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
   const slots = state.publishTimes?.length ? state.publishTimes : DEFAULT_SLOTS_AFT;
   const captionLangs: Lang[] = state.captionLangs?.length ? state.captionLangs : ['fa', 'ps', 'en'];
 
+  // Studio defaults (theme/layout chosen in the Brand Studio apply to every
+  // automated post unless a per-post StudioDesign override exists).
+  const defaultDesign = {
+    themeId: state.studioTheme,
+    layout: state.studioLayout,
+  };
+
   // Deterministic plan — same order in every language (zip by index).
   const plans = await Promise.all((['fa', 'ps', 'en'] as Lang[]).map((l) => buildDailyPlan(l)));
   const base = plans[0];
   if (!base || base.posts.length === 0) return { created: 0 };
+
+  // Per-post designs saved from the Brand Studio override the defaults.
+  type StudioDesignRow = {
+    contentRef: string; templateType: string; themeId: string; layout: string;
+    size: string; overrides: unknown; captionOverride: unknown;
+  };
+  const designs = (await db.studioDesign
+    .findMany({ where: { forDate: todayUtc } })
+    .catch(() => [] as StudioDesignRow[])) as StudioDesignRow[];
+  const designByRef = new Map<string, StudioDesignRow>(designs.map((d) => [d.contentRef, d]));
 
   const rows: {
     scheduledFor: Date; templateType: string; contentRef: string | null;
@@ -205,11 +231,16 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
     const primaryIdx = (['fa', 'ps', 'en'] as Lang[]).indexOf(primary);
     const primaryPost = plans[primaryIdx]?.posts[idx] ?? post;
     const ref = post.opp?.slug ?? post.news?.slug ?? post.idea?.id ?? post.story?.id ?? post.stat?.labelKey ?? null;
+    if (ref && designByRef.has(ref)) {
+      // A saved StudioDesign owns this post's queue row for today (created via
+      // the studio save flow) — building the plan row as well would double-post.
+      return;
+    }
     rows.push({
       scheduledFor,
       templateType: post.template,
       contentRef: ref,
-      contentJson: buildCanvasProps(primaryPost, primary, 'square'),
+      contentJson: buildCanvasProps(primaryPost, primary, 'square', defaultDesign),
       captionJson: captions,
     });
   });
@@ -237,7 +268,8 @@ async function renderQueueImage(baseUrl: string, props: CanvasProps): Promise<{ 
       executablePath: exe,
       args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
     });
-    const page = await browser.newPage({ viewport: { width: 1180, height: 1500 } });
+    const vh = props.size === 'story' ? 2100 : props.size === 'portrait' ? 1500 : 1180;
+    const page = await browser.newPage({ viewport: { width: 1180, height: vh } });
     const qs = encodeURIComponent(JSON.stringify(props));
     const token = process.env.SOCIAL_RENDER_TOKEN ? `&t=${encodeURIComponent(process.env.SOCIAL_RENDER_TOKEN)}` : '';
     await page.goto(`${baseUrl}/fa/studio-render?p=${qs}${token}`, { waitUntil: 'networkidle', timeout: 45000 });

@@ -18,11 +18,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlarmClock, BarChart3, CalendarDays, Check, Copy, Download, Eye, GraduationCap,
-  Lightbulb, Loader2, Newspaper, Palette, Quote, RefreshCw, Search, Sparkles, Star, Wand2,
-} from 'lucide-react';
+  Lightbulb, Loader2, Newspaper, Palette, Quote, RefreshCw, Search, Sparkles, Star, Wand2, Play } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import QRCode from 'qrcode';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -39,6 +39,10 @@ import { toEasternDigits, formatDateLong } from '@/lib/date-format';
 import type { Lang } from '@/lib/lang-route';
 import { OpportunityPoster, buildPosterData } from '@/components/site/opportunity-poster';
 import { SocialCanvas, type PosterSize } from '@/lib/social/templates';
+import {
+  STUDIO_THEME_LIST, LAYOUTS, resolveTheme, canvasHeight,
+  type StudioThemeId, type StudioLayout,
+} from '@/lib/social/themes';
 import { TEMPLATE_DEFS, type PostTemplate } from '@/lib/social/brand';
 import { buildCaption, type CaptionInput } from '@/lib/social/captions';
 import type { DailyPlan, PlanIdea, PlanNews, PlanOpp, PlanPost, PlanStat, PlanStory } from '@/lib/social/plan';
@@ -125,13 +129,18 @@ export function BrandStudioPanel() {
   // plan pools). Typing only narrows the list server-side.
   const searchMode = labTemplate === 'spotlight' || labTemplate === 'deadline';
 
-  const [captionOverrides, setCaptionOverrides] = useState<Record<string, { caption: string; source: 'template' | 'ai' }>>({});
+  const [captionOverrides, setCaptionOverrides] = useState<Record<string, { caption: string; source: 'template' | 'ai' | 'manual' }>>({});
   const [aiBusyKey, setAiBusyKey] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const canvasWrapRef = useRef<HTMLDivElement>(null);
   const fetchSeq = useRef(0);
+  const [themeId, setThemeId] = useState<StudioThemeId>('midnight');
+  const [layout, setLayout] = useState<StudioLayout>('classic');
+  const [overrides, setOverrides] = useState<Record<string, Record<string, unknown>>>({});
+  const [savingDesign, setSavingDesign] = useState(false);
+  const [publishingDesign, setPublishingDesign] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
   const fetchPlan = useCallback(async () => {
@@ -250,6 +259,16 @@ export function BrandStudioPanel() {
     return plan.posts.find((p) => p.key === selectedKey) ?? plan.posts[0] ?? null;
   }, [tab, labPost, plan, selectedKey]);
 
+  // ── per-post content overrides (reset when switching posts) ───────────────
+  const activeOverrides = (activePost && overrides[activePost.key]) || {};
+  const setOverride = (key: string, value: unknown) => {
+    if (!activePost) return;
+    setOverrides((prev) => ({
+      ...prev,
+      [activePost.key]: { ...prev[activePost.key], [key]: value },
+    }));
+  };
+
   // ── caption for the active post (override > deterministic) ────────────────
   const activeCaption = useMemo(() => {
     if (!activePost) return '';
@@ -274,13 +293,14 @@ export function BrandStudioPanel() {
     } else if (activePost.template === 'story') {
       url = `https://www.myariahub.com/${seg}/success-stories`;
     }
-    QRCode.toDataURL(url, { margin: 0, width: 168, color: { dark: '#1B2440', light: '#FFFBF2' } })
+    const th = resolveTheme(themeId);
+    QRCode.toDataURL(url, { margin: 0, width: 168, color: { dark: th.qrDark, light: th.qrLight } })
       .then((u) => !cancelled && setQrDataUrl(u))
       .catch(() => !cancelled && setQrDataUrl(null));
     return () => {
       cancelled = true;
     };
-  }, [activePost, lang]);
+  }, [activePost, lang, themeId]);
 
   // ── actions ───────────────────────────────────────────────────────────────
   const copyCaption = useCallback(async () => {
@@ -319,14 +339,96 @@ export function BrandStudioPanel() {
     }
   }, [activePost, aiBusyKey, lang, loc, tr, t, toast]);
 
+  const todayIso = () => new Date().toISOString().slice(0, 10);
+
+  const designPayload = useCallback(() => {
+    if (!activePost) return null;
+    return {
+      action: 'save',
+      design: {
+        contentRef: activePost.key,
+        forDate: todayIso(),
+        templateType: activePost.template,
+        themeId,
+        layout,
+        size,
+        overrides: activeOverrides,
+      },
+      contentJson: socialPropsFor(activePost, lang, size, qrDataUrl, loc, tr, { themeId, layout, overrides: activeOverrides }),
+      captionJson: { [lang]: activeCaption },
+    };
+  }, [activePost, themeId, layout, size, activeOverrides, lang, qrDataUrl, loc, tr, activeCaption]);
+
+  const saveDesign = useCallback(async (): Promise<boolean> => {
+    const payload = designPayload();
+    if (!payload) return false;
+    setSavingDesign(true);
+    try {
+      const res = await fetch('/api/admin/studio/design', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || 'save failed');
+      toast({ title: t('admin.studio.saved') });
+      return true;
+    } catch (e) {
+      toast({ title: (e instanceof Error ? e.message : 'Save failed'), variant: 'destructive' });
+      return false;
+    } finally {
+      setSavingDesign(false);
+    }
+  }, [designPayload, t, toast]);
+
+  const publishDesign = useCallback(async () => {
+    const payload = designPayload();
+    if (!payload) return;
+    setPublishingDesign(true);
+    try {
+      const saveRes = await fetch('/api/admin/studio/design', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const saved = await saveRes.json();
+      if (!saveRes.ok || !saved.ok || !saved.row?.id) throw new Error(saved.error || 'save failed');
+      const pubRes = await fetch('/api/admin/automation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'publish-now', id: saved.row.id, force: true }),
+      });
+      const pub = await pubRes.json();
+      if (!pubRes.ok || !pub.ok) throw new Error(pub.error || 'publish failed');
+      toast({ title: t('admin.automation.publishSent') });
+    } catch (e) {
+      toast({ title: (e instanceof Error ? e.message : 'Publish failed'), variant: 'destructive' });
+    } finally {
+      setPublishingDesign(false);
+    }
+  }, [designPayload, t, toast]);
+
+  const setAutomationDefault = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/automation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save-state', studioTheme: themeId, studioLayout: layout }),
+      });
+      if (!res.ok) throw new Error('failed');
+      toast({ title: t('admin.studio.defaultSet') });
+    } catch {
+      toast({ title: 'Failed', variant: 'destructive' });
+    }
+  }, [themeId, layout, t, toast]);
+
   const downloadPng = useCallback(async () => {
     const node = canvasWrapRef.current?.firstElementChild as HTMLElement | null;
     if (!node || !activePost) return;
     setExporting(true);
     try {
       const w = 1080;
-      const h = size === 'portrait' ? 1350 : 1080;
-      await toPng(node, { pixelRatio: 1, width: w, height: h, cacheBust: true });
+      const h = canvasHeight(size);
       const url = await toPng(node, { pixelRatio: 1, width: w, height: h, cacheBust: true });
       const a = document.createElement('a');
       const code = lang.toUpperCase();
@@ -401,10 +503,12 @@ export function BrandStudioPanel() {
         },
         lang,
       );
-      return <OpportunityPoster data={data} lang={lang} size={size} qrDataUrl={qrDataUrl} />;
+      if (activeOverrides.title) data.title = activeOverrides.title as string;
+      if (activeOverrides.deadlineDate) data.deadline = activeOverrides.deadlineDate as string;
+      return <OpportunityPoster data={data} lang={lang} size={size} themeId={themeId} qrDataUrl={qrDataUrl} />;
     }
-    return <SocialCanvas {...socialPropsFor(activePost, lang, size, qrDataUrl, loc, tr)} />;
-  }, [activePost, lang, size, qrDataUrl, loc, tr]);
+    return <SocialCanvas {...socialPropsFor(activePost, lang, size, qrDataUrl, loc, tr, { themeId, layout, overrides: activeOverrides })} />;
+  }, [activePost, lang, size, qrDataUrl, loc, tr, themeId, layout, activeOverrides]);
 
   return (
     <div className="space-y-4">
@@ -455,6 +559,7 @@ export function BrandStudioPanel() {
             <SelectContent>
               <SelectItem value="square">{t('admin.studio.sizeSquare')}</SelectItem>
               <SelectItem value="portrait">{t('admin.studio.sizePortrait')}</SelectItem>
+              <SelectItem value="story">{t('admin.studio.sizeStory')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -638,7 +743,157 @@ export function BrandStudioPanel() {
                     {captionSource === 'ai' ? 'AI' : 'Brand'}
                   </Badge>
                 </div>
-                <div className="flex items-center gap-1.5">
+                {/* design controls + content editing */}
+              <div className="border-t border-border/60 px-4 py-4 space-y-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-1.5" role="group" aria-label="Theme">
+                    {STUDIO_THEME_LIST.map((th) => (
+                      <button
+                        key={th.id}
+                        type="button"
+                        onClick={() => setThemeId(th.id)}
+                        aria-pressed={themeId === th.id}
+                        title={th.label}
+                        className={cn(
+                          'h-8 w-8 rounded-full border-2 transition-transform',
+                          themeId === th.id ? 'border-primary scale-110' : 'border-border hover:scale-105',
+                        )}
+                        style={{ background: `linear-gradient(135deg, ${th.bgMid} 0%, ${th.bgBottom} 60%, ${th.accent} 130%)` }}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-1" role="group" aria-label="Layout">
+                    {LAYOUTS.map((l) => (
+                      <button
+                        key={l.id}
+                        type="button"
+                        onClick={() => setLayout(l.id)}
+                        aria-pressed={layout === l.id}
+                        className={cn(
+                          'rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-colors',
+                          layout === l.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground',
+                        )}
+                      >
+                        {l.label}
+                      </button>
+                    ))}
+                  </div>
+                  <Button
+                    size="sm" variant="outline" className="h-8 gap-1 text-[11px]"
+                    disabled={savingDesign}
+                    onClick={setAutomationDefault}
+                    title="Automated posts will use this theme + layout"
+                  >
+                    Set as default
+                  </Button>
+                </div>
+
+                {/* content editing */}
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <Label className="text-[10px] text-muted-foreground">Title</Label>
+                    <Input
+                      className="h-8 text-xs" dir="auto"
+                      value={String(activeOverrides.title ?? activePost.title ?? '')}
+                      onChange={(e) => setOverride('title', e.target.value)}
+                    />
+                  </div>
+                  {activePost.template === 'deadline' && (
+                    <div>
+                      <Label className="text-[10px] text-muted-foreground">Deadline date</Label>
+                      <Input
+                        type="date" className="h-8 text-xs"
+                        value={String(activeOverrides.deadlineDate ?? activePost.opp?.deadline ?? '')}
+                        onChange={(e) => setOverride('deadlineDate', e.target.value)}
+                      />
+                    </div>
+                  )}
+                  {(activePost.template === 'tip' || activePost.template === 'news' || activePost.template === 'promo') && (
+                    <div className="sm:col-span-2">
+                      <Label className="text-[10px] text-muted-foreground">Note</Label>
+                      <Input
+                        className="h-8 text-xs" dir="auto"
+                        value={String(activeOverrides.note ?? activePost.meta ?? '')}
+                        onChange={(e) => setOverride('note', e.target.value)}
+                      />
+                    </div>
+                  )}
+                  {activePost.template === 'promo' && (
+                    <div className="sm:col-span-2 grid gap-2">
+                      {[0, 1, 2].map((i) => {
+                        const items = Array.isArray(activeOverrides.items) ? (activeOverrides.items as unknown[]).map(String) : [];
+                        return (
+                          <Input
+                            key={i}
+                            className="h-8 text-xs" dir="auto"
+                            placeholder={`Checklist item ${i + 1}`}
+                            value={items[i] ?? ''}
+                            onChange={(e) => {
+                              const next = [...items];
+                              while (next.length < 3) next.push('');
+                              next[i] = e.target.value;
+                              setOverride('items', next);
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+                  {activePost.template === 'stat' && (
+                    <>
+                      <div>
+                        <Label className="text-[10px] text-muted-foreground">Stat value</Label>
+                        <Input
+                          className="h-8 text-xs" dir="ltr"
+                          value={String(activeOverrides.statValue ?? '')}
+                          onChange={(e) => setOverride('statValue', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-[10px] text-muted-foreground">Stat label</Label>
+                        <Input
+                          className="h-8 text-xs" dir="auto"
+                          value={String(activeOverrides.statLabel ?? '')}
+                          onChange={(e) => setOverride('statLabel', e.target.value)}
+                        />
+                      </div>
+                    </>
+                  )}
+                  {activePost.template === 'story' && (
+                    <>
+                      <div>
+                        <Label className="text-[10px] text-muted-foreground">Person name</Label>
+                        <Input
+                          className="h-8 text-xs" dir="auto"
+                          value={String(activeOverrides.personName ?? activePost.meta ?? '')}
+                          onChange={(e) => setOverride('personName', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-[10px] text-muted-foreground">Person detail</Label>
+                        <Input
+                          className="h-8 text-xs" dir="auto"
+                          value={String(activeOverrides.personMeta ?? '')}
+                          onChange={(e) => setOverride('personMeta', e.target.value)}
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Button size="sm" variant="outline" className="h-8 gap-1.5 px-2.5" disabled={savingDesign} onClick={saveDesign}>
+                    {savingDesign ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Check className="h-3.5 w-3.5" aria-hidden="true" />}
+                    <span className="hidden sm:inline">Save design</span>
+                  </Button>
+                  <Button size="sm" className="h-8 gap-1.5 px-2.5" disabled={publishingDesign} onClick={publishDesign}>
+                    {publishingDesign ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Play className="h-3.5 w-3.5" aria-hidden="true" />}
+                    <span className="hidden sm:inline">Design → publish now</span>
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5">
                   <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-2.5" onClick={copyCaption}>
                     {copiedKey === activePost.key ? <Check className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}
                     <span className="hidden sm:inline">{t('admin.studio.copy')}</span>
@@ -653,12 +908,19 @@ export function BrandStudioPanel() {
                   </Button>
                 </div>
               </div>
-              <pre
+              <textarea
                 dir="auto"
-                className="max-h-52 overflow-y-auto whitespace-pre-wrap px-4 py-3 font-sans text-[13px] leading-relaxed"
-              >
-                {activeCaption}
-              </pre>
+                value={activeCaption}
+                onChange={(e) =>
+                  activePost &&
+                  setCaptionOverrides((prev) => ({
+                    ...prev,
+                    [activePost.key]: { caption: e.target.value, source: 'manual' },
+                  }))
+                }
+                rows={6}
+                className="max-h-52 min-h-[120px] w-full resize-y overflow-y-auto whitespace-pre-wrap bg-transparent px-4 py-3 font-sans text-[13px] leading-relaxed outline-none"
+              />
             </div>
           ) : null}
         </div>
@@ -877,17 +1139,29 @@ function socialPropsFor(
   qrDataUrl: string | null,
   loc: Loc,
   tr: Tr,
+  design?: {
+    themeId: StudioThemeId;
+    layout: StudioLayout;
+    overrides: Record<string, unknown>;
+  },
 ): Parameters<typeof SocialCanvas>[0] {
-  const base = { template: post.template, lang, size, qrDataUrl, title: post.title };
+  const o = design?.overrides ?? {};
+  const title = typeof o.title === 'string' && o.title.trim() ? o.title : post.title;
+  const noteOverride = typeof o.note === 'string' && o.note.trim() ? o.note : null;
+  const deadlineOverride = typeof o.deadlineDate === 'string' && o.deadlineDate ? o.deadlineDate : null;
+  const base = {
+    template: post.template, lang, size, qrDataUrl,
+    themeId: design?.themeId, layout: design?.layout, title,
+  };
   switch (post.template) {
     case 'deadline':
       return {
         ...base,
-        deadlineDate: post.opp?.deadline ?? null,
-        note: [post.opp?.organization, post.opp?.country].filter(Boolean).join(' • ') || undefined,
+        deadlineDate: deadlineOverride ?? post.opp?.deadline ?? null,
+        note: noteOverride ?? ([post.opp?.organization, post.opp?.country].filter(Boolean).join(' • ') || undefined),
       };
     case 'tip':
-      return { ...base, seriesNo: post.seriesNo ?? 1 };
+      return { ...base, seriesNo: post.seriesNo ?? 1, note: noteOverride ?? undefined };
     case 'quote':
       return base;
     case 'promo':
@@ -896,18 +1170,27 @@ function socialPropsFor(
         checklist: [tr('social.post.promoCheck1'), tr('social.post.promoCheck2'), tr('social.post.promoCheck3')],
       };
     case 'news':
-      return { ...base, note: post.meta, newsDate: post.news?.publishedAt ?? null };
+      return { ...base, note: noteOverride ?? post.meta, newsDate: post.news?.publishedAt ?? null };
     case 'stat':
       return {
         ...base,
         stat: { value: post.stat?.value ?? '', label: tr(post.stat?.labelKey ?? ''), sub: tr(post.stat?.subKey ?? '') },
       };
-    case 'story':
+    case 'story': {
+      const personName = typeof o.personName === 'string' && o.personName.trim() ? o.personName : post.meta;
       return {
         ...base,
         note: undefined,
-        person: post.meta ? { name: post.meta, meta: [post.story?.program, post.story?.country].filter(Boolean).join(' • ') } : undefined,
+        person: personName
+          ? {
+              name: personName,
+              meta: typeof o.personMeta === 'string' && o.personMeta.trim()
+                ? o.personMeta
+                : [post.story?.program, post.story?.country].filter(Boolean).join(' • '),
+            }
+          : undefined,
       };
+    }
     default:
       return base;
   }
