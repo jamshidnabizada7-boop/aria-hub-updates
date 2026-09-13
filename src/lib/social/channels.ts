@@ -1,16 +1,23 @@
 /**
  * Social channel adapters — publish a ready post to each platform.
  *
- * Every adapter is fail-soft: it returns { ok, error? } and NEVER throws.
- * Credentials live in the PublishChannel.credentials JSON:
+ * Every adapter is fail-soft: it returns a PublishResult and NEVER throws.
+ * Beyond ok/error, adapters report:
+ *   id/permalink   — the platform post identifiers, persisted by the publisher
+ *                    so retries can reconcile instead of double-posting
+ *   downgraded     — the image post failed but a text-only post went out
+ *   rateLimited    — platform throttling → skip this channel for the run
+ *   tokenExpired   — reauthorization needed → channel disabled + admin alert
+ *
+ * Credentials live in the (encrypted at rest) PublishChannel.credentials JSON:
  *   telegram  → { botToken, chatId }
  *   facebook  → { pageId, accessToken }
  *   x         → { accessToken, apiSecret? }   (OAuth2 user-context token)
  *   instagram → { igUserId, accessToken }     (Graph API container flow)
  *
- * Images are passed as PUBLIC urls (https://www.myariahub.com/generated-posts/…)
- * — required by Facebook/Instagram/Telegram-by-url. When only a local file
- * exists, Telegram uses multipart upload; others fall back to text-only.
+ * Images are passed as PUBLIC urls (https://…/generated-posts/…) — required
+ * by Facebook/Instagram/Telegram-by-url. When only a local file exists,
+ * Telegram uses multipart upload; others fall back to text-only.
  */
 
 export interface PublishInput {
@@ -23,9 +30,19 @@ export interface PublishInput {
 export interface PublishResult {
   ok: boolean;
   error?: string;
+  id?: string | null;
+  permalink?: string | null;
+  /** image post failed but a text-only post went out — surfaced to admins */
+  downgraded?: string;
+  /** platform throttling — skip this channel for the rest of the run */
+  rateLimited?: boolean;
+  /** credentials rejected — channel needs reauthorization */
+  tokenExpired?: boolean;
 }
 
 const TIMEOUT_MS = 20000;
+/** IG containers can take ~15-30s to finish processing before media_publish. */
+const IG_STATUS_TIMEOUT_MS = 30000;
 
 async function safeFetch(url: string, init: RequestInit & { body?: BodyInit | undefined } = {}): Promise<{ ok: boolean; status: number; json: Record<string, unknown> | null; text: string }> {
   const ctrl = new AbortController();
@@ -43,6 +60,27 @@ async function safeFetch(url: string, init: RequestInit & { body?: BodyInit | un
 
 const errOf = (e: unknown) => (e instanceof Error ? e.message : String(e)).slice(0, 240);
 
+/** Best-effort permalink lookup for a Graph-API post id. */
+async function graphPermalink(id: string, accessToken: string): Promise<string | null> {
+  try {
+    const r = await safeFetch(`https://graph.facebook.com/v21.0/${encodeURIComponent(id)}?fields=permalink&access_token=${encodeURIComponent(accessToken)}`);
+    return (r.json as { permalink?: string } | null)?.permalink ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Classify a Graph API error payload into recovery hints:
+ *  190 → invalid/expired token; 4/17/32/613 (+HTTP 429/32) → throttling.
+ */
+function classifyGraph(json: Record<string, unknown> | null, status: number): { rateLimited?: boolean; tokenExpired?: boolean } {
+  const code = (json as { error?: { code?: number; error_subcode?: number } } | null)?.error?.code;
+  if (code === 190) return { tokenExpired: true };
+  if (status === 429 || code === 4 || code === 17 || code === 32 || code === 613) return { rateLimited: true };
+  return {};
+}
+
 // ── Telegram ─────────────────────────────────────────────────────────────────
 async function publishTelegram(creds: Record<string, unknown>, input: PublishInput): Promise<PublishResult> {
   const botToken = String(creds.botToken || '');
@@ -50,6 +88,7 @@ async function publishTelegram(creds: Record<string, unknown>, input: PublishInp
   if (!botToken || !chatId) return { ok: false, error: 'telegram: missing botToken/chatId' };
   const api = (m: string) => `https://api.telegram.org/bot${botToken}/${m}`;
   try {
+    let last: PublishResult | null = null;
     if (input.imagePath) {
       // multipart local-file upload
       const { readFile } = await import('node:fs/promises');
@@ -59,7 +98,9 @@ async function publishTelegram(creds: Record<string, unknown>, input: PublishInp
       fd.append('caption', input.caption.slice(0, 1024));
       fd.append('photo', new Blob([new Uint8Array(buf)], { type: 'image/png' }), 'post.png');
       const r = await safeFetch(api('sendPhoto'), { method: 'POST', body: fd });
-      if (r.ok) return { ok: true };
+      const j = r.json as { result?: { message_id?: number } } | null;
+      if (r.ok) return { ok: true, id: j?.result?.message_id ? String(j.result.message_id) : null };
+      last = { ok: false, error: `telegram: ${r.status} sendPhoto failed` };
       // fall through to text
     } else if (input.imageUrl) {
       const r = await safeFetch(api('sendPhoto'), {
@@ -67,16 +108,23 @@ async function publishTelegram(creds: Record<string, unknown>, input: PublishInp
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chat_id: chatId, photo: input.imageUrl, caption: input.caption.slice(0, 1024) }),
       });
-      if (r.ok) return { ok: true };
+      const j = r.json as { result?: { message_id?: number } } | null;
+      if (r.ok) return { ok: true, id: j?.result?.message_id ? String(j.result.message_id) : null };
+      last = { ok: false, error: `telegram: ${r.status} sendPhoto failed` };
     }
     const r2 = await safeFetch(api('sendMessage'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ chat_id: chatId, text: input.caption.slice(0, 4096), disable_web_preview: false }),
     });
-    if (r2.ok) return { ok: true };
-    const desc = (r2.json as { description?: string } | null)?.description || r2.text.slice(0, 160);
-    return { ok: false, error: `telegram: ${r2.status} ${desc}` };
+    if (r2.ok) {
+      const j = r2.json as { result?: { message_id?: number } } | null;
+      return { ok: true, id: j?.result?.message_id ? String(j.result.message_id) : null, ...(last?.error ? { downgraded: last.error } : {}) };
+    }
+    const desc = (r2.json as { description?: string; parameters?: { retry_after?: number } } | null);
+    if (r2.status === 429) return { ok: false, error: `telegram: 429 ${desc?.description || 'rate limited'}`, rateLimited: true };
+    if (/401|Unauthorized/i.test(`${r2.status} ${desc?.description || ''}`)) return { ok: false, error: `telegram: ${desc?.description || 'unauthorized — check bot token'}`, tokenExpired: true };
+    return { ok: false, error: `telegram: ${r2.status} ${desc?.description || r2.text.slice(0, 160)}` };
   } catch (e) {
     return { ok: false, error: `telegram: ${errOf(e)}` };
   }
@@ -88,22 +136,48 @@ async function publishFacebook(creds: Record<string, unknown>, input: PublishInp
   const accessToken = String(creds.accessToken || '');
   if (!pageId || !accessToken) return { ok: false, error: 'facebook: missing pageId/accessToken' };
   try {
+    let photoError: string | null = null;
     if (input.imageUrl) {
       const r = await safeFetch(`https://graph.facebook.com/v21.0/${pageId}/photos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: input.imageUrl, caption: input.caption.slice(0, 5000), access_token: accessToken }),
       });
-      if (r.ok) return { ok: true };
+      if (r.ok) {
+        const j = r.json as { id?: string; post_id?: string } | null;
+        const id = j?.post_id || j?.id || null;
+        return { ok: true, id, permalink: id ? await graphPermalink(id, accessToken) : null };
+      }
+      const cls = classifyGraph(r.json, r.status);
+      const msg = (r.json as { error?: { message?: string } } | null)?.error?.message || r.text.slice(0, 160);
+      if (cls.tokenExpired) return { ok: false, error: `facebook: token rejected — ${msg}`, tokenExpired: true };
+      if (cls.rateLimited) return { ok: false, error: `facebook: rate limited — ${msg}`, rateLimited: true };
+      // Fall through to a text-only feed post, but SAY so — silent downgrades
+      // used to ship image-less posts with no trace.
+      photoError = msg;
     }
     const r2 = await safeFetch(`https://graph.facebook.com/v21.0/${pageId}/feed`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: input.caption.slice(0, 5000), link: input.link || undefined, access_token: accessToken }),
     });
-    if (r2.ok) return { ok: true };
+    if (r2.ok) {
+      const j = r2.json as { id?: string } | null;
+      const id = j?.id || null;
+      return {
+        ok: true,
+        id,
+        permalink: id ? await graphPermalink(id, accessToken) : null,
+        ...(photoError ? { downgraded: `image failed (${photoError}) — posted text-only` } : {}),
+      };
+    }
+    const cls2 = classifyGraph(r2.json, r2.status);
     const err = (r2.json as { error?: { message?: string } } | null)?.error?.message || r2.text.slice(0, 160);
-    return { ok: false, error: `facebook: ${r2.status} ${err}` };
+    return {
+      ok: false,
+      error: `facebook: ${r2.status} ${err}`,
+      ...cls2,
+    };
   } catch (e) {
     return { ok: false, error: `facebook: ${errOf(e)}` };
   }
@@ -119,7 +193,13 @@ async function publishX(creds: Record<string, unknown>, input: PublishInput): Pr
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
       body: JSON.stringify({ text: input.caption.slice(0, 280) }),
     });
-    if (r.ok) return { ok: true };
+    if (r.ok) {
+      const j = r.json as { data?: { id?: string } } | null;
+      const id = j?.data?.id || null;
+      return { ok: true, id, permalink: id ? `https://x.com/i/web/status/${id}` : null };
+    }
+    if (r.status === 429) return { ok: false, error: 'x: 429 rate limited', rateLimited: true };
+    if (r.status === 401 || r.status === 403) return { ok: false, error: `x: ${r.status} ${r.text.slice(0, 120)}`, tokenExpired: true };
     return { ok: false, error: `x: ${r.status} ${r.text.slice(0, 160)}` };
   } catch (e) {
     return { ok: false, error: `x: ${errOf(e)}` };
@@ -127,11 +207,26 @@ async function publishX(creds: Record<string, unknown>, input: PublishInput): Pr
 }
 
 // ── Instagram (Graph container flow — image required) ────────────────────────
+/** Poll the container until FINISHED — publishing an unfinished container
+ *  used to fail with "media not ready" intermittently. */
+async function waitInstagramReady(creationId: string, accessToken: string): Promise<{ ready: boolean; error?: string }> {
+  const deadline = Date.now() + IG_STATUS_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 3000));
+    const r = await safeFetch(`https://graph.facebook.com/v21.0/${encodeURIComponent(creationId)}?fields=status_code&access_token=${encodeURIComponent(accessToken)}`);
+    const code = (r.json as { status_code?: string } | null)?.status_code;
+    if (code === 'FINISHED') return { ready: true };
+    if (code === 'ERROR' || code === 'EXPIRED') return { ready: false, error: `instagram: container ${code}` };
+    // IN_PROGRESS / IN_PROGRESS-keep polling
+  }
+  return { ready: false, error: 'instagram: container not FINISHED in time' };
+}
+
 async function publishInstagram(creds: Record<string, unknown>, input: PublishInput): Promise<PublishResult> {
   const igUserId = String(creds.igUserId || '');
   const accessToken = String(creds.accessToken || '');
   if (!igUserId || !accessToken) return { ok: false, error: 'instagram: missing igUserId/accessToken' };
-  if (!input.imageUrl) return { ok: false, error: 'instagram: image required' };
+  if (!input.imageUrl) return { ok: false, error: 'instagram: image required (render failed?)' };
   try {
     const c = await safeFetch(`https://graph.facebook.com/v21.0/${igUserId}/media`, {
       method: 'POST',
@@ -139,14 +234,24 @@ async function publishInstagram(creds: Record<string, unknown>, input: PublishIn
       body: JSON.stringify({ image_url: input.imageUrl, caption: input.caption.slice(0, 2200), access_token: accessToken }),
     });
     const creationId = (c.json as { id?: string } | null)?.id;
-    if (!c.ok || !creationId) return { ok: false, error: `instagram: container ${c.status} ${c.text.slice(0, 120)}` };
+    if (!c.ok || !creationId) {
+      const cls = classifyGraph(c.json, c.status);
+      return { ok: false, error: `instagram: container ${c.status} ${c.text.slice(0, 120)}`, ...cls };
+    }
+    const wait = await waitInstagramReady(creationId, accessToken);
+    if (!wait.ready) return { ok: false, error: wait.error };
     const p = await safeFetch(`https://graph.facebook.com/v21.0/${igUserId}/media_publish`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ creation_id: creationId, access_token: accessToken }),
     });
-    if (p.ok) return { ok: true };
-    return { ok: false, error: `instagram: publish ${p.status} ${p.text.slice(0, 120)}` };
+    if (p.ok) {
+      const j = p.json as { id?: string } | null;
+      const id = j?.id || null;
+      return { ok: true, id, permalink: id ? await graphPermalink(id, accessToken) : null };
+    }
+    const cls = classifyGraph(p.json, p.status);
+    return { ok: false, error: `instagram: publish ${p.status} ${p.text.slice(0, 120)}`, ...cls };
   } catch (e) {
     return { ok: false, error: `instagram: ${errOf(e)}` };
   }
@@ -158,6 +263,9 @@ const ADAPTERS: Record<string, (creds: Record<string, unknown>, input: PublishIn
   x: publishX,
   instagram: publishInstagram,
 };
+
+/** Platforms that can post text-only (used for honest test messages). */
+export const TEXT_ONLY_PLATFORMS = new Set(['telegram', 'facebook', 'x']);
 
 export async function publishToPlatform(platform: string, creds: Record<string, unknown>, input: PublishInput): Promise<PublishResult> {
   const fn = ADAPTERS[platform];

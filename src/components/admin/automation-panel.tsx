@@ -120,11 +120,13 @@ export function AutomationPanel() {
   };
 
   const saveChannel = async (platform: string, enabled: boolean) => {
-    const meta = PLATFORM_META[platform];
     const draft = credDrafts[platform] || {};
-    const existing = status?.channels.find((c) => c.platform === platform);
-    const credentials = Object.keys(draft).length ? draft : (existing?.credentials ?? {});
+    // Credentials are masked by the API (secrets never round-trip), so we send
+    // only the fields the user typed; the server merges them with what's
+    // stored. Toggling enabled alone leaves credentials untouched.
+    const credentials = Object.fromEntries(Object.entries(draft).filter(([, v]) => typeof v === 'string' && v));
     await act({ action: 'save-channel', platform, label: platform, enabled, credentials }, `ch-${platform}`);
+    setCredDrafts((prev) => ({ ...prev, [platform]: {} }));
   };
 
   if (loading && !status) {
@@ -299,7 +301,8 @@ export function AutomationPanel() {
                           <Input
                             type="password"
                             className="h-8 text-xs"
-                            value={draft[f.key] ?? (ch?.credentials?.[f.key] as string) ?? ''}
+                            value={draft[f.key] ?? (typeof ch?.credentials?.[f.key] === 'string' ? (ch?.credentials?.[f.key] as string) : '')}
+                            placeholder={ch?.credentials?.[f.key] === true ? 'saved — leave blank to keep' : f.label}
                             onChange={(e) => setCredDrafts((prev) => ({ ...prev, [platform]: { ...prev[platform], [f.key]: e.target.value } }))}
                           />
                         </div>

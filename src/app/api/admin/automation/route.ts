@@ -1,16 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentAdmin } from '@/lib/admin-auth';
 import { db } from '@/lib/db';
-import { getState, patchState, DEFAULT_SLOTS_AFT } from '@/lib/social/publisher';
+import { getState, patchState, DEFAULT_SLOTS_AFT, composeCaptionWithLimit, deepLinkOf } from '@/lib/social/publisher';
 import { publishToPlatform } from '@/lib/social/channels';
+import { decryptCredentials, encryptCredentials, maskCredentials } from '@/lib/social/credentials';
 
 /**
  * GET  /api/admin/automation — status snapshot for the Automation panel:
- *        state (times/batch/toggles/backoff), channels, pending counts,
- *        upcoming queue rows, last pipeline runs, untranslated counts.
+ *        state (times/batch/toggles/backoff), channels (credentials MASKED —
+ *        only "configured" flags + public ids, never secret values),
+ *        pending counts, upcoming queue rows, last pipeline runs,
+ *        untranslated counts.
  * POST /api/admin/automation — actions:
  *        { action: 'save-state', publishTimes?, captionLangs?, translateBatch?, autoImport?, autoPublish? }
  *        { action: 'save-channel', platform, label?, enabled, credentials? }
+ *          — credentials are encrypted at rest; provided fields are MERGED
+ *            into the stored ones (send only what changed).
  *        { action: 'test-channel', platform }
  *        { action: 'publish-now', id }      — immediately render+publish one queue row
  *        { action: 'cancel-post', id }
@@ -18,6 +23,8 @@ import { publishToPlatform } from '@/lib/social/channels';
 export const dynamic = 'force-dynamic';
 
 const PLATFORMS = ['telegram', 'facebook', 'instagram', 'x'] as const;
+/** Per-platform caption budgets (same table the publisher uses). */
+const CAPTION_LIMITS: Record<string, number> = { telegram: 1000, facebook: 4500, x: 270, instagram: 2100 };
 
 export async function GET() {
   const admin = await getCurrentAdmin();
@@ -48,10 +55,17 @@ export async function GET() {
   `;
   const counts = untranslated[0] ?? { opportunities: 0, news: 0 };
 
+  // Credentials NEVER leave the server — the panel gets "which fields are
+  // configured" flags + public identifiers only.
+  const safeChannels = channels.map((ch) => ({
+    ...ch,
+    credentials: maskCredentials(ch.credentials),
+  }));
+
   return NextResponse.json({
     ok: true,
     state: { ...state, publishTimes: state.publishTimes?.length ? state.publishTimes : DEFAULT_SLOTS_AFT },
-    channels,
+    channels: safeChannels,
     queue,
     runs,
     untranslated: counts,
@@ -96,24 +110,45 @@ export async function POST(req: NextRequest) {
         if (!(PLATFORMS as readonly string[]).includes(platform)) {
           return NextResponse.json({ error: 'invalid_platform' }, { status: 400 });
         }
+        const incoming = (body.credentials ?? {}) as Record<string, unknown>;
+        // Merge semantics: the panel never receives stored secrets, so empty
+        // fields mean "unchanged". Only non-empty provided values overwrite.
+        const existing = await db.publishChannel.findUnique({ where: { platform } });
+        const mergedCreds: Record<string, unknown> = { ...decryptCredentials(existing?.credentials) };
+        for (const [k, v] of Object.entries(incoming)) {
+          if (typeof v === 'string' && v.trim()) mergedCreds[k] = v.trim();
+        }
+        const hasAny = Object.values(mergedCreds).some((v) => typeof v === 'string' && v);
         const data = {
-          label: String(body.label || platform),
-          enabled: Boolean(body.enabled),
-          ...(body.credentials !== undefined ? { credentials: body.credentials as object } : {}),
+          label: String(body.label || existing?.label || platform),
+          enabled: body.enabled === undefined ? (existing?.enabled ?? false) : Boolean(body.enabled),
+          ...(hasAny ? { credentials: encryptCredentials(mergedCreds) } : {}),
         };
         const ch = await db.publishChannel.upsert({
           where: { platform },
           create: { platform, ...data },
           update: data,
         });
-        return NextResponse.json({ ok: true, channel: ch });
+        return NextResponse.json({ ok: true, channel: { ...ch, credentials: maskCredentials(ch.credentials) } });
       }
 
       case 'test-channel': {
         const platform = String(body.platform || '');
         const ch = await db.publishChannel.findUnique({ where: { platform } });
         if (!ch) return NextResponse.json({ error: 'not_found' }, { status: 404 });
-        const creds = (ch.credentials ?? {}) as Record<string, unknown>;
+        const creds = decryptCredentials(ch.credentials);
+        // Honest test per platform: Instagram physically cannot post without
+        // an image, so a caption-only test there used to always "fail".
+        if (platform === 'instagram') {
+          const missing = ['igUserId', 'accessToken'].filter((k) => !String(creds[k] || ''));
+          return NextResponse.json({
+            ok: false,
+            error: missing.length
+              ? `instagram: missing ${missing.join('/')}`
+              : 'instagram: config present — Instagram needs a rendered image; use "Publish now" on a ready queue row to test end-to-end',
+            configOk: missing.length === 0,
+          });
+        }
         const r = await publishToPlatform(platform, creds, {
           caption: 'ARIA HUB — test message from Brand Studio automation. ✅',
         });
@@ -128,47 +163,62 @@ export async function POST(req: NextRequest) {
         const id = String(body.id || '');
         const row = await db.socialPostQueue.findUnique({ where: { id } });
         if (!row) return NextResponse.json({ error: 'not_found' }, { status: 404 });
-        const { renderDueQueue } = await import('@/lib/social/publisher');
+        // Guard: re-publishing an already-published row used to be one click
+        // away (and one double-click away from duplicates).
+        if (row.status === 'published' && body.force !== true) {
+          return NextResponse.json({ error: 'already_published', message: 'This post is already published. Pass force:true to republish deliberately.' }, { status: 409 });
+        }
+        const { renderOneQueueRow } = await import('@/lib/social/publisher');
         // Force-render this specific row if it has no image yet, then publish.
         if (row.imageStatus !== 'ready') {
-          const { renderOneQueueRow } = await import('@/lib/social/publisher');
           await renderOneQueueRow(row.id);
         }
         const fresh = await db.socialPostQueue.findUniqueOrThrow({ where: { id } });
         const state = await getState();
         const channels = await db.publishChannel.findMany({ where: { enabled: true } });
-        const { composeCaption } = await import('@/lib/social/publisher');
-        const caption = composeCaption(fresh.captionJson, state.captionLangs?.length ? state.captionLangs : ['fa', 'ps', 'en']);
+        const langs = state.captionLangs?.length ? state.captionLangs : (['fa', 'ps', 'en'] as const);
         const images = (fresh.imagePaths ?? {}) as { square?: string; local?: string };
-        const results: Record<string, { ok: boolean; error?: string }> = {};
-        let anyOk = false;
+        const prevResults = (fresh.results ?? {}) as Record<string, { ok?: boolean; error?: string }>;
+        const results: Record<string, { ok: boolean; error?: string; downgraded?: string }> = { ...prevResults };
+        const external: Record<string, { id: string | null; permalink: string | null }> =
+          (fresh.externalIds ?? {}) as Record<string, { id: string | null; permalink: string | null }>;
+        let anyOk = Object.values(prevResults).some((r) => r.ok);
         for (const ch of channels) {
-          const creds = (ch.credentials ?? {}) as Record<string, unknown>;
+          if (prevResults[ch.platform]?.ok) continue; // never double-post a channel
+          const caption = composeCaptionWithLimit(fresh.captionJson, [...langs], CAPTION_LIMITS[ch.platform] ?? 2200);
+          const creds = decryptCredentials(ch.credentials);
           const r = await publishToPlatform(ch.platform, creds, {
             caption,
             imageUrl: images.square ?? null,
             imagePath: images.local ?? null,
-            link: 'https://www.myariahub.com',
+            link: deepLinkOf(caption) || (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.myariahub.com'),
           });
-          results[ch.platform] = r;
-          if (r.ok) anyOk = true;
+          results[ch.platform] = { ok: r.ok, ...(r.error ? { error: r.error } : {}), ...(r.downgraded ? { downgraded: r.downgraded } : {}) };
+          if (r.ok) {
+            anyOk = true;
+            external[ch.platform] = { id: r.id ?? null, permalink: r.permalink ?? null };
+          }
         }
+        const mergedList = Object.values(results);
+        const allOk = mergedList.length > 0 && mergedList.every((r) => r.ok);
+        const status = allOk ? 'published' : anyOk ? 'partial' : 'failed';
         await db.socialPostQueue.update({
           where: { id },
           data: {
-            status: anyOk ? 'published' : 'failed',
+            status,
             results,
+            externalIds: Object.keys(external).length ? external : undefined,
             attempts: { increment: 1 },
-            publishedAt: anyOk ? new Date() : null,
-            error: anyOk ? null : 'no enabled channels or all failed',
+            publishedAt: allOk ? (fresh.publishedAt ?? new Date()) : fresh.publishedAt ?? null,
+            error: allOk ? null : mergedList.map((r) => r.error).filter(Boolean).join(' | ').slice(0, 500) || 'no enabled channels or all failed',
           },
         });
-        return NextResponse.json({ ok: anyOk, results });
+        return NextResponse.json({ ok: anyOk, status, results });
       }
 
       case 'cancel-post': {
         const id = String(body.id || '');
-        await db.socialPostQueue.update({ where: { id }, data: { status: 'cancelled' } });
+        await db.socialPostQueue.update({ where: { id }, data: { status: 'cancelled', claimedAt: null } });
         return NextResponse.json({ ok: true });
       }
 

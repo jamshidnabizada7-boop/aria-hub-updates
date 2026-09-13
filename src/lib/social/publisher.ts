@@ -11,12 +11,21 @@
  */
 import { mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+
+// Linux fallback paths kept for the original sandbox host.
+const CHROME_CANDIDATES = [
+  '/home/z/.cache/ms-playwright/chromium_headless_shell-1200/chrome-headless-shell-linux64/chrome-headless-shell',
+  '/home/z/.cache/ms-playwright/chromium-1234/chrome-linux64/chrome',
+];
 import { join } from 'node:path';
 import os from 'node:os';
 import { db } from '@/lib/db';
 import { buildDailyPlan, type PlanPost } from '@/lib/social/plan';
 import { buildCaption, type CaptionInput } from '@/lib/social/captions';
 import { publishToPlatform } from '@/lib/social/channels';
+import { notifyAdmin } from '@/lib/social/notify';
+import { decryptCredentials } from '@/lib/social/credentials';
+import { resolveExecutable } from '@/lib/import/scrapers/browser-fetch';
 import type { Lang, PostTemplate, PosterSize } from '@/lib/social/brand';
 import { translate } from '@/lib/i18n';
 
@@ -25,7 +34,12 @@ const AFT_OFFSET_MIN = 270;
 export const DEFAULT_SLOTS_AFT = ['08:00', '12:30', '20:00'];
 
 const PUBLIC_DIR = join(process.cwd(), 'public', 'generated-posts');
-const PUBLIC_BASE = 'https://www.myariahub.com/generated-posts';
+const PUBLIC_BASE = `${(process.env.NEXT_PUBLIC_SITE_URL || 'https://www.myariahub.com').replace(/\/$/, '')}/generated-posts`;
+
+/** Per-platform caption budget — blocks are dropped whole, never cut mid-line. */
+const CAPTION_LIMITS: Record<string, number> = { telegram: 1000, facebook: 4500, x: 270, instagram: 2100 };
+const PUBLISH_CLAIM_TIMEOUT_MS = 10 * 60 * 1000;
+const RENDER_CLAIM_TIMEOUT_MS = 15 * 60 * 1000;
 
 // ── time helpers ─────────────────────────────────────────────────────────────
 /** UTC Date for "today's" AFT slot, e.g. '20:00' AFT. */
@@ -198,19 +212,20 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
     });
   });
 
-  await db.socialPostQueue.createMany({ data: rows });
+  // skipDuplicates + the (contentRef, scheduledFor) unique index make the
+  // build idempotent even if two ticks race past the daily cursor check.
+  const res = await db.socialPostQueue.createMany({ data: rows, skipDuplicates: true });
   await patchState({ lastQueueBuildDate: todayUtc });
+  void res;
   return { created: rows.length };
 }
 
 // ── 2. renderer (playwright screenshots the CODE template) ──────────────────
-const CHROME_CANDIDATES = [
-  '/home/z/.cache/ms-playwright/chromium_headless_shell-1200/chrome-headless-shell-linux64/chrome-headless-shell',
-  '/home/z/.cache/ms-playwright/chromium-1234/chrome-linux64/chrome',
-];
-
 async function renderQueueImage(baseUrl: string, props: CanvasProps): Promise<{ file: string; publicUrl: string } | null> {
-  const exe = CHROME_CANDIDATES.find((p) => existsSync(p));
+  // Shared resolver: env CHROME_PATH → Windows Chrome/Edge → Linux sandbox
+  // paths (was hard-coded to one machine's /home/z cache — rendering silently
+  // returned null everywhere else, killing the whole Instagram flow).
+  const exe = resolveExecutable() ?? CHROME_CANDIDATES.find((p) => existsSync(p)) ?? null;
   if (!exe) return null;
   let browser: import('playwright-core').Browser | null = null;
   try {
@@ -238,6 +253,13 @@ async function renderQueueImage(baseUrl: string, props: CanvasProps): Promise<{ 
 
 // ── 3. publish flow ──────────────────────────────────────────────────────────
 export async function renderDueQueue(baseUrl: string, limit = 2): Promise<{ rendered: number }> {
+  // Stale-render sweep: a process that died mid-render leaves rows in
+  // 'rendering' forever (they were never publishable from that state).
+  // Rendering touches no external API, so resetting to pending is safe.
+  await db.socialPostQueue.updateMany({
+    where: { status: 'rendering', claimedAt: { lt: new Date(Date.now() - RENDER_CLAIM_TIMEOUT_MS) } },
+    data: { status: 'pending', claimedAt: null },
+  }).catch(() => undefined);
   const rows = await db.socialPostQueue.findMany({
     where: { status: 'pending', scheduledFor: { lte: new Date(Date.now() + 3600000) } },
     orderBy: { scheduledFor: 'asc' },
@@ -258,7 +280,7 @@ export async function renderOneQueueRow(id: string, baseUrl = 'http://127.0.0.1:
   // Re-check memory right before launching chrome — a compile wave may have
   // started between the tick's gate and this call.
   if (Math.floor(os.freemem() / 1024 / 1024) < 1200) return false;
-  await db.socialPostQueue.update({ where: { id }, data: { status: 'rendering' } });
+  await db.socialPostQueue.update({ where: { id }, data: { status: 'rendering', claimedAt: new Date() } });
   const img = await renderQueueImage(baseUrl, row.contentJson as CanvasProps);
   await db.socialPostQueue.update({
     where: { id },
@@ -276,14 +298,54 @@ export function composeCaption(captions: unknown, langs: Lang[]): string {
   return langs.map((l) => c[l]).filter(Boolean).join('\n\n');
 }
 
+/**
+ * Compose a caption that fits a platform's limit by dropping whole language
+ * blocks — never slicing mid-line. Every block carries its own 🔗 link and
+ * hashtags, so any surviving block is a complete, usable caption. The old
+ * `.slice(0, N)` cut mid-hashtag and could chop the link off entirely.
+ */
+export function composeCaptionWithLimit(captions: unknown, langs: Lang[], maxLen: number): string {
+  const full = composeCaption(captions, langs);
+  if (full.length <= maxLen) return full;
+  const blocks = full.split('\n\n').map((b) => b.trim()).filter(Boolean);
+  let out = '';
+  for (const block of blocks) {
+    const candidate = out ? `${out}\n\n${block}` : block;
+    if (candidate.length > maxLen) break;
+    out = candidate;
+  }
+  return out || full.slice(0, maxLen);
+}
+
+/** Pull the deep link out of a composed caption (every block embeds 🔗 URL). */
+export function deepLinkOf(caption: string): string | null {
+  return caption.match(/🔗\s*(\S+)/)?.[1] ?? null;
+}
+
 export async function publishDueQueue(limit = 2): Promise<{ published: number; failed: number }> {
   const state = await getState();
   if (state.autoPublish === false) return { published: 0, failed: 0 };
   const channels = await db.publishChannel.findMany({ where: { enabled: true } });
   if (channels.length === 0) return { published: 0, failed: 0 };
 
+  // Stale-claim sweep: a worker that died between claiming and recording left
+  // the row in 'publishing' forever. The platform call MAY have gone out —
+  // fail the row (never silently re-queue → duplicate) and tell the admin.
+  const stale = await db.socialPostQueue.updateMany({
+    where: { status: 'publishing', claimedAt: { lt: new Date(Date.now() - PUBLISH_CLAIM_TIMEOUT_MS) } },
+    data: { status: 'failed', claimedAt: null, error: 'publish claim timed out — check channel posts for an accidental duplicate before retrying', attempts: { increment: 1 } },
+  }).catch(() => null);
+  if (stale?.count) {
+    void notifyAdmin('Publish claim timeout', [
+      `${stale.count} queue row(s) were stuck in 'publishing' and are now marked failed.`,
+      'Before retrying them by hand, check the channels for posts that may have gone out anyway.',
+    ]);
+  }
+
   const due = await db.socialPostQueue.findMany({
-    where: { status: { in: ['ready', 'failed'] }, scheduledFor: { lte: new Date() }, attempts: { lt: 3 } },
+    // 'partial' rows are retried per-channel (channels already ok are skipped
+    // below), so they are due again — they used to be frozen forever.
+    where: { status: { in: ['ready', 'failed', 'partial'] }, scheduledFor: { lte: new Date() }, attempts: { lt: 3 } },
     orderBy: { scheduledFor: 'asc' },
     take: limit,
   });
@@ -291,44 +353,100 @@ export async function publishDueQueue(limit = 2): Promise<{ published: number; f
   let published = 0;
   let failed = 0;
   for (const row of due) {
-    const caption = composeCaption(row.captionJson, state.captionLangs?.length ? state.captionLangs : ['fa', 'ps', 'en']);
+    const langs = state.captionLangs?.length ? state.captionLangs : (['fa', 'ps', 'en'] as Lang[]);
     const images = (row.imagePaths ?? {}) as { square?: string; local?: string };
-    const results: Record<string, { ok: boolean; error?: string }> = {};
+
+    // Claim the row with a compare-and-swap: only the worker that flips the
+    // status owns it. Two ticks (scheduler + cron backstop) used to both
+    // select the same row and double-post it to every channel.
+    const claim = await db.socialPostQueue.updateMany({
+      where: { id: row.id, status: { in: ['ready', 'failed', 'partial'] } },
+      data: { status: 'publishing', claimedAt: new Date() },
+    });
+    if (claim.count === 0) continue; // another worker claimed it first
+
+    const prevResults = (row.results ?? {}) as Record<string, { ok?: boolean; error?: string }>;
+    const results: Record<string, { ok: boolean; error?: string; downgraded?: string }> = {};
+    const external: Record<string, { id: string | null; permalink: string | null }> = {};
     let anyOk = false;
+    let tokenExpiredChannel: string | null = null;
+
     for (const ch of channels) {
-      const creds = (ch.credentials ?? {}) as Record<string, unknown>;
+      // Per-channel retry: channels that already succeeded in an earlier run
+      // must NOT be posted to again (that's how partial rows froze/duplicated).
+      if (prevResults[ch.platform]?.ok) {
+        results[ch.platform] = { ok: true };
+        anyOk = true;
+        continue;
+      }
+      const caption = composeCaptionWithLimit(row.captionJson, langs, CAPTION_LIMITS[ch.platform] ?? 2200);
+      const creds = decryptCredentials(ch.credentials);
       const r = await publishToPlatform(ch.platform, creds, {
         caption,
         imageUrl: images.square ?? null,
         imagePath: images.local ?? null,
-        link: 'https://www.myariahub.com',
+        link: deepLinkOf(caption) || (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.myariahub.com'),
       });
-      results[ch.platform] = r;
+      results[ch.platform] = { ok: r.ok, ...(r.error ? { error: r.error } : {}), ...(r.downgraded ? { downgraded: r.downgraded } : {}) };
       if (r.ok) {
         anyOk = true;
+        external[ch.platform] = { id: r.id ?? null, permalink: r.permalink ?? null };
         await db.publishChannel.update({
           where: { id: ch.id },
           data: { lastStatus: 'ok', lastError: null, lastPublishedAt: new Date() },
+        });
+      } else if (r.tokenExpired) {
+        // Dead token: disable the channel and alert — retrying for days is noise.
+        tokenExpiredChannel = ch.platform;
+        await db.publishChannel.update({
+          where: { id: ch.id },
+          data: { lastStatus: 'error', lastError: r.error ?? 'token expired', enabled: false },
         });
       } else {
         await db.publishChannel.update({
           where: { id: ch.id },
           data: { lastStatus: 'error', lastError: r.error ?? 'unknown' },
         });
+        if (r.rateLimited) break; // platform-wide throttle — skip its remaining posts this run
       }
     }
-    const done = anyOk;
+
+    // Merge over previous results so a partially-succeeded row keeps its wins.
+    const merged: Record<string, { ok: boolean; error?: string; downgraded?: string }> = { ...prevResults };
+    for (const [k, v] of Object.entries(results)) merged[k] = v;
+    const mergedList = Object.values(merged);
+    const allOk = mergedList.length > 0 && mergedList.every((r) => r.ok);
+    const status = allOk ? 'published' : anyOk ? 'partial' : 'failed';
+
     await db.socialPostQueue.update({
       where: { id: row.id },
       data: {
-        status: done ? (Object.values(results).every((r) => r.ok) ? 'published' : 'partial') : 'failed',
-        results,
+        status,
+        results: merged,
+        externalIds: Object.keys(external).length ? { ...((row.externalIds ?? {}) as object), ...external } : (row.externalIds ?? undefined),
         attempts: { increment: 1 },
-        error: done ? null : Object.values(results).map((r) => r.error).filter(Boolean).join(' | ').slice(0, 500) || 'all channels failed',
-        publishedAt: done ? new Date() : null,
+        claimedAt: null,
+        error: allOk ? null : mergedList.map((r) => r.error).filter(Boolean).join(' | ').slice(0, 500) || 'channels pending or failed',
+        publishedAt: allOk ? (row.publishedAt ?? new Date()) : row.publishedAt ?? null,
       },
     });
-    if (done) published++; else failed++;
+    if (allOk) published++; else failed++;
+
+    // One-shot admin alert when a row exhausts its retries or a token died.
+    if ((status !== 'published' && row.attempts + 1 >= 3 && !row.notifiedAt) || tokenExpiredChannel) {
+      const sent = await notifyAdmin(
+        tokenExpiredChannel ? `Publishing paused: ${tokenExpiredChannel} token rejected` : `Post failed after ${row.attempts + 1} attempts`,
+        [
+          tokenExpiredChannel
+            ? `The ${tokenExpiredChannel} channel's credentials were rejected (error 190/expired). It has been disabled — reauthorize it in Admin → Automation.`
+            : `Queue row ${row.id} (${row.templateType} / ${row.contentRef ?? 'no ref'}) failed on all remaining channels.`,
+          ...(tokenExpiredChannel ? [] : [Object.values(results).map((r) => r.error).filter(Boolean).join(' | ').slice(0, 400) || 'no error detail']),
+        ],
+      );
+      if (sent || !tokenExpiredChannel) {
+        await db.socialPostQueue.update({ where: { id: row.id }, data: { notifiedAt: new Date() } }).catch(() => undefined);
+      }
+    }
   }
   return { published, failed };
 }

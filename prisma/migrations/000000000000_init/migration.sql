@@ -1210,9 +1210,12 @@ CREATE TABLE "SocialPostQueue" (
     "imagePaths" JSONB,
     "status" TEXT NOT NULL DEFAULT 'pending',
     "results" JSONB,
+    "externalIds" JSONB,
     "attempts" INTEGER NOT NULL DEFAULT 0,
     "error" TEXT,
     "publishedAt" TIMESTAMP(3),
+    "claimedAt" TIMESTAMP(3),
+    "notifiedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -1560,6 +1563,9 @@ CREATE INDEX "SocialPostQueue_scheduledFor_status_idx" ON "SocialPostQueue"("sch
 
 -- CreateIndex
 CREATE INDEX "SocialPostQueue_status_idx" ON "SocialPostQueue"("status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "SocialPostQueue_contentRef_scheduledFor_key" ON "SocialPostQueue"("contentRef", "scheduledFor");
 
 -- CreateIndex
 CREATE INDEX "PipelineRun_kind_startedAt_idx" ON "PipelineRun"("kind", "startedAt");
