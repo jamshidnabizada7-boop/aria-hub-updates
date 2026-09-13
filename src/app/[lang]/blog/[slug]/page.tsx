@@ -21,7 +21,9 @@ export async function generateMetadata({
   const { lang, slug } = await params;
   const typedLang = (LANGS.includes(lang) ? lang : 'fa') as Lang;
   const post = await getBlogPost(slug, typedLang);
-  if (!post) return { title: 'Post Not Found' };
+  // notFound() in the metadata phase sets a real 404 status — during the
+  // streamed page render the headers are already gone and it ships as 200.
+  if (!post) notFound();
 
   const title = post.seoTitle || post.title;
   const description = post.seoDescription || post.excerpt;
