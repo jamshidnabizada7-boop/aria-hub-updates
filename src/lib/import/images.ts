@@ -85,7 +85,31 @@ async function downloadAndOptimize(
     });
     clearTimeout(timer);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const buffer = Buffer.from(await res.arrayBuffer());
+    // Cap the download: a multi-hundred-MB body used to be fully buffered
+    // before sharp ever saw it. Content-Length is authoritative when present;
+    // otherwise the streamed read stops at the cap.
+    const MAX_BYTES = 12 * 1024 * 1024; // 12 MB — generous for any real image
+    const declared = Number(res.headers.get('content-length') || 0);
+    if (declared > MAX_BYTES) throw new Error(`image too large (${(declared / 1048576).toFixed(1)} MB)`);
+    let buffer: Buffer;
+    if (res.body) {
+      const reader = res.body.getReader();
+      const chunks: Uint8Array[] = [];
+      let total = 0;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        total += value.byteLength;
+        if (total > MAX_BYTES) {
+          await reader.cancel().catch(() => undefined);
+          throw new Error(`image exceeded ${MAX_BYTES / 1048576} MB while downloading`);
+        }
+        chunks.push(value);
+      }
+      buffer = Buffer.concat(chunks.map((c) => Buffer.from(c)));
+    } else {
+      buffer = Buffer.from(await res.arrayBuffer());
+    }
     if (buffer.length < 100) throw new Error('image too small (possibly an error page)');
 
     // Optimize with sharp

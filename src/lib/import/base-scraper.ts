@@ -14,6 +14,16 @@ import type { FetchOptions, RawListing, ScrapePage, SourceHandle } from './types
 interface CacheEntry { body: string; etag?: string; at: number; }
 const fetchCache = new Map<string, CacheEntry>();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const CACHE_MAX_ENTRIES = 300; // unbounded Map used to grow for the life of the process
+
+/** Keep the cache bounded: drop the oldest entries beyond the cap. */
+function trimFetchCache(): void {
+  while (fetchCache.size > CACHE_MAX_ENTRIES) {
+    const oldest = fetchCache.keys().next().value;
+    if (oldest === undefined) break;
+    fetchCache.delete(oldest);
+  }
+}
 
 export abstract class BaseScraper {
   public source: SourceHandle;
@@ -77,6 +87,7 @@ export abstract class BaseScraper {
           throw new Error('challenge page (bot protection interstitial)');
         }
         fetchCache.set(url, { body, etag: res.headers.get('etag') || undefined, at: Date.now() });
+        trimFetchCache();
         await sleep(delay); // respect the source
         return body;
       } catch (e) {
