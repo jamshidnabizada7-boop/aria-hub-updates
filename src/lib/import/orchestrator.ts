@@ -44,6 +44,9 @@ const CHALLENGE_TITLE_RE =
 /** Error message pattern meaning the detail page does not exist (soft-404). */
 const SOFT_404_RE = /soft-404|page not found/i;
 
+/** How often a known listing gets its detail page re-fetched for drift checks. */
+const DETAIL_RECHECK_MS = 24 * 60 * 60 * 1000;
+
 /**
  * Description texts that mean content extraction failed and grabbed a label
  * value ("All", "International", "Afghan Nationals") instead of the article.
@@ -310,11 +313,11 @@ async function processListing(
     return;
   }
 
-  // Compute content hash
-  const hash = await computeHash(listing);
+  // Pre-enrichment hash — used only for the cross-URL exact-duplicate lookup.
+  const preHash = await computeHash(listing);
 
   // Dedupe
-  const dedupe = await findExisting(db, listing, hash);
+  const dedupe = await findExisting(db, listing, preHash);
   if (dedupe.action === 'skip') {
     // True content-hash duplicate — identical content already exists.
     // Count as both skipped (no work done) and duplicate (content collision).
@@ -322,15 +325,20 @@ async function processListing(
     counters.duplicates++;
     return;
   }
-  if (dedupe.action === 'update' && !dedupe.changed && !force) {
-    // URL-matched record but content is unchanged — just refresh lastChecked.
-    // This is NOT a duplicate (it's the same known record), just unchanged.
-    counters.skipped++;
-    await db.opportunity.update({
-      where: { id: dedupe.existing.id },
-      data: { lastChecked: new Date() },
-    });
-    return;
+
+  // Fast path: this row was fully detail-checked less than a day ago and the
+  // list-page content is unchanged — skip the detail re-fetch. The daily
+  // recheck below is what catches source-side edits (deadline extensions…).
+  if (dedupe.action === 'update' && !force) {
+    const last = dedupe.existing.lastChecked?.getTime() ?? 0;
+    if (Date.now() - last < DETAIL_RECHECK_MS) {
+      counters.skipped++;
+      await db.opportunity.update({
+        where: { id: dedupe.existing.id },
+        data: { lastChecked: new Date() },
+      });
+      return;
+    }
   }
 
   // Fetch detail page now that we know we need to create/update it.
@@ -380,6 +388,22 @@ async function processListing(
       counters.skipped++;
       return;
     }
+  }
+
+  // Post-enrichment content hash — computed AFTER the detail page filled in
+  // the real deadline/description, so source-side edits actually register as
+  // changes (the old pre-enrichment hash never saw detail-page updates).
+  const hash = await computeHash(listing);
+
+  // Daily recheck verdict: fully re-fetched and still identical → just
+  // refresh lastChecked (NOT a duplicate — the same known record, unchanged).
+  if (dedupe.action === 'update' && !force && dedupe.existing.contentHash === hash) {
+    counters.skipped++;
+    await db.opportunity.update({
+      where: { id: dedupe.existing.id },
+      data: { lastChecked: new Date() },
+    });
+    return;
   }
 
   // Images

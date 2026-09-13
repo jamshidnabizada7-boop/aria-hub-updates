@@ -2,13 +2,14 @@
  * Duplicate detection and content hashing.
  *
  * Before publishing a listing, the orchestrator checks:
- *   1. sourceUrl  (exact match — fastest)
+ *   1. sourceUrl  (exact match — now backed by a DB unique constraint)
  *   2. contentHash (sha256 of normalized key fields)
- *   3. title + organization fuzzy match (normalized, trimmed)
+ *   3. title + organization fuzzy match, SCOPED TO THE SAME SOURCE
+ *      (cross-source look-alikes must not hijack each other's rows)
  *
- * If a match is found and contentHash matches → skip (duplicate, no change).
- * If a match is found but contentHash differs → update in place.
- * If no match → create new.
+ * The stored contentHash is the POST-ENRICHMENT hash (computed after the
+ * detail page filled in real deadlines/descriptions), so source-side edits
+ * register as changes on the next import.
  */
 
 import type { PrismaClient } from '@prisma/client';
@@ -34,7 +35,10 @@ export async function computeHash(listing: RawListing): Promise<string> {
 
 export type DedupeResult =
   | { action: 'skip'; existing: { id: string; reason: string } }
-  | { action: 'update'; existing: { id: string; reason: string }; changed: boolean }
+  | {
+      action: 'update';
+      existing: { id: string; reason: string; contentHash: string | null; lastChecked: Date | null };
+    }
   | { action: 'create'; existing: null };
 
 /**
@@ -46,17 +50,20 @@ export async function findExisting(
   listing: RawListing,
   incomingHash: string,
 ): Promise<DedupeResult> {
-  // 1. Exact sourceUrl match
+  // 1. Exact sourceUrl match (unique constraint makes this race-proof).
   const byUrl = listing.sourceUrl
-    ? await db.opportunity.findFirst({ where: { sourceUrl: listing.sourceUrl } })
+    ? await db.opportunity.findUnique({ where: { sourceUrl: listing.sourceUrl } })
     : null;
 
   if (byUrl) {
-    const changed = byUrl.contentHash !== incomingHash;
     return {
       action: 'update',
-      existing: { id: byUrl.id, reason: 'sourceUrl match' },
-      changed,
+      existing: {
+        id: byUrl.id,
+        reason: 'sourceUrl match',
+        contentHash: byUrl.contentHash,
+        lastChecked: byUrl.lastChecked,
+      },
     };
   }
 
@@ -72,30 +79,34 @@ export async function findExisting(
     };
   }
 
-  // 3. Fuzzy title + organization match
-  // Query at the DB level using title contains so this scales to any table size.
-  // A take:50 limit here was the original bug — with 261+ rows most matches were invisible.
+  // 3. Fuzzy title + organization match — same source only. Without the
+  //    sourceName scope, two aggregators carrying the same scholarship fought
+  //    over one row, silently flipping its attribution on every run.
   const normTitle = normalizeForCompare(listing.title);
   const normOrg = normalizeForCompare(listing.organization);
   if (normTitle) {
     const candidates = await db.opportunity.findMany({
       where: {
         status: { in: ['published', 'draft'] },
-        // Use a broad DB-side filter: title contains the first significant word
+        sourceName: listing.sourceName,
+        // Broad DB-side filter: title contains the first significant words
         title: { contains: listing.title.split(' ').slice(0, 3).join(' '), mode: 'insensitive' },
       },
-      select: { id: true, title: true, organization: true, contentHash: true },
+      select: { id: true, title: true, organization: true, contentHash: true, lastChecked: true },
       take: 200, // reasonable upper bound after DB-side filter narrows results
     });
     for (const c of candidates) {
       if (normalizeForCompare(c.title) === normTitle) {
         // Organization matches too (or both are null)?
         if (!normOrg || !c.organization || normalizeForCompare(c.organization) === normOrg) {
-          const changed = c.contentHash !== incomingHash;
           return {
             action: 'update',
-            existing: { id: c.id, reason: 'fuzzy title+org match' },
-            changed,
+            existing: {
+              id: c.id,
+              reason: 'fuzzy title+org match (same source)',
+              contentHash: c.contentHash,
+              lastChecked: c.lastChecked,
+            },
           };
         }
       }

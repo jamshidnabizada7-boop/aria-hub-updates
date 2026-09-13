@@ -106,6 +106,17 @@ export async function runTick(baseUrl = 'http://127.0.0.1:3000'): Promise<TickRe
     data: { status: 'error', message: 'stale (process died mid-tick)', finishedAt: new Date() },
   }).catch(() => undefined);
 
+  // Housekeeping: expire opportunities whose deadline has passed. The
+  // read-side filters already hide them from listings; marking the status
+  // keeps the admin content-health "expired" counter truthful.
+  await db.opportunity.updateMany({
+    where: {
+      status: 'published',
+      deadline: { lt: new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`) },
+    },
+    data: { status: 'expired' },
+  }).catch(() => undefined);
+
   const run = await db.pipelineRun.create({ data: { kind: 'tick', status: 'running' } });
   const result: TickResult = { ran: true };
 

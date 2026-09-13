@@ -13,7 +13,7 @@
  *     categoryInclude?: string[], // keep only posts having an embedded term
  *                                 //   whose name matches one of these (case-
  *                                 //   insensitive, substring-tolerant)
- *     defaultDeadlineDays?: number, // deadline = publishedDate + N days
+ *     (defaultDeadlineDays is no longer used — invented deadlines removed)
  *     autoDetectType?: boolean,   // jobType from title keywords
  *     crawlDelayMs?: number,
  *     timeoutMs?: number,
@@ -200,12 +200,11 @@ export class WpApiScraper extends BaseScraper {
     const include = Array.isArray(cfg.categoryInclude)
       ? (cfg.categoryInclude as unknown[]).map((c) => String(c).toLowerCase().trim()).filter(Boolean)
       : [];
-    const deadlineDays = Number(cfg.defaultDeadlineDays) || 0;
 
     const listings: RawListing[] = [];
     for (const post of posts) {
       try {
-        const listing = this.mapPost(post, include, deadlineDays);
+        const listing = this.mapPost(post, include);
         if (listing) listings.push(listing);
       } catch (e) {
         console.error(`[wp-api] post ${post?.id} parse failed:`, e instanceof Error ? e.message : e);
@@ -227,7 +226,7 @@ export class WpApiScraper extends BaseScraper {
    * Map a WP post to a RawListing. Returns null when the post is filtered out
    * (categoryInclude mismatch) or has no usable title/link.
    */
-  private mapPost(post: WpPost, include: string[], deadlineDays: number): RawListing | null {
+  private mapPost(post: WpPost, include: string[]): RawListing | null {
     const link = post.link?.trim();
     const title = decodeEntities(post.title?.rendered || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
     if (!link || !title) return null;
@@ -259,18 +258,11 @@ export class WpApiScraper extends BaseScraper {
 
     const publishedDate = parseDate(post.date_gmt || post.date);
 
-    // Deadline: an explicit "Deadline: <date>" line in the body wins; the
-    // publishedDate + N days heuristic is only a fallback when the site
-    // doesn't publish one.
-    const deadline =
-      extractDeadlineFromText(description) ||
-      (() => {
-        if (!publishedDate || deadlineDays <= 0) return null;
-        const d = new Date(`${publishedDate}T00:00:00Z`);
-        if (isNaN(d.getTime())) return null;
-        d.setUTCDate(d.getUTCDate() + deadlineDays);
-        return d.toISOString().slice(0, 10);
-      })();
+    // Deadline: only an explicit "Deadline: <date>" line in the body counts.
+    // The old publishedDate + N days heuristic INVENTED deadlines that could
+    // be wrong by weeks and were shown to users as real — listings without a
+    // stated deadline now stay deadline-less (rendered as rolling/open).
+    const deadline = extractDeadlineFromText(description);
 
     // Featured image from _embedded["wp:featuredmedia"].
     const media = post._embedded?.['wp:featuredmedia']?.find((m) => m?.source_url);
