@@ -1,5 +1,5 @@
 // ARIA HUB — Professional Business Services Platform
-// Fully dynamic, CMS-driven relational schema (SQLite)
+// Fully dynamic, CMS-driven relational schema (PostgreSQL)
 
 generator client {
   provider = "prisma-client-js"
@@ -9,6 +9,34 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   // directUrl = env("DIRECT_URL")
+}
+
+// ─── Status enums (converted from free-text strings, Phase 2) ───────────────
+// Values match every status observed in the database and written by the app.
+
+enum OpportunityStatus {
+  published
+  draft
+  expired
+  archived
+}
+
+enum ImportRunStatus {
+  running
+  pending
+  ok
+  partial
+  error
+  stopped
+}
+
+enum MonetizationOrderStatus {
+  requested
+  payment_claimed
+  paid
+  active
+  delivered
+  declined
 }
 
 // ─── Site-wide settings (single row, key/value style + structured) ───────────
@@ -209,12 +237,13 @@ model Opportunity {
   image           String?
   attachments     String? // JSON
   featured        Boolean              @default(false)
-  status          String               @default("published")
+  status          OpportunityStatus    @default(published)
   sort            Int                  @default(0)
   seoTitle        String?
   seoDescription  String?
   categoryId      String?
   category        OpportunityCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  monetizationOrders MonetizationOrder[]
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
 
@@ -297,7 +326,7 @@ model ImportRun {
   source       ImportSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
   startedAt    DateTime     @default(now())
   finishedAt   DateTime?
-  status       String       @default("running") // running | ok | error | partial | stopped
+  status       ImportRunStatus @default(running) // running | pending | ok | error | partial | stopped
   found        Int          @default(0)
   imported     Int          @default(0)
   updated      Int          @default(0)
@@ -633,7 +662,7 @@ model MonetizationOrder {
   id            String    @id @default(cuid())
   referenceCode String    @unique // human-friendly, e.g. AR-AD-7K2M9Q
   product       String // key from src/lib/monetization.ts PRODUCT_CATALOG
-  status        String    @default("requested") // requested | payment_claimed | paid | active | delivered | declined
+  status        MonetizationOrderStatus @default(requested)
   amountUsd     Float // quoted price in USD (server-side catalog price)
   amountAfn     Float // quoted AFN equivalent at order time (informational)
   buyerName     String
@@ -643,6 +672,7 @@ model MonetizationOrder {
   buyerLang     String    @default("fa") // language of the order form used
   message       String? // free-text requirements (job details, slot copy…)
   opportunityId String? // attached listing (featured/promotion orders)
+  opportunity   Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
   paymentMethod String? // hawala | afg_pay | hesab_pay | bank | cash | payoneer | wise | other
   paymentRef    String? // hawala code / transaction id provided by the buyer
   paidAt        DateTime?
@@ -832,6 +862,8 @@ model User {
   bookmarks     TemplateBookmark[]
   ratings       TemplateRating[]
   comments      TemplateComment[]
+  interviewSessions    InterviewSession[]
+  interviewExperiences InterviewExperience[]
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
 }
@@ -1011,6 +1043,7 @@ model InterviewQuestion {
 model InterviewSession {
   id          String   @id @default(cuid())
   userId      String?  // Can be null if practicing anonymously
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   mode        String   @default("practice") // mock | practice | timed
   status      String   @default("in_progress") // in_progress | completed | abandoned
   questions   Json?    // Array of Question IDs for this session
@@ -1026,6 +1059,7 @@ model InterviewSession {
 model InterviewExperience {
   id              String   @id @default(cuid())
   userId          String?
+  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   studentName     String?
   studentNameI18n Json?
   scholarshipName String?
