@@ -198,7 +198,7 @@ export function BrandShell({
 
       {/* kicker */}
       <div style={{ position: 'relative', padding: `0 ${pad}px`, marginTop: portrait ? 50 : 38 }}>
-        <KickerChip icon={kickerIcon}>{kicker}</KickerChip>
+        <KickerChip icon={kickerIcon} label={String(kicker)} />
       </div>
 
       {/* content zone */}

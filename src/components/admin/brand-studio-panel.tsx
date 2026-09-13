@@ -232,7 +232,7 @@ export function BrandStudioPanel() {
     if (labTemplate === 'news') {
       const news = pools.news.find((n) => n.slug === labItemKey);
       if (!news) return null;
-      return buildNewsPost(news, lang, loc, tr);
+      return buildNewsPost(news as unknown as RawNews, lang, loc, tr);
     }
     if (labTemplate === 'stat') {
       const stat = pools.stats.find((s) => s.labelKey === labItemKey);
@@ -241,7 +241,7 @@ export function BrandStudioPanel() {
     }
     const story = pools.story.find((s) => s.id === labItemKey);
     if (!story) return null;
-    return buildStoryPost(story, lang, loc, tr);
+    return buildStoryPost(story as unknown as RawStory, lang, loc, tr);
   }, [tab, plan, labTemplate, labItemKey, lang, loc, tr, library.results]);
 
   const activePost: PlanPost | null = useMemo(() => {
@@ -800,7 +800,7 @@ function buildNewsPost(news: RawNews, lang: Lang, loc: Loc, tr: Tr): PlanPost {
     key: `news-${news.slug}`,
     template: 'news',
     title,
-    note,
+    meta: note,
     news: { ...news, titleI18n: news.titleI18n, excerptI18n: news.excerptI18n },
     caption: buildCaption(input),
     brief: '',
@@ -861,7 +861,7 @@ function captionInputFor(post: PlanPost, lang: Lang, loc: Loc, tr: Tr): CaptionI
     case 'promo':
       return { template: 'promo', lang, title: post.title };
     case 'news':
-      return { template: 'news', lang, title: post.title, note: post.note };
+      return { template: 'news', lang, title: post.title, note: post.meta };
     case 'stat':
       return { template: 'stat', lang, title: post.title, statValue: post.stat?.value, statLabel: tr(post.stat?.labelKey ?? ''), note: post.meta };
     case 'story':
@@ -896,7 +896,7 @@ function socialPropsFor(
         checklist: [tr('social.post.promoCheck1'), tr('social.post.promoCheck2'), tr('social.post.promoCheck3')],
       };
     case 'news':
-      return { ...base, note: post.note, newsDate: post.news?.publishedAt ?? null };
+      return { ...base, note: post.meta, newsDate: post.news?.publishedAt ?? null };
     case 'stat':
       return {
         ...base,

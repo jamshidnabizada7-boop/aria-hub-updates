@@ -192,7 +192,7 @@ export function AdminApp({ admin }: { admin: AdminUser }) {
             <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
               <MenuIcon className="h-5 w-5" />
             </Button>
-            <h1 className="text-lg font-bold">{t(NAV.find((n) => n.key === active)?.labelKey || 'admin.nav.dashboard')}</h1>
+            <h1 className="text-lg font-bold">{t(NAV.find((n): n is Extract<NavItem, { key: string }> => 'key' in n && n.key === active)?.labelKey || 'admin.nav.dashboard')}</h1>
           </div>
           <div className="flex items-center gap-2">
             <Button asChild variant="outline" size="sm" className="gap-2 text-xs">
@@ -460,7 +460,7 @@ function CrudTable({ model }: { model: string }) {
         <div className="flex gap-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${t('admin.button.search')} ${t(NAV.find((n) => n.key === model)?.labelKey || label)}...`} className="w-64 ps-9" />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`${t('admin.button.search')} ${t(NAV.find((n): n is Extract<NavItem, { key: string }> => 'key' in n && n.key === model)?.labelKey || label)}...`} className="w-64 ps-9" />
           </div>
           {model === 'opportunity' && (
             <Select value={filterCategory} onValueChange={setFilterCategory}>

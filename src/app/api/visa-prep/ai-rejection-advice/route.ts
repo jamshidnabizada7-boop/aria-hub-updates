@@ -1,14 +1,30 @@
 import { NextResponse } from 'next/server';
 import { getClientIp, rateLimit } from '@/lib/admin-auth';
-import { generateText } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
 
-// We use the Groq API key from environment since it's the fastest and highest limit.
-// Fallback to OpenAI format if needed
-const groq = createOpenAI({
-  baseURL: 'https://api.groq.com/openai/v1',
-  apiKey: process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY || '',
-});
+// Groq (OpenAI-compatible) via plain fetch — the `ai`/`@ai-sdk/openai` SDKs
+// were referenced here but never installed, which 500'd this route on load.
+const GROQ_MODEL = 'llama-3.1-8b-instant';
+
+async function generateAdvice(system: string, prompt: string): Promise<string> {
+  const apiKey = process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY || '';
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.6,
+    }),
+  });
+  if (!res.ok) throw new Error(`groq ${res.status}: ${(await res.text()).slice(0, 160)}`);
+  const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+  const text = json.choices?.[0]?.message?.content;
+  if (!text) throw new Error('groq: empty completion');
+  return text;
+}
 
 export async function POST(req: Request) {
 
@@ -38,13 +54,12 @@ export async function POST(req: Request) {
           ? 'Respond in Pashto. '
           : 'Respond in English. ';
 
-    const { text } = await generateText({
-      model: groq('llama-3.1-8b-instant'),
-      system: `You are an expert US Immigration consultant. A user will describe their visa rejection situation or what the officer told them. 
+    const text = await generateAdvice(
+      `You are an expert US Immigration consultant. A user will describe their visa rejection situation or what the officer told them.
 Your job is to identify the likely rejection code (e.g., 214(b), 221(g), 212(a)(6)(C)) and provide 2-3 specific, actionable steps to mitigate it in their next interview.
-${langInstruction}Format your response in simple HTML (using <strong>, <ul>, <li>) so it renders nicely in a web app. Do not include markdown formatting like \`\`\`html. Keep it under 150 words. Be empathetic but realistic.`,
-      prompt: query,
-    });
+${langInstruction}Format your response in simple HTML (using <strong>, <ul>, <li>) so it renders nicely in a web app. Do not include markdown formatting. Keep it under 150 words. Be empathetic but realistic.`,
+      query,
+    );
 
     return NextResponse.json({ advice: text });
 

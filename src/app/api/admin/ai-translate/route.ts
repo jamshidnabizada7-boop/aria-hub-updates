@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
   }
 
   const chat = (system: string, user: string): Promise<string> => {
-    const p = provider as Record<string, unknown>;
+    const p = provider as unknown as Record<string, unknown>;
     if (typeof p.chat === 'function') {
       return (p as unknown as { chat(s: string, u: string): Promise<string> }).chat(system, user);
     }

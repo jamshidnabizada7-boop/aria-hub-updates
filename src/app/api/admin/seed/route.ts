@@ -104,15 +104,15 @@ export async function GET() {
 
     // ── Legal Footer Links ───────────────────────────────────────
     const legalLinks = [
-      { label: 'Privacy Policy', labelI18n: { en: 'Privacy Policy', fa: 'حریم خصوصی', ps: 'د محرمیت تګلاره' }, url: '/privacy-policy', group: 'legal', order: 1 },
-      { label: 'Terms of Service', labelI18n: { en: 'Terms of Service', fa: 'شرایط خدمات', ps: 'د خدماتو شرایط' }, url: '/terms-of-service', group: 'legal', order: 2 },
-      { label: 'About Us', labelI18n: { en: 'About Us', fa: 'درباره ما', ps: 'زموږ په اړه' }, url: '/about', group: 'legal', order: 3 },
-      { label: 'Contact Us', labelI18n: { en: 'Contact Us', fa: 'تماس با ما', ps: 'موږ سره اړیکه' }, url: '/contact', group: 'legal', order: 4 },
-      { label: 'Blog', labelI18n: { en: 'Blog', fa: 'بلاگ', ps: 'بلاګ' }, url: '/blog', group: 'legal', order: 5 },
+      { label: 'Privacy Policy', labelI18n: { en: 'Privacy Policy', fa: 'حریم خصوصی', ps: 'د محرمیت تګلاره' }, url: '/privacy-policy', column: 'legal', order: 1 },
+      { label: 'Terms of Service', labelI18n: { en: 'Terms of Service', fa: 'شرایط خدمات', ps: 'د خدماتو شرایط' }, url: '/terms-of-service', column: 'legal', order: 2 },
+      { label: 'About Us', labelI18n: { en: 'About Us', fa: 'درباره ما', ps: 'زموږ په اړه' }, url: '/about', column: 'legal', order: 3 },
+      { label: 'Contact Us', labelI18n: { en: 'Contact Us', fa: 'تماس با ما', ps: 'موږ سره اړیکه' }, url: '/contact', column: 'legal', order: 4 },
+      { label: 'Blog', labelI18n: { en: 'Blog', fa: 'بلاگ', ps: 'بلاګ' }, url: '/blog', column: 'legal', order: 5 },
     ];
     let legalSeeded = 0;
     for (const link of legalLinks) {
-      const existing = await db.footerLink.findFirst({ where: { url: link.url, group: link.group } });
+      const existing = await db.footerLink.findFirst({ where: { url: link.url, column: link.column } });
       if (!existing) {
         await db.footerLink.create({ data: link });
         legalSeeded++;

@@ -31,7 +31,7 @@ export default async function SocialPosterPage({
   const { slug = '', size: rawSize } = await searchParams;
   const size: PosterSize = rawSize === 'portrait' ? 'portrait' : 'square';
 
-  let posterData = null;
+  let posterData: ReturnType<typeof buildPosterData> | null = null;
   let qrDataUrl: string | null = null;
   if (slug) {
     const opp = await db.opportunity.findUnique({

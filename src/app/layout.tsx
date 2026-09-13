@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Vazirmatn } from "next/font/google";
 import { cookies } from "next/headers";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
+import { isLang } from "@/lib/i18n-config";
 import { Providers } from "@/components/providers";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/react";
@@ -75,7 +76,7 @@ export default async function RootLayout({
   // is rendered server-side in the right language.
   const cookieStore = await cookies();
   const cookieLang = cookieStore.get("aria-lang")?.value;
-  const lang = LANGS.includes(cookieLang) ? cookieLang : DEFAULT_LANG;
+  const lang = isLang(cookieLang) ? cookieLang : DEFAULT_LANG;
   const dir = lang === "en" ? "ltr" : "rtl";
 
   return (

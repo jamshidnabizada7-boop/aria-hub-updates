@@ -241,16 +241,12 @@ export class O4afScraper extends BaseScraper {
       if (category) listing.category = category;
 
       // ── Location + deadline (header options list) ──────────────────────────
-      let locationText: string | null = null;
-      let deadlineText: string | null = null;
-      $('ul.jobsearch-jobdetail-options li').each(function () {
-        const li = $(this);
-        if (li.find('i.jobsearch-maps-and-flags').length) {
-          if (!locationText) locationText = li.text().replace(/\s+/g, ' ').trim();
-        } else if (li.find('i.jobsearch-calendar').length) {
-          if (!deadlineText) deadlineText = li.text().replace(/\s+/g, ' ').trim();
-        }
-      });
+      // (functional form — assignments inside .each() defeat TS narrowing)
+      const optionItems = $('ul.jobsearch-jobdetail-options li');
+      const locationText =
+        optionItems.filter(function () { return $(this).find('i.jobsearch-maps-and-flags').length > 0; }).first().text().replace(/\s+/g, ' ').trim() || null;
+      const deadlineText =
+        optionItems.filter(function () { return $(this).find('i.jobsearch-calendar').length > 0; }).first().text().replace(/\s+/g, ' ').trim() || null;
 
       if (locationText) {
         // "China, China" → "China"; "Kabul, Afghanistan" stays as-is.

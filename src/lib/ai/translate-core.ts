@@ -10,7 +10,8 @@
  */
 import { db } from '@/lib/db';
 import { getAIProvider } from '@/lib/ai/provider';
-import { Prisma, type JsonValue } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+type JsonValue = Prisma.JsonValue;
 
 const PrismaAnyNull = Prisma.DbNull;
 
@@ -41,8 +42,10 @@ function parseJsonLoose(raw: string): Record<string, { fa?: string; ps?: string 
 async function translateFields(fields: Record<string, string>): Promise<Record<string, { fa: string; ps: string }> | null> {
   const provider = await getAIProvider();
   if (!provider) throw new Error('no ai provider configured');
+  const chat = (provider as { chat?: (system: string, prompt: string) => Promise<string> }).chat?.bind(provider);
+  if (!chat) throw new Error('ai provider does not support chat completions');
   const prompt = `Translate these fields to fa (Dari/Persian) and ps (Pashto).\nReturn JSON: {"<fieldKey>":{"fa":"…","ps":"…"}}.\n\n${JSON.stringify(fields, null, 1)}`;
-  const raw = await provider.chat(SYSTEM_PROMPT, prompt);
+  const raw = await chat(SYSTEM_PROMPT, prompt);
   const parsed = parseJsonLoose(raw);
   if (!parsed) return null;
   const out: Record<string, { fa: string; ps: string }> = {};

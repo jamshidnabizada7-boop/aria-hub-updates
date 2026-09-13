@@ -5,7 +5,7 @@
  */
 
 import { db } from '@/lib/db';
-import type { News, NewsCategory } from '@prisma/client';
+import type { News } from '@prisma/client';
 import { getLocalizedContent } from '@/lib/i18n-content';
 import type { Lang } from '@/lib/i18n-config';
 
@@ -38,7 +38,12 @@ function readingMinutes(html: string): number {
   return Math.max(1, Math.round(words / 200));
 }
 
-function toCard(row: News & { category: NewsCategory | null }, lang: Lang): BlogCard {
+/** Minimal shape the mapper needs — includes narrow `category` to a subset. */
+type NewsRowForCard = Omit<News, 'category'> & {
+  category: { slug: string; name: string; nameI18n: unknown } | null;
+};
+
+function toCard(row: NewsRowForCard, lang: Lang): BlogCard {
   const title = getLocalizedContent(row.title, row.titleI18n as Record<string, string> | null, lang);
   return {
     id: row.id,

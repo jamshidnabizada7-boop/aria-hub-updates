@@ -76,19 +76,25 @@ function isJunkLocalizedValue(v: unknown): boolean {
 
 export function getLocalizedContent(
   baseValue: string | null | undefined,
-  i18nValue: Record<string, string> | null | undefined,
+  i18nValue: unknown, // Prisma JsonValue in practice — validated below
   lang: string
 ): string {
   // Priority 1: Check if i18n value exists and has the requested language
-  if (i18nValue && typeof i18nValue === 'object') {
+  const i18n =
+    i18nValue && typeof i18nValue === 'object' && !Array.isArray(i18nValue)
+      ? (i18nValue as Record<string, unknown>)
+      : null;
+  if (i18n) {
     // Try requested language (junk values — bare URLs — count as missing)
-    if (!isJunkLocalizedValue(i18nValue[lang])) {
-      return i18nValue[lang] as string;
+    const inLang = i18n[lang];
+    if (typeof inLang === 'string' && !isJunkLocalizedValue(inLang)) {
+      return inLang;
     }
 
     // Fallback to English
-    if (!isJunkLocalizedValue(i18nValue['en'])) {
-      return i18nValue['en'] as string;
+    const inEn = i18n['en'];
+    if (typeof inEn === 'string' && !isJunkLocalizedValue(inEn)) {
+      return inEn;
     }
   }
 
@@ -122,19 +128,23 @@ export function getLocalizedContent(
  */
 export function getLocalizedArray(
   baseValue: string | any[] | null | undefined,
-  i18nValue: Record<string, any[]> | null | undefined,
+  i18nValue: unknown, // Prisma JsonValue in practice — validated below
   lang: string
 ): any[] {
   // Priority 1: Check if i18n value exists and has the requested language
-  if (i18nValue && typeof i18nValue === 'object') {
+  const i18n =
+    i18nValue && typeof i18nValue === 'object' && !Array.isArray(i18nValue)
+      ? (i18nValue as Record<string, unknown>)
+      : null;
+  if (i18n) {
     // Try requested language
-    if (Array.isArray(i18nValue[lang])) {
-      return i18nValue[lang];
+    if (Array.isArray(i18n[lang])) {
+      return i18n[lang] as any[];
     }
-    
+
     // Fallback to English
-    if (Array.isArray(i18nValue['en'])) {
-      return i18nValue['en'];
+    if (Array.isArray(i18n['en'])) {
+      return i18n['en'] as any[];
     }
   }
   

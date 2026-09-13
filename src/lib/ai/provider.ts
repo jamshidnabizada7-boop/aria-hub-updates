@@ -44,6 +44,7 @@ export interface AIProvider {
 
   /** Suggest category slugs from a known set. */
   categorize(text: string, knownSlugs: string[]): Promise<string[]>;
+
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────────
@@ -129,7 +130,7 @@ export async function getAIProvider(): Promise<AIProvider | null> {
     cachedProvider = null;
   }
 
-  return cachedProvider;
+  return cachedProvider ?? null;
 }
 
 /** Reset the cached provider (useful in tests). */

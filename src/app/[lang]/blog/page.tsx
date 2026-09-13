@@ -54,7 +54,9 @@ export default async function BlogPage({
     listBlogCategories(typedLang),
   ]);
 
-  const [featured, ...rest] = category ? [null, ...posts] : posts;
+  // (a plain destructure of [null, ...posts] types `post` as possibly null)
+  const featured = category ? null : posts[0] ?? null;
+  const rest = category ? posts : posts.slice(1);
   const BackIcon = isRtl ? ArrowRight : ArrowLeft;
   const FwdIcon = isRtl ? ArrowLeft : ArrowRight;
 

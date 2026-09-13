@@ -40,7 +40,7 @@ interface Category { id: string; slug: string; name: string }
 interface Item { id: string; [k: string]: unknown }
 
 const TRANSLATABLE = [
-  'title', 'description', 'eligibility', 'benefits', 'responsibilities',
+  'title', 'description', 'eligibility', 'benefits', 'responsibilities', 'seoTitle', 'seoDescription',
   'requirements', 'guidelines', 'jobType', 'salary', 'educationReq', 'experience',
 ] as const;
 

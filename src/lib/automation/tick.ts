@@ -33,7 +33,7 @@ export interface TickResult {
   queue?: { created: number; error?: string };
   publish?: { rendered: number; published: number; failed: number; error?: string };
   /** step-level failures — a tick with errors is recorded as 'partial', never 'ok' */
-  errors?: string[];
+  errors: string[];
 }
 
 /**
@@ -113,7 +113,7 @@ async function stepImport(state: Awaited<ReturnType<typeof getState>>, runId: st
   return { ran, ok };
 }
 
-async function stepTranslate(state: Awaited<ReturnType<typeof getState>>, errors: string[]): Promise<{ processed: number; failed: number; rateLimited: boolean; skipped: boolean }> {
+async function stepTranslate(state: Awaited<ReturnType<typeof getState>>, errors: string[]): Promise<{ processed: number; failed: number; rateLimited: boolean; skipped: boolean; error?: string }> {
   if (state.translateBackoffUntil && new Date(state.translateBackoffUntil) > new Date()) {
     return { processed: 0, failed: 0, rateLimited: false, skipped: true };
   }
@@ -136,11 +136,11 @@ async function stepTranslate(state: Awaited<ReturnType<typeof getState>>, errors
 
 export async function runTick(baseUrl = 'http://127.0.0.1:3000'): Promise<TickResult> {
   const g = globalThis as unknown as { __ariaTickRunning?: boolean };
-  if (g.__ariaTickRunning) return { ran: false, reason: 'tick_already_running' };
-  if (freeMb() < MIN_FREE_MB) return { ran: false, reason: `low_memory_${freeMb()}mb` };
+  if (g.__ariaTickRunning) return { ran: false, reason: 'tick_already_running', errors: [] };
+  if (freeMb() < MIN_FREE_MB) return { ran: false, reason: `low_memory_${freeMb()}mb`, errors: [] };
   // Cross-process guard: the in-memory flag cannot see the cron backstop or
   // a CLI tick in another process — the DB lock can.
-  if (!(await acquireTickLock())) return { ran: false, reason: 'tick_locked_elsewhere' };
+  if (!(await acquireTickLock())) return { ran: false, reason: 'tick_locked_elsewhere', errors: [] };
   g.__ariaTickRunning = true;
 
   // Housekeeping: ticks abandoned by a crashed/OOM-killed process stay

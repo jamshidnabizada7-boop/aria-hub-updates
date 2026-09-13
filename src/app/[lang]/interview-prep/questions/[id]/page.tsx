@@ -50,7 +50,7 @@ export default async function QuestionDetailPage({
   const commonMistakes = (getLocalizedContent(
     Array.isArray(question.commonMistakes) ? (question.commonMistakes as string[]).join('\n') : '',
     Array.isArray(question.commonMistakesI18n)
-      ? (question.commonMistakesI18n as Record<string, string[]>)[lang]?.join('\n')
+      ? (question.commonMistakesI18n as unknown as Record<string, string[]>)[lang]?.join('\n')
       : undefined,
     lang
   ) || '')
@@ -60,7 +60,7 @@ export default async function QuestionDetailPage({
   const followUps = (getLocalizedContent(
     Array.isArray(question.followUpQuestions) ? (question.followUpQuestions as string[]).join('\n') : '',
     Array.isArray(question.followUpQuestionsI18n)
-      ? (question.followUpQuestionsI18n as Record<string, string[]>)[lang]?.join('\n')
+      ? (question.followUpQuestionsI18n as unknown as Record<string, string[]>)[lang]?.join('\n')
       : undefined,
     lang
   ) || '')

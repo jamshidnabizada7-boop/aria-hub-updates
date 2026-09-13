@@ -602,7 +602,7 @@ export default async function OpportunityDetailPage({
                               dir="auto"
                               className="line-clamp-2 text-[13px] font-medium leading-snug text-foreground/80 transition-colors group-hover:text-primary"
                             >
-                              {getLocalizedContent(item.title, item.titleI18n as I18nJson, lang)}
+                              {getLocalizedContent(item.title, (item as { titleI18n?: unknown }).titleI18n as I18nJson, lang)}
                             </span>
                             {dl !== null && (
                               <span

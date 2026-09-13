@@ -23,7 +23,7 @@ export default async function Page({
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
   const activeWhere = {
-    status: 'published',
+    status: 'published' as const,
     OR: [{ deadline: null }, { deadline: { gte: today } }],
   };
 

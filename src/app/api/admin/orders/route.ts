@@ -1,3 +1,4 @@
+import type { MonetizationOrderStatus } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentAdmin, logAction } from '@/lib/admin-auth';
 import { db } from '@/lib/db';
@@ -44,7 +45,7 @@ export async function GET(req: NextRequest) {
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const status = req.nextUrl.searchParams.get('status') || 'all';
-  const where = ALL_STATUSES.includes(status as OrderStatus) ? { status } : {};
+  const where = ALL_STATUSES.includes(status as OrderStatus) ? { status: status as OrderStatus } : {};
 
   const items = await db.monetizationOrder.findMany({
     where,
@@ -166,7 +167,7 @@ export async function PATCH(req: NextRequest) {
   const updated = await db.monetizationOrder.update({
     where: { id },
     data: {
-      status: nextStatus,
+      status: nextStatus as MonetizationOrderStatus,
       paymentMethod,
       paymentRef,
       adminNote,

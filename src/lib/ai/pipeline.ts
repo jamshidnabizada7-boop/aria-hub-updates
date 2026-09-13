@@ -301,7 +301,7 @@ export async function runAIPipeline(
 
   for (const s of sectionFields) {
     if (s.value) {
-      (data as Record<string, unknown>)[`${s.key}I18n`] = { [originalLang]: s.value };
+      (data as unknown as Record<string, unknown>)[`${s.key}I18n`] = { [originalLang]: s.value };
     }
   }
 
@@ -311,7 +311,7 @@ export async function runAIPipeline(
   if (provider) {
     try {
       const chat = (system: string, user: string): Promise<string> =>
-        typeof (provider as Record<string, unknown>).chat === 'function'
+        typeof (provider as unknown as Record<string, unknown>).chat === 'function'
           ? (provider as unknown as { chat(s: string, u: string): Promise<string> }).chat(system, user)
           : Promise.reject(new Error('no chat'));
       const sections = await translateSections(
@@ -379,7 +379,7 @@ async function enrichWithProvider(provider: unknown, listing: RawListing): Promi
   // The ZAIProvider exposes a private chat(); other providers expose
   // rewrite/translate. Normalize: prefer an explicit enrich() if present,
   // else fall back to a raw chat-style call through the ZAI provider shape.
-  const p = provider as Record<string, unknown>;
+  const p = provider as unknown as Record<string, unknown>;
   if (typeof p.enrich === 'function') {
     return (p as unknown as { enrich(system: string, user: string): Promise<string> }).enrich(
       ENRICH_SYSTEM,

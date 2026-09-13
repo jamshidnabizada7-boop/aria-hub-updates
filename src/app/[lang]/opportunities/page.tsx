@@ -560,7 +560,7 @@ export default async function OpportunitiesPage({
           )}
 
           {/* Channel follow band — recurring-visit driver (DB-managed links) */}
-          <FollowChannelsBand lang={lang} socialLinks={data.socialLinks} className="mt-14" />
+          <FollowChannelsBand lang={lang} socialLinks={data.socialLinks.map((l) => ({ platform: l.platform, label: l.label ?? '', url: l.url }))} className="mt-14" />
           {/* Email alert signup — captures leads; category prefilled from the active filter.
               #alerts is the end-of-feed / empty-state CTA target. */}
           <div id="alerts" className="mt-14 scroll-mt-28">

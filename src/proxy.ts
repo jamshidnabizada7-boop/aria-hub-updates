@@ -4,7 +4,9 @@ const LANGS = ['en', 'fa', 'ps'];
 const COOKIE_NAME = 'aria-lang';
 const ONE_YEAR = 60 * 60 * 24 * 365;
 
-/**
+/** Next 16: the `middleware` convention was renamed to `proxy` — same
+ * signature, same matcher config.
+ *
  * Parse an Accept-Language header and return the first supported language
  * (ordered by q-value). fa/fa-IR -> fa, ps/ps-AF -> ps, en/en-US -> en.
  */
@@ -47,7 +49,7 @@ function headersWithLangCookie(req: NextRequest, value: string): Headers {
   return headers;
 }
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Skip anything that looks like a static file (last path segment has an extension).
@@ -97,9 +99,9 @@ export function middleware(req: NextRequest) {
   // No language prefix: pick one (cookie > Accept-Language > site default fa)
   // and redirect, preserving the query string.
   const cookieLang = req.cookies.get(COOKIE_NAME)?.value;
-  const lang = LANGS.includes(cookieLang)
+  const lang = LANGS.includes(cookieLang ?? '')
     ? cookieLang
-    : (matchAcceptLanguage(req.headers.get('accept-language')) ?? 'fa');
+    : (matchAcceptLanguage(req.headers.get('accept-language') ?? '') ?? 'fa');
 
   const url = req.nextUrl.clone();
   url.pathname = `/${lang}${pathname === '/' ? '' : pathname}`;

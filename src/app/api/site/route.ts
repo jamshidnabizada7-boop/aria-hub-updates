@@ -59,7 +59,7 @@ export async function GET() {
     ]);
 
     const menuTree = buildMenuTree(menuItems as any);
-    const footer: Record<string, typeof footerLinks> = {};
+    const footer: Partial<Record<string, typeof footerLinks>> = {};
     for (const fl of footerLinks) {
       (footer[fl.column] ||= []).push(fl);
     }

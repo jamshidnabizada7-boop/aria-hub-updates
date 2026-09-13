@@ -301,7 +301,7 @@ export default async function AdvertisePage({
         {/* ── Channels band ───────────────────────────────────────────── */}
         {data.socialLinks?.length ? (
           <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 lg:px-8">
-            <FollowChannelsBand lang={lang} socialLinks={data.socialLinks} />
+            <FollowChannelsBand lang={lang} socialLinks={data.socialLinks.map((l) => ({ platform: l.platform, label: l.label ?? '', url: l.url }))} />
           </section>
         ) : null}
 

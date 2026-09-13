@@ -26,7 +26,9 @@ import { publishToPlatform } from '@/lib/social/channels';
 import { notifyAdmin } from '@/lib/social/notify';
 import { decryptCredentials } from '@/lib/social/credentials';
 import { resolveExecutable } from '@/lib/import/scrapers/browser-fetch';
-import type { Lang, PostTemplate, PosterSize } from '@/lib/social/brand';
+import type { Lang } from '@/lib/i18n-config';
+import type { PostTemplate } from '@/lib/social/brand';
+import type { PosterSize } from '@/lib/social/templates';
 import { translate } from '@/lib/i18n';
 
 // Afghanistan Time = UTC+4:30 (no DST).
@@ -412,7 +414,8 @@ export async function publishDueQueue(limit = 2): Promise<{ published: number; f
     }
 
     // Merge over previous results so a partially-succeeded row keeps its wins.
-    const merged: Record<string, { ok: boolean; error?: string; downgraded?: string }> = { ...prevResults };
+    const merged: Record<string, { ok: boolean; error?: string; downgraded?: string }> =
+      { ...(prevResults as Record<string, { ok: boolean; error?: string; downgraded?: string }>) };
     for (const [k, v] of Object.entries(results)) merged[k] = v;
     const mergedList = Object.values(merged);
     const allOk = mergedList.length > 0 && mergedList.every((r) => r.ok);

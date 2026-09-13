@@ -1088,6 +1088,7 @@ model VisaCountry {
   embassyInfo     String?
   embassyInfoI18n Json?
   successRate     String?        // "85%"
+  guideContent    String?        // general guidelines HTML shown on the country page
   status          String         @default("published")
   order           Int            @default(0)
   questions       VisaQuestion[]

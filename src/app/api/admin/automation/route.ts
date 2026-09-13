@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
         const data = {
           label: String(body.label || existing?.label || platform),
           enabled: body.enabled === undefined ? (existing?.enabled ?? false) : Boolean(body.enabled),
-          ...(hasAny ? { credentials: encryptCredentials(mergedCreds) } : {}),
+          ...(hasAny ? { credentials: encryptCredentials(mergedCreds) as object } : {}),
         };
         const ch = await db.publishChannel.upsert({
           where: { platform },
@@ -179,9 +179,11 @@ export async function POST(req: NextRequest) {
         const langs = state.captionLangs?.length ? state.captionLangs : (['fa', 'ps', 'en'] as const);
         const images = (fresh.imagePaths ?? {}) as { square?: string; local?: string };
         const prevResults = (fresh.results ?? {}) as Record<string, { ok?: boolean; error?: string }>;
-        const results: Record<string, { ok: boolean; error?: string; downgraded?: string }> = { ...prevResults };
+        const results: Record<string, { ok: boolean; error?: string; downgraded?: string }> =
+          { ...(prevResults as Record<string, { ok: boolean; error?: string; downgraded?: string }>) };
         const external: Record<string, { id: string | null; permalink: string | null }> =
           (fresh.externalIds ?? {}) as Record<string, { id: string | null; permalink: string | null }>;
+        void external;
         let anyOk = Object.values(prevResults).some((r) => r.ok);
         for (const ch of channels) {
           if (prevResults[ch.platform]?.ok) continue; // never double-post a channel

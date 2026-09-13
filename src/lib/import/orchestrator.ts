@@ -12,12 +12,12 @@
  *
  * Robustness:
  *   - Each listing is wrapped in try/catch — one failure never aborts the run.
- *   - Batch DB writes via $transaction per source.
+ *   - Per-listing writes (no transaction — see dedupe.ts for the race story).
  *   - Sequential detail fetches with crawl-delay (handled in BaseScraper).
  *   - Sanitized errors recorded in ImportRun.errors for the admin log viewer.
  */
 
-import type { PrismaClient, Prisma } from '@prisma/client';
+import type { PrismaClient, Prisma, OpportunityStatus } from '@prisma/client';
 import { db } from '@/lib/db';
 import { getScraper } from './registry';
 import { computeHash, findExisting } from './dedupe';
@@ -70,6 +70,7 @@ export interface RunSummary {
   duplicates: number;
   failed: number;
   processingMs: number;
+  error?: string;
 }
 
 /** Module-level guard: prevent overlapping runs of the same source. */
@@ -191,7 +192,7 @@ async function runOneSource(
         break;
       }
       try {
-        await processListing(db, scraper, listing, source, categories, knownSlugs, counters, force);
+        await processListing(db, scraper, listing, source, categories, knownSlugs, counters, force, errors);
       } catch (e) {
         counters.failed++;
         errors.push({ url: listing.sourceUrl, message: sanitizeError(e), ts: new Date().toISOString() });
@@ -289,6 +290,7 @@ async function processListing(
   knownSlugs: string[],
   counters: { found: number; imported: number; updated: number; skipped: number; duplicates: number; failed: number },
   force: boolean,
+  errors: Array<{ url: string; message: string; ts: string }>,
 ): Promise<void> {
   // Bot-challenge guard: when a source is behind Cloudflare, the "detail
   // page" sometimes IS the challenge page and the scraper stores its title
@@ -441,7 +443,7 @@ async function processListing(
     logoUrl: logo.path || null,
     publishedDate: listing.publishedDate || null,  // String field in schema, no conversion needed
     canonicalUrl: listing.sourceUrl,
-    status: source.autoPublish ? 'published' : 'draft',
+    status: (source.autoPublish ? 'published' : 'draft') as OpportunityStatus,
     extractedData: listing.extractedData || {},
   };
 

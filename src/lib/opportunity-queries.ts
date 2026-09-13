@@ -473,7 +473,7 @@ export async function getRelatedOpportunities(
 export async function getFacets(lang?: Lang): Promise<Facets> {
   const today = startOfTodayUtc();
   const where = {
-    status: 'published',
+    status: 'published' as const,
     OR: [{ deadline: null }, { deadline: { gte: today } }],
   };
 
@@ -485,7 +485,7 @@ export async function getFacets(lang?: Lang): Promise<Facets> {
     db.opportunity.groupBy({
       by: ['categoryId'],
       where,
-      _count: true,
+      _count: { _all: true },
     }),
     db.opportunity.groupBy({
       by: ['country'],
@@ -498,7 +498,7 @@ export async function getFacets(lang?: Lang): Promise<Facets> {
   ]);
 
   const countByCategory = new Map(
-    byCategory.map((g) => [g.categoryId ?? '', g._count])
+    byCategory.map((g) => [g.categoryId ?? '', g._count?._all ?? 0])
   );
 
   return {
@@ -513,7 +513,7 @@ export async function getFacets(lang?: Lang): Promise<Facets> {
     })),
     locations: byCountry.map((g) => ({
       name: g.country as string,
-      count: g._count.country,
+      count: g._count?.country ?? 0,
     })),
     totalActive,
   };

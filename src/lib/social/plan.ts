@@ -175,7 +175,7 @@ export async function buildDailyPlan(lang: Lang): Promise<DailyPlan> {
   const oppPool: PlanOpp[] = oppRows.map((o) => ({ ...o, deadline: o.deadline ? o.deadline.toISOString() : null }));
   const closingPool: PlanOpp[] = closingRows.map((o) => ({ ...o, deadline: o.deadline ? o.deadline.toISOString() : null }));
   const newsPool: PlanNews[] = newsRows.map((n) => ({ ...n, publishedAt: n.publishedAt.toISOString() }));
-  const storyPool: PlanStory[] = storyRows;
+  const storyPool = storyRows as unknown as PlanStory[];
   const tips = ideaRows.filter((i) => i.kind === 'tip');
   const quotes = ideaRows.filter((i) => i.kind === 'quote');
   const promos = ideaRows.filter((i) => i.kind === 'promo');
@@ -268,7 +268,7 @@ export async function buildDailyPlan(lang: Lang): Promise<DailyPlan> {
       const note = trim(getLocalizedContent(n.excerpt, i18n(n.excerptI18n), lang) || n.excerpt, 160);
       const input: CaptionInput = { template, lang, title, note };
       posts.push({
-        key: `news-${n.slug}`, template, title, note,
+        key: `news-${n.slug}`, template, title, meta: note,
         news: n, caption: buildCaption(input), brief: captionBrief(input),
       });
     } else if (template === 'stat') {

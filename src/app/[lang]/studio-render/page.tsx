@@ -16,7 +16,8 @@ import { use, useMemo, useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import { OpportunityPoster, buildPosterData, type PosterSize as _PS } from '@/components/site/opportunity-poster';
 import { SocialCanvas, type PosterSize } from '@/lib/social/templates';
-import type { Lang, PostTemplate } from '@/lib/social/brand';
+import type { Lang } from '@/lib/i18n-config';
+import type { PostTemplate } from '@/lib/social/brand';
 
 type Props = {
   searchParams: Promise<{ p?: string }>;

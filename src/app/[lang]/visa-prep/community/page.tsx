@@ -50,7 +50,7 @@ export default async function VisaCommunityPage({
           </div>
 
           {/* Client Grid Component */}
-          <CommunityClient initialStories={stories} />
+          <CommunityClient initialStories={stories as unknown as Parameters<typeof CommunityClient>[0]['initialStories']} />
         
         </div>
       </div>
