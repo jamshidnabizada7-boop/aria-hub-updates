@@ -1,0 +1,15 @@
+import pg from 'pg';
+const pool = new pg.Pool({ connectionString: 'postgresql://postgres@127.0.0.1:5433/ariahub?sslmode=disable', max: 2 });
+console.log('=== LOCAL NEWS ===');
+const { rows: news } = await pool.query(`SELECT title, "titleI18n" IS NOT NULL AS i18n, status FROM "News"`);
+news.forEach(r => console.log(`${r.title.slice(0,60).padEnd(62)} i18n=${r.i18n?'Y':'N'} ${r.status}`));
+console.log('\n=== LOCAL SUCCESS STORIES ===');
+const { rows: ss } = await pool.query(`SELECT * FROM "SuccessStory" LIMIT 3`);
+ss.forEach(r => console.log(JSON.stringify(r).slice(0, 200)));
+console.log('\n=== LOCAL CATEGORIES ===');
+const { rows: cat } = await pool.query(`SELECT id, slug, name FROM "OpportunityCategory"`);
+cat.forEach(r => console.log(`${r.slug.padEnd(20)} ${r.name}`));
+console.log('\n=== SAMPLE OPPORTUNITY FULL I18N CHECK ===');
+const { rows: opp } = await pool.query(`SELECT title, "titleI18n", "aiSummaryI18n", "extractedDataI18n" IS NOT NULL AS has_ext FROM "Opportunity" LIMIT 1`);
+console.log(JSON.stringify(opp[0], null, 1).slice(0, 900));
+await pool.end();

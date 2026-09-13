@@ -1,0 +1,10 @@
+import { Client } from 'pg';
+const c = new Client({ connectionString: 'postgresql://postgres@127.0.0.1:5433/ariahub?sslmode=disable' });
+await c.connect();
+const q = await c.query('SELECT id, "scheduledFor", "templateType", "contentRef", status, "imageStatus" FROM "SocialPostQueue" ORDER BY "scheduledFor" ASC LIMIT 6');
+console.log('QUEUE:', JSON.stringify(q.rows, null, 1));
+const runs = await c.query('SELECT kind, status, "startedAt" FROM "PipelineRun" ORDER BY "startedAt" DESC LIMIT 3');
+console.log('RUNS:', JSON.stringify(runs.rows));
+const st = await c.query('SELECT state FROM "AutomationState"');
+console.log('STATE:', JSON.stringify(st.rows[0]?.state)?.slice(0, 200));
+await c.end();

@@ -1,0 +1,1277 @@
+// ARIA HUB — Professional Business Services Platform
+// Fully dynamic, CMS-driven relational schema (SQLite)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // directUrl = env("DIRECT_URL")
+}
+
+// ─── Site-wide settings (single row, key/value style + structured) ───────────
+model SiteSetting {
+  id                 String   @id @default(cuid())
+  siteName           String   @default("ARIA HUB")
+  siteNameI18n       Json?
+  tagline            String   @default("Professional Business Services Platform")
+  taglineI18n        Json?
+  description        String   @default("Premium business, visa and opportunity services.")
+  descriptionI18n    Json?
+  logoUrl            String?
+  logoDarkUrl        String?
+  faviconUrl         String?
+  appleIconUrl       String?
+  primaryColor       String   @default("#0A66C2")
+  secondaryColor     String   @default("#0EA5E9")
+  accentColor        String   @default("#22D3EE")
+  fontFamily         String   @default("Geist")
+  email              String?
+  phone              String?
+  address            String?
+  addressI18n        Json?
+  currency           String   @default("USD")
+  timezone           String   @default("Asia/Karachi")
+  dateFormat         String   @default("MMM dd, yyyy")
+  maintenanceMode    Boolean  @default(false)
+  gaId               String?
+  fbPixelId          String?
+  customScripts      String?
+  mapEmbed           String?
+  socialPosition     String   @default("left") // left | right
+  socialHideOnScroll Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+// ─── Languages ───────────────────────────────────────────────────────────────
+model Language {
+  id           String   @id @default(cuid())
+  code         String   @unique // en, fa, ps
+  name         String // English, Dari, Pashto
+  nativeName   String // English, دری, پښتو
+  direction    String   @default("ltr") // ltr | rtl
+  enabled      Boolean  @default(true)
+  isDefault    Boolean  @default(false)
+  flag         String?
+  order        Int      @default(0)
+  translations Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ─── Navigation menus (unlimited nested) ─────────────────────────────────────
+model MenuItem {
+  id           String     @id @default(cuid())
+  label        String
+  labelI18n    Json? // { en: "...", fa: "...", ps: "..." }
+  url          String?
+  parentId     String?
+  icon         String?
+  order        Int        @default(0)
+  visible      Boolean    @default(true)
+  openInNewTab Boolean    @default(false)
+  pageSlug     String?
+  parent       MenuItem?  @relation("MenuTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children     MenuItem[] @relation("MenuTree")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([parentId])
+  @@index([order])
+}
+
+// ─── Page sections (CMS) ─────────────────────────────────────────────────────
+model Section {
+  id        String   @id @default(cuid())
+  key       String   @unique // hero, services, whyChooseUs, etc.
+  title     String
+  subtitle  String?
+  enabled   Boolean  @default(true)
+  order     Int      @default(0)
+  config    String? // JSON string of section config
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─── Services ────────────────────────────────────────────────────────────────
+model ServiceCategory {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  icon        String?
+  description String?
+  order       Int       @default(0)
+  services    Service[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Service {
+  id              String           @id @default(cuid())
+  title           String
+  titleI18n       Json? // { en: "...", fa: "...", ps: "..." }
+  slug            String           @unique
+  excerpt         String
+  excerptI18n     Json?
+  description     String
+  descriptionI18n Json?
+  icon            String?
+  image           String?
+  gallery         String? // JSON array of image urls
+  video           String?
+  price           String?
+  featured        Boolean          @default(false)
+  status          String           @default("published") // published | draft | archived
+  sort            Int              @default(0)
+  seoTitle        String?
+  seoDescription  String?
+  categoryId      String?
+  category        ServiceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([categoryId])
+  @@index([featured])
+  @@index([status])
+}
+
+// ─── Visas ───────────────────────────────────────────────────────────────────
+model Visa {
+  id                     String   @id @default(cuid())
+  country                String
+  countryI18n            Json?
+  countryCode            String?
+  visaType               String
+  visaTypeI18n           Json?
+  slug                   String   @unique
+  duration               String?
+  processingTime         String?
+  fee                    String?
+  requirements           String? // JSON array
+  requirementsI18n       Json?
+  documents              String? // JSON array
+  documentsI18n          Json?
+  eligibility            String?
+  eligibilityI18n        Json?
+  embassyDetails         String?
+  applicationProcess     String?
+  applicationProcessI18n Json?
+  faqs                   String? // JSON array
+  image                  String?
+  gallery                String? // JSON
+  featured               Boolean  @default(false)
+  status                 String   @default("published")
+  sort                   Int      @default(0)
+  seoTitle               String?
+  seoDescription         String?
+  description            String?
+  descriptionI18n        Json?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@index([featured])
+  @@index([status])
+  @@index([country])
+}
+
+// ─── Opportunities (jobs, scholarships, etc.) ────────────────────────────────
+model OpportunityCategory {
+  id            String        @id @default(cuid())
+  name          String
+  nameI18n      Json? // { en: "...", fa: "...", ps: "..." }
+  slug          String        @unique
+  icon          String?
+  order         Int           @default(0)
+  opportunities Opportunity[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Opportunity {
+  id              String               @id @default(cuid())
+  title           String
+  titleI18n       Json?
+  slug            String               @unique
+  organization    String?
+  country         String?
+  deadline        DateTime?
+  description     String
+  descriptionI18n Json?
+  eligibility     String?
+  eligibilityI18n Json?
+  benefits        String?
+  benefitsI18n    Json?
+  website         String?
+  applyUrl        String?
+  image           String?
+  attachments     String? // JSON
+  featured        Boolean              @default(false)
+  status          String               @default("published")
+  sort            Int                  @default(0)
+  seoTitle        String?
+  seoDescription  String?
+  categoryId      String?
+  category        OpportunityCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  // ─── Automated import tracking (all optional; populated by import pipeline) ──
+  sourceName           String?
+  sourceUrl            String? // canonical listing URL on source site
+  originalUrl          String? // deep link to the original post
+  importedAt           DateTime?
+  lastChecked          DateTime?
+  contentHash          String? // sha256 of normalized content for change detection
+  aiSummary            String?
+  aiSummaryI18n        Json?
+  jobType              String? // job | scholarship | fellowship | internship | ...
+  jobTypeI18n          Json?
+  salary               String?
+  salaryI18n           Json?
+  educationReq         String?
+  educationReqI18n     Json?
+  experience           String?
+  experienceI18n       Json?
+  responsibilities     String?
+  responsibilitiesI18n Json?
+  requirements         String? // required documents / materials
+  requirementsI18n     Json?
+  guidelines           String? // submission guidelines / how to apply
+  guidelinesI18n       Json?
+  tags                 String? // JSON array of strings
+  tagsI18n             Json? // { en: [...], fa: [...], ps: [...] }
+  seoTitleI18n         Json?
+  seoDescriptionI18n   Json?
+  seoKeywords          String? // JSON array of strings
+  seoKeywordsI18n      Json?
+  ogTitle              String?
+  ogTitleI18n          Json?
+  ogDescription        String?
+  ogDescriptionI18n    Json?
+  canonicalUrl         String?
+  importStatus         String? // imported | updated | skipped | failed | pending
+  translationStatus    String? // pending | partial | complete | failed
+  language             String? // original source language code (en, fa, ps, ...)
+  logoUrl              String?
+  publishedDate        String?
+  extractedData        Json? // store extra dynamic metadata scraped from the source
+  extractedDataI18n    Json? // localized dynamic metadata scraped from the source
+
+  @@index([categoryId])
+  @@index([featured])
+  @@index([status])
+  @@index([sourceUrl])
+  @@index([contentHash])
+  @@index([importStatus])
+}
+
+// ─── Automated import sources ────────────────────────────────────────────────
+model ImportSource {
+  id              String      @id @default(cuid())
+  name            String      @unique // "Wazifaha Jobs", "Scholarships.af"
+  type            String // job | scholarship
+  scraperKey      String // maps to a BaseScraper subclass in the registry
+  baseUrl         String
+  enabled         Boolean     @default(true)
+  autoPublish     Boolean     @default(false) // publish immediately, else save as draft
+  scheduleMinutes Int         @default(60) // informational; runs are admin-triggered
+  defaultCategory String? // opportunity category slug hint
+  config          String? // JSON: selectors, filters, API options, etc.
+  lastRunAt       DateTime?
+  lastRunStatus   String? // ok | error | partial
+  lastRunStats    String? // JSON summary of last run
+  runs            ImportRun[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+// ─── Import run logs (one row per import execution) ──────────────────────────
+model ImportRun {
+  id           String       @id @default(cuid())
+  sourceId     String
+  source       ImportSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  startedAt    DateTime     @default(now())
+  finishedAt   DateTime?
+  status       String       @default("running") // running | ok | error | partial | stopped
+  found        Int          @default(0)
+  imported     Int          @default(0)
+  updated      Int          @default(0)
+  skipped      Int          @default(0)
+  duplicates   Int          @default(0)
+  failed       Int          @default(0)
+  processingMs Int          @default(0)
+  errors       String? // JSON array of { url, message, ts }
+  triggeredBy  String? // manual | <source-name>
+  createdAt    DateTime     @default(now())
+
+  @@index([sourceId])
+  @@index([startedAt])
+}
+
+// ─── Gallery ─────────────────────────────────────────────────────────────────
+model GalleryAlbum {
+  id          String        @id @default(cuid())
+  title       String
+  slug        String        @unique
+  description String?
+  coverImage  String?
+  order       Int           @default(0)
+  items       GalleryItem[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model GalleryItem {
+  id          String        @id @default(cuid())
+  title       String
+  type        String        @default("image") // image | video
+  url         String
+  thumbnail   String?
+  caption     String?
+  captionI18n Json?
+  category    String? // Office | Events | Travel | Team | etc.
+  albumId     String?
+  album       GalleryAlbum? @relation(fields: [albumId], references: [id], onDelete: SetNull)
+  order       Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([albumId])
+  @@index([category])
+}
+
+// ─── Payments ────────────────────────────────────────────────────────────────
+model PaymentMethod {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  logo          String?
+  qrCode        String?
+  accountNumber String?
+  iban          String?
+  accountTitle  String?
+  description   String?
+  instructions  String?
+  status        String   @default("active")
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status])
+}
+
+// ─── Testimonials ────────────────────────────────────────────────────────────
+model Testimonial {
+  id          String   @id @default(cuid())
+  name        String
+  nameI18n    Json?
+  role        String?
+  roleI18n    Json?
+  company     String?
+  companyI18n Json?
+  avatar      String?
+  rating      Int      @default(5)
+  content     String
+  contentI18n Json?
+  featured    Boolean  @default(false)
+  status      String   @default("published")
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([featured])
+  @@index([status])
+}
+
+// ─── Partners ────────────────────────────────────────────────────────────────
+model Partner {
+  id        String   @id @default(cuid())
+  name      String
+  logo      String?
+  website   String?
+  order     Int      @default(0)
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─── Counters / Stats ────────────────────────────────────────────────────────
+model Counter {
+  id         String   @id @default(cuid())
+  label      String
+  labelI18n  Json?
+  value      Int
+  suffix     String?
+  suffixI18n Json?
+  icon       String?
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ─── FAQs ────────────────────────────────────────────────────────────────────
+model Faq {
+  id           String   @id @default(cuid())
+  question     String
+  questionI18n Json?
+  answer       String
+  answerI18n   Json?
+  category     String?
+  order        Int      @default(0)
+  status       String   @default("published")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ─── News / Blog ─────────────────────────────────────────────────────────────
+model NewsCategory {
+  id        String   @id @default(cuid())
+  name      String
+  nameI18n  Json?
+  slug      String   @unique
+  posts     News[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model News {
+  id             String        @id @default(cuid())
+  title          String
+  titleI18n      Json?
+  slug           String        @unique
+  excerpt        String
+  excerptI18n    Json?
+  content        String
+  contentI18n    Json?
+  image          String?
+  author         String?
+  tags           String? // JSON array
+  featured       Boolean       @default(false)
+  status         String        @default("published")
+  publishedAt    DateTime      @default(now())
+  seoTitle       String?
+  seoDescription String?
+  categoryId     String?
+  category       NewsCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([featured])
+  @@index([status])
+  @@index([categoryId])
+}
+
+// ─── Social Links (floating + footer) ────────────────────────────────────────
+model SocialLink {
+  id        String   @id @default(cuid())
+  platform  String // whatsapp, facebook, instagram, telegram, linkedin, youtube, tiktok, messenger, phone, email
+  label     String
+  url       String
+  icon      String?
+  color     String?
+  enabled   Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─── Footer ──────────────────────────────────────────────────────────────────
+model FooterLink {
+  id        String   @id @default(cuid())
+  column    String // quickLinks, services, contact, etc.
+  label     String
+  labelI18n Json?
+  url       String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([column])
+}
+
+// -------------------------------------------------------------------------------------------------
+// Why Choose Us Features
+// -------------------------------------------------------------------------------------------------
+model WhyChooseUsFeature {
+  id              String   @id @default(cuid())
+  key             String?  @unique
+  title           String
+  titleI18n       Json?
+  description     String
+  descriptionI18n Json?
+  icon            String   @default("Check")
+  color           String   @default("from-primary to-chart-2")
+  glow            String   @default("bg-primary/20")
+  order           Int      @default(0)
+  enabled         Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ─── Contact submissions ─────────────────────────────────────────────────────
+model ContactMessage {
+  id         String   @id @default(cuid())
+  name       String
+  email      String
+  phone      String?
+  subject    String?
+  message    String
+  department String?
+  status     String   @default("new") // new | read | replied | archived
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ─── Departments / Branches ──────────────────────────────────────────────────
+model Department {
+  id          String   @id @default(cuid())
+  name        String
+  nameI18n    Json?
+  email       String?
+  phone       String?
+  description String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Branch {
+  id        String   @id @default(cuid())
+  name      String
+  address   String
+  phone     String?
+  email     String?
+  hours     String?
+  isMain    Boolean  @default(false)
+  mapEmbed  String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─── Advertisements (Promote) ────────────────────────────────────────────────
+model Advertisement {
+  id          String   @id @default(cuid())
+  company     String
+  title       String
+  description String?
+  image       String?
+  video       String?
+  website     String?
+  package     String?
+  startDate   String?
+  endDate     String?
+  views       Int      @default(0)
+  clicks      Int      @default(0)
+  status      String   @default("pending") // pending | approved | rejected | expired
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status])
+}
+
+// ─── Newsletter subscribers ──────────────────────────────────────────────────
+model Subscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  status    String   @default("active") // active | unsubscribed
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─── Community-submitted opportunities (moderation queue) ───────────────────
+model OpportunitySubmission {
+  id           String    @id @default(cuid())
+  title        String
+  organization String?
+  categorySlug String // jobs | scholarships | internships | ...
+  country      String?
+  deadline     DateTime?
+  applyUrl     String?
+  applyEmail   String?
+  description   String
+  contactName  String?
+  contactEmail String // for moderation follow-up
+  status       String    @default("pending") // pending | approved | rejected
+  reviewNote   String?
+  reviewedAt   DateTime?
+  reviewedBy   String?
+  sourceIp     String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // ─── Employer lane (distinct from community submissions) ──
+  submitterType  String  @default("community") // community | employer
+  jobType        String? // full-time | part-time | contract | internship | remote
+  salaryRange    String? // free text, e.g. "600–900 USD/month"
+  location       String? // city / province, e.g. "Kabul"
+  companyWebsite String? // https://…
+
+  // ─── Submitter tracking & decision notifications ──
+  referenceCode String    @unique // human-friendly tracking code, e.g. AR-7K2M9QCX
+  lang          String    @default("en") // language the submitter used — drives notification email
+  publishedSlug String? // set on approve → deep link for the /track page + notification email
+  notifiedAt    DateTime? // when the decision email was sent (prevents double sends)
+
+  @@index([status, createdAt])
+}
+
+// ─── Monetization Orders (paid postings & promotions — Phase-2 revenue) ──────
+// Self-serve order funnel adapted to Afghan payment reality: buyer requests a
+// product → pays via hawala/AfPay/hesabPay/bank/cash (or Payoneer/Wise for
+// internationals) → claims payment with a reference → admin verifies → the
+// platform auto-delivers (features the listing, schedules the sponsored slot).
+model MonetizationOrder {
+  id            String    @id @default(cuid())
+  referenceCode String    @unique // human-friendly, e.g. AR-AD-7K2M9Q
+  product       String // key from src/lib/monetization.ts PRODUCT_CATALOG
+  status        String    @default("requested") // requested | payment_claimed | paid | active | delivered | declined
+  amountUsd     Float // quoted price in USD (server-side catalog price)
+  amountAfn     Float // quoted AFN equivalent at order time (informational)
+  buyerName     String
+  buyerOrg      String?
+  buyerEmail    String // follow-up + verification channel
+  buyerPhone    String? // Afghan reality: phone/WhatsApp-first communication
+  buyerLang     String    @default("fa") // language of the order form used
+  message       String? // free-text requirements (job details, slot copy…)
+  opportunityId String? // attached listing (featured/promotion orders)
+  paymentMethod String? // hawala | afg_pay | hesab_pay | bank | cash | payoneer | wise | other
+  paymentRef    String? // hawala code / transaction id provided by the buyer
+  paidAt        DateTime?
+  verifiedAt    DateTime?
+  verifiedBy    String?
+  deliveredAt   DateTime?
+  featuredUntil DateTime? // set when auto-applied to the attached opportunity
+  adminNote     String?
+  sourceIp      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([status, createdAt])
+}
+
+// ─── Opportunity Email Alerts (lead capture until SMTP is configured) ───────
+model AlertSubscriber {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  lang         String    @default("fa") // en | fa | ps — preferred digest language
+  categorySlug String? // null = all categories
+  frequency    String    @default("weekly") // weekly | daily
+  status       String    @default("pending") // pending | active | unsubscribed
+  confirmToken String? // reserved for double opt-in once email delivery is live
+  sourceIp     String?
+  lastDigestAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([status, createdAt])
+}
+
+// ─── Users / Auth ────────────────────────────────────────────────────────────
+model AdminUser {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  name             String
+  password         String
+  role             String    @default("admin") // super_admin | admin | editor | moderator | content_manager | support
+  avatar           String?
+  twoFactorEnabled Boolean   @default(false)
+  lastLoginAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String?
+  entityId  String?
+  details   String?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ─── Analytics ───────────────────────────────────────────────────────────────
+model Visit {
+  id        String   @id @default(cuid())
+  path      String
+  country   String?
+  city      String?
+  browser   String?
+  device    String?
+  referrer  String?
+  createdAt DateTime @default(now())
+
+  @@index([path])
+  @@index([createdAt])
+}
+
+// ─── Process Steps (How It Works) ────────────────────────────────────────────
+model ProcessStep {
+  id              String   @id @default(cuid())
+  title           String
+  titleI18n       Json?
+  description     String
+  descriptionI18n Json?
+  icon            String?
+  order           Int      @default(0)
+  status          String   @default("published")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
+  @@index([order])
+}
+
+// ─── Pricing Packages ────────────────────────────────────────────────────────
+model PricingPackage {
+  id              String   @id @default(cuid())
+  name            String
+  nameI18n        Json?
+  slug            String   @unique
+  price           String
+  period          String   @default("one-time")
+  description     String?
+  descriptionI18n Json?
+  features        String? // JSON array of strings
+  featuresI18n    Json?
+  icon            String?
+  featured        Boolean  @default(false)
+  badge           String?
+  ctaLabel        String   @default("Get Started")
+  ctaUrl          String   @default("#contact")
+  order           Int      @default(0)
+  status          String   @default("published")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
+  @@index([featured])
+}
+
+// ─── Team Members ────────────────────────────────────────────────────────────
+model TeamMember {
+  id        String   @id @default(cuid())
+  name      String
+  nameI18n  Json?
+  role      String
+  roleI18n  Json?
+  bio       String?
+  bioI18n   Json?
+  photo     String?
+  email     String?
+  linkedin  String?
+  twitter   String?
+  order     Int      @default(0)
+  featured  Boolean  @default(false)
+  status    String   @default("published")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([featured])
+}
+
+// ─── Comparison Rows (Why us vs others) ──────────────────────────────────────
+model ComparisonRow {
+  id              String   @id @default(cuid())
+  feature         String
+  featureI18n     Json?
+  ariaValue       String   @default("✓")
+  ariaValueI18n   Json?
+  othersValue     String   @default("—")
+  othersValueI18n Json?
+  order           Int      @default(0)
+  status          String   @default("published")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
+}
+
+// ─── CTA Banner content (editable marketing band) ────────────────────────────
+model CtaBanner {
+  id                String   @id @default(cuid())
+  title             String
+  titleI18n         Json?
+  subtitle          String?
+  subtitleI18n      Json?
+  buttonText        String   @default("Get Started")
+  buttonTextI18n    Json?
+  buttonUrl         String   @default("#contact")
+  secondaryText     String?
+  secondaryTextI18n Json?
+  accent            String   @default("primary")
+  order             Int      @default(0)
+  status            String   @default("published")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+// ─── NextAuth Standard Models ────────────────────────────────────────────────
+model User {
+  id            String             @id @default(cuid())
+  name          String?
+  email         String?            @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  bookmarks     TemplateBookmark[]
+  ratings       TemplateRating[]
+  comments      TemplateComment[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Document Template Library ───────────────────────────────────────────────
+
+model DocumentCategory {
+  id          String             @id @default(cuid())
+  name        String
+  nameI18n    Json?
+  slug        String             @unique
+  icon        String?
+  order       Int                @default(0)
+  templates   DocumentTemplate[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+model DocumentTemplate {
+  id                 String             @id @default(cuid())
+  title              String
+  titleI18n          Json?
+  slug               String             @unique
+  excerpt            String?
+  excerptI18n        Json?
+  content            String?
+  contentI18n        Json?
+  previewUrl         String?
+  fileDocxUrl        String?
+  filePdfUrl         String?
+  isPremium          Boolean            @default(false)
+  categoryId         String?
+  category           DocumentCategory?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  filters            Json?
+  requiredFields     Json?
+  requiredFieldsI18n Json?
+  commonMistakes     Json?
+  commonMistakesI18n Json?
+  writingTips        Json?
+  writingTipsI18n    Json?
+  successRate        Int                @default(0)
+  status             String             @default("published")
+  featured           Boolean            @default(false)
+  seoTitle           String?
+  seoDescription     String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  comments           TemplateComment[]
+  ratings            TemplateRating[]
+  bookmarks          TemplateBookmark[]
+
+  @@index([categoryId])
+  @@index([status])
+}
+
+model TemplateComment {
+  id         String           @id @default(cuid())
+  content    String
+  templateId String
+  userId     String
+  status     String           @default("approved")
+  template   DocumentTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@index([templateId])
+  @@index([userId])
+}
+
+model TemplateRating {
+  id         String           @id @default(cuid())
+  score      Int
+  templateId String
+  userId     String
+  template   DocumentTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime         @default(now())
+
+  @@unique([templateId, userId])
+}
+
+model TemplateBookmark {
+  id         String           @id @default(cuid())
+  templateId String
+  userId     String
+  template   DocumentTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime         @default(now())
+
+  @@unique([templateId, userId])
+}
+
+// ─── Interview Preparation Center ────────────────────────────────────────────
+
+model InterviewCategory {
+  id          String              @id @default(cuid())
+  name        String
+  nameI18n    Json?
+  slug        String              @unique
+  icon        String?
+  description String?
+  descriptionI18n Json?
+  order       Int                 @default(0)
+  questions   InterviewQuestion[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+}
+
+model InterviewQuestion {
+  id                String             @id @default(cuid())
+  question          String
+  questionI18n      Json?
+  categoryId        String?
+  category          InterviewCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  difficulty        String             @default("medium") // beginner | medium | hard
+  filters           Json?              // { scholarship: "...", university: "...", country: "...", degree: "..." }
+  sampleAnswer      String?
+  sampleAnswerI18n  Json?
+  strongExample     String?
+  strongExampleI18n Json?
+  weakExample       String?
+  weakExampleI18n   Json?
+  tips              String?
+  tipsI18n          Json?
+  commonMistakes    Json?              // array of strings
+  commonMistakesI18n Json?
+  followUpQuestions Json?              // array of strings
+  followUpQuestionsI18n Json?
+  expectedDuration  String?            // e.g. "2-3 mins"
+  status            String             @default("published")
+  featured          Boolean            @default(false)
+  order             Int                @default(0)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([categoryId])
+  @@index([difficulty])
+  @@index([status])
+}
+
+model InterviewSession {
+  id          String   @id @default(cuid())
+  userId      String?  // Can be null if practicing anonymously
+  mode        String   @default("practice") // mock | practice | timed
+  status      String   @default("in_progress") // in_progress | completed | abandoned
+  questions   Json?    // Array of Question IDs for this session
+  responses   Json?    // Array of { questionId, transcript, audioUrl, confidenceScore, fluencyScore, grammarScore, aiFeedback }
+  score       Int?     // Overall score out of 100
+  duration    Int?     // Duration in seconds
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([userId])
+}
+
+model InterviewExperience {
+  id              String   @id @default(cuid())
+  userId          String?
+  studentName     String?
+  studentNameI18n Json?
+  scholarshipName String?
+  university      String?
+  country         String?
+  degree          String?
+  content         String
+  contentI18n     Json?
+  rating          Int      @default(5) // Difficulty rating 1-5
+  status          String   @default("pending") // pending | published | rejected
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
+}
+
+// ─── Visa Interview Preparation Center ────────────────────────────────────────
+
+model VisaCountry {
+  id              String         @id @default(cuid())
+  name            String         // USA, Canada, UK, etc.
+  nameI18n        Json?
+  code            String         @unique // US, CA, UK, AU, etc.
+  processingTime  String?        // "3-4 weeks"
+  costEstimate    String?        // "$160"
+  embassyInfo     String?
+  embassyInfoI18n Json?
+  successRate     String?        // "85%"
+  status          String         @default("published")
+  order           Int            @default(0)
+  questions       VisaQuestion[]
+  documents       VisaDocument[]
+  experiences     VisaExperience[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([status])
+}
+
+model VisaCategory {
+  id              String         @id @default(cuid())
+  name            String         // Student Visa, Tourist Visa, Work Visa, Family Visa
+  nameI18n        Json?
+  slug            String         @unique
+  icon            String?
+  description     String?
+  descriptionI18n Json?
+  order           Int            @default(0)
+  questions       VisaQuestion[]
+  documents       VisaDocument[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model VisaRejection {
+  id                   String   @id @default(cuid())
+  code                 String   @unique // "214b" | "221g" | "financial" …
+  section              String   // "Section 214(b)" — display code
+  title                String
+  titleI18n            Json?
+  description          String
+  descriptionI18n      Json?
+  mitigation           Json?    // array of strings (EN)
+  mitigationI18n       Json?    // { en: [], fa: [], ps: [] }
+  icon                 String?
+  order                Int      @default(0)
+  status               String   @default("published")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([status])
+}
+
+model VisaQuestion {
+  id                String         @id @default(cuid())
+  question          String
+  questionI18n      Json?
+  countryId         String?
+  country           VisaCountry?   @relation(fields: [countryId], references: [id], onDelete: SetNull)
+  categoryId        String?
+  category          VisaCategory?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  difficulty        String         @default("medium")
+  bestAnswer        String?
+  bestAnswerI18n    Json?
+  wrongAnswer       String?
+  wrongAnswerI18n   Json?
+  aiExplanation     String?
+  aiExplanationI18n Json?
+  confidenceTips    String?
+  confidenceTipsI18n Json?
+  followUpQuestions Json?          // array of strings
+  followUpQuestionsI18n Json?
+  status            String         @default("published")
+  featured          Boolean        @default(false)
+  order             Int            @default(0)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@index([countryId])
+  @@index([categoryId])
+  @@index([status])
+}
+
+model VisaDocument {
+  id              String         @id @default(cuid())
+  name            String
+  nameI18n        Json?
+  description     String?
+  descriptionI18n Json?
+  isRequired      Boolean        @default(true)
+  countryId       String?
+  country         VisaCountry?   @relation(fields: [countryId], references: [id], onDelete: SetNull)
+  categoryId      String?
+  category        VisaCategory?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  order           Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([countryId])
+  @@index([categoryId])
+}
+
+model VisaExperience {
+  id              String         @id @default(cuid())
+  studentName     String?
+  studentNameI18n Json?
+  countryId       String?
+  country         VisaCountry?   @relation(fields: [countryId], references: [id], onDelete: SetNull)
+  status          String         @default("approved") // approved | rejected
+  content         String         @db.Text
+  contentI18n     Json?
+  rating          Int            @default(5)
+  publishedStatus String         @default("pending") // pending | published
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([countryId])
+  @@index([publishedStatus])
+}
+
+model SuccessStory {
+  id           String   @id @default(cuid())
+  title        String
+  titleI18n    Json?
+  storyType    String   @default("other")
+  country      String
+  program      String?
+  visaType     String?
+  year         Int
+  content      String   @db.Text
+  contentI18n  Json?
+  authorAlias  String?
+  contactEmail String?
+  featured     Boolean  @default(false)
+  likes        Int      @default(0)
+  status       String   @default("pending")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([country, visaType])
+  @@index([createdAt])
+  @@index([status, storyType])
+}
+
+// ─── Brand Studio: social post ideas (tips / quotes / promos) ────────────────
+// Editorial brand-voice copy used by the code-driven social templates and the
+// daily post planner. Fully trilingual so every generated post is publish-ready
+// in fa / ps / en. Managed from the admin panel (Content group).
+model SocialIdea {
+  id        String   @id @default(cuid())
+  kind      String // tip | quote | promo
+  text      String // canonical text (en)
+  textI18n  Json? // { en, fa, ps }
+  note      String? // optional secondary line (attribution / context)
+  noteI18n  Json?
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([kind, active])
+}
+
+// ─── Automation: social auto-publish + pipeline (R26) ─────────────────────────
+model PublishChannel {
+  id              String    @id @default(cuid())
+  platform        String    @unique // telegram | facebook | instagram | x
+  label           String
+  enabled         Boolean   @default(false)
+  credentials     Json? // { botToken, chatId } / { pageId, accessToken } …
+  lastStatus      String? // ok | error | not_configured
+  lastError       String?
+  lastPublishedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model SocialPostQueue {
+  id            String    @id @default(cuid())
+  scheduledFor  DateTime // posting slot (AFT business hours)
+  templateType  String // spotlight | deadline | tip | quote | promo | news | stat | story
+  contentRef    String? // slug / id of the source content
+  contentJson   Json // full content snapshot for deterministic rendering
+  captionJson   Json // { en, fa, ps }
+  imageStatus   String    @default("none") // none | ready | failed
+  imagePaths    Json? // { square?, portrait? } → /generated-posts/*.png
+  status        String    @default("pending") // pending | rendering | ready | publishing | published | partial | failed | cancelled
+  results       Json? // per-channel { platform: { ok, error? } }
+  attempts      Int       @default(0)
+  error         String?
+  publishedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([scheduledFor, status])
+  @@index([status])
+}
+
+model PipelineRun {
+  id         String    @id @default(cuid())
+  kind       String // tick | import | translate | publish
+  status     String    @default("running") // running | ok | partial | error
+  stats      Json?
+  message    String?
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  @@index([kind, startedAt])
+}
+
+// Single-row automation state (cursors + backoff), kept out of SiteSetting for clarity.
+model AutomationState {
+  id        String   @id @default("singleton")
+  state     Json     @default("{}") // { translateBackoffUntil, lastQueueBuildDate, … }
+  updatedAt DateTime @updatedAt
+}
+
+// ─── Static Pages (CMS) ────────────────────────────────────────────────────────
+model Page {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  title           String
+  titleI18n       Json?
+  content         String   @db.Text
+  contentI18n     Json?
+  status          String   @default("published")
+  seoTitle        String?
+  seoDescription  String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+

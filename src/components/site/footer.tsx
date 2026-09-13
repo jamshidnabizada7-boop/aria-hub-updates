@@ -1,0 +1,293 @@
+'use client';
+
+import React, { useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Send, MapPin, Phone, Mail, Loader2, Shield, Award, Globe2, MessageCircle, Facebook, Instagram, Linkedin, Youtube, CheckCircle2, Sparkles } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { useT } from '@/hooks/use-t';
+import { useToast } from '@/hooks/use-toast';
+import { useLangStore } from '@/lib/lang-store';
+import { useLangHref } from '@/hooks/use-lang-href';
+import { getLocalizedContent } from '@/lib/i18n-content';
+import type { SiteSettings, SocialLink, FooterLink } from '@/lib/types';
+import { Confetti } from './confetti';
+
+export function Footer({
+  settings,
+  footer,
+  socialLinks,
+}: {
+  settings: SiteSettings | null;
+  footer: Record<string, FooterLink[]>;
+  socialLinks: SocialLink[];
+}) {
+  const t = useT();
+  const lang = useLangStore((s) => s.code);
+  const hrefFn = useLangHref();
+  const { toast } = useToast();
+  const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+  const clickCount = useRef(0);
+  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Secret admin access: click footer logo 5× within 2s
+  const handleLogoClick = (e: React.MouseEvent) => {
+    clickCount.current += 1;
+    if (clickTimer.current) clearTimeout(clickTimer.current);
+    clickTimer.current = setTimeout(() => { clickCount.current = 0; }, 2000);
+    if (clickCount.current >= 5) {
+      clickCount.current = 0;
+      if (clickTimer.current) clearTimeout(clickTimer.current);
+      router.push('/admin');
+      return;
+    }
+    e.preventDefault();
+    window.location.hash = 'home';
+  };
+
+  async function subscribe(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name }),
+      });
+      if (!res.ok) throw new Error();
+      setDone(true);
+      toast({ title: t('newsletter.success') });
+      setEmail('');
+      setName('');
+      setTimeout(() => setDone(false), 4000);
+    } catch {
+      toast({ title: t('footer.subscriptionFailed'), variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const cols = [
+    { key: 'quickLinks', label: t('footer.quickLinks') },
+    { key: 'services', label: t('footer.services') },
+    { key: 'opportunities', label: t('footer.opportunities') },
+  ].filter((c) => footer[c.key]?.length);
+
+  return (
+    <footer className="mt-auto relative overflow-hidden border-t border-border/60 bg-card/40 print:hidden">
+      <div className="absolute inset-0 -z-10 bg-grid opacity-[0.03]" />
+      <div className="absolute -top-px left-1/2 h-px w-2/3 -translate-x-1/2 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+
+      {/* Newsletter band */}
+      <div className="border-b border-border/60">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 px-4 py-10 sm:px-6 lg:flex-row lg:px-8">
+          <div className="text-center lg:text-left">
+            <h3 className="flex items-center gap-2 text-2xl font-bold">
+              <Sparkles className="h-5 w-5 text-primary" />
+              {t('newsletter.title')}
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">{t('newsletter.subtitle')}</p>
+          </div>
+          <div className="w-full max-w-md">
+            <AnimatePresence mode="wait">
+              {done ? (
+                <motion.div
+                  key="success"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="relative flex items-center gap-3 overflow-visible rounded-xl border border-chart-3/40 bg-chart-3/10 px-5 py-4 text-chart-3"
+                >
+                  <Confetti active={done} />
+                  <motion.div
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ type: 'spring', stiffness: 260, damping: 12, delay: 0.1 }}
+                  >
+                    <CheckCircle2 className="h-6 w-6" />
+                  </motion.div>
+                  <div>
+                    <p className="font-semibold">{t('newsletter.success')}</p>
+                    <p className="text-xs text-muted-foreground">{t('footer.welcome')}</p>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.form
+                  key="form"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onSubmit={subscribe}
+                  className="flex flex-col gap-2 sm:flex-row"
+                >
+                  <Input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder={t('footer.nameOptional')}
+                    className="h-12 rounded-xl sm:w-40"
+                  />
+                  <Input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder={t('newsletter.placeholder')}
+                    className="h-12 rounded-xl"
+                  />
+                  <Button type="submit" disabled={loading} aria-label={t('newsletter.subscribe')} className="h-12 shrink-0 rounded-xl bg-gradient-to-r from-primary to-chart-2 px-5 shadow-float">
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 rtl-flip" />}
+                    <span className="ms-2 hidden sm:inline">{t('newsletter.subscribe')}</span>
+                  </Button>
+                </motion.form>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+      </div>
+
+      {/* Main footer */}
+      <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-2 gap-8 md:grid-cols-4 lg:grid-cols-6">
+          {/* Brand */}
+          <div className="col-span-2 lg:col-span-2">
+            <button onClick={handleLogoClick} className="flex items-center gap-2.5" aria-label={settings?.siteName || 'ARIA HUB'}>
+              {settings?.logoUrl ? (
+                <img src={settings.logoUrl} alt={settings.siteName} className="h-9 w-9 rounded-xl object-cover" />
+              ) : (
+                <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-chart-2 text-sm font-black text-primary-foreground">A</div>
+              )}
+              <span className="text-lg font-bold">
+                {settings?.siteName?.split(' ')[0] || 'ARIA'}
+                <span className="text-gradient-static"> {(settings?.siteName?.split(' ')[1]) || 'HUB'}</span>
+              </span>
+            </button>
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
+              {getLocalizedContent(settings?.description, settings?.descriptionI18n, lang) || t('footer.aboutDesc')}
+            </p>
+            <div className="mt-5 space-y-2 text-sm text-muted-foreground">
+              {settings?.address && (
+                <p className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> <span dir="auto">{getLocalizedContent(settings.address, settings.addressI18n, lang)}</span></p>
+              )}
+              {settings?.phone && (
+                <a href={`tel:${settings.phone}`} className="flex items-center gap-2 py-1 transition-colors hover:text-foreground"><Phone className="h-4 w-4 shrink-0 text-primary" /> <span dir="auto">{settings.phone}</span></a>
+              )}
+              {settings?.email && (
+                <a href={`mailto:${settings.email}`} className="flex items-center gap-2 py-1 transition-colors hover:text-foreground"><Mail className="h-4 w-4 shrink-0 text-primary" /> <span dir="auto">{settings.email}</span></a>
+              )}
+            </div>
+          </div>
+
+          {/* Link columns */}
+          {cols.map((c) => (
+            <div key={c.key}>
+              <h4 className="mb-4 text-sm font-bold uppercase tracking-wider">{c.label}</h4>
+              <ul className="space-y-2.5">
+                {footer[c.key]?.map((link) => (
+                  <li key={link.id}>
+                    <a href={hrefFn(link.url)} className="text-sm text-muted-foreground transition-colors hover:text-primary">
+                      {getLocalizedContent(link.label, link.labelI18n, lang)}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+
+          {/* Social + certificates */}
+          <div className="col-span-2 md:col-span-2 lg:col-span-2">
+            <h4 className="mb-4 text-sm font-bold uppercase tracking-wider">{t('footer.followUs')}</h4>
+            <div className="flex flex-wrap gap-2">
+              {socialLinks.map((s) => (
+                <a
+                  key={s.id}
+                  href={s.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="grid h-10 w-10 place-items-center rounded-xl border border-border/60 bg-card/50 text-muted-foreground transition-all hover:-translate-y-0.5 hover:text-foreground"
+                  style={s.color ? { ['--tw-shadow-color' as any]: s.color } : undefined}
+                  title={s.label}
+                >
+                  <SocialIcon platform={s.platform} />
+                </a>
+              ))}
+            </div>
+            <div className="mt-6 flex flex-wrap gap-3">
+              {[
+                { icon: Shield, labelKey: 'footer.sslSecured' },
+                { icon: Award, labelKey: 'footer.isoCertified' },
+                { icon: Globe2, labelKey: 'footer.globalTrust' },
+              ].map((c, i) => (
+                <div key={i} className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-card/40 px-2.5 py-1.5 text-xs text-muted-foreground">
+                  <c.icon className="h-3.5 w-3.5 text-primary" />
+                  {t(c.labelKey)}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Copyright bar */}
+      <div className="border-t border-border/60">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 py-6 text-sm text-muted-foreground sm:flex-row sm:px-6 lg:px-8">
+          <p>© {new Date().getFullYear()} {settings?.siteName || 'ARIA HUB'}. {t('footer.rights')}</p>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {footer['legal'] && footer['legal'].length > 0 ? (
+              footer['legal'].map((link, idx, arr) => (
+                <React.Fragment key={link.id}>
+                  <Link href={hrefFn(link.url)} className="p-2 transition-colors hover:text-foreground">
+                    {getLocalizedContent(link.label, link.labelI18n, lang)}
+                  </Link>
+                  {idx < arr.length - 1 && <span className="text-border">·</span>}
+                </React.Fragment>
+              ))
+            ) : (
+              <>
+                <Link href={hrefFn('/privacy-policy')} className="p-2 transition-colors hover:text-foreground">{t('footer.privacy')}</Link>
+                <span className="text-border">·</span>
+                <Link href={hrefFn('/terms-of-service')} className="p-2 transition-colors hover:text-foreground">{t('footer.terms')}</Link>
+                <span className="text-border">·</span>
+                <Link href={hrefFn('/about')} className="p-2 transition-colors hover:text-foreground">{t('footer.aboutUs')}</Link>
+                <span className="text-border">·</span>
+                <Link href={hrefFn('/contact')} className="p-2 transition-colors hover:text-foreground">{t('footer.contactUs')}</Link>
+                <span className="text-border">·</span>
+                <Link href={hrefFn('/blog')} className="p-2 transition-colors hover:text-foreground">{t('footer.blog')}</Link>
+                <span className="text-border">·</span>
+                <Link href={hrefFn('/success-stories')} className="p-2 transition-colors hover:text-foreground">{t('stories.eyebrow')}</Link>
+                <span className="text-border">·</span>
+                <Link href={hrefFn('/employers')} className="p-2 transition-colors hover:text-foreground">{t('employers.eyebrow')}</Link>
+                <span className="text-border">·</span>
+                <Link href={hrefFn('/advertise')} className="p-2 font-semibold transition-colors hover:text-foreground">{t('footer.advertise')}</Link>
+                <span className="text-border">·</span>
+                <Link href={hrefFn('/track')} className="p-2 transition-colors hover:text-foreground">{t('track.title')}</Link>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+function SocialIcon({ platform }: { platform: string }) {
+  const cls = 'h-4 w-4';
+  switch (platform) {
+    case 'whatsapp': return <MessageCircle className={cls} />;
+    case 'phone': return <Phone className={cls} />;
+    case 'email': return <Mail className={cls} />;
+    case 'facebook': return <Facebook className={cls} />;
+    case 'instagram': return <Instagram className={cls} />;
+    case 'telegram': return <Send className={cls} />;
+    case 'linkedin': return <Linkedin className={cls} />;
+    case 'youtube': return <Youtube className={cls} />;
+    default: return <Send className={cls} />;
+  }
+}
+

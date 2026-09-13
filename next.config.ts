@@ -1,0 +1,35 @@
+import type { NextConfig } from "next";
+
+const isDev = process.env.NODE_ENV === "development" || process.env.__NEXT_DEV === "true";
+
+const nextConfig: NextConfig = {
+  output: "standalone",
+  compress: true,
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  reactStrictMode: false,
+  // Allow the sandbox preview proxy + local origins during development
+  // (prevents "Cross origin request detected" warnings / aborted requests).
+  allowedDevOrigins: ["*.space-z.ai", "http://localhost:3000", "21.0.8.222", "21.0.16.223", "localhost"],
+  experimental: {
+    // optimizeCss (critters) + Turbopack HMR crashes repeatedly in dev
+    // ("Cell no longer exists ... AppPageLoaderTree" panic loop). It is a
+    // build-time optimization — keep it for production only.
+    optimizeCss: !isDev,
+    // 4GB sandbox OOM-kills the dev server when Turbopack's Rust heap grows
+    // past ~2.8GB while holding all warm routes. Cap it so Turbopack GCs
+    // aggressively instead of growing until the kernel kills the process.
+    // (Node-side heap is separately capped via NODE_OPTIONS in dev-restart.sh.)
+    ...(isDev ? { turbopackMemoryLimit: 512 } : {}),
+  },
+  images: {
+    formats: ["image/avif", "image/webp"],
+    remotePatterns: [
+      { protocol: "https", hostname: "**" },
+      { protocol: "http", hostname: "**" }
+    ],
+  },
+};
+
+export default nextConfig;
