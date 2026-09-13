@@ -9,7 +9,7 @@ import type { AIProvider, RewriteResult, SEOResult } from '../provider';
 import { REWRITE_SYSTEM, translateSystem, seoSystem, categorizeSystem } from '../prompts';
 import { parseJSON, retry } from './helpers';
 
-const MODEL = process.env.CEREBRAS_MODEL || 'llama3.3-70b';
+const MODEL = process.env.CEREBRAS_MODEL || 'qwen-3.8-27b'; // verified in Cerebras's catalog 2026-09-13
 const API_BASE = 'https://api.cerebras.ai/v1';
 
 export class CerebrasProvider implements AIProvider {

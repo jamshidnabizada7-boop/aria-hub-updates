@@ -9,7 +9,7 @@ import type { AIProvider, RewriteResult, SEOResult } from '../provider';
 import { REWRITE_SYSTEM, translateSystem, seoSystem, categorizeSystem } from '../prompts';
 import { parseJSON, retry } from './helpers';
 
-const MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+const MODEL = process.env.GEMINI_MODEL || 'gemini-flash-latest'; // always-current alias, verified 2026-09-13
 
 export class GeminiProvider implements AIProvider {
   private clientPromise: Promise<any> | null = null;
