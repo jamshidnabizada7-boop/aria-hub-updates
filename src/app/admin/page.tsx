@@ -1,3 +1,4 @@
+import { translate } from '@/lib/i18n';
 import { getCurrentAdmin } from '@/lib/admin-auth';
 import { AdminApp } from './admin-app';
 import { LoginForm } from './login-form';
@@ -26,7 +27,7 @@ function AdminLogin() {
             A
           </div>
           <h1 className="text-2xl font-bold">ARIA HUB Admin</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Sign in to manage your website</p>
+          <p className="mt-1 text-sm text-muted-foreground">Sign in to manage your website · ورود به پنل مدیریت</p>
         </div>
         <LoginForm />
       </div>

@@ -9,6 +9,7 @@ import { useT } from '@/hooks/use-t';
 import type { PaymentMethod } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 export function PaymentsSection({ methods }: { methods: PaymentMethod[] }) {
   const t = useT();
@@ -68,7 +69,7 @@ function PaymentCard({ method, t }: { method: PaymentMethod; t: (k: string) => s
         </div>
         {method.qrCode && (
           method.qrCode.startsWith('/') || method.qrCode.startsWith('http') ? (
-            <img src={method.qrCode} alt="QR code" className="h-16 w-16 rounded-lg border border-border bg-background object-contain p-1" />
+            <Image src={method.qrCode} alt="QR code" width={64} height={64} className="h-16 w-16 rounded-lg border border-border bg-background object-contain p-1" />
           ) : (
             <div className="grid h-10 w-10 place-items-center rounded-lg border border-border bg-background">
               <QrCode className="h-5 w-5 text-muted-foreground" />

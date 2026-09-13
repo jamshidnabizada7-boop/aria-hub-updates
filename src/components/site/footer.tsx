@@ -3,6 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, MapPin, Phone, Mail, Loader2, Shield, Award, Globe2, MessageCircle, Facebook, Instagram, Linkedin, Youtube, CheckCircle2, Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -159,7 +160,7 @@ export function Footer({
           <div className="col-span-2 lg:col-span-2">
             <button onClick={handleLogoClick} className="flex items-center gap-2.5" aria-label={settings?.siteName || 'ARIA HUB'}>
               {settings?.logoUrl ? (
-                <img src={settings.logoUrl} alt={settings.siteName} className="h-9 w-9 rounded-xl object-cover" />
+                <Image src={settings.logoUrl} alt={settings.siteName} width={36} height={36} className="h-9 w-9 rounded-xl object-cover" unoptimized={settings.logoUrl.startsWith('http') && !settings.logoUrl.startsWith('https://www.myariahub.com')} />
               ) : (
                 <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-chart-2 text-sm font-black text-primary-foreground">A</div>
               )}

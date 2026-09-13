@@ -239,7 +239,8 @@ async function renderQueueImage(baseUrl: string, props: CanvasProps): Promise<{ 
     });
     const page = await browser.newPage({ viewport: { width: 1180, height: 1500 } });
     const qs = encodeURIComponent(JSON.stringify(props));
-    await page.goto(`${baseUrl}/fa/studio-render?p=${qs}`, { waitUntil: 'networkidle', timeout: 45000 });
+    const token = process.env.SOCIAL_RENDER_TOKEN ? `&t=${encodeURIComponent(process.env.SOCIAL_RENDER_TOKEN)}` : '';
+    await page.goto(`${baseUrl}/fa/studio-render?p=${qs}${token}`, { waitUntil: 'networkidle', timeout: 45000 });
     await page.waitForSelector('[data-studio-canvas="1"]', { timeout: 15000 });
     const el = await page.$('[data-studio-canvas="1"]');
     if (!el) throw new Error('canvas element not found');
@@ -250,6 +251,31 @@ async function renderQueueImage(baseUrl: string, props: CanvasProps): Promise<{ 
     return null;
   } finally {
     try { await browser?.close(); } catch { /* noop */ }
+  }
+}
+
+// ── housekeeping: generated-posts retention ─────────────────────────────────
+const POST_RETENTION_DAYS = 30;
+
+/** Delete generated post images older than the retention window. Best-effort. */
+export async function cleanupGeneratedPosts(): Promise<number> {
+  try {
+    const { readdir, unlink } = await import('node:fs/promises');
+    const files = await readdir(PUBLIC_DIR);
+    const cutoff = Date.now() - POST_RETENTION_DAYS * 86400000;
+    let removed = 0;
+    for (const f of files) {
+      if (!f.endsWith('.png')) continue;
+      const path = join(PUBLIC_DIR, f);
+      const st = await (await import('node:fs/promises')).stat(path).catch(() => null);
+      if (st && st.mtimeMs < cutoff) {
+        await unlink(path).catch(() => undefined);
+        removed++;
+      }
+    }
+    return removed;
+  } catch {
+    return 0;
   }
 }
 

@@ -163,6 +163,12 @@ export async function runTick(baseUrl = 'http://127.0.0.1:3000'): Promise<TickRe
     data: { status: 'expired' },
   }).catch(() => undefined);
 
+  // Housekeeping: prune generated post images older than 30 days (the folder
+  // used to grow unbounded — one 1080px PNG per post per day).
+  await import('@/lib/social/publisher')
+    .then((m) => m.cleanupGeneratedPosts())
+    .catch(() => undefined);
+
   const run = await db.pipelineRun.create({ data: { kind: 'tick', status: 'running' } });
   const result: TickResult = { ran: true, errors: [] };
 
