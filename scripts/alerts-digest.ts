@@ -8,9 +8,13 @@
  *   --send                  Actually sends via SMTP (requires SMTP_HOST,
  *                           SMTP_PORT, SMTP_USER, SMTP_PASS env vars).
  *
- * Scheduling (production, after Neon quota returns):
+ * Scheduling (host cron — the script is CLI-only by design):
  *   daily   → cron 0 6 * * *   setsid bun scripts/alerts-digest.ts --send --frequency=daily
  *   weekly  → cron 0 6 * * 1   setsid bun scripts/alerts-digest.ts --send --frequency=weekly
+ *
+ * A DB lock (AutomationState row 'digest-lock') prevents overlapping cron
+ * firings from double-emailing; per-subscriber lastDigestAt is the second
+ * guard. A crashed run's lock expires after 30 minutes.
  *
  * Matching rules:
  *   - subscriber.status != 'unsubscribed'
@@ -25,6 +29,30 @@ import { PrismaClient } from '@prisma/client';
 import { writeFileSync, mkdirSync } from 'node:fs';
 
 const db = new PrismaClient();
+
+const DIGEST_LOCK_STALE_MS = 30 * 60 * 1000;
+
+/** Atomic claim: returns false when another digest run is still alive. */
+async function acquireDigestLock(): Promise<boolean> {
+  const claim = JSON.stringify({ digestRunning: true, digestStartedAt: new Date().toISOString() });
+  const stale = new Date(Date.now() - DIGEST_LOCK_STALE_MS).toISOString();
+  const n = await db.$executeRaw`
+    INSERT INTO "AutomationState" (id, state, "updatedAt")
+    VALUES ('digest-lock', ${claim}::jsonb, now())
+    ON CONFLICT (id) DO UPDATE
+    SET state = "AutomationState".state || ${claim}::jsonb, "updatedAt" = now()
+    WHERE COALESCE(("AutomationState".state->>'digestRunning')::boolean, false) = false
+       OR ("AutomationState".state->>'digestStartedAt') IS NULL
+       OR ("AutomationState".state->>'digestStartedAt')::timestamptz < ${stale}::timestamptz`;
+  return n === 1;
+}
+
+async function releaseDigestLock(): Promise<void> {
+  await db.$executeRaw`
+    UPDATE "AutomationState"
+    SET state = state || '{"digestRunning":false}'::jsonb
+    WHERE id = 'digest-lock'`;
+}
 
 const BASE_URL = process.env.PUBLIC_BASE_URL || 'https://www.myariahub.com';
 const MAX_ITEMS = 6;
@@ -221,9 +249,19 @@ async function main() {
   );
 }
 
-main()
-  .catch((e) => {
+(async () => {
+  if (!(await acquireDigestLock())) {
+    console.log('alerts-digest: another run is in progress (or crashed <30 min ago) — skipping');
+    await db.$disconnect();
+    process.exit(0);
+  }
+  try {
+    await main();
+  } catch (e) {
     console.error(e);
     process.exit(1);
-  })
-  .finally(() => db.$disconnect());
+  } finally {
+    await releaseDigestLock().catch(() => undefined);
+    await db.$disconnect();
+  }
+})();

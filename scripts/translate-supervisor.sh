@@ -1,4 +1,6 @@
 #!/bin/bash
+# MANUAL SESSION TOOL — do NOT schedule alongside the app: it drains the same
+# translation queue as the in-app automation tick and doubles the AI quota burn.
 # translate-supervisor.sh — keeps scripts/translate-fill-all.mjs running until
 # ALL fa/ps translations are complete. The fill script is checkpointed
 # (scripts/.translate-progress.json), so restarts resume exactly where the

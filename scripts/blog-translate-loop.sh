@@ -1,4 +1,6 @@
 #!/bin/bash
+# MANUAL SESSION TOOL — do NOT schedule alongside the app: it drains the same
+# translation queue as the in-app automation tick and doubles the AI quota burn.
 # Patient trilingual blog translation loop: 1 post per attempt, 15-min pause.
 # Self-stops after 6h or when no pending rows remain. Designed to coexist with
 # the opportunity backfill loop (it loses 429 battles gracefully and retries).

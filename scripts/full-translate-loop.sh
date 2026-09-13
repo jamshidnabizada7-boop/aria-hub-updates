@@ -1,4 +1,6 @@
 #!/bin/bash
+# MANUAL SESSION TOOL — do NOT schedule alongside the app: it drains the same
+# translation queue as the in-app automation tick and doubles the AI quota burn.
 # Gentle full-trilingual backfill loop: batch of 10, then 10-min pause.
 # Self-stops after 6h or when nothing is pending.
 cd /home/z/my-project

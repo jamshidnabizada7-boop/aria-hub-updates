@@ -28,17 +28,53 @@ const TRANSLATE_BACKOFF_MIN = 30;
 export interface TickResult {
   ran: boolean;
   reason?: string;
-  import?: { ran: number; ok: number };
-  translate?: { processed: number; failed: number; rateLimited: boolean; skipped: boolean };
-  queue?: { created: number };
-  publish?: { rendered: number; published: number; failed: number };
+  import?: { ran: number; ok: number; error?: string };
+  translate?: { processed: number; failed: number; rateLimited: boolean; skipped: boolean; error?: string };
+  queue?: { created: number; error?: string };
+  publish?: { rendered: number; published: number; failed: number; error?: string };
+  /** step-level failures — a tick with errors is recorded as 'partial', never 'ok' */
+  errors?: string[];
+}
+
+/**
+ * Cross-process tick lock.
+ *
+ * The in-memory flag below cannot see across processes — the 5-min in-process
+ * scheduler, the 15-min external cron and the admin "Run now" button all
+ * converge here, and a dev server + a CLI tick run in different processes.
+ * This is an atomic compare-and-set on the AutomationState singleton: it
+ * succeeds only when no tick is running OR the previous claim is stale
+ * (crashed process that never released).
+ */
+const TICK_LOCK_STALE_MS = 30 * 60 * 1000;
+
+export async function acquireTickLock(): Promise<boolean> {
+  const now = new Date().toISOString();
+  const stale = new Date(Date.now() - TICK_LOCK_STALE_MS).toISOString();
+  const claim = JSON.stringify({ tickRunning: true, tickStartedAt: now });
+  const n = await db.$executeRaw`
+    INSERT INTO "AutomationState" (id, state, "updatedAt")
+    VALUES ('singleton', ${claim}::jsonb, now())
+    ON CONFLICT (id) DO UPDATE
+    SET state = "AutomationState".state || ${claim}::jsonb, "updatedAt" = now()
+    WHERE COALESCE(("AutomationState".state->>'tickRunning')::boolean, false) = false
+       OR ("AutomationState".state->>'tickStartedAt') IS NULL
+       OR ("AutomationState".state->>'tickStartedAt')::timestamptz < ${stale}::timestamptz`;
+  return n === 1;
+}
+
+export async function releaseTickLock(): Promise<void> {
+  await db.$executeRaw`
+    UPDATE "AutomationState"
+    SET state = state || '{"tickRunning":false}'::jsonb
+    WHERE id = 'singleton'`;
 }
 
 function freeMb(): number {
   return Math.floor(os.freemem() / 1024 / 1024);
 }
 
-async function stepImport(state: Awaited<ReturnType<typeof getState>>, runId: string): Promise<{ ran: number; ok: number }> {
+async function stepImport(state: Awaited<ReturnType<typeof getState>>, runId: string, errors: string[]): Promise<{ ran: number; ok: number }> {
   if (state.autoImport === false) return { ran: 0, ok: 0 };
   // Sources due = enabled + (never run OR last run older than ~1h floor).
   const due = await db.importSource.findMany({
@@ -61,8 +97,11 @@ async function stepImport(state: Awaited<ReturnType<typeof getState>>, runId: st
       const summary = await runImport({ sourceId: src.id, triggeredBy: 'auto' });
       ran++;
       if (!summary.error) ok++;
-    } catch {
+      else errors.push(`import ${src.name}: ${String(summary.error).slice(0, 120)}`);
+    } catch (e) {
       ran++;
+      const msg = (e instanceof Error ? e.message : String(e)).slice(0, 120);
+      errors.push(`import ${src.name}: ${msg}`);
     }
   }
   if (ran) {
@@ -74,7 +113,7 @@ async function stepImport(state: Awaited<ReturnType<typeof getState>>, runId: st
   return { ran, ok };
 }
 
-async function stepTranslate(state: Awaited<ReturnType<typeof getState>>): Promise<{ processed: number; failed: number; rateLimited: boolean; skipped: boolean }> {
+async function stepTranslate(state: Awaited<ReturnType<typeof getState>>, errors: string[]): Promise<{ processed: number; failed: number; rateLimited: boolean; skipped: boolean }> {
   if (state.translateBackoffUntil && new Date(state.translateBackoffUntil) > new Date()) {
     return { processed: 0, failed: 0, rateLimited: false, skipped: true };
   }
@@ -87,9 +126,11 @@ async function stepTranslate(state: Awaited<ReturnType<typeof getState>>): Promi
       await patchState({ translateBackoffUntil: null });
     }
     return { ...r, skipped: false };
-  } catch {
+  } catch (e) {
+    const msg = (e instanceof Error ? e.message : String(e)).slice(0, 160);
+    errors.push(`translate: ${msg}`);
     await patchState({ translateBackoffUntil: new Date(Date.now() + TRANSLATE_BACKOFF_MIN * 60000).toISOString() });
-    return { processed: 0, failed: 0, rateLimited: true, skipped: false };
+    return { processed: 0, failed: 0, rateLimited: true, skipped: false, error: msg };
   }
 }
 
@@ -97,12 +138,17 @@ export async function runTick(baseUrl = 'http://127.0.0.1:3000'): Promise<TickRe
   const g = globalThis as unknown as { __ariaTickRunning?: boolean };
   if (g.__ariaTickRunning) return { ran: false, reason: 'tick_already_running' };
   if (freeMb() < MIN_FREE_MB) return { ran: false, reason: `low_memory_${freeMb()}mb` };
+  // Cross-process guard: the in-memory flag cannot see the cron backstop or
+  // a CLI tick in another process — the DB lock can.
+  if (!(await acquireTickLock())) return { ran: false, reason: 'tick_locked_elsewhere' };
   g.__ariaTickRunning = true;
 
   // Housekeeping: ticks abandoned by a crashed/OOM-killed process stay
-  // 'running' forever — mark runs older than 15 min as stale.
+  // 'running' forever — mark old runs stale. The threshold must sit ABOVE the
+  // legit tick budget (IMPORT_GLOBAL_TIMEOUT_MS can be 10 min), else healthy
+  // long runs get poisoned as errors.
   await db.pipelineRun.updateMany({
-    where: { status: 'running', startedAt: { lt: new Date(Date.now() - 15 * 60000) } },
+    where: { status: 'running', startedAt: { lt: new Date(Date.now() - 30 * 60000) } },
     data: { status: 'error', message: 'stale (process died mid-tick)', finishedAt: new Date() },
   }).catch(() => undefined);
 
@@ -118,22 +164,24 @@ export async function runTick(baseUrl = 'http://127.0.0.1:3000'): Promise<TickRe
   }).catch(() => undefined);
 
   const run = await db.pipelineRun.create({ data: { kind: 'tick', status: 'running' } });
-  const result: TickResult = { ran: true };
+  const result: TickResult = { ran: true, errors: [] };
 
   try {
     const state = await getState();
 
     // 1. import due sources
-    result.import = await stepImport(state, run.id);
+    result.import = await stepImport(state, run.id, result.errors);
 
     // 2. translate a small batch
-    result.translate = await stepTranslate(state);
+    result.translate = await stepTranslate(state, result.errors);
 
     // 3. build today's social queue (once/day)
     try {
       result.queue = await buildTodaysQueue();
-    } catch {
-      result.queue = { created: 0 };
+    } catch (e) {
+      const msg = (e instanceof Error ? e.message : String(e)).slice(0, 160);
+      result.queue = { created: 0, error: msg };
+      result.errors.push(`queue: ${msg}`);
     }
 
     // 4. render + publish due posts — rendering spawns a headless chrome,
@@ -147,11 +195,16 @@ export async function runTick(baseUrl = 'http://127.0.0.1:3000'): Promise<TickRe
       }
       const pub = await publishDueQueue();
       result.publish = { rendered, published: pub.published, failed: pub.failed };
-    } catch {
-      result.publish = { rendered: 0, published: 0, failed: 0 };
+    } catch (e) {
+      const msg = (e instanceof Error ? e.message : String(e)).slice(0, 160);
+      result.publish = { rendered: 0, published: 0, failed: 0, error: msg };
+      result.errors.push(`publish: ${msg}`);
     }
 
+    // A tick with any step error is 'partial' at best — silent failures used
+    // to be recorded as 'ok' with zeroed counters.
     const okAll =
+      result.errors.length === 0 &&
       (result.import?.ok ?? 0) >= (result.import?.ran ?? 0) &&
       !result.translate?.rateLimited &&
       (result.publish?.failed ?? 0) === 0;
@@ -171,6 +224,7 @@ export async function runTick(baseUrl = 'http://127.0.0.1:3000'): Promise<TickRe
     }).catch(() => undefined);
   } finally {
     g.__ariaTickRunning = false;
+    await releaseTickLock().catch(() => undefined);
   }
 
   return result;

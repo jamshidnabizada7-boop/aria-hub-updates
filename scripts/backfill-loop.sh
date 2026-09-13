@@ -1,4 +1,6 @@
 #!/bin/bash
+# MANUAL SESSION TOOL — do NOT schedule alongside the app: it drains the same
+# translation queue as the in-app automation tick and doubles the AI quota burn.
 # Chunked backfill: each run translates up to 25 records in a fresh process
 # (low memory footprint), sleeping between chunks. Survives OOM kills by
 # simply moving to the next chunk on the next loop iteration.

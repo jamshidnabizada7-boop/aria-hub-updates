@@ -1,4 +1,6 @@
 #!/bin/bash
+# MANUAL SESSION TOOL — do NOT schedule alongside the app: it drains the same
+# translation queue as the in-app automation tick and doubles the AI quota burn.
 # translate-fill-loop.sh — R21-c trilingual completeness driver.
 # Runs scripts/translate-fill-all.mjs in passes (checkpointed/resumable) until
 # scripts/i18n-audit.mjs reports 0 missing fa/ps cells, or 6h elapse.
