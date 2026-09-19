@@ -91,3 +91,10 @@ deploy/oracle_ed25519.pub
 /vercel-env.txt
 /_neon-import.sql
 /tools/
+
+# local-only workspaces
+/.zcode/
+/.zscripts/
+/_internal-docs/
+/_start-pg.vbs
+/_start-pg.bat

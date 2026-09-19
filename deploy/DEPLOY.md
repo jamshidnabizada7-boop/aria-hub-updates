@@ -1,6 +1,12 @@
 # ARIA HUB — Complete Hosting Guide for Ahmad Jamshid
 ### myariahub.com on Oracle Cloud Always Free — website + PostgreSQL database on one free server
 
+> **CURRENT PRODUCTION (live since launch):** the site runs on **Vercel** with the
+> database on **Neon** (free tier). This guide is the planned **upgrade path** for
+> when the Oracle account exists. On migration day, follow Parts 1–5 as written,
+> then use **§6.7 (Neon → Oracle)** instead of §6.4 (local → server) — the data
+> source is Neon, not the local cluster.
+
 **Status:** everything technical is already prepared in this `deploy/` folder. You only do
 the 4 account/console steps in Parts 1–4 (about 30 minutes, needs your bank card) and
 run **one command** in Part 5. The database chapter (Part 6) explains everything about
@@ -241,7 +247,35 @@ Verify: `ssh ubuntu@IP 'cd /opt/ariahub/deploy && sudo docker compose logs migra
   → increase size → restart, then `ssh ubuntu@IP 'sudo growpart /dev/sda 1 && \
   sudo resize2fs /dev/sda1'`.
 
+### 6.7 Migrating from Neon → Oracle (bank-card day)
+
+Current production DB is Neon (free tier). On Oracle migration day:
+
+1. Finish Parts 1–5 (Oracle account, instance, ports, DNS swap, deploy command).
+   The stack's Postgres container starts **empty** — that's correct.
+2. Export from Neon (schema + all data):
+   ```bash
+   bash deploy/export-neon.sh          # writes aria-neon-DATE.sql
+   ```
+3. Import into the server's Postgres container:
+   ```bash
+   scp aria-neon-DATE.sql ubuntu@SERVER_IP:/tmp/
+   ssh ubuntu@SERVER_IP 'cd /opt/ariahub/deploy && \
+     gunzip -c /tmp/aria-neon-DATE.sql 2>/dev/null || cat /tmp/aria-neon-DATE.sql | \
+     sudo docker compose exec -T db psql -U aria -d ariahub -v ON_ERROR_STOP=0'
+   ```
+4. Update `DATABASE_URL` on **Vercel → Settings → Environment Variables** to the
+   Oracle URL (`postgresql://aria:<password from deploy/.env>@SERVER_IP:5432/ariahub` —
+   open port 5432 in the Security List for Vercel's IPs only, or keep Vercel
+   reading via an SSH tunnel if you prefer closed ports).
+5. Redeploy on Vercel → verify row counts on the live site → **cancel the Neon
+   project** (data now has its free 200 GB home).
+
+From then on, nightly backups (`ariahub-backup-db`) run on the Oracle box and
+Neon is retired.
+
 ---
+
 
 ## Part 7 — Day-to-day operations
 
