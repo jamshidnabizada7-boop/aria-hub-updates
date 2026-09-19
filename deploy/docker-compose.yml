@@ -1,0 +1,85 @@
+# ARIA HUB production stack for the Oracle Cloud Always Free ARM box.
+# Run from deploy/:  sudo docker compose up -d --build
+# Services: postgres 16, one-shot schema sync, Next.js standalone app, Caddy (HTTPS).
+
+name: ariahub
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: aria
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in deploy/.env}
+      POSTGRES_DB: ariahub
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aria -d ariahub"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+
+  # One-shot: syncs prisma/schema.prisma onto the database (their established
+  # workflow is `db push`; migrations folder only holds the init snapshot).
+  migrate:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      target: builder
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://aria:${POSTGRES_PASSWORD}@db:5432/ariahub
+    command: ["bunx", "prisma", "db", "push", "--skip-generate"]
+    restart: "no"
+
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      target: runtime
+      args:
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://www.myariahub.com}
+        NEXT_PUBLIC_ADSENSE_CLIENT: ${NEXT_PUBLIC_ADSENSE_CLIENT:-}
+        NEXT_PUBLIC_ADSENSE_SLOT_LISTING: ${NEXT_PUBLIC_ADSENSE_SLOT_LISTING:-}
+        NEXT_PUBLIC_ADSENSE_SLOT_DETAIL_MID: ${NEXT_PUBLIC_ADSENSE_SLOT_DETAIL_MID:-}
+        NEXT_PUBLIC_ADSENSE_SLOT_DETAIL_END: ${NEXT_PUBLIC_ADSENSE_SLOT_DETAIL_END:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://aria:${POSTGRES_PASSWORD}@db:5432/ariahub
+      CHROME_PATH: /usr/bin/chromium
+    volumes:
+      # Runtime-written media must survive redeploys (publisher.ts writes
+      # generated-posts; admin uploads land in uploads/).
+      - generated_posts:/app/public/generated-posts
+      - uploads:/app/public/uploads
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:-myariahub.com}
+    volumes:
+      - ./Caddyfile.prod:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  pgdata:
+  generated_posts:
+  uploads:
+  caddy_data:
+  caddy_config:

@@ -26,6 +26,8 @@ interface RenderProps {
   newsDate?: string | null;
   checklist?: string[];
   stat?: { value: string; label: string };
+  packages?: { value: string; label: string; sub?: string }[];
+  dateBadge?: { big: string; small?: string };
   person?: { name: string; meta: string };
   posterData?: {
     slug: string; title: string; titleI18n: Record<string, string> | null;
@@ -90,6 +92,8 @@ export default function StudioRenderCanvas({ p }: { p?: string }) {
             newsDate={props.newsDate ?? null}
             checklist={props.checklist}
             stat={props.stat}
+            packages={props.packages}
+            dateBadge={props.dateBadge}
             person={props.person}
             qrDataUrl={qr}
           />

@@ -25,7 +25,7 @@
  *                          story chips, checklist rows)
  */
 
-export type StudioThemeId = 'midnight' | 'emerald' | 'sunset' | 'ivory';
+export type StudioThemeId = 'midnight' | 'emerald' | 'sunset' | 'ivory' | 'crimson';
 
 export interface StudioTheme {
   id: StudioThemeId;
@@ -164,6 +164,33 @@ export const STUDIO_THEMES: Record<StudioThemeId, StudioTheme> = {
     surface: 'rgba(255, 255, 255, 0.72)',
     surfaceBorder: 'rgba(31, 27, 18, 0.16)',
   },
+  crimson: {
+    id: 'crimson',
+    label: 'Crimson cinema',
+    dark: true,
+    bgTop: '#2A070F',
+    bgMid: '#7E1523',
+    bgBottom: '#1C040A',
+    deep: '#240610',
+    accent: '#FFD24A',
+    accentSoft: 'rgba(255, 210, 74, 0.14)',
+    accentLine: 'rgba(255, 210, 74, 0.45)',
+    accentFaint: 'rgba(255, 210, 74, 0.08)',
+    text: '#FFFFFF',
+    textDim: 'rgba(255, 235, 230, 0.75)',
+    onAccent: '#2A070F',
+    glowA: 'rgba(255, 96, 96, 0.22)',
+    glowB: 'rgba(255, 210, 74, 0.10)',
+    dots: 'rgba(255, 255, 255, 0.05)',
+    ctaFrom: '#F3C64C',
+    ctaTo: '#FFD24A',
+    ctaText: '#2A070F',
+    qrDark: '#2A070F',
+    qrLight: '#FFF6EC',
+    logoBg: '#FFD24A',
+    surface: 'rgba(255, 255, 255, 0.07)',
+    surfaceBorder: 'rgba(255, 150, 150, 0.30)',
+  },
 };
 
 export const STUDIO_THEME_LIST = Object.values(STUDIO_THEMES);
@@ -185,7 +212,8 @@ export function resolveTheme(id: string | null | undefined): StudioTheme {
  */
 export type StudioLayout =
   | 'classic' | 'minimal' | 'bold'
-  | 'split' | 'frame' | 'stack' | 'glass' | 'banner' | 'ticket';
+  | 'split' | 'frame' | 'stack' | 'glass' | 'banner' | 'ticket'
+  | 'cinema';
 
 export const LAYOUTS: { id: StudioLayout; label: string }[] = [
   { id: 'classic', label: 'Classic card' },
@@ -197,6 +225,7 @@ export const LAYOUTS: { id: StudioLayout; label: string }[] = [
   { id: 'glass', label: 'Glass card' },
   { id: 'banner', label: 'Top banner' },
   { id: 'ticket', label: 'Ticket stub' },
+  { id: 'cinema', label: 'Cinema (vignette + props)' },
 ];
 
 export const DEFAULT_LAYOUT: StudioLayout = 'classic';

@@ -187,6 +187,21 @@ export function buildCaption(input: CaptionInput): string {
       L.push(`🔗 ${link}`);
       break;
     }
+    // Studio-exclusive formats — the poster carries the design, so the
+    // caption stays short and link-forward.
+    case 'packages':
+    case 'teaser':
+    case 'greeting':
+    case 'hiring':
+    case 'follow':
+    case 'pick':
+    case 'day': {
+      L.push(input.title);
+      if (input.note) L.push(input.note);
+      L.push('');
+      L.push(`🔗 ${link}`);
+      break;
+    }
   }
 
   const tags = [...TAGS[input.lang], ...(EXTRA_TAGS[input.template]?.[input.lang] ?? [])];

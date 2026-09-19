@@ -9,6 +9,10 @@
  */
 export async function register() {
   if (process.env.NEXT_RUNTIME !== 'nodejs') return;
+  // Escape hatch for environments with no reachable DB (local previews,
+  // screenshot rigs) — the tick's DB retries would otherwise wedge the
+  // event loop a couple of minutes after boot.
+  if (process.env.ARIA_DISABLE_SCHEDULER === '1') return;
   const g = globalThis as unknown as { __ariaSchedulerStarted?: boolean };
   if (g.__ariaSchedulerStarted) return;
   g.__ariaSchedulerStarted = true;

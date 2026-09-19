@@ -18,7 +18,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlarmClock, BarChart3, CalendarDays, Check, Copy, Download, Eye, GraduationCap,
-  Lightbulb, Loader2, Newspaper, Palette, Quote, RefreshCw, Search, Sparkles, Star, Wand2, Play } from 'lucide-react';
+  Lightbulb, Loader2, Megaphone, Moon, MousePointerClick, Newspaper, Package,
+  Palette, Quote, RefreshCw, Search, Sparkles, Star, Telescope, UserPlus, Wand2, Play } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import QRCode from 'qrcode';
 import { Button } from '@/components/ui/button';
@@ -58,6 +59,13 @@ const TYPE_ICON: Record<PostTemplate, React.ComponentType<{ className?: string }
   news: Newspaper,
   stat: BarChart3,
   story: GraduationCap,
+  packages: Package,
+  teaser: Telescope,
+  greeting: Moon,
+  hiring: Megaphone,
+  follow: UserPlus,
+  pick: MousePointerClick,
+  day: CalendarDays,
 };
 
 interface RawIdea { id: string; kind: string; text: string; textI18n: Record<string, string> | null }
@@ -232,8 +240,12 @@ export function BrandStudioPanel() {
       if (!opp) return null;
       return buildOppPost(labTemplate, opp, lang, loc, tr);
     }
-    if (labTemplate === 'tip' || labTemplate === 'quote' || labTemplate === 'promo') {
-      const pool = labTemplate === 'tip' ? pools.ideaTip : labTemplate === 'quote' ? pools.ideaQuote : pools.ideaPromo;
+    if (labTemplate === 'tip' || labTemplate === 'quote' || labTemplate === 'promo'
+      || labTemplate === 'teaser' || labTemplate === 'greeting'
+      || labTemplate === 'follow' || labTemplate === 'pick' || labTemplate === 'day') {
+      const pool = labTemplate === 'tip' ? pools.ideaTip
+        : labTemplate === 'quote' || labTemplate === 'greeting' || labTemplate === 'day' ? pools.ideaQuote
+          : pools.ideaPromo;
       const idea = (pool as RawIdea[]).find((i) => i.id === labItemKey);
       if (!idea) return null;
       return buildIdeaPost(labTemplate, idea, lang, loc, tr, pool.indexOf(idea) + 1);
@@ -242,6 +254,16 @@ export function BrandStudioPanel() {
       const news = pools.news.find((n) => n.slug === labItemKey);
       if (!news) return null;
       return buildNewsPost(news as unknown as RawNews, lang, loc, tr);
+    }
+    if (labTemplate === 'hiring') {
+      const news = pools.news.find((n) => n.slug === labItemKey);
+      if (!news) return null;
+      return { ...buildNewsPost(news as unknown as RawNews, lang, loc, tr), template: 'hiring', key: `hiring-${news.slug}` };
+    }
+    if (labTemplate === 'packages') {
+      const stat = pools.stats.find((s) => s.labelKey === labItemKey);
+      if (!stat) return null;
+      return { ...buildStatPost(stat, lang, tr), template: 'packages', key: `packages-${stat.labelKey}` };
     }
     if (labTemplate === 'stat') {
       const stat = pools.stats.find((s) => s.labelKey === labItemKey);
@@ -465,6 +487,19 @@ export function BrandStudioPanel() {
         return pools.ideaQuote.filter((i) => matches(loc(i.text, i.textI18n))).map((i) => ({ key: i.id, label: loc(i.text, i.textI18n) }));
       case 'promo':
         return pools.ideaPromo.filter((i) => matches(loc(i.text, i.textI18n))).map((i) => ({ key: i.id, label: loc(i.text, i.textI18n) }));
+      case 'teaser':
+        return pools.ideaPromo.filter((i) => matches(loc(i.text, i.textI18n))).map((i) => ({ key: i.id, label: loc(i.text, i.textI18n) }));
+      case 'greeting':
+        return pools.ideaQuote.filter((i) => matches(loc(i.text, i.textI18n))).map((i) => ({ key: i.id, label: loc(i.text, i.textI18n) }));
+      case 'follow':
+      case 'pick':
+        return pools.ideaPromo.filter((i) => matches(loc(i.text, i.textI18n))).map((i) => ({ key: i.id, label: loc(i.text, i.textI18n) }));
+      case 'day':
+        return pools.ideaQuote.filter((i) => matches(loc(i.text, i.textI18n))).map((i) => ({ key: i.id, label: loc(i.text, i.textI18n) }));
+      case 'hiring':
+        return pools.news.filter((n) => matches(loc(n.title, n.titleI18n))).map((n) => ({ key: n.slug, label: loc(n.title, n.titleI18n) }));
+      case 'packages':
+        return pools.stats.map((s) => ({ key: s.labelKey, label: `${s.value} ${tr(s.labelKey)}` })).filter((s) => matches(s.label));
       case 'news':
         return pools.news.filter((n) => matches(loc(n.title, n.titleI18n))).map((n) => ({ key: n.slug, label: loc(n.title, n.titleI18n) }));
       case 'stat':
@@ -810,7 +845,11 @@ export function BrandStudioPanel() {
                       />
                     </div>
                   )}
-                  {(activePost.template === 'tip' || activePost.template === 'news' || activePost.template === 'promo') && (
+                  {(activePost.template === 'tip' || activePost.template === 'news' || activePost.template === 'promo'
+                    || activePost.template === 'teaser' || activePost.template === 'greeting'
+                    || activePost.template === 'hiring' || activePost.template === 'packages'
+                    || activePost.template === 'follow' || activePost.template === 'pick'
+                    || activePost.template === 'day') && (
                     <div className="sm:col-span-2">
                       <Label className="text-[10px] text-muted-foreground">Note</Label>
                       <Input
@@ -819,6 +858,55 @@ export function BrandStudioPanel() {
                         onChange={(e) => setOverride('note', e.target.value)}
                       />
                     </div>
+                  )}
+                  {(activePost.template === 'hiring' || activePost.template === 'pick') && (
+                    <div className="sm:col-span-2">
+                      <Label className="text-[10px] text-muted-foreground">
+                        {activePost.template === 'pick' ? 'Side tiles (comma-separated, max 2)' : 'Callouts (comma-separated)'}
+                      </Label>
+                      <Input
+                        className="h-8 text-xs" dir="auto"
+                        placeholder={activePost.template === 'pick' ? 'وظایف, بورسیه‌ها' : 'Graphic Designer, Kabul office'}
+                        value={Array.isArray(activeOverrides.callouts) ? (activeOverrides.callouts as unknown[]).map(String).join(', ') : ''}
+                        onChange={(e) => setOverride('callouts', e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
+                      />
+                    </div>
+                  )}
+                  {activePost.template === 'day' && (
+                    <div className="sm:col-span-2 grid grid-cols-2 gap-2">
+                      <Input
+                        className="h-8 text-xs" dir="auto"
+                        placeholder="Badge (e.g. ۱۴ ژوئن)"
+                        value={String(activeOverrides.badgeBig ?? '')}
+                        onChange={(e) => setOverride('badgeBig', e.target.value)}
+                      />
+                      <Input
+                        className="h-8 text-xs" dir="auto"
+                        placeholder="Badge small (e.g. Mother's Day)"
+                        value={String(activeOverrides.badgeSmall ?? '')}
+                        onChange={(e) => setOverride('badgeSmall', e.target.value)}
+                      />
+                    </div>
+                  )}
+                  {activePost.template === 'packages' && (
+                    <>
+                      {(['p1', 'p2'] as const).map((slot) => (
+                        <div key={slot} className="sm:col-span-2 grid grid-cols-2 gap-2">
+                          <Input
+                            className="h-8 text-xs" dir="ltr"
+                            placeholder={`Card ${slot === 'p1' ? '1' : '2'} value (e.g. ۲۰۰۰+)`}
+                            value={String(activeOverrides[`${slot}Value`] ?? '')}
+                            onChange={(e) => setOverride(`${slot}Value`, e.target.value)}
+                          />
+                          <Input
+                            className="h-8 text-xs" dir="auto"
+                            placeholder={`Card ${slot === 'p1' ? '1' : '2'} label`}
+                            value={String(activeOverrides[`${slot}Label`] ?? '')}
+                            onChange={(e) => setOverride(`${slot}Label`, e.target.value)}
+                          />
+                        </div>
+                      ))}
+                    </>
                   )}
                   {activePost.template === 'promo' && (
                     <div className="sm:col-span-2 grid gap-2">
@@ -1036,7 +1124,7 @@ function buildOppPost(
 }
 
 function buildIdeaPost(
-  template: 'tip' | 'quote' | 'promo',
+  template: 'tip' | 'quote' | 'promo' | 'teaser' | 'greeting' | 'follow' | 'pick' | 'day',
   idea: RawIdea,
   lang: Lang,
   loc: Loc,
@@ -1130,6 +1218,14 @@ function captionInputFor(post: PlanPost, lang: Lang, loc: Loc, tr: Tr): CaptionI
       return { template: 'stat', lang, title: post.title, statValue: post.stat?.value, statLabel: tr(post.stat?.labelKey ?? ''), note: post.meta };
     case 'story':
       return { template: 'story', lang, title: post.title, personName: post.meta, personMeta: undefined };
+    case 'packages':
+    case 'teaser':
+    case 'greeting':
+    case 'hiring':
+    case 'follow':
+    case 'pick':
+    case 'day':
+      return { template: post.template, lang, title: post.title, note: post.meta };
   }
 }
 
@@ -1178,6 +1274,49 @@ function socialPropsFor(
         ...base,
         stat: { value: post.stat?.value ?? '', label: tr(post.stat?.labelKey ?? ''), sub: tr(post.stat?.subKey ?? '') },
       };
+    case 'packages': {
+      // Card 1 comes from the stat pool; card 2 is admin-entered (overrides).
+      const card1 = {
+        value: typeof o.p1Value === 'string' && o.p1Value.trim() ? o.p1Value : post.stat?.value ?? '',
+        label: typeof o.p1Label === 'string' && o.p1Label.trim() ? o.p1Label : post.stat ? tr(post.stat.labelKey) : '',
+        sub: typeof o.p1Sub === 'string' && o.p1Sub.trim() ? o.p1Sub : post.stat ? tr(post.stat.subKey) : undefined,
+      };
+      const card2 = {
+        value: typeof o.p2Value === 'string' ? o.p2Value : '',
+        label: typeof o.p2Label === 'string' ? o.p2Label : '',
+        sub: typeof o.p2Sub === 'string' && o.p2Sub.trim() ? o.p2Sub : undefined,
+      };
+      return {
+        ...base,
+        note: noteOverride ?? undefined,
+        packages: [card1, ...(card2.value || card2.label ? [card2] : [])],
+      };
+    }
+    case 'teaser':
+    case 'greeting':
+    case 'follow':
+      return { ...base, note: noteOverride ?? post.meta ?? undefined };
+    case 'pick': {
+      const callouts = Array.isArray(o.callouts)
+        ? (o.callouts as unknown[]).map(String).filter((s) => s.trim())
+        : [];
+      return { ...base, note: noteOverride ?? post.meta ?? undefined, checklist: callouts };
+    }
+    case 'day': {
+      const badgeBig = typeof o.badgeBig === 'string' && o.badgeBig.trim() ? o.badgeBig : '';
+      const badgeSmall = typeof o.badgeSmall === 'string' && o.badgeSmall.trim() ? o.badgeSmall : undefined;
+      return {
+        ...base,
+        note: noteOverride ?? post.meta ?? undefined,
+        dateBadge: badgeBig ? { big: badgeBig, small: badgeSmall } : undefined,
+      };
+    }
+    case 'hiring': {
+      const callouts = Array.isArray(o.callouts)
+        ? (o.callouts as unknown[]).map(String).filter((s) => s.trim())
+        : post.meta ? [post.meta] : [];
+      return { ...base, note: noteOverride ?? undefined, checklist: callouts };
+    }
     case 'story': {
       const personName = typeof o.personName === 'string' && o.personName.trim() ? o.personName : post.meta;
       return {

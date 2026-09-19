@@ -25,7 +25,14 @@ export type PostTemplate =
   | 'promo'
   | 'news'
   | 'stat'
-  | 'story';
+  | 'story'
+  | 'packages'
+  | 'teaser'
+  | 'greeting'
+  | 'hiring'
+  | 'follow'
+  | 'pick'
+  | 'day';
 
 /** Palette — extracted from the real ARIA HUB logo mark (single source of truth). */
 export const BRAND = {
@@ -57,6 +64,14 @@ export const TEMPLATE_DEFS: {
   { key: 'news', labelKey: 'admin.studio.type.news', pool: 'news' },
   { key: 'stat', labelKey: 'admin.studio.type.stat', pool: 'stat' },
   { key: 'story', labelKey: 'admin.studio.type.story', pool: 'story' },
+  // Studio-exclusive showcase formats (not in the automation weekday mix).
+  { key: 'packages', labelKey: 'admin.studio.type.packages', pool: 'stat' },
+  { key: 'teaser', labelKey: 'admin.studio.type.teaser', pool: 'idea:promo' },
+  { key: 'greeting', labelKey: 'admin.studio.type.greeting', pool: 'idea:quote' },
+  { key: 'hiring', labelKey: 'admin.studio.type.hiring', pool: 'news' },
+  { key: 'follow', labelKey: 'admin.studio.type.follow', pool: 'idea:promo' },
+  { key: 'pick', labelKey: 'admin.studio.type.pick', pool: 'idea:promo' },
+  { key: 'day', labelKey: 'admin.studio.type.day', pool: 'idea:quote' },
 ];
 
 const STOP = new Set([

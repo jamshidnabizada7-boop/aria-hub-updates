@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ARIA HUB — Promo Ad 9:16 Browser Preview</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;800;900&display=swap">
+  <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Vazirmatn', sans-serif;
+      background: radial-gradient(circle at 50% 30%, #0d1a38 0%, #060e22 60%, #030712 100%);
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px 20px;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .brand-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 20px;
+      border-radius: 999px;
+      background: rgba(248, 216, 152, 0.12);
+      border: 1px solid rgba(248, 216, 152, 0.4);
+      color: #F8D898;
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .title {
+      font-size: 32px;
+      font-weight: 900;
+      color: #ffffff;
+      margin-bottom: 6px;
+    }
+    .subtitle {
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+    .preview-layout {
+      display: flex;
+      gap: 40px;
+      align-items: flex-start;
+      max-width: 1200px;
+      width: 100%;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .phone-mockup {
+      width: 380px;
+      height: 675px;
+      border-radius: 40px;
+      background: #000;
+      border: 6px solid #1e293b;
+      box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.8), 0 0 40px rgba(6, 182, 212, 0.25);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .phone-notch {
+      position: absolute;
+      top: 10px;
+      width: 120px;
+      height: 22px;
+      background: #000;
+      border-radius: 12px;
+      z-index: 20;
+    }
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .sidebar {
+      flex: 1;
+      min-width: 320px;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .card {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      padding: 20px 24px;
+    }
+    .card h3 {
+      font-size: 18px;
+      font-weight: 800;
+      color: #F8D898;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .scene-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .scene-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 10px 14px;
+      color: #f8fafc;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: right;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.2s;
+    }
+    .scene-btn:hover {
+      background: rgba(6, 182, 212, 0.2);
+      border-color: #06B6D4;
+    }
+    .scene-time {
+      font-size: 12px;
+      color: #06B6D4;
+      font-weight: 700;
+      direction: ltr;
+    }
+    .specs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      font-size: 13px;
+    }
+    .spec-item {
+      background: rgba(255, 255, 255, 0.04);
+      padding: 8px 12px;
+      border-radius: 8px;
+    }
+    .spec-label {
+      color: rgba(255, 255, 255, 0.5);
+      margin-bottom: 4px;
+    }
+    .spec-val {
+      color: #FFFFFF;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand-badge">
+      <span>✨ تیزر رسمی تبلیغاتی آریا هاب (ARIA HUB)</span>
+    </div>
+    <h1 class="title">پیش‌نمایش ویدیو در مرورگر • کیفیت بالا (1080×1920)</h1>
+    <p class="subtitle">طراحی مدرن موشن گرافیک • فیزیک جهشی (Spring) • گویش فارسی افغانستان</p>
+  </div>
+
+  <div class="preview-layout">
+    <!-- Phone Mockup Frame -->
+    <div class="phone-mockup">
+      <div class="phone-notch"></div>
+      <video id="promoVideo" controls autoplay loop playsinline>
+        <source src="promo_ad.mp4" type="video/mp4">
+        مرورگر شما از تگ ویدیو پشتیبانی نمی‌کند.
+      </video>
+    </div>
+
+    <!-- Sidebar Info & Controls -->
+    <div class="sidebar">
+      <div class="card">
+        <h3>🎬 ناوبری صحنه‌های ویدیو</h3>
+        <div class="scene-list">
+          <button class="scene-btn" onclick="seek(0)">
+            <span>صحنه ۱: پرسش قلاب (Hook) با تایپوگرافی جهشی</span>
+            <span class="scene-time">0:00 - 0:06</span>
+          </button>
+          <button class="scene-btn" onclick="seek(6.5)">
+            <span>صحنه ۲: موکاپ سه‌بعدی UI پلتفرم با پیمایش و کلیک</span>
+            <span class="scene-time">0:06 - 0:13</span>
+          </button>
+          <button class="scene-btn" onclick="seek(13.5)">
+            <span>صحنه ۳: معرفی ۳ مزیت کلیدی (بورسیه، کار، هوش مصنوعی)</span>
+            <span class="scene-time">0:13 - 0:26</span>
+          </button>
+          <button class="scene-btn" onclick="seek(26)">
+            <span>صحنه ۴: جامعه افغانستان و آمار دستاوردها</span>
+            <span class="scene-time">0:26 - 0:31</span>
+          </button>
+          <button class="scene-btn" onclick="seek(31.5)">
+            <span>صحنه ۵: رونمایی لوگوی آریا هاب و دکمه درخشان CTA</span>
+            <span class="scene-time">0:31 - 0:38</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>📊 مشخصات فنی ویدیو</h3>
+        <div class="specs-grid">
+          <div class="spec-item">
+            <div class="spec-label">نام فایل</div>
+            <div class="spec-val" style="direction: ltr;">promo_ad.mp4</div>
+          </div>
+          <div class="spec-item">
+            <div class="spec-label">ابعاد و نسبت</div>
+            <div class="spec-val" style="direction: ltr;">1080x1920 (9:16)</div>
+          </div>
+          <div class="spec-item">
+            <div class="spec-label">مدت زمان</div>
+            <div class="spec-val">۳۸.۰ ثانیه (۱,۱۴۰ فریم)</div>
+          </div>
+          <div class="spec-item">
+            <div class="spec-label">نرخ فریم</div>
+            <div class="spec-val" style="direction: ltr;">30 FPS</div>
+          </div>
+          <div class="spec-item">
+            <div class="spec-label">کدک ویدیو</div>
+            <div class="spec-val" style="direction: ltr;">H.264 (High @ L4.2, yuv420p)</div>
+          </div>
+          <div class="spec-item">
+            <div class="spec-label">کدک صوتی</div>
+            <div class="spec-val" style="direction: ltr;">AAC Stereo 192 kbps</div>
+          </div>
+          <div class="spec-item">
+            <div class="spec-label">لوگوی پلتفرم</div>
+            <div class="spec-val" style="color: #F8D898;">لوگوی رسمی آریا هاب (بدون Z)</div>
+          </div>
+          <div class="spec-item">
+            <div class="spec-label">مناسب برای</div>
+            <div class="spec-val">TikTok, Reels, Instagram, FB</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="border-color: rgba(6, 182, 212, 0.4);">
+        <h3 style="color: #06B6D4;">🚀 دانلود مستقیم ویدیو</h3>
+        <p style="font-size: 14px; color: rgba(255, 255, 255, 0.7); margin-bottom: 12px;">
+          فایل ویدیو با کیفیت مطلوب رندر شده و آماده انتشار در اینستاگرام، تیک‌تاک و فیسبوک است.
+        </p>
+        <a href="promo_ad.mp4" download="promo_ad.mp4" style="
+          display: block;
+          text-align: center;
+          background: linear-gradient(90deg, #06B6D4, #2563EB);
+          color: white;
+          text-decoration: none;
+          padding: 12px;
+          border-radius: 12px;
+          font-weight: 800;
+          font-size: 15px;
+          box-shadow: 0 4px 15px rgba(6, 182, 212, 0.4);
+        ">
+          ⬇️ دانلود فایل promo_ad.mp4 (۱۵.۵ مگابایت)
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const v = document.getElementById('promoVideo');
+    function seek(s) {
+      if (v) {
+        v.currentTime = s;
+        v.play();
+      }
+    }
+  </script>
+</body>
+</html>

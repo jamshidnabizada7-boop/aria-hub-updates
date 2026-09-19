@@ -72,15 +72,19 @@ server.log
 # original Linux postgres data dir (renamed during Windows DB setup)
 /.localpg-linux/
 
-# Ad-video pipeline: regenerable artifacts (scripts are tracked, outputs are not)
-_advideo/tools/
-_advideo/shots/
-_advideo/cards/
-_advideo/vcards/
-_advideo/clips/
-_advideo/rclips/
-_advideo/aud/
-_advideo/spot/
-_advideo/rspot/
+# Video production workspace (Remotion sources, ad pipeline, renders, test artifacts).
+# Kept locally only — finished videos live in /videos and public/advideo|videos.
+/_video-studio/
 public/advideo/shots/
 public/advideo/vshots/
+
+# deploy secrets
+deploy/.env
+deploy/oracle_ed25519
+deploy/oracle_ed25519.pub
+
+# security-scanner plugin state
+/.mimosa/
+
+# commit message scratch
+/COMMIT_MSG.txt

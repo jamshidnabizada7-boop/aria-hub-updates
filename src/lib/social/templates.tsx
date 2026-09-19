@@ -18,8 +18,10 @@
 import { cloneElement, isValidElement } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import {
-  AlarmClock, BarChart3, CalendarDays, CheckCircle2, GraduationCap,
-  Lightbulb, Newspaper, Quote as QuoteGlyph, Sparkles,
+  AlarmClock, BarChart3, Briefcase, CalendarDays, CheckCircle2, Facebook,
+  GraduationCap, Heart, Instagram, Lightbulb, Megaphone, Moon,
+  MousePointerClick, Newspaper, Package, Quote as QuoteGlyph, Send, Sparkles,
+  Telescope, UserPlus,
 } from 'lucide-react';
 import { translate } from '@/lib/i18n';
 import { formatDateLong, toEasternDigits } from '@/lib/date-format';
@@ -72,6 +74,10 @@ export interface SocialCanvasProps {
   person?: { name: string; meta: string };
   /** News template: publish date ISO. */
   newsDate?: string | null;
+  /** Packages template: 1–2 offer cards (value is the hero glyph/number). */
+  packages?: { value: string; label: string; sub?: string }[];
+  /** Day template: date badge above the headline (e.g. "۱۴ ژوئن" / "14 June"). */
+  dateBadge?: { big: string; small?: string };
 }
 
 // ─── shared pieces ───────────────────────────────────────────────────────────
@@ -192,7 +198,7 @@ interface ShellProps {
   children: ReactNode;
 }
 
-const SHELL_LAYOUTS = new Set<StudioLayout>(['split', 'frame', 'stack', 'glass', 'banner', 'ticket']);
+const SHELL_LAYOUTS = new Set<StudioLayout>(['split', 'frame', 'stack', 'glass', 'banner', 'ticket', 'cinema']);
 
 function ShellRoot({ lang, size, theme, style, children }: {
   lang: Lang; size: PosterSize; theme: StudioTheme; style?: CSSProperties; children: ReactNode;
@@ -660,6 +666,100 @@ function TicketShell({ lang, size, theme, kicker, kickerIcon, cta, tagline, qrDa
   );
 }
 
+// ── Cinema: spotlight vignette, glossy floating props, white contact bar ────
+// Modelled on the showcase-poster school (deep radial spotlight, floating 3D
+// spheres, double-chevron brand mark, white footer strip). Colors stay on the
+// StudioTheme tokens — pair with the `crimson` theme for the classic look.
+
+function CinemaShell({ lang, size, theme, kicker, kickerIcon, cta, tagline, qrDataUrl, children }: ShellProps) {
+  const rtl = lang !== 'en';
+  const story = size === 'story';
+  const portrait = size === 'portrait';
+  const pad = story ? 88 : portrait ? 76 : 64;
+  const barBg = theme.dark ? '#FFFFFF' : theme.deep;
+  const barFg = theme.dark ? '#1C040A' : '#FFFFFF';
+  const orb = (px: number): CSSProperties => ({
+    width: px, height: px, borderRadius: '50%',
+    background: `radial-gradient(circle at 32% 28%, rgba(255,255,255,0.55) 0%, ${theme.accentSoft} 34%, ${theme.ctaFrom} 62%, ${theme.bgTop} 100%)`,
+    boxShadow: '0 26px 60px rgba(0,0,0,0.45), inset -14px -18px 44px rgba(0,0,0,0.35)',
+    opacity: 0.9,
+  });
+  const chev = (opacity: number, key: string): ReactNode => (
+    <div
+      key={key}
+      style={{
+        width: 46, height: 46, borderRadius: 8,
+        borderInlineStart: `11px solid ${theme.accent}`,
+        borderTop: `11px solid ${theme.accent}`,
+        transform: rtl ? 'rotate(225deg)' : 'rotate(45deg)',
+        opacity,
+      }}
+    />
+  );
+  return (
+    <ShellRoot
+      lang={lang} size={size} theme={theme}
+      style={{
+        background: `radial-gradient(ellipse 130% 92% at 50% 34%, ${theme.bgMid} 0%, ${theme.bgTop} 52%, ${theme.bgBottom} 100%)`,
+      }}
+    >
+      {/* spotlight glow behind the content */}
+      <div
+        style={{
+          position: 'absolute', top: '10%', left: '50%', transform: 'translateX(-50%)',
+          width: 920, height: story ? 900 : 660, borderRadius: '50%',
+          background: `radial-gradient(ellipse, ${theme.glowA} 0%, rgba(0,0,0,0) 68%)`,
+        }}
+      />
+      <Dots theme={theme} opacity={0.14} />
+      <Watermark portrait={portrait} theme={theme} />
+
+      {/* floating glossy spheres */}
+      <div style={{ position: 'absolute', top: story ? 540 : portrait ? 400 : 316, insetInlineStart: 54, ...orb(story ? 150 : 116) }} />
+      <div style={{ position: 'absolute', bottom: story ? 600 : portrait ? 470 : 366, insetInlineEnd: 66, ...orb(story ? 102 : 82) }} />
+
+      {/* double-chevron brand mark */}
+      <div style={{ position: 'absolute', top: story ? 300 : portrait ? 240 : 200, insetInlineEnd: pad, display: 'flex', flexDirection: 'column', gap: -14 }}>
+        {chev(0.95, 'a')}
+        {chev(0.45, 'b')}
+      </div>
+
+      {/* content column */}
+      <div style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', padding: `${story ? 78 : 56}px ${pad}px ${story ? 70 : 52}px` }}>
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <Lockup theme={theme} rtl={rtl} tagline={tagline} center logoSize={72} nameSize={34} taglineSize={18} />
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 18, marginTop: story ? 66 : 44 }}>
+          <div style={{ width: 64, height: 2, background: theme.accentLine }} />
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontSize: 24, fontWeight: 800, letterSpacing: 3, textTransform: 'uppercase', color: theme.accent, whiteSpace: 'nowrap' }}>
+            {kickerIcon}
+            {kicker}
+          </span>
+          <div style={{ width: 64, height: 2, background: theme.accentLine }} />
+        </div>
+
+        <ShellFlow justify="center" align="center" pad="18px 0 0" gap={24}>{children}</ShellFlow>
+
+        {/* white contact bar — the signature of this family */}
+        <div
+          style={{
+            background: barBg, color: barFg, borderRadius: 24, padding: '18px 28px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18,
+            boxShadow: '0 24px 60px rgba(0,0,0,0.45)', borderTop: `4px solid ${theme.accent}`,
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+            <span style={{ fontSize: 30, fontWeight: 800, direction: 'ltr', textAlign: rtl ? 'right' : 'left', letterSpacing: 0.5 }}>{BRAND.site}</span>
+            <span style={{ fontSize: 19, fontWeight: 700, opacity: 0.75 }}>{cta}</span>
+          </div>
+          <QrChip qrDataUrl={qrDataUrl} theme={theme} size={80} />
+        </div>
+      </div>
+    </ShellRoot>
+  );
+}
+
 function StudioShell(props: ShellProps) {
   switch (props.layout) {
     case 'split': return <SplitShell {...props} />;
@@ -668,6 +768,7 @@ function StudioShell(props: ShellProps) {
     case 'glass': return <GlassShell {...props} />;
     case 'banner': return <BannerShell {...props} />;
     case 'ticket': return <TicketShell {...props} />;
+    case 'cinema': return <CinemaShell {...props} />;
     default: return null;
   }
 }
@@ -688,7 +789,8 @@ export function BrandShell({
 }) {
   // Distinct composition families — each is its own shell, not a reskin.
   if (layout === 'split' || layout === 'frame' || layout === 'stack'
-    || layout === 'glass' || layout === 'banner' || layout === 'ticket') {
+    || layout === 'glass' || layout === 'banner' || layout === 'ticket'
+    || layout === 'cinema') {
     return (
       <StudioShell
         lang={lang} size={size} theme={theme} layout={layout}
@@ -1143,6 +1245,415 @@ export function SocialCanvas(props: SocialCanvasProps) {
           {stat.sub ? (
             <div style={{ fontSize: 27, color: theme.textDim, fontWeight: 500 }}>{stat.sub}</div>
           ) : null}
+        </ContentFrame>
+      </BrandShell>
+    );
+  }
+
+  // ── showcase formats (studio-exclusive, modelled on the reference posters) ──
+
+  if (template === 'packages') {
+    const cards = (props.packages ?? []).filter((c) => c && (c.value || c.label));
+    return (
+      <BrandShell
+        lang={lang} size={size} theme={theme} layout={layout}
+        kicker={t('social.post.kicker.packages')}
+        kickerIcon={<Package style={{ width: 26, height: 26 }} />}
+        qrDataUrl={qrDataUrl}
+      >
+        <ContentFrame size={size} layout={layout}>
+          <GoldRule theme={theme} layout={layout} />
+          <AccentHeadline text={title} max={story ? 4 : portrait ? 3 : 2} theme={theme} layout={layout} />
+          <div style={{ display: 'flex', gap: 28, justifyContent: 'center', alignItems: 'stretch', flexWrap: 'wrap' }}>
+            {cards.map((card, i) => (
+              <div
+                key={i}
+                style={{
+                  flex: cards.length === 1 ? '0 1 460px' : '1 1 0', minWidth: 240, maxWidth: 460,
+                  borderRadius: 38,
+                  background: theme.dark ? 'rgba(255,255,255,0.07)' : theme.surface,
+                  border: `2.5px solid ${theme.accentLine}`,
+                  boxShadow: '0 26px 70px rgba(0,0,0,0.4)',
+                  padding: `${story ? 46 : 36}px 28px`,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: story ? 138 : 116, fontWeight: 900, lineHeight: 1,
+                    direction: 'ltr', color: theme.text,
+                    textShadow: '0 10px 44px rgba(0,0,0,0.45)',
+                  }}
+                >
+                  {card.value}
+                </div>
+                <div style={{ width: 52, height: 4, borderRadius: 999, background: theme.accent }} />
+                <div style={{ fontSize: 28, fontWeight: 700, color: theme.textDim, textAlign: 'center', lineHeight: 1.4 }}>
+                  {card.label}
+                </div>
+                {card.sub ? (
+                  <div style={{ fontSize: 21, fontWeight: 600, color: theme.textDim, opacity: 0.8, textAlign: 'center' }}>{card.sub}</div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+          {note ? (
+            <div style={{ fontSize: 32, fontWeight: 800, color: theme.accent, textAlign: 'center', lineHeight: 1.45 }}>
+              {note}
+            </div>
+          ) : null}
+        </ContentFrame>
+      </BrandShell>
+    );
+  }
+
+  if (template === 'teaser') {
+    return (
+      <BrandShell
+        lang={lang} size={size} theme={theme} layout={layout}
+        kicker={t('social.post.kicker.teaser')}
+        kickerIcon={<Telescope style={{ width: 26, height: 26 }} />}
+        qrDataUrl={qrDataUrl}
+      >
+        <ContentFrame size={size} layout={layout}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, textAlign: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ width: 54, height: 2, background: theme.accentLine }} />
+              <Telescope style={{ width: 44, height: 44, color: theme.accent }} />
+              <div style={{ width: 54, height: 2, background: theme.accentLine }} />
+            </div>
+            <div
+              style={{
+                fontSize: headlineSize(title, story ? 100 : 86), fontWeight: 900, lineHeight: 1.16,
+                display: '-webkit-box', WebkitLineClamp: story ? 4 : 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                textShadow: '0 8px 36px rgba(0,0,0,0.4)',
+              }}
+            >
+              {title}
+            </div>
+            {note ? (
+              <div style={{ fontSize: 40, fontStyle: 'italic', fontWeight: 700, color: theme.accent, lineHeight: 1.35 }}>
+                {note}
+              </div>
+            ) : null}
+          </div>
+        </ContentFrame>
+      </BrandShell>
+    );
+  }
+
+  if (template === 'greeting') {
+    return (
+      <BrandShell
+        lang={lang} size={size} theme={theme} layout={layout}
+        kicker={t('social.post.kicker.greeting')}
+        kickerIcon={<Moon style={{ width: 26, height: 26 }} />}
+        qrDataUrl={qrDataUrl}
+      >
+        <ContentFrame size={size} layout={layout}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: story ? 30 : 22 }}>
+            {/* ornament arch with crescent — occasion neutral, works for Eid,
+                Mawlid, Friday and national-day greetings alike */}
+            <div
+              style={{
+                width: 290, height: story ? 400 : 330,
+                borderRadius: '145px 145px 26px 26px',
+                border: `3px solid ${theme.accentLine}`,
+                background: theme.accentFaint,
+                display: 'grid', placeItems: 'center', position: 'relative',
+              }}
+            >
+              <div style={{ position: 'absolute', inset: 14, borderRadius: '131px 131px 16px 16px', border: `1px solid ${theme.accentFaint}` }} />
+              <Moon style={{ width: 96, height: 96, color: theme.accent }} />
+              <Sparkles style={{ position: 'absolute', top: 42, insetInlineEnd: 52, width: 32, height: 32, color: theme.accent }} />
+              <Sparkles style={{ position: 'absolute', bottom: 58, insetInlineStart: 46, width: 24, height: 24, color: theme.accent, opacity: 0.7 }} />
+            </div>
+            <div
+              style={{
+                fontSize: headlineSize(title, 62), fontWeight: 900, lineHeight: 1.28, textAlign: 'center',
+                display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                textShadow: '0 8px 36px rgba(0,0,0,0.4)',
+              }}
+            >
+              {title}
+            </div>
+            {note ? (
+              <div style={{ fontSize: 27, fontWeight: 600, color: theme.textDim, textAlign: 'center', maxWidth: 760, lineHeight: 1.55 }}>
+                {note}
+              </div>
+            ) : null}
+          </div>
+        </ContentFrame>
+      </BrandShell>
+    );
+  }
+
+  if (template === 'hiring') {
+    const callouts = (props.checklist ?? []).slice(0, 3);
+    const rtlFlip = lang !== 'en';
+    return (
+      <BrandShell
+        lang={lang} size={size} theme={theme} layout={layout}
+        kicker={t('social.post.kicker.hiring')}
+        kickerIcon={<Megaphone style={{ width: 26, height: 26 }} />}
+        qrDataUrl={qrDataUrl}
+      >
+        <ContentFrame size={size} layout={layout}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 22, textAlign: 'center' }}>
+            <Megaphone
+              style={{
+                width: story ? 104 : 88, height: story ? 104 : 88, color: theme.accent,
+                transform: `${rtlFlip ? 'scaleX(-1) ' : ''}rotate(-8deg)`,
+                filter: 'drop-shadow(0 14px 34px rgba(0,0,0,0.4))',
+              }}
+            />
+            <div
+              style={{
+                fontSize: headlineSize(title, story ? 116 : 100), fontWeight: 900, lineHeight: 1.08,
+                letterSpacing: 1, textTransform: 'uppercase',
+                display: '-webkit-box', WebkitLineClamp: story ? 3 : 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                textShadow: '0 10px 44px rgba(0,0,0,0.45)',
+              }}
+            >
+              {title}
+            </div>
+            {note ? (
+              <div style={{ fontSize: 31, fontWeight: 700, color: theme.textDim, lineHeight: 1.4 }}>
+                {note}
+              </div>
+            ) : null}
+            {callouts.length ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
+                {callouts.map((row, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 12,
+                      background: theme.dark ? 'rgba(255,255,255,0.07)' : theme.surface,
+                      border: `1.5px solid ${theme.accentLine}`,
+                      borderRadius: 999, padding: '13px 30px',
+                      fontSize: 26, fontWeight: 700,
+                    }}
+                  >
+                    <CheckCircle2 style={{ width: 29, height: 29, color: theme.accent, flexShrink: 0 }} />
+                    {row}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </ContentFrame>
+      </BrandShell>
+    );
+  }
+
+  // ── showcase formats round 2 (profile / choice / occasion-day) ──────────────
+
+  if (template === 'follow') {
+    // CSS phone mockup with the ARIA HUB profile on screen + glowing orbit
+    // rings — the "follow us" hero of the reference posters, fully code-drawn.
+    const ring = (rotate: number, color: string, opacity: number, blur: number, key: string): ReactNode => (
+      <div
+        key={key}
+        style={{
+          position: 'absolute', left: '50%', top: '50%',
+          width: story ? 700 : 600, height: story ? 230 : 190,
+          marginLeft: story ? -350 : -300, marginTop: story ? -115 : -95,
+          border: `3px solid ${color}`, borderRadius: '50%',
+          transform: `rotate(${rotate}deg)`, opacity, filter: blur ? `blur(${blur}px)` : undefined,
+          pointerEvents: 'none',
+        }}
+      />
+    );
+    const chip = (icon: ReactNode, key: string, style: CSSProperties): ReactNode => (
+      <div
+        key={key}
+        style={{
+          width: 84, height: 84, borderRadius: '50%', display: 'grid', placeItems: 'center',
+          background: `radial-gradient(circle at 32% 28%, rgba(255,255,255,0.5) 0%, ${theme.accentSoft} 40%, ${theme.bgTop} 100%)`,
+          boxShadow: '0 18px 44px rgba(0,0,0,0.45)', color: theme.text, ...style,
+        }}
+      >
+        {icon}
+      </div>
+    );
+    return (
+      <BrandShell
+        lang={lang} size={size} theme={theme} layout={layout}
+        kicker={t('social.post.kicker.follow')}
+        kickerIcon={<UserPlus style={{ width: 26, height: 26 }} />}
+        qrDataUrl={qrDataUrl}
+      >
+        <ContentFrame size={size} layout={layout}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: story ? 36 : 26 }}>
+            {/* phone + orbits stage */}
+            <div style={{ position: 'relative', width: '100%', height: story ? 660 : 520, display: 'grid', placeItems: 'center' }}>
+              {ring(-16, theme.accent, 0.75, 0, 'r1')}
+              {ring(-16, theme.accent, 0.4, 6, 'r1b')}
+              {ring(14, 'rgba(255,255,255,0.65)', 0.8, 0, 'r2')}
+              {ring(14, 'rgba(255,255,255,0.5)', 0.35, 6, 'r2b')}
+              {/* phone */}
+              <div
+                style={{
+                  position: 'relative', width: 264, height: story ? 540 : 430,
+                  borderRadius: 42, border: `10px solid ${theme.deep}`,
+                  background: `linear-gradient(180deg, ${theme.bgMid} 0%, ${theme.bgTop} 100%)`,
+                  boxShadow: '0 40px 90px rgba(0,0,0,0.55)',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  padding: '44px 20px 20px', gap: 12,
+                }}
+              >
+                <div style={{ position: 'absolute', top: 14, left: '50%', transform: 'translateX(-50%)', width: 84, height: 18, borderRadius: 999, background: theme.deep }} />
+                <div style={{ width: 88, height: 88, borderRadius: '50%', overflow: 'hidden', background: theme.logoBg, outline: `3px solid ${theme.accentLine}`, outlineOffset: -3 }}>
+                  <img src="/images/logo-mark.png" alt="ARIA HUB" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                </div>
+                <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: 2, direction: 'ltr' }}>ARIA HUB</div>
+                <div style={{ fontSize: 17, fontWeight: 600, color: theme.textDim, direction: 'ltr' }}>{BRAND.site}</div>
+                <div
+                  style={{
+                    marginTop: 4, background: theme.accent, color: theme.onAccent,
+                    fontSize: 20, fontWeight: 800, padding: '9px 34px', borderRadius: 999,
+                  }}
+                >
+                  {t('social.post.followBtn')}
+                </div>
+                <div style={{ marginTop: 2, display: 'flex', gap: 18, color: theme.textDim }}>
+                  <Briefcase style={{ width: 22, height: 22 }} />
+                  <GraduationCap style={{ width: 22, height: 22 }} />
+                  <Newspaper style={{ width: 22, height: 22 }} />
+                </div>
+              </div>
+              {/* floating platform chips */}
+              {chip(<Facebook style={{ width: 38, height: 38 }} />, 'fb', { position: 'absolute', insetInlineStart: 18, top: story ? 120 : 84 })}
+              {chip(<Instagram style={{ width: 38, height: 38 }} />, 'ig', { position: 'absolute', insetInlineEnd: 18, top: story ? 330 : 260 })}
+              {chip(<Send style={{ width: 38, height: 38 }} />, 'tg', { position: 'absolute', insetInlineStart: 30, bottom: story ? 60 : 40 })}
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: headlineSize(title, 54), fontWeight: 900, lineHeight: 1.3, textShadow: '0 8px 36px rgba(0,0,0,0.4)' }}>
+                {title}
+              </div>
+              {note ? (
+                <div style={{ marginTop: 10, fontSize: 28, fontWeight: 700, color: theme.textDim, lineHeight: 1.5 }}>
+                  {note}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </ContentFrame>
+      </BrandShell>
+    );
+  }
+
+  if (template === 'pick') {
+    // Three glowing app tiles, centre one elevated — the "they choose us" beat.
+    const tiles = (props.checklist ?? []).slice(0, 2);
+    return (
+      <BrandShell
+        lang={lang} size={size} theme={theme} layout={layout}
+        kicker={t('social.post.kicker.pick')}
+        kickerIcon={<MousePointerClick style={{ width: 26, height: 26 }} />}
+        qrDataUrl={qrDataUrl}
+      >
+        <ContentFrame size={size} layout={layout}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: story ? 34 : 24, textAlign: 'center' }}>
+            <AccentHeadline text={title} max={story ? 4 : 3} theme={theme} layout={layout} />
+            {note ? <NoteLine text={note} theme={theme} clamp={2} /> : null}
+            <div style={{ display: 'flex', alignItems: 'center', gap: story ? 34 : 26, marginTop: 8 }}>
+              {tiles[0] ? (
+                <div
+                  style={{
+                    width: story ? 190 : 158, height: story ? 190 : 158, borderRadius: 40,
+                    background: theme.dark ? 'rgba(255,255,255,0.06)' : theme.surface,
+                    border: `2px solid ${theme.surfaceBorder}`,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
+                    opacity: 0.92,
+                  }}
+                >
+                  <GraduationCap style={{ width: 64, height: 64, color: theme.text }} />
+                  <div style={{ fontSize: 20, fontWeight: 700, color: theme.textDim }}>{tiles[0]}</div>
+                </div>
+              ) : null}
+              {/* centre tile — the brand, highlighted */}
+              <div
+                style={{
+                  width: story ? 218 : 182, height: story ? 218 : 182, borderRadius: 44,
+                  background: theme.dark ? 'rgba(255,255,255,0.10)' : theme.surface,
+                  border: `3px solid ${theme.accent}`,
+                  boxShadow: `0 0 70px ${theme.glowA}, 0 26px 70px rgba(0,0,0,0.5)`,
+                  transform: 'translateY(-14px)',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
+                  position: 'relative',
+                }}
+              >
+                <div style={{ width: 84, height: 84, borderRadius: 24, overflow: 'hidden', background: theme.logoBg }}>
+                  <img src="/images/logo-mark.png" alt="ARIA HUB" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                </div>
+                <div style={{ fontSize: 21, fontWeight: 800, color: theme.accent, letterSpacing: 1, direction: 'ltr' }}>ARIA HUB</div>
+                {/* touch glow */}
+                <div style={{ position: 'absolute', bottom: -26, left: '50%', transform: 'translateX(-50%)', width: 120, height: 46, borderRadius: '50%', background: `radial-gradient(ellipse, ${theme.glowA} 0%, rgba(0,0,0,0) 70%)` }} />
+              </div>
+              {tiles[1] ? (
+                <div
+                  style={{
+                    width: story ? 190 : 158, height: story ? 190 : 158, borderRadius: 40,
+                    background: theme.dark ? 'rgba(255,255,255,0.06)' : theme.surface,
+                    border: `2px solid ${theme.surfaceBorder}`,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
+                    opacity: 0.92,
+                  }}
+                >
+                  <Newspaper style={{ width: 64, height: 64, color: theme.text }} />
+                  <div style={{ fontSize: 20, fontWeight: 700, color: theme.textDim }}>{tiles[1]}</div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </ContentFrame>
+      </BrandShell>
+    );
+  }
+
+  if (template === 'day') {
+    // Occasion-day card: date badge + line-art glyph + bold greeting.
+    const badge = props.dateBadge;
+    return (
+      <BrandShell
+        lang={lang} size={size} theme={theme} layout={layout}
+        kicker={t('social.post.kicker.day')}
+        kickerIcon={<Sparkles style={{ width: 26, height: 26 }} />}
+        qrDataUrl={qrDataUrl}
+      >
+        <ContentFrame size={size} layout={layout}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: story ? 30 : 22, textAlign: 'center' }}>
+            {badge ? (
+              <div
+                style={{
+                  display: 'inline-flex', alignItems: 'baseline', gap: 14,
+                  background: theme.dark ? 'rgba(255,255,255,0.08)' : theme.surface,
+                  border: `2px solid ${theme.accentLine}`, borderRadius: 22,
+                  padding: '14px 30px', direction: 'ltr',
+                }}
+              >
+                <span style={{ fontSize: 46, fontWeight: 900, color: theme.accent, lineHeight: 1 }}>{badge.big}</span>
+                {badge.small ? <span style={{ fontSize: 24, fontWeight: 700, color: theme.textDim }}>{badge.small}</span> : null}
+              </div>
+            ) : null}
+            <Heart style={{ width: story ? 150 : 120, height: story ? 150 : 120, color: theme.text, filter: `drop-shadow(0 0 34px ${theme.glowA})` }} />
+            <div
+              style={{
+                fontSize: headlineSize(title, 64), fontWeight: 900, lineHeight: 1.3,
+                display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                textShadow: '0 8px 36px rgba(0,0,0,0.4)',
+              }}
+            >
+              {title}
+            </div>
+            {note ? (
+              <div style={{ fontSize: 27, fontWeight: 600, color: theme.textDim, maxWidth: 760, lineHeight: 1.55 }}>
+                {note}
+              </div>
+            ) : null}
+          </div>
         </ContentFrame>
       </BrandShell>
     );

@@ -1,0 +1,31 @@
+# Keep the Docker build context small. Everything here is dev/workstation-only.
+node_modules
+.next
+out
+.git
+logs
+dev.log
+db
+tsconfig.tsbuildinfo
+
+# Ad/video production workspace and its exports (site videos live in public/)
+_advideo
+remotion
+/ARIA-HUB-*.mp4
+/promo_ad.mp4
+/promo_ad_visual.mp4
+/test_*.mp4
+/test_*.mp3
+/test_*.png
+/still-scene*.png
+/browser_preview_verified.png
+
+# Workstation scratch
+agent-ctx
+tool-results
+download
+upload
+examples
+mini-services
+docs
+*.log

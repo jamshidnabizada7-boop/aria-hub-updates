@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ARIA HUB — 30-Day Viral Reels Master Preview</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap">
+  <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Vazirmatn', sans-serif;
+      background: radial-gradient(1400px 900px at 50% 15%, #0a142e 0%, #060c1e 50%, #030611 100%);
+      color: #f8fafc;
+      min-height: 100vh;
+      padding: 30px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 24px;
+      border-radius: 999px;
+      background: rgba(248, 216, 152, 0.12);
+      border: 1px solid rgba(248, 216, 152, 0.35);
+      color: #F8D898;
+      font-size: 16px;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+    h1 {
+      font-size: 34px;
+      font-weight: 900;
+      color: #ffffff;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      font-size: 16px;
+      color: rgba(248, 250, 252, 0.7);
+    }
+    .day-selector-bar {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      max-width: 1200px;
+      width: 100%;
+      padding: 12px 6px;
+      margin-bottom: 30px;
+      scrollbar-width: thin;
+      scrollbar-color: #F8D898 #0c162d;
+    }
+    .day-btn {
+      flex: 0 0 auto;
+      padding: 10px 18px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(12, 22, 45, 0.8);
+      color: #f8fafc;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .day-btn:hover {
+      border-color: #F8D898;
+      transform: translateY(-2px);
+    }
+    .day-btn.active {
+      background: linear-gradient(135deg, #F8D898 0%, #F59E0B 100%);
+      color: #040815;
+      border-color: #F8D898;
+      box-shadow: 0 0 20px rgba(248, 216, 152, 0.4);
+    }
+    .main-grid {
+      display: grid;
+      grid-template-columns: 460px 1fr;
+      gap: 36px;
+      max-width: 1200px;
+      width: 100%;
+      align-items: start;
+    }
+    @media (max-width: 960px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .player-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .phone-mockup {
+      width: 420px;
+      height: 746px;
+      border-radius: 40px;
+      background: #020617;
+      border: 8px solid #1e293b;
+      box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.9), 0 0 40px rgba(6, 182, 212, 0.25);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .phone-notch {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 24px;
+      background: #000;
+      border-radius: 12px;
+      z-index: 20;
+    }
+    video, img.preview-screen {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      background: #040815;
+    }
+    .details-panel {
+      background: rgba(12, 22, 45, 0.75);
+      border: 1px solid rgba(248, 216, 152, 0.22);
+      border-radius: 24px;
+      padding: 32px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    }
+    .pill-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 800;
+      margin-bottom: 16px;
+    }
+    .detail-title {
+      font-size: 26px;
+      font-weight: 900;
+      color: #ffffff;
+      line-height: 1.35;
+      margin-bottom: 12px;
+    }
+    .hook-box {
+      background: rgba(248, 216, 152, 0.08);
+      border-right: 4px solid #F8D898;
+      padding: 16px 20px;
+      border-radius: 0 16px 16px 0;
+      margin-bottom: 20px;
+    }
+    .hook-box .label {
+      font-size: 13px;
+      font-weight: 700;
+      color: #F8D898;
+      margin-bottom: 6px;
+    }
+    .hook-box .text {
+      font-size: 20px;
+      font-weight: 800;
+      color: #fff;
+    }
+    .features-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .features-list li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.9);
+    }
+    .features-list li::before {
+      content: "✓";
+      color: #10B981;
+      font-weight: 900;
+      font-size: 18px;
+    }
+    .vo-box {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .vo-box h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #06B6D4;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .vo-box p {
+      font-size: 15px;
+      line-height: 1.7;
+      color: rgba(255, 255, 255, 0.85);
+    }
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="badge">
+      <span>🎬 ARIA HUB 30-DAY VIRAL REELS</span>
+    </div>
+    <h1>سامانه مدیریت و پیش‌نمایش ۳۰ ویدیوی ویرال</h1>
+    <p class="subtitle">تولید شده با ریموشن ۴ (Remotion) + ریکت ۱۹ + فرمول آوانگار و تاییدیه رسمی</p>
+  </div>
+
+  <div class="day-selector-bar" id="daySelector"></div>
+
+  <div class="main-grid">
+    <!-- Left: Phone Player -->
+    <div class="player-column">
+      <div class="phone-mockup">
+        <div class="phone-notch"></div>
+        <video id="reelVideo" controls autoplay loop playsinline>
+          <source src="/videos/ariahub-reels-fa.mp4" type="video/mp4">
+        </video>
+        <img id="reelStill" class="preview-screen" src="/out/stills/day01_frame45.png" alt="Preview Still" style="display: none;">
+      </div>
+      <div style="margin-top: 16px; display: flex; gap: 12px;">
+        <button id="toggleViewBtn" class="day-btn" style="padding: 8px 16px; font-size: 13px;">
+          🔄 نمایش فریم‌های استاتیک / ویدیو
+        </button>
+      </div>
+    </div>
+
+    <!-- Right: Detailed Script Breakdown -->
+    <div class="details-panel" id="detailsPanel">
+      <div id="pillarTag" class="pill-tag" style="background: rgba(248, 216, 152, 0.2); color: #F8D898;">
+        🎓 بورسیه تحصیلی بین‌المللی
+      </div>
+      <h2 id="detailTitle" class="detail-title">بورسیه فولفند ترکیه (Türkiye Bursları)</h2>
+
+      <div class="hook-box">
+        <div class="label">قلاب افتتاحیه (Hook 0-3s):</div>
+        <div id="hookText" class="text">بدون مدرک تافل بورسیه فولفند ترکیه شو!</div>
+      </div>
+
+      <div style="margin-bottom: 18px;">
+        <div style="font-size: 13px; font-weight: 700; color: #F8D898; margin-bottom: 4px;">پیام ثانویه و رفع نگرانی:</div>
+        <div id="subHookText" style="font-size: 16px; color: #fff; font-weight: 600;">لیلیه رایگان • معاش ماهانه • تکت رفت و برگشت</div>
+      </div>
+
+      <div style="margin-bottom: 22px;">
+        <div style="font-size: 13px; font-weight: 700; color: #06B6D4; margin-bottom: 8px;">مزایای کلیدی به تصویر کشیده‌شده:</div>
+        <ul id="featuresList" class="features-list"></ul>
+      </div>
+
+      <div class="vo-box">
+        <h4>🎙️ متن گویندگی به فارسی افغانستان (Voiceover):</h4>
+        <p id="voScriptText"></p>
+      </div>
+
+      <div class="meta-row">
+        <div>مسیر در وبسایت: <strong id="targetRoute" style="color: #06B6D4;"></strong></div>
+        <div>وضعیت: <strong id="statusBadge" style="color: #10B981;"></strong></div>
+        <div>مدت زمان: <strong>۳۰ ثانیه (۹۰۰ فریم)</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    let reels = [];
+    let currentDay = 1;
+    let showStill = false;
+
+    const stillsMap = {
+      1: '/out/stills/day01_frame45.png',
+      25: '/out/stills/day25_frame45.png',
+      28: '/out/stills/day28_frame45.png'
+    };
+
+    const EMBEDDED_REELS = [
+  {
+    "day": 1,
+    "id": "Day01",
+    "slug": "day01-turkiye-burslari",
+    "pillar": "scholarship",
+    "title": "بورسیه فولفند ترکیه (Türkiye Bursları)",
+    "hookTitle": "بدون مدرک تافل بورسیه فولفند ترکیه شو!",
+    "goldWord": "رایگان",
+    "subHook": "لیلیه رایگان • معاش ماهانه • تکت رفت و برگشت",
+    "tagline": "بورسیه ۱۰۰٪ دولتی ترکیه",
+    "statusBadge": "دوره سالانه جنوری ۲۰۲۷ | آمادگی زودهنگام",
+    "statsHighlight": {
+      "number": "۱۰۰٪",
+      "label": "پوشش کامل تمام مصارف"
+    },
+    "features": [
+      "بدون نیاز به مدرک تافل یا زبان ترکی",
+      "پرداخت کامل فیس پوهنتون + لیلیه رایگان",
+      "معاش ماهانه + بیمه صحی + تکت پرواز",
+      "امکان ثبت‌نام اولیه با تذکره الکترونیکی"
+    ],
+    "uiScreenshotPath": "advideo/vshots/scholarships.png",
+    "targetRoute": "/fa/opportunities?category=scholarships",
+    "ctaText": "همین حالا اسنادت ره آماده کو!",
+    "ctaSubtext": "لینک مستقیم و چک‌لیست رایگان در: myariahub.com",
+    "accentColor": "#F8D898",
+    "voiceoverScript": "میدانستی برای ثبت‌نام در یکی از معتبرترین بورسیه‌های دولتی جهان، نیاز به پرداخت حتی یک افغانی هم نداری؟ ثبت‌نام رسمی بورسیه دولتی ترکیه (Türkiye Bursları) هر سال در ماه جدی (جنوری) باز میشه، اما به دلیل حجم بالای اسناد و تذکره الکترونیکی، داوطلبان موفق از همین پاییز آمادگی ره شروع میکنند! این بورس تمام مصارف تحصیل، لیلیه، تکت پرواز رفت و برگشت و حتی معاش ماهانه را پرداخت میکنه! جالب‌تر اینکه بدون مدرک زبان انگلیسی یا ترکی هم میتانی ثبت‌نام کنی. تمام جزییات، شرایط سنی برای لیسانس و ماستری، و چک‌لیست کامل اسناد را همین حالا در آریا هاب برایت آماده کردیم. این ویدیو ره برای دوستانت بفرست و از لینک داخل بیو ثبت‌نام ره شروع کو."
+  },
+  {
+    "day": 2,
+    "id": "Day02",
+    "slug": "day02-remote-jobs-usd",
+    "pillar": "job",
+    "title": "اولین کار ریموت و درآمد دلاری از خانه",
+    "hookTitle": "درآمد دلاری از خانه بدون حساب بانکی خارجی!",
+    "goldWord": "دالری",
+    "subHook": "بدون نیاز به ویزا یا پاسپورت اروپایی",
+    "tagline": "کارهای ریموت بین‌المللی",
+    "statusBadge": "بست‌های فعال روزانه | پرداخت ارزی",
+    "statsHighlight": {
+      "number": "+$850",
+      "label": "درآمد متوسط فریلنسری"
+    },
+    "features": [
+      "استخدام در بست‌های ترجمه، دیتا انتری و گرافیک",
+      "پذیرش رسمی متقاضیان از داخل افغانستان",
+      "نقد کردن درآمد از طریق صرافی‌های معتبر و تتر",
+      "بدون نیاز به کارت اعتباری بین‌المللی"
+    ],
+    "uiScreenshotPath": "advideo/vshots/jobs.png",
+    "targetRoute": "/fa/opportunities?category=jobs",
+    "ctaText": "بست‌های ریموت امروز را ببین!",
+    "ctaSubtext": "فرصت‌های تایید شده کاری در: myariahub.com",
+    "accentColor": "#10B981",
+    "voiceoverScript": "اگر فکر میکنی از داخل افغانستان نمیشه درآمد دالری داشت، این ویدیو دیدگاهت ره کاملاً عوض میکنه. در آریا هاب، بست‌های کاری ریموتی را جمع‌آوری کردیم که نه نیاز به حساب بانکی خارجی دارند و نه پاسپورت اروپایی! از مهارت‌های ابتدایی مثل ترجمه، تایپ و دیتا انتری گرفته تا طراحی گرافیک و برنامه‌نویسی. معاش به صورت دالر از طریق صرافی‌های معتبر بدون دردسر به دستت میرسه. همین حالا به بخش کارهای ریموت در آریا هاب برو و برای بست‌های تاییدشده اپلای کو!"
+  },
+  {
+    "day": 3,
+    "id": "Day03",
+    "slug": "day03-visa-214b-exposed",
+    "pillar": "visa",
+    "title": "دلیل رد شدن ویزای دانشجویی (بند 214b)",
+    "hookTitle": "راز بزرگ رد شدن ویزای تحصیلی در سفارت!",
+    "goldWord": "رد شدن",
+    "subHook": "بند ۲۱۴(b) و اشتباه مرگبار عدم اثبات بازگشت",
+    "tagline": "دفاعیه ویزا و مصاحبه کنسولی",
+    "statusBadge": "راهنمای کنسولی | دفاعیه بند 214(b)",
+    "statsHighlight": {
+      "number": "۷۰٪+",
+      "label": "ریجکتی‌ها به خاطر بند ۲۱۴(b)"
+    },
+    "features": [
+      "شناخت دقیق بند ۲۱۴(b) و قصد مهاجرتی",
+      "فرمول اثبات وابستگی به وطن (Ties to Home)",
+      "۴ ستون اسناد ضروری قبل از ورود به سفارت",
+      "پرهیز از شعارهای کلیشه‌ای در مصاحبه"
+    ],
+    "uiScreenshotPath": "advideo/vshots/home.png",
+    "targetRoute": "/fa/visa-prep/rejections",
+    "ctaText": "دفاعیه اصولی ویزا ره یاد بگیر!",
+    "ctaSubtext": "چک‌لیست دفاعیه ویزا در: myariahub.com",
+    "accentColor": "#F43F5E",
+    "voiceoverScript": "بیشتر از ۷۰ درصد ویزاهای تحصیلی متقاضیان افغانستان به خاطر بند ۲۱۴ بی رد میشن؛ اما این بند اصلاً یعنی چی؟ یعنی آفیسر کنسولی معتقد است قصد بازگشت نداری! اگر در مصاحبه فقط از زیبایی‌های کشور مقصد یا پیشرفت اروپا بگویی، رد میشی. باید ثابت کنی بعد از ختم درس، با مهارت‌های جدیدت چه نقشی در جامعه خودت بازی میکنی. ما در بخش ویزا-پِرِپ آریا هاب، راهکارهای دقیق رد شدن تحت بند ۲۱۴(b) و روش اصولی پاسخ به سوالات سفارت را برایت آماده کردیم."
+  },
+  {
+    "day": 4,
+    "id": "Day04",
+    "slug": "day04-stop-canva-ats-cv",
+    "pillar": "tool",
+    "title": "خداحافظی با کانوا: ساخت سی‌وی ATS",
+    "hookTitle": "اشتباه مهلک: سی‌وی‌های گرافیکی کانوا حذف میشن!",
+    "goldWord": "مهلک",
+    "subHook": "ربات‌های ATS سی‌وی‌های دو ستونه ره رد میکنند",
+    "tagline": "سی‌وی ساز هوشمند استاندارد",
+    "statusBadge": "ابزار رایگان آنلاین | خروجی استاندارد PDF",
+    "statsHighlight": {
+      "number": "۹۸٪",
+      "label": "سازگاری با سیستم‌های ATS"
+    },
+    "features": [
+      "قالب تک ستونه مورد تایید دانشگاه‌ها و شرکت‌ها",
+      "ساخت رایگان رزومه بین‌المللی در کمتر از ۵ دقیقه",
+      "پشتیبانی کامل از زبان‌های فارسی، پشتو و انگلیسی",
+      "خروجی استاندارد PDF بدون به هم ریختگی"
+    ],
+    "uiScreenshotPath": "advideo/vshots/cvb.png",
+    "targetRoute": "/fa/cv-builder",
+    "ctaText": "سی‌وی معیاریت ره رایگان بساز!",
+    "ctaSubtext": "سی‌وی‌ساز هوشمند در: myariahub.com/fa/cv-builder",
+    "accentColor": "#06B6D4",
+    "voiceoverScript": "آیا میدانستی ۹۰ درصد شرکت‌های بین‌المللی و دانشگاه‌ها، اصلاً سی‌وی‌های رنگارنگ با نمودارهای ستاره‌ای کانوا را باز نمیکنند؟ سیستم‌های اتوماتیک یا ATS فقط متن‌های ساده و ساختارمند را اسکن میکنند! اگر سی‌وی در قالب درست نباشه، قبل از اینکه به دست کارفرما برسه حذف میشه. در سیستم سی‌وی‌ساز آریا هاب، در کمتر از ۵ دقیقه یک رزومه کاملاً استاندارد و مطابق معیارهای جهانی به رایگان بساز و پی‌دی‌اف دانلود کو."
+  },
+  {
+    "day": 5,
+    "id": "Day05",
+    "slug": "day05-daad-germany",
+    "pillar": "scholarship",
+    "title": "بورسیه فولفند دآآد آلمان (DAAD)",
+    "hookTitle": "تحصیل ۱۰۰٪ رایگان در آلمان + ۹۳۴ یورو معاش!",
+    "goldWord": "فولفند",
+    "subHook": "تدریس کامل به انگلیسی بدون مدرک زبان آلمانی",
+    "tagline": "بورسیه دولتی دآآد (DAAD)",
+    "statusBadge": "ددلاین‌های خزان ۲۰۲۶ | برنامه‌های انگلیسی‌زبان",
+    "statsHighlight": {
+      "number": "€934",
+      "label": "معاش ماهانه خالص"
+    },
+    "features": [
+      "معافیت ۱۰۰٪ از فیس پوهنتون‌های دولتی آلمان",
+      "برنامه‌های هلموت اشمیت و ایپوس به زبان انگلیسی",
+      "بیمه صحی کامل + پرداخت تکت پرواز رفت و برگشت",
+      "لیست کامل رشته‌ها و ددلاین‌ها در آریا هاب"
+    ],
+    "uiScreenshotPath": "advideo/vshots/scholarships.png",
+    "targetRoute": "/fa/opportunities?category=scholarships",
+    "ctaText": "ددلاین‌های آلمان ره از دست نده!",
+    "ctaSubtext": "مشاهده فرصت‌های DAAD در: myariahub.com",
+    "accentColor": "#FBBF24",
+    "voiceoverScript": "تحصیل رایگان در آلمان، معاش ماهانه بیش از ۹۳۰ یورو، بیمه صحی کامل و تکت پرواز! بورسیه دآآد آلمان یکی از باارزش‌ترین فرصت‌های جهان برای جوانان افغانستان است. خبر خوش این است که برنامه‌های متعددی مثل هلموت اشمیت و ایپوس حتی به زبان انگلیسی تدریس میشوند و نیازی به زبان آلمانی در شروع کار نداری. لیست رشته‌های واجد شرایط و ددلاین‌های ثبت‌نام را در صفحه ددلاین‌های آریا هاب چک کن."
+  },
+  {
+    "day": 6,
+    "id": "Day06",
+    "slug": "day06-ngo-hiring-formula",
+    "pillar": "job",
+    "title": "فرمول استخدام در موسسات بین‌المللی کابل",
+    "hookTitle": "چگونه از بین ۳۰۰ متقاضی در کابل استخدام شدم؟",
+    "goldWord": "فرمول",
+    "subHook": "قانون طلایی یک‌سوم بالای سی‌وی با اعداد واقعی",
+    "tagline": "استراتژی استخدام در موسسات",
+    "statusBadge": "کیس واقعی احمد ضیا | استخدام از بین ۳۰۰ نفر",
+    "statsHighlight": {
+      "number": "1/300",
+      "label": "قبولی با فرمول اختصاصی"
+    },
+    "features": [
+      "توقف ارسال سی‌وی‌های عمومی و بی‌هدف",
+      "برجسته کردن دستاوردهای عددی در ابتدای رزومه",
+      "تنظیم کاورلتر بر اساس نام و پروژه مشخص موسسه",
+      "۱۰ نکته کلیدی قبولی مصاحبه در آریا هاب"
+    ],
+    "uiScreenshotPath": "advideo/vshots/jobs.png",
+    "targetRoute": "/fa/blog/resume-tips-international-ngos",
+    "ctaText": "فرمول استخدام موسسات ره بخوان!",
+    "ctaSubtext": "مقاله و نمونه کاورلتر در: myariahub.com",
+    "accentColor": "#3B82F6",
+    "voiceoverScript": "درخواست دادن به وظایف اکبر و موسسات مثل قمار نیست؛ فقط یک فرمول ساده داره! احمد ضیا از کابل توانست از بین ۳۰۰ متقاضی به عنوان آفیسر برنامه در یک موسسه بین‌المللی استخدام شود. راز موفقیت او چی بود؟ یک‌سوم بالایی سی‌وی باید دقیقاً دو پروژه قبلی و اعداد واقعی دستاوردت ره نشان بده، مثلاً 'مدیریت توزیع برای ۱۸ هزار خانواده'. در آریا هاب ۱۰ نکته طلایی برای قبولی در موسسات همراه با نمونه کاورلتر مخصوص برایت آماده است."
+  },
+  {
+    "day": 7,
+    "id": "Day07",
+    "slug": "day07-visa-interview-questions",
+    "pillar": "visa",
+    "title": "۳ سوال سرنوشت‌ساز در مصاحبه ویزای دانشجویی",
+    "hookTitle": "این ۳ سوال سرنوشت ویزای شما ره تعیین میکنه!",
+    "goldWord": "سفارت",
+    "subHook": "آفیسر فقط ۳ دقیقه برای تصمیم‌گیری وقت دارد",
+    "tagline": "آمادگی مصاحبه سفارت",
+    "statusBadge": "شبیه‌ساز هوشمند مصاحبه | تکنیک STAR",
+    "statsHighlight": {
+      "number": "۳ دقیقه",
+      "label": "زمان طلایی مصاحبه کنسولی"
+    },
+    "features": [
+      "چرا این پوهنتون؟ (نام بردن از کریکولم و استاد مشخص)",
+      "کی مصارف ره میده؟ (اثبات منبع معتبر و قانونی تمکن)",
+      "بعد از فراغت کجایی؟ (پلان شفاف بازگشت و توسعه شغلی)",
+      "تمرین با شبیه‌ساز زمان‌دار در آریا هاب"
+    ],
+    "uiScreenshotPath": "advideo/vshots/tools.png",
+    "targetRoute": "/fa/interview-prep/practice",
+    "ctaText": "قبل از سفارت آنلاین تمرین کو!",
+    "ctaSubtext": "شبیه‌ساز مصاحبه در: myariahub.com/fa/interview-prep",
+    "accentColor": "#EC4899",
+    "voiceoverScript": "در مصاحبه سفارت، آفیسر فقط ۳ دقیقه وقت داره تا درباره شما تصمیم بگیره! این سه سوال حتماً پرسیده میشه: اول: چرا این دانشگاه؟ هرگز نگو چون رتبه خوبی داره؛ باید استاد و کریکولم مشخص نام ببری. دوم: کی مصارف ره میده؟ سوم: بعد از فراغت کجایی؟ در آریا هاب بخش شبیه‌ساز مصاحبه را باز کن، این سوالات ره تمرین کن و با تکنیک STAR بهترین جواب‌ها ره آماده کن."
+  },
+  {
+    "day": 8,
+    "id": "Day08",
+    "slug": "day08-ai-opportunity-matcher",
+    "pillar": "tool",
+    "title": "مچر هوشمند فرصت‌ها: یافتن بورسیه در ۶۰ ثانیه",
+    "hookTitle": "یافتن دقیق‌ترین بورسیه متناسب با شرایطت در ۶۰ ثانیه!",
+    "goldWord": "۶۰ ثانیه",
+    "subHook": "توقف ساعت‌ها جستجوی خسته‌کننده در کانال‌های تلگرام",
+    "tagline": "تطبیق‌دهنده هوشمند شرایط",
+    "statusBadge": "الگوریتم ارزیابی شرایط | درصد شانس واقعی",
+    "statsHighlight": {
+      "number": "۹۴٪",
+      "label": "دقت تطبیق با پروفایل شخصی"
+    },
+    "features": [
+      "فیلتر بر اساس سن، مقطع، رشته و کشور مقصد",
+      "محاسبه درصد شانس قبولی واقعی (بالا / متوسط)",
+      "ارائه دلایل الگوریتمی متناسب با وضعیت تحصیلی",
+      "دسترسی مستقیم و کاملاً رایگان بدون نیاز به واسطه"
+    ],
+    "uiScreenshotPath": "advideo/vshots/matcher.png",
+    "targetRoute": "/fa/opportunity-matcher",
+    "ctaText": "همین حالا شانسات ره تست کو!",
+    "ctaSubtext": "مچر هوشمند در: myariahub.com/fa/opportunity-matcher",
+    "accentColor": "#8B5CF6",
+    "voiceoverScript": "ساعت‌ها گشتن در اینترنت و کانال‌های تلگرام برای پیدا کردن بورسیه ره متوقف کو! سیستم هوشمند تطبیق فرصت‌های آریا هاب بر اساس سن، رشته تحصیلی، سطح زبان و کشور مورد علاقه، در چند ثانیه دقیق‌ترین بورسیه‌ها و کارهایی که واجد شرایط هستی ره پیدا میکنه. درصد شانس قبولی ره نشان میده و میگه از کجا شروع کنی. کاملاً رایگان امتحان کن!"
+  },
+  {
+    "day": 9,
+    "id": "Day09",
+    "slug": "day09-erasmus-mundus",
+    "pillar": "scholarship",
+    "title": "بورسیه اراسموس موندوس اروپا (Erasmus Mundus)",
+    "hookTitle": "تحصیل در ۳ کشور اروپایی با ۱۴۰۰ یورو معاش ماهانه!",
+    "goldWord": "اراسموس",
+    "subHook": "لوکس‌ترین و معتبرترین بورسیه تحصیلی جهان",
+    "tagline": "بورسیه اتحادیه اروپا",
+    "statusBadge": "فراخوان سالانه ۲۰۲۷ | افتتاح در اکتبر و نوامبر",
+    "statsHighlight": {
+      "number": "€1,400",
+      "label": "معاش ماهانه بدون مالیات"
+    },
+    "features": [
+      "تحصیل همزمان در ۲ یا ۳ کشور پیشرفته اروپایی",
+      "معافیت ۱۰۰٪ از کل فیس پوهنتون و مصارف ویزا",
+      "کمک‌هزینه سفر و بیمه درمانی جامع بین‌المللی",
+      "سهمیه ویژه برای داوطلبان کشورهای همکار"
+    ],
+    "uiScreenshotPath": "advideo/vshots/scholarships.png",
+    "targetRoute": "/fa/opportunities?category=scholarships",
+    "ctaText": "راهنمای اراسموس موندوس ره ببین!",
+    "ctaSubtext": "راهنمای کامل در: myariahub.com",
+    "accentColor": "#F59E0B",
+    "voiceoverScript": "یکی از لوکس‌ترین و معتبرترین بورسیه‌های روی زمین، اراسموس موندوس است! در طول یک دوره ماستری دو ساله، حداقل در دو یا سه کشور مختلف اروپایی زندگی و تحصیل میکنی. کل فیس پوهنتون معاف است، مصارف ویزه و سفر پرداخت میشه و ماهانه ۱۴۰۰ یورو معاش خالص میگیری. متقاضیان از افغانستان شانس بالایی در سهمیه‌های بین‌المللی دارند. راهنمای گام‌به‌گام را در آریا هاب بخوان."
+  },
+  {
+    "day": 10,
+    "id": "Day10",
+    "slug": "day10-get-paid-afghanistan-freelance",
+    "pillar": "job",
+    "title": "نحوه دریافت و نقد کردن درآمد دلاری در افغانستان",
+    "hookTitle": "چگونه در داخل افغانستان درآمد دلاری ره نقد کنیم؟",
+    "goldWord": "درآمد دلاری",
+    "subHook": "راهکارهای قانونی برای عبور از تحریم‌های بانکی",
+    "tagline": "مدیریت مالی فریلنسری",
+    "statusBadge": "راهنمای نقدینگی ارزی | ۳ روش قانونی و مطمئن",
+    "statsHighlight": {
+      "number": "$1,200",
+      "label": "متوسط برداشت ارزی ماهانه"
+    },
+    "features": [
+      "نقد کردن سریع از طریق حواله‌های صرافی معتبر",
+      "دریافت با ارز دیجیتال تتر (USDT) در کیف پول امن",
+      "استفاده از حساب‌پی و درگاه‌های پرداخت منطقه‌ای",
+      "درج شرایط پرداخت مطمئن در قرارداد با کارفرما"
+    ],
+    "uiScreenshotPath": "advideo/vshots/jobs.png",
+    "targetRoute": "/fa/opportunities?category=jobs",
+    "ctaText": "بست‌های ریموت بین‌المللی را ببین!",
+    "ctaSubtext": "فرصت‌های شغلی ارزی در: myariahub.com",
+    "accentColor": "#10B981",
+    "voiceoverScript": "بزرگترین سوال کسانی که میخواهند آنلاین کار کنند: 'چگونه پولم ره در داخل افغانستان تحویل بگیرم؟' سیستم بانکی شاید با مشکل مواجه باشه، اما راهکارهای کاملاً قانونی و سریع وجود داره! بیشتر فریلنسرهای موفق در افغانستان از طریق سیستم‌های حواله صرافی، انتقال تتر یا یواس‌دی‌تی، و پلتفرم‌های واسط بدون تاخیر معاش‌شان ره نقد میکنند. راهنمای بست‌های ریموت تاییدشده ره در آریا هاب برایت آماده کردیم."
+  },
+  {
+    "day": 11,
+    "id": "Day11",
+    "slug": "day11-fake-agent-alert",
+    "pillar": "visa",
+    "title": "هشدار کلاهبرداری کمیشن‌کارها: بند 212(a)(6)(C)",
+    "hookTitle": "هشدار: هرگز این ۵۰۰ دالر ره به کمیشن‌کار ندهید!",
+    "goldWord": "تقلبی",
+    "subHook": "ارائه اسناد جعلی باعث محرومیت همیشگی از ویزا میشود",
+    "tagline": "آگاهی حقوقی ویزا",
+    "statusBadge": "هشدار جعل اسناد | محرومیت مادام‌العمر سفارت",
+    "statsHighlight": {
+      "number": "بند 212",
+      "label": "محرومیت دایمی جعل سند"
+    },
+    "features": [
+      "هیچ سفارتی ویزای ۱۰۰٪ تضمینی صادر نمی‌کند",
+      "اسناد بانکی جعلی بزرگترین دام کمیشن‌کارها هستند",
+      "تمام فرصت‌های آریا هاب دارای لینک مستقیم و رسمی هستند",
+      "مشاوره رایگان و پرهیز از پرداخت هزینه‌های گزاف"
+    ],
+    "uiScreenshotPath": "advideo/vshots/home.png",
+    "targetRoute": "/fa/visa-prep/rejections",
+    "ctaText": "فرصت‌های اصلی و معتبر را ببین!",
+    "ctaSubtext": "لینک‌های تایید شده رسمی در: myariahub.com",
+    "accentColor": "#EF4444",
+    "voiceoverScript": "متاسفانه صدها جوان سالانه هزاران دالر را به خاطر وعده‌های دروغین ویزه و بورسیه تضمینی به کمیشن‌کارها میبازند! به یاد داشته باش: طبق بند ۲۱۲ قانون مهاجرت، ارائه اسناد جعلی باعث محرومیت همیشگی میشه! هیچ سفارتخانه‌ای کمیشن‌کار رسمی ندارد و هیچ کس نمیتانه ویزه را ۱۰۰٪ تضمین کنه. در آریا هاب، تمام فرصت‌ها مستقیماً از وبسایت‌های اصلی سازمان‌ها تایید میشن و لینک مستقیم منبع درج است تا فریب هیچ شیادی را نخوری."
+  },
+  {
+    "day": 12,
+    "id": "Day12",
+    "slug": "day12-sop-formula-freshta",
+    "pillar": "tool",
+    "title": "فرمول ۴ پاراگرافی انگیزه‌نامه برنده (SOP فرشته)",
+    "hookTitle": "این انگیزه‌نامه (SOP) برنده بورسیه ماستری شد!",
+    "goldWord": "فرمول جادویی",
+    "subHook": "ساختار ۴ پاراگرافی که داوران اروپایی به دنبال آن هستند",
+    "tagline": "قالب‌های برنده انگیزه‌نامه",
+    "statusBadge": "کیس استادی واقعی | فرشته از هرات برنده بورسیه لندن",
+    "statsHighlight": {
+      "number": "۴ پاراگراف",
+      "label": "فرمول استاندارد SOP برنده"
+    },
+    "features": [
+      "پاراگراف ۱: جرقه انگیزه و بیان مشکل واقعی در جامعه",
+      "پاراگراف ۲: پایه اکادمیک و سوابق کاری با اعداد واقعی",
+      "پاراگراف ۳: چرا این دیپارتمنت و کریکولم مشخص",
+      "پاراگراف ۴: پلان ۵ ساله مشخص بازگشت و ایجاد تغییر"
+    ],
+    "uiScreenshotPath": "advideo/vshots/tools.png",
+    "targetRoute": "/fa/templates",
+    "ctaText": "دانلود رایگان تمپلیت انگیزه‌نامه!",
+    "ctaSubtext": "قالب‌های ویرایش‌پذیر در: myariahub.com/fa/templates",
+    "accentColor": "#06B6D4",
+    "voiceoverScript": "فرق بین یک متقاضی رد شده و برنده بورسیه، در نمرات مکتب یا پوهنتون نیست؛ در متن انگیزه‌نامه یا SOP است! این قالب ۴ پاراگرافی دقیقاً همان ساختاری است که داوران دانشگاه‌های بریتانیا و اروپا به دنبالش هستند: بیان مشکل واقعی، دستاوردهای عددی، و نقشه مشخص برای آینده. متن خام و تمپلیت ویرایش‌پذیر این انگیزه‌نامه را همین حالا از بخش قالب‌های آریا هاب رایگان دانلود کن."
+  },
+  {
+    "day": 13,
+    "id": "Day13",
+    "slug": "day13-italy-dsu-scholarship",
+    "pillar": "scholarship",
+    "title": "بورسیه منطقه‌ای ایتالیا (DSU) — ۷۰۰۰ یورو کمک‌هزینه",
+    "hookTitle": "خوابگاه رایگان + تا ۷۰۰۰ یورو پول نقد در ایتالیا!",
+    "goldWord": "ایتالیا",
+    "subHook": "بورسیه استانی DSU بر اساس شرایط اقتصادی خانواده",
+    "tagline": "بورسیه منطقه‌ای ایتالیا",
+    "statusBadge": "ددلاین‌های پذیرش ایتالیا | اولویت کشورهای در حال توسعه",
+    "statsHighlight": {
+      "number": "€7,000",
+      "label": "کمک‌هزینه نقد سالانه"
+    },
+    "features": [
+      "معافیت کامل از فیس پوهنتون‌های میلان، بولونیا و رم",
+      "خوابگاه رایگان دولتی یا کمک‌هزینه کرایه خانه",
+      "کارت غذای رایگان در تمام کافه‌تریاهای دانشگاه",
+      "اولویت بالا برای متقاضیان اهل افغانستان"
+    ],
+    "uiScreenshotPath": "advideo/vshots/scholarships.png",
+    "targetRoute": "/fa/opportunities?category=scholarships",
+    "ctaText": "راهنمای پذیرش ایتالیا ره بخوان!",
+    "ctaSubtext": "شرایط کامل بورسیه در: myariahub.com",
+    "accentColor": "#10B981",
+    "voiceoverScript": "ایتالیا در حال حاضر یکی از بهترین مقاصد تحصیلی برای دانشجویان افغانستان است، به خاطر بورسیه‌های منطقه‌ای یا DSU! این بورس بر اساس وضعیت اقتصادی داده میشه، یعنی دانشجویانی که از کشورهای در حال توسعه می‌آیند در اولویت اول دریافت خوابگاه رایگان، فیس صفر، و تا ۷۰۰۰ یورو پول نقد در سال قرار دارند. برنامه‌های انگلیسی فراوان در مقطع لیسانس و ماستری. ددلاین‌ها نزدیک است، راهنمای ایتالیا ره در آریا هاب بخوان."
+  },
+  {
+    "day": 14,
+    "id": "Day14",
+    "slug": "day14-remote-designer-sadaf",
+    "pillar": "job",
+    "title": "طراح ریموت در مزار شریف با معاش یورویی (صدف)",
+    "hookTitle": "از مزار شریف تا استارتاپ برلین بدون ویزا!",
+    "goldWord": "بدون ویزا",
+    "subHook": "چگونه ساخت پورتفولیو ۶ اپلیکیشن، کارفرمای آلمانی را جذب کرد",
+    "tagline": "سرگذشت‌های موفق شغلی",
+    "statusBadge": "داستان واقعی صدف از مزار | استخدام در استارتاپ برلین",
+    "statsHighlight": {
+      "number": "۴ برابر",
+      "label": "معاش ارزی نسبت به بازار محلی"
+    },
+    "features": [
+      "بازطراحی رایگان ۶ اپلیکیشن و انتشار تحلیل در لینکدین",
+      "قبولی در ۴ مرحله مصاحبه آنلاین به زبان انگلیسی",
+      "مدیریت قطعی برق و انترنت با دو سیم‌کارت پشتیبان",
+      "مطالعه تجربه کامل در سرگذشت‌های موفق آریا هاب"
+    ],
+    "uiScreenshotPath": "advideo/vshots/jobs.png",
+    "targetRoute": "/fa/success-stories",
+    "ctaText": "داستان موفقیت صدف ره بخوان!",
+    "ctaSubtext": "سرگذشت‌های جوانان موفق در: myariahub.com/fa/success-stories",
+    "accentColor": "#6366F1",
+    "voiceoverScript": "صدف از مزار شریف نتوانست کار محلی مناسب پیدا کند، پس روش خود ره عوض کرد: به جای ارسال درخواست‌های تکراری، ۶ اپلیکیشن معروف ره رایگان بازطراحی کرد و تحلیل‌هایش ره به انگلیسی در لینکدین نشر کرد! یک شرکت استارتاپی از برلین به او پیام داد و بعد از ۴ مرحله مصاحبه آنلاین، استخدام شد. معاش او ۴ برابر معاش‌های محلی است. تجربه کامل صدف و راهکارهای مدیریت برق و انترنت را در بخش سرگذشت‌های موفق آریا هاب بخوانید."
+  },
+  {
+    "day": 15,
+    "id": "Day15",
+    "slug": "day15-bank-statement-myth",
+    "pillar": "visa",
+    "title": "حقیقت درباره صورتحساب بانکی و ضمانت مالی سفارت",
+    "hookTitle": "آیا برای بورسیه به حساب ۵۰ هزار دالری نیاز داری؟ نه!",
+    "goldWord": "حقیقت",
+    "subHook": "نامه رسمی قبولی بورسیه جایگزین کامل حساب بانکی است",
+    "tagline": "راهنمای مدارک سفارت",
+    "statusBadge": "افشاگری سوءتفاهم تمکن مالی | بورسیه‌های فولفند",
+    "statsHighlight": {
+      "number": "$0",
+      "label": "ضمانت بانکی در بورس فولفند"
+    },
+    "features": [
+      "تفاوت اساسی ویزای خودهزینه با بورسیه فول‌فند",
+      "بند رسمی سفارت: نامه بورسیه کفایت مالی را ثابت می‌کند",
+      "پرهیز از جعل حساب بانکی و خطر محرومیت کنسولی",
+      "چک‌لیست دقیق اسناد مالی در آریا هاب"
+    ],
+    "uiScreenshotPath": "advideo/vshots/home.png",
+    "targetRoute": "/fa/visa-prep/rejections",
+    "ctaText": "چک‌لیست اسناد سفارت ره بررسی کن!",
+    "ctaSubtext": "راهنمای مدارک در: myariahub.com/fa/visa-prep",
+    "accentColor": "#EAB308",
+    "voiceoverScript": "یکی از بزرگترین سوءتفاهم‌هایی که باعث میشه جوانان افغانستان اصلاً برای بورسیه‌ها اقدام نکنند، ترس از حساب بانکی است! توجه کنید: اگر شما یک بورسیه فولفند مثل ترکیه، دآآد، یا اراسموس برنده شوید، نامه رسمی قبولی بورسیه به تنهایی جایگزین کامل حساب بانکی و تمکن مالی در سفارت است! یعنی نیازی به نشان دادن میلیون‌ها افغانی در حساب بانکی ندارید. اسناد واقعی مورد نیاز سفارت ره در چک‌لیست آریا هاب ببینید."
+  },
+  {
+    "day": 16,
+    "id": "Day16",
+    "slug": "day16-deadline-tracker",
+    "pillar": "tool",
+    "title": "روزشمار زنده ددلاین‌ها: هیچ فرصتی را از دست نده",
+    "hookTitle": "ددلاین بورسیه‌ها منتظر شما نمی‌ماند!",
+    "goldWord": "روزشمار",
+    "subHook": "اطلاع از فرصت‌هایی که در این هفته یا این ماه بسته میشوند",
+    "tagline": "سامانه روزشمار ددلاین‌ها",
+    "statusBadge": "روزشمار لحظه‌ای | دسته‌بندی بر اساس فوریت",
+    "statsHighlight": {
+      "number": "LIVE",
+      "label": "شمارش معکوس لحظه‌ای"
+    },
+    "features": [
+      "نمایش دقیق روزها و ساعات باقیمانده برای اپلای",
+      "فیلتر بر اساس فرصت‌های در حال بسته شدن این هفته",
+      "لینک مستقیم و سریع به پورتال رسمی ثبت‌نام",
+      "پوشش همزمان بورسیه‌ها و بست‌های کاری بین‌المللی"
+    ],
+    "uiScreenshotPath": "advideo/vshots/deadlines.png",
+    "targetRoute": "/fa/deadlines",
+    "ctaText": "تقویم زنده ددلاین‌ها ره ببین!",
+    "ctaSubtext": "روزشمار لحظه‌ای در: myariahub.com/fa/deadlines",
+    "accentColor": "#EF4444",
+    "voiceoverScript": "بدترین اتفاق اینه که ماه‌ها برای یک بورسیه اسناد جمع کنی، ولی وقتی وبسایت ره باز میکنی ببینی ددلاین دیروز بسته شده! در صفحه ددلاین‌های آریا هاب، روزشمار زنده تمام بورسیه‌ها و بست‌های کاری بین‌المللی را به ترتیب تاریخ بسته‌شدن برایت چیدیم. تقویم ره مرتب چک کن تا فرصت‌های ویژه قبل از اتمام مهلت از دستت نرود."
+  },
+  {
+    "day": 17,
+    "id": "Day17",
+    "slug": "day17-stipendium-hungaricum",
+    "pillar": "scholarship",
+    "title": "بورسیه دولتی مجارستان (Stipendium Hungaricum)",
+    "hookTitle": "بورسیه دولتی مجارستان؛ آسان‌ترین مسیر به قلب اروپا!",
+    "goldWord": "مجارستان",
+    "subHook": "پوشش تمام مقاطع لیسانس، ماستری و دکتری",
+    "tagline": "بورسیه دولتی مجارستان",
+    "statusBadge": "دوره سالانه ۲۰۲۷ | افتتاح رسمی در ماه نوامبر",
+    "statsHighlight": {
+      "number": "۱۰۰٪",
+      "label": "فیس پوهنتون و خوابگاه رایگان"
+    },
+    "features": [
+      "تحصیل ۱۰۰٪ رایگان در پوهنتون‌های معتبر اروپایی",
+      "خوابگاه رایگان دانشجویی + بیمه خدمات درمانی",
+      "کمک‌هزینه زندگی ماهانه در تمام طول دوره تحصیل",
+      "پروسه اپلای شفاف با سهمیه سالانه بالا"
+    ],
+    "uiScreenshotPath": "advideo/vshots/scholarships.png",
+    "targetRoute": "/fa/opportunities?category=scholarships",
+    "ctaText": "رشته‌ها و شرایط مجارستان ره چک کن!",
+    "ctaSubtext": "مشاهده شرایط بورسیه در: myariahub.com",
+    "accentColor": "#10B981",
+    "voiceoverScript": "اگر دنبال یک بورسیه معتبر اروپایی با پروسه ثبت‌نام شفاف هستید، بورسیه دولت مجارستان (Stipendium Hungaricum) را در نظر داشته باشید! پورتال رسمی این بورسیه در ماه نوامبر (حدود دو ماه دیگر) باز میشه و فرصت بی‌نظیری است تا از حالا اسنادتان ره آماده کنید. این برنامه تمام مقاطع تحصیلی از لیسانس تا دکتری را در پوهنتون‌های برتر این کشور پوشش میده. فیس صفر، لیلیه رایگان، و بیمه درمانی کامل. شرایط و رشته‌های واجد شرایط را در آریا هاب مطالعه کنید."
+  },
+  {
+    "day": 18,
+    "id": "Day18",
+    "slug": "day18-cold-emailing-professors",
+    "pillar": "tool",
+    "title": "راز ایمیل زدن به استادان خارجی: فرمول ۳ جمله‌ای",
+    "hookTitle": "چگونه استادان دانشگاه‌های خارجی به ایمیل شما پاسخ میدهند؟",
+    "goldWord": "ایمیل",
+    "subHook": "توقف ارسال ایمیل‌های کپی‌شده به ۱۰۰ استاد",
+    "tagline": "قالب ارتباط با اساتید",
+    "statusBadge": "تمپلیت ویرایش‌پذیر | راهنمای اخذ پذیرش با فند",
+    "statsHighlight": {
+      "number": "۳ خط",
+      "label": "فرمول طلایی جلب توجه استاد"
+    },
+    "features": [
+      "اشاره به مقاله تازه منتشر شده استاد در سال‌های اخیر",
+      "بیان مهارت فنی دقیق شما که مشکل تحقیقاتی او را حل می‌کند",
+      "درخواست کوتاه و کم‌زحمت برای یک تماس کوتاه ۱۰ دقیقه‌ای",
+      "دانلود قالب‌های آماده ایمیل اکادمیک در آریا هاب"
+    ],
+    "uiScreenshotPath": "advideo/vshots/tools.png",
+    "targetRoute": "/fa/templates",
+    "ctaText": "قالب آماده ایمیل استاد ره دانلود کن!",
+    "ctaSubtext": "قالب‌های مکاتبه اکادمیک در: myariahub.com/fa/templates",
+    "accentColor": "#3B82F6",
+    "voiceoverScript": "ارسال ایمیل‌های تکراری و کاپی‌شده به استادان خارجی، سریع‌ترین راه برای رفتن به پوشه اسپم است! برای اینکه استاد در کانادا، آلمان یا استرالیا فند تحقیقاتی‌اش را به شما بدهد، باید نشان دهید حداقل یکی از مقالات اخیرش را خوانده‌اید. قالب آماده و معیاری 'ایمیل به استاد' را با متون اختصاصی در آریا هاب گذاشتیم؛ فقط نام و موضوع مقاله را تغییر دهید و ارسال کنید."
+  },
+  {
+    "day": 19,
+    "id": "Day19",
+    "slug": "day19-surviving-221g-admin",
+    "pillar": "visa",
+    "title": "برگه زرد سفارت (بند 221g اداری): پایان کار نیست!",
+    "hookTitle": "برگه زرد ۲۲۱(g) سفارت؛ پایان کار نیست!",
+    "goldWord": "221g",
+    "subHook": "بررسی اداری به معنی ریجکت قطعی پرونده نیست",
+    "tagline": "راهنمای پروسه اداری ویزا",
+    "statusBadge": "بررسی اداری (Admin Processing) | تجربیات داوطلبان F1",
+    "statsHighlight": {
+      "number": "۶ هفته",
+      "label": "متوسط زمان تصویب پرونده"
+    },
+    "features": [
+      "عدم ارسال درخواست تکراری در حین بررسی اداری",
+      "پاسخ دقیق و سریع به پرسشنامه فرم DS-5535",
+      "در جریان نگه داشتن سوپروایزر و پوهنتون مقصد",
+      "مطالعه جدول زمانی متقاضیان موفق در آریا هاب"
+    ],
+    "uiScreenshotPath": "advideo/vshots/home.png",
+    "targetRoute": "/fa/visa-prep/rejections",
+    "ctaText": "راهنمای عبور از ۲۲۱(g) ره بخوان!",
+    "ctaSubtext": "مشاهده تجربیات واقعی در: myariahub.com/fa/visa-prep",
+    "accentColor": "#FBBF24",
+    "voiceoverScript": "اگر بعد از مصاحبه سفارت، برگه زرد اداری ۲۲۱ جی گرفتید، اصلاً وحشت نکنید! این به معنی رد شدن قطعی نیست، بلکه پرونده شما وارد بررسی امنیتی معمول شده است. پرونده صدها دانشجوی اهل افغانستان دقیقاً بعد از چند هفته در همین مرحله تصویب شده. در این مدت نباید درخواست تکراری ثبت کنید، بلکه باید پاسخ سوالات اداری را با دقت بفرستید. تجربه واقعی پذیرفته‌شدگان را در بخش سرگذشت‌های موفق آریا هاب بخوانید."
+  },
+  {
+    "day": 20,
+    "id": "Day20",
+    "slug": "day20-post-track-opportunities",
+    "pillar": "tool",
+    "title": "ثبت و ردیابی فرصت‌های کاری و بورسیه برای نهادها",
+    "hookTitle": "فرصت‌های شغلی موسسه خود را رایگان ثبت و ردیابی کنید!",
+    "goldWord": "ردیابی",
+    "subHook": "دسترسی مستقیم به بیش از ۱۰ هزار نیروی مسلکی جوان",
+    "tagline": "پورتال ثبت فرصت و کارفرما",
+    "statusBadge": "ثبت رایگان فرصت | پیگیری وضعیت با کد رهگیری",
+    "statsHighlight": {
+      "number": "10,000+",
+      "label": "جوانان باانگیزه در شبکه آریا هاب"
+    },
+    "features": [
+      "ثبت رایگان بست‌های کاری، کارآموزی و بورسیه",
+      "دریافت کد رهگیری اختصاصی (مثل AR-7K2M9QCX)",
+      "مشاهده لحظه‌ای وضعیت تایید، ویرایش و انتشار",
+      "رساندن مستقیم آگهی به استعدادهای افغانستان"
+    ],
+    "uiScreenshotPath": "advideo/vshots/tools.png",
+    "targetRoute": "/fa/submit-opportunity",
+    "ctaText": "آگهی موسسه ره رایگان ثبت کو!",
+    "ctaSubtext": "ثبت و پیگیری آگهی در: myariahub.com/fa/track",
+    "accentColor": "#06B6D4",
+    "voiceoverScript": "آیا برای موسسه یا شرکت خود در کابل و ولایات به دنبال کارمندان مسلکی و بااستعداد هستید؟ در آریا هاب می‌توانید بست‌های کاری، کارآموزی یا بورسیه‌های خود را به صورت رایگان ثبت کنید! بعد از ثبت، یک کد رهگیری اختصاصی دریافت میکنید و در صفحه ردیابی می‌توانید وضعیت تایید و لینک انتشار فرصت را مشاهده کنید. فرصت‌های سازمان خود را مستقیماً به هزاران جوان باانگیزه برسانید."
+  },
+  {
+    "day": 21,
+    "id": "Day21",
+    "slug": "day21-romanian-government-scholarship",
+    "pillar": "scholarship",
+    "title": "بورسیه دولتی رومانیا: بدون آیلتس + یک سال کالج زبان",
+    "hookTitle": "تحصیل در اروپا بدون مدرک آیلتس با بورسیه رومانیا!",
+    "goldWord": "رومانیا",
+    "subHook": "یک سال کالج آموزش رایگان زبان قبل از پوهنتون",
+    "tagline": "بورسیه وزارت خارجه رومانیا",
+    "statusBadge": "دوره سالانه ۲۰۲۷ | افتتاح در دسامبر و جنوری",
+    "statsHighlight": {
+      "number": "NO IELTS",
+      "label": "بدون نیاز به مدرک زبان انگلیسی"
+    },
+    "features": [
+      "یک سال دوره مقدماتی رایگان زبان رومانیایی",
+      "پوشش تمام رشته‌های دانشگاهی به جز طب و دندانپزشکی",
+      "فیس پوهنتون، لیلیه دولتی و کمک‌هزینه ماهانه",
+      "پروسه ثبت‌نام کاملاً آنلاین از طریق لینک مستقیم آریا هاب"
+    ],
+    "uiScreenshotPath": "advideo/vshots/scholarships.png",
+    "targetRoute": "/fa/opportunities?category=scholarships",
+    "ctaText": "راهنمای ثبت‌نام رومانیا ره بخوان!",
+    "ctaSubtext": "مشاهده جزییات در: myariahub.com",
+    "accentColor": "#3B82F6",
+    "voiceoverScript": "یکی از بورسیه‌های کمتر شناخته‌شده اما بسیار مناسب برای متقاضیان افغانستان، بورسیه دولتی رومانیاست! برای این بورسیه نیازی به داشتن مدرک تافل یا آیلتس نداری، چون دولت یک سال آموزش کامل زبان را رایگان در اختیارت میگذاره. فیس دانشگاه، لیلیه و هزینه ماهانه پرداخت میشه و پروسه اپلای کاملاً آنلاینه. راهنمای ثبت‌نام و چک‌لیست ترجمه اسناد در آریا هاب منتشر شده است."
+  },
+  {
+    "day": 22,
+    "id": "Day22",
+    "slug": "day22-international-remote-skills",
+    "pillar": "job",
+    "title": "مهارت‌های نرم برای ورود به بازار کار بین‌المللی",
+    "hookTitle": "چگونه کارفرمای خارجی را مجذوب مهارت‌هایت کنی؟",
+    "goldWord": "بین‌المللی",
+    "subHook": "مهارت فنی فقط نیمی از ماجراست؛ مهارت نرم کلید استخدام است",
+    "tagline": "توسعه مهارت‌های شغلی",
+    "statusBadge": "راهنمای تخصصی کار | ارتقای پروفایل برای استخدام خارجی",
+    "statsHighlight": {
+      "number": "100%",
+      "label": "تفاوت استخدام با ارتباطات شفاف"
+    },
+    "features": [
+      "تسلط بر ارتباطات غیرهمزمان (Async) و داکیومنت‌نویسی",
+      "بیان دستاوردهای قابل اندازه‌گیری به جای وظایف کلیشه‌ای",
+      "نشان دادن قابلیت اتکا و حل مسئله در تیم‌های توزیع‌شده",
+      "مقالات کاربردی رشد شغلی در پایگاه دانش آریا هاب"
+    ],
+    "uiScreenshotPath": "advideo/vshots/jobs.png",
+    "targetRoute": "/fa/blog/transitioning-to-international-work",
+    "ctaText": "مقالات تخصصی کار ره مطالعه کن!",
+    "ctaSubtext": "راهنمای رشد شغلی در: myariahub.com",
+    "accentColor": "#10B981",
+    "voiceoverScript": "برای کار کردن با تیم‌های بین‌المللی، مهارت فنی فقط نیمی از ماجراست! کارفرمای خارجی بیشتر از هر چیز به این نگاه میکنه که آیا میتانی به صورت غیرهمزمان و شفاف به انگلیسی ارتباط برقرار کنی؟ در بخش مقالات آریا هاب، راهنمای گام‌به‌گام انتقال از کارهای سنتی به پروژه‌های بین‌المللی را برایت آماده کردیم تا بدانی چگونه پروفایل و ارتباطاتت ره در سطح استانداردهای جهانی ارتقا دهی."
+  },
+  {
+    "day": 23,
+    "id": "Day23",
+    "slug": "day23-exchange-prague-zahra",
+    "pillar": "scholarship",
+    "title": "برنامه‌های تبادلی کوتاه‌مدت (داستان زهرا از بامیان)",
+    "hookTitle": "یک سمستر در پراگ از طریق برنامه تبادلی — از بامیان!",
+    "goldWord": "تبادلی",
+    "subHook": "بورسیه‌های کوتاه‌مدت، بودجه کامل و پروسه سریع ویزا",
+    "tagline": "برنامه‌های تبادل دانشجو (Exchange)",
+    "statusBadge": "یک سمستر در پراگ چک | بدون سال‌ها انتظار",
+    "statsHighlight": {
+      "number": "۴ تا ۶ ماه",
+      "label": "مدت دوره تبادلی با بورس کامل"
+    },
+    "features": [
+      "بودجه کامل شامل تکت پرواز، خوابگاه و بیمه",
+      "زمان انتظار بسیار کوتاه‌تر برای مصاحبه ویزای سفارت",
+      "رمز موفقیت: انشای یک‌صفحه‌ای پلان بازگشت و تدریس",
+      "خواندن تجربیات واقعی دانشجویان در آریا هاب"
+    ],
+    "uiScreenshotPath": "advideo/vshots/scholarships.png",
+    "targetRoute": "/fa/success-stories",
+    "ctaText": "داستان موفقیت زهرا ره بخوان!",
+    "ctaSubtext": "سرگذشت‌های موفق در: myariahub.com/fa/success-stories",
+    "accentColor": "#EC4899",
+    "voiceoverScript": "برنامه‌های تبادلی یا Exchange کم‌استفاده‌ترین فرصت‌ها برای دانشجویان افغانستان هستند! زهرا از بامیان توانست یک سمستر تحصیلی با بودجه کامل در پراگ پایتخت جمهوری چک بگذراند. این برنامه‌ها کوتاه‌تر هستند و وقت انتظار سفارت بسیار کمتری دارند. انشای زهرا به خاطر نوشتن یک 'پلان بازگشت' یک‌صفحه‌ای برنده شد که نشان می‌داد پس از بازگشت به کشور چه کارهایی برای پوهنتون خود انجام میده. این تجربه ارزشمند را در بخش سرگذشت‌های موفق آریا هاب بخوانید."
+  },
+  {
+    "day": 24,
+    "id": "Day24",
+    "slug": "day24-star-cover-letter",
+    "pillar": "tool",
+    "title": "چگونه یک کاورلتر شکست‌ناپذیر بنویسیم؟ (تکنیک STAR)",
+    "hookTitle": "چرا ۸۰ درصد کاورلترها بدون خوانده‌شدن رد میشوند؟",
+    "goldWord": "کاورلتر",
+    "subHook": "بزرگترین اشتباه: خلاصه‌کردن دوباره متن سی‌وی",
+    "tagline": "تکنیک نگارش انگیزه کاری",
+    "statusBadge": "تکنیک STAR | دوری از کلیشه‌های تکراری رزومه",
+    "statsHighlight": {
+      "number": "STAR",
+      "label": "تکنیک موقعیت، اقدام، نتیجه"
+    },
+    "features": [
+      "بیان موقعیت و چالش واقعی شرکت در بند اول",
+      "تشریح اقدام مشخص و ابتکار عملی شما برای حل مشکل",
+      "ارائه دستاورد و نتیجه عددی قابل اثبات در بند سوم",
+      "دانلود نمونه‌های آماده کاورلتر در آریا هاب"
+    ],
+    "uiScreenshotPath": "advideo/vshots/tools.png",
+    "targetRoute": "/fa/blog/writing-compelling-cover-letter",
+    "ctaText": "آموزش و دانلود قالب کاورلتر!",
+    "ctaSubtext": "تمپلیت‌های کاورلتر در: myariahub.com/fa/templates",
+    "accentColor": "#8B5CF6",
+    "voiceoverScript": "بزرگترین اشتباه در نوشتن کاورلتر، خلاصه‌کردن دوباره سی‌وی است! مدیران استخدام کاورلترهای تکراری که با جملات کلیشه‌ای شروع میشن را اصلاً نمی‌خوانند. کاورلتر شما باید یک داستان کوتاه از حل یک مشکل واقعی باشه: موقعیت چی بود، چه اقدامی کردی و چه نتیجه عددی به دست آوردی؟ فرمول دقیق نوشتن کاورلترهای تاثیرگذار و تمپلیت‌های آماده را در وبسایت آریا هاب مطالعه کنید."
+  },
+  {
+    "day": 25,
+    "id": "Day25",
+    "slug": "day25-embassies-open-in-kabul",
+    "pillar": "visa",
+    "title": "کدام کشورها واقعاً در کابل ویزای تحصیلی می‌دهند؟",
+    "hookTitle": "کدام کشورها واقعاً در کابل ویزای تحصیلی می‌دهند؟",
+    "goldWord": "ویزا در کابل",
+    "subHook": "سفارت‌های فعال در کابل: ترکیه، روسیه، چین + پوهنتون‌های آنلاین بدون ویزا",
+    "tagline": "نقشه راه کنسولی کابل",
+    "statusBadge": "نقشه کنسولی داخل کابل | پرهیز از سفر پرخطر به کشور سوم",
+    "statsHighlight": {
+      "number": "۳ سفارت",
+      "label": "صدور مستقیم ویزای تحصیلی در کابل"
+    },
+    "features": [
+      "سفارت ترکیه در کابل: صدور مستقیم برای بورس ترکیه بورسلاری",
+      "سفارت روسیه در دارالامان: بیش از ۵۰۰ بورس سالانه بدون خروج",
+      "سفارت چین در کابل: صدور ویزای تحصیلی برای پذیرفته‌شدگان CSC",
+      "بورسیه‌های آنلاین معتبر دانشگاه‌های آمریکایی بدون نیاز به ویزا"
+    ],
+    "uiScreenshotPath": "advideo/vshots/home.png",
+    "targetRoute": "/fa/visa-prep/rejections",
+    "ctaText": "نقشه سفارت‌های فعال در کابل ره ببین!",
+    "ctaSubtext": "راهنمای کنسولی در: myariahub.com/fa/visa-prep",
+    "accentColor": "#F59E0B",
+    "voiceoverScript": "قبل از اینکه لک‌ها افغانی مصرف کنی و برای ویزا راهی اسلام‌آباد یا تهران شوی، این حقیقت ره بدان: سفارتخانه‌های بریتانیا، آمریکا و کانادا در کابل بخش صدور ویزا ندارند و اخذ ویزا از کشورهای سوم برای شهروندان افغانستان با خطرات و مصارف هنگفتی همراه است! اما سفارتخانه‌های ترکیه، روسیه و چین در خودِ کابل فعال هستند و مستقیماً برای بورسیه‌های دولتی خود ویزای تحصیلی صادر میکنند. همچنین پوهنتون‌های آنلاین معتبر آمریکایی مثل University of the People بورسیه‌های کاملاً رایگان بدون نیاز به پاسپورت و ویزا برای جوانان افغانستان ارائه میدهند. نقشه راه واقعی ویزا و فرصت‌های بدون خطر را در آریا هاب مطالعه کنید."
+  },
+  {
+    "day": 26,
+    "id": "Day26",
+    "slug": "day26-remote-job-interview-prep",
+    "pillar": "job",
+    "title": "موفقیت در مصاحبه کاری آنلاین در زوم و تیمز",
+    "hookTitle": "چگونه در مصاحبه کاری آنلاین، کارفرما را شگفت‌زده کنی؟",
+    "goldWord": "مصاحبه شغلی",
+    "subHook": "۳ اصل فنی برای متقاضیان از افغانستان جهت اعتمادسازی",
+    "tagline": "مهارت‌های مصاحبه ریموت",
+    "statusBadge": "چک‌لیست فنی مصاحبه آنلاین | جلب اعتماد کارفرما",
+    "statsHighlight": {
+      "number": "۳ اصل",
+      "label": "تماس چشمی، صدا، پلان برق و نت"
+    },
+    "features": [
+      "تماس چشمی مستقیم با کمره به جای نگاه به صفحه نمایش",
+      "استفاده از هدفون سیم‌دار و نور طبیعی روبرو برای شفافیت",
+      "ارائه پلان شفاف پشتیبان برق و انترنت (اعتمادسازی قوی)",
+      "شبیه‌ساز سوالات پرتکرار مصاحبه در آریا هاب"
+    ],
+    "uiScreenshotPath": "advideo/vshots/jobs.png",
+    "targetRoute": "/fa/blog/ace-remote-job-interview",
+    "ctaText": "چک‌لیست مصاحبه آنلاین ره بخوان!",
+    "ctaSubtext": "آمادگی مصاحبه کاری در: myariahub.com",
+    "accentColor": "#06B6D4",
+    "voiceoverScript": "در مصاحبه آنلاین با یک کارفرمای خارجی، محیط و نحوه ارائه‌تان تفاوت اصلی را میسازد! اول: به کمره لپتاپ نگاه کنید نه به وسط صفحه تا تماس چشمی برقرار شود. دوم: هدفون سیم‌دار استفاده کنید تا صدا شفاف باشد. سوم: داشتن یک برنامه مشخص برای مدیریت اینترنت و برق و بیان صادقانه آن، باعث اعتماد کارفرما به مسئولیت‌پذیری شما میشه. چک‌لیست کامل آمادگی مصاحبه آنلاین را در آریا هاب مطالعه کنید."
+  },
+  {
+    "day": 27,
+    "id": "Day27",
+    "slug": "day27-visa-cost-calculator",
+    "pillar": "visa",
+    "title": "ماشین‌حساب هوشمند هزینه‌های ویزا و سفارت",
+    "hookTitle": "قبل از رفتن به سفارت، چقدر بودجه نیاز داری؟",
+    "goldWord": "ماشین‌حساب",
+    "subHook": "تفکیک دقیق فیس سفارت، بایومتریک، معاینات صحی و ترجمه",
+    "tagline": "ماشین‌حساب بودجه ویزا",
+    "statusBadge": "محاسبه بودجه ویزا | تبدیل دالر، یورو و افغانی",
+    "statsHighlight": {
+      "number": "USD/EUR/AFN",
+      "label": "محاسبه همزمان با ۳ واحد ارزی"
+    },
+    "features": [
+      "محاسبه فیس رسمی سفارت و بایومتریک کشور مقصد",
+      "برآورد هزینه‌های آزمایشات صحی و بیمه درمانی مسافرتی",
+      "تخمین دقیق هزینه ترجمه رسمی اسناد و تکت پرواز",
+      "برنامه‌ریزی شفاف مالی بدون غافلگیری قبل از مصاحبه"
+    ],
+    "uiScreenshotPath": "advideo/vshots/tools.png",
+    "targetRoute": "/fa/visa-prep/calculator",
+    "ctaText": "هزینه‌های ویزات ره رایگان حساب کو!",
+    "ctaSubtext": "ماشین‌حساب ویزا در: myariahub.com/fa/visa-prep/calculator",
+    "accentColor": "#10B981",
+    "voiceoverScript": "یکی از دغدغه‌های اصلی قبل از اقدام برای ویزا: 'مجموع هزینه‌های واقعی سفارت و مدارک چقدر میشه؟' در ابزار ماشین‌حساب هزینه‌های ویزا در آریا هاب، کشور مقصد و نوع ویزا را انتخاب کن تا تمام هزینه‌ها از فیس سفارت و بایومتریک گرفته تا معاینات صحی، ترجمه اسناد و بیمه درمانی را با ارزهای دالر، یورو و افغانی برایت محاسبه کنه. بدون ابهام مالی جلو بروید!"
+  },
+  {
+    "day": 28,
+    "id": "Day28",
+    "slug": "day28-ielts-7-5-farzad-mazar",
+    "pillar": "tool",
+    "title": "آیلتس ۷٫۵ با خودآموزی در ۹۰ روز (داستان فرزاد از مزار)",
+    "hookTitle": "آیلتس ۷٫۵ با خودآموزی در ۹۰ روز و کار تمام‌وقت!",
+    "goldWord": "آیلتس ۷٫۵",
+    "subHook": "روزی ۲ ساعت با یک گوشی و بسته انترنت ۲ گیگابایتی",
+    "tagline": "خودآموزی زبان انگلیسی",
+    "statusBadge": "کیس استادی فرزاد از مزار شریف | بدون هزینه کورس",
+    "statsHighlight": {
+      "number": "7.5 Band",
+      "label": "نمره آیلتس بدون کورس تجارتی"
+    },
+    "features": [
+      "برنامه روزانه ۲ ساعته: شنیداری، ریدینگ زمان‌دار و رایتینگ",
+      "ضبط صدای خود در موبایل برای شناسایی مکث‌ها و رفع تکرارها",
+      "رونویسی دستی انشاهای بند ۸ برای تسلط بر ساختار آکادمیک",
+      "مطالعه تجربه فرزاد در سرگذشت‌های موفق آریا هاب"
+    ],
+    "uiScreenshotPath": "advideo/vshots/tools.png",
+    "targetRoute": "/fa/success-stories",
+    "ctaText": "متدهای خودآموزی فرزاد ره بخوان!",
+    "ctaSubtext": "سرگذشت‌های موفق در: myariahub.com/fa/success-stories",
+    "accentColor": "#3B82F6",
+    "voiceoverScript": "فرزاد از مزار شریف روزانه فقط ۲ ساعت وقت آزاد و یک گوشی با بسته انترنت محدود داشت؛ اما توانست بدون پرداخت حتی یک افغانی به کورس‌های گران‌قیمت، نمره آیلتس ۷٫۵ بگیرد و به لیست کوتاه ۳ بورسیه معتبر بین‌المللی برسد! دو عادت کلیدی او: ضبط روزانه صدای خود در موبایل برای رفع اشتباهات اسپیکینگ، و رونویسی دستی انشاهای بند ۸ برای درونی‌کردن ساختارهای اکادمیک. نقشه راه و تجربیات واقعی داوطلبان موفق را در سرگذشت‌های موفق آریا هاب بخوانید."
+  },
+  {
+    "day": 29,
+    "id": "Day29",
+    "slug": "day29-csc-china-scholarship",
+    "pillar": "scholarship",
+    "title": "بورسیه دولت چین (CSC) — بالاترین سهمیه پذیرش",
+    "hookTitle": "بورسیه دولتی چین (CSC)؛ بالاترین سهمیه پذیرش!",
+    "goldWord": "بورسیه دولتی",
+    "subHook": "فیس صفر، خوابگاه رایگان و معاش ماهانه تا ۳۵۰۰ یوان",
+    "tagline": "بورسیه دولت چین (CSC)",
+    "statusBadge": "دوره سالانه ۲۰۲۷ | افتتاح در دسامبر و جنوری",
+    "statsHighlight": {
+      "number": "3,500 RMB",
+      "label": "معاش ماهانه به همراه مسکن"
+    },
+    "features": [
+      "پوشش تمام مقاطع لیسانس، ماستری و دکتری",
+      "برنامه‌های متعدد به زبان انگلیسی در تکنالوژی، AI و طب",
+      "بیمه صحی کامل و امکان اقدام برای دو تیپ A و B",
+      "بررسی شرایط و مدارک مورد نیاز در آریا هاب"
+    ],
+    "uiScreenshotPath": "advideo/vshots/scholarships.png",
+    "targetRoute": "/fa/opportunities?category=scholarships",
+    "ctaText": "مشاهده شرایط بورسیه چین در آریا هاب!",
+    "ctaSubtext": "راهنمای کامل در: myariahub.com",
+    "accentColor": "#EF4444",
+    "voiceoverScript": "یکی از بزرگترین برنامه‌های بورسیه دولتی جهان با بالاترین سهمیه برای متقاضیان افغانستان، بورسیه دولت چین (CSC) است که دوره جدید آن به‌زودی در ماه‌های آینده باز میشه! این برنامه دوره‌های لیسانس، ماستری و دکتری را در صدها پوهنتون برتر بین‌المللی پوشش میده. فیس صفر، لیلیه رایگان در داخل دانشگاه و معاش ماهانه. برنامه‌های متعددی به زبان انگلیسی تدریس میشن. جزییات و شرایط ثبت‌نام را در آریا هاب بررسی کنید."
+  },
+  {
+    "day": 30,
+    "id": "Day30",
+    "slug": "day30-master-roadmap-success",
+    "pillar": "tool",
+    "title": "نقشه راه جامع موفقیت بین‌المللی بدون کمیشن‌کار",
+    "hookTitle": "نقشه راه کامل مهاجرت تحصیلی و کاری بدون کمیشن‌کار!",
+    "goldWord": "موفقیت",
+    "subHook": "۵ گام طلایی: تطبیق هوشمند، رزومه معیاری، مدارک، مصاحبه",
+    "tagline": "نقشه راه جامع آریا هاب",
+    "statusBadge": "جمع‌بندی جامع ابزارها | پلتفرم ۱۰۰٪ رایگان",
+    "statsHighlight": {
+      "number": "100% FREE",
+      "label": "پلتفرم جامع جوانان افغانستان"
+    },
+    "features": [
+      "گام ۱: ارزیابی شرایط با مچر هوشمند فرصت‌ها",
+      "گام ۲: ساخت رزومه استاندارد ATS در ۵ دقیقه",
+      "گام ۳: دانلود قالب‌های برنده انگیزه‌نامه و ایمیل استاد",
+      "گام ۴: تمرین مصاحبه با شبیه‌ساز قبل از رفتن به سفارت"
+    ],
+    "uiScreenshotPath": "advideo/vshots/home.png",
+    "targetRoute": "/fa",
+    "ctaText": "همین حالا مسیرت ره آغاز کو!",
+    "ctaSubtext": "پلتفرم جامع جوانان افغانستان: myariahub.com",
+    "accentColor": "#F8D898",
+    "voiceoverScript": "برای رسیدن به بورسیه‌های معتبر جهانی یا کارهای ریموت بین‌المللی، به هیچ کمیشن‌کار و واسطه‌ای نیاز نداری! فقط به یک نقشه راه اصولی نیاز داری: شرایطت ره با مچر هوشمند آریا هاب بسنج، سی‌وی معیاریت ره در ۵ دقیقه بساز، انگیزه‌نامه‌ات ره با تمپلیت‌های برنده بنویس، و قبل از سفارت در شبیه‌ساز مصاحبه تمرین کو. تمام این ابزارها در آریا هاب کاملاً رایگان در خدمت شماست. آینده‌ات ره خودت بساز!"
+  }
+]
+;
+
+    async function init() {
+      reels = EMBEDDED_REELS;
+      renderDayButtons();
+      loadDay(1);
+
+      document.getElementById('toggleViewBtn').addEventListener('click', () => {
+        showStill = !showStill;
+        updateMediaDisplay();
+      });
+    }
+
+    function renderDayButtons() {
+      const container = document.getElementById('daySelector');
+      container.innerHTML = '';
+      reels.forEach((r) => {
+        const btn = document.createElement('button');
+        btn.className = `day-btn ${r.day === currentDay ? 'active' : ''}`;
+        btn.innerHTML = `<span>روز ${r.day}</span>`;
+        btn.addEventListener('click', () => loadDay(r.day));
+        container.appendChild(btn);
+      });
+    }
+
+    function loadDay(dayNum) {
+      currentDay = dayNum;
+      const reel = reels.find((r) => r.day === dayNum) || reels[0];
+
+      // Update button highlights
+      document.querySelectorAll('.day-btn').forEach((btn, idx) => {
+        btn.classList.toggle('active', reels[idx]?.day === dayNum);
+      });
+
+      // Update Details
+      document.getElementById('detailTitle').textContent = reel.title;
+      document.getElementById('hookText').textContent = reel.hookTitle;
+      document.getElementById('subHookText').textContent = reel.subHook;
+      document.getElementById('voScriptText').textContent = reel.voiceoverScript;
+      document.getElementById('targetRoute').textContent = reel.targetRoute;
+      document.getElementById('statusBadge').textContent = reel.statusBadge;
+
+      const fList = document.getElementById('featuresList');
+      fList.innerHTML = '';
+      reel.features.forEach((feat) => {
+        const li = document.createElement('li');
+        li.textContent = feat;
+        fList.appendChild(li);
+      });
+
+      // Update Pillar Tag
+      const pTag = document.getElementById('pillarTag');
+      const icons = { scholarship: '🎓 بورسیه بین‌المللی', job: '💼 کار ریموت و دلاری', visa: '🛡️ دفاعیه ویزا و سفارت', tool: '⚡ ابزار هوشمند شغلی' };
+      pTag.textContent = icons[reel.pillar] || reel.pillar;
+
+      // Update Video / Still source
+      updateMediaDisplay();
+    }
+
+    function updateMediaDisplay() {
+      const vid = document.getElementById('reelVideo');
+      const img = document.getElementById('reelStill');
+      const reel = reels.find((r) => r.day === currentDay);
+
+      if (showStill && stillsMap[currentDay]) {
+        vid.style.display = 'none';
+        img.style.display = 'block';
+        img.src = stillsMap[currentDay];
+      } else {
+        vid.style.display = 'block';
+        img.style.display = 'none';
+        // Try to point to day's rendered MP4 if present, else fallback to promo_ad.mp4
+        const daySlug = reel ? reel.slug : 'day01-turkiye-burslari';
+        vid.src = `/out/reels/${daySlug}.mp4`;
+        vid.onerror = () => {
+          vid.src = '/videos/ariahub-reels-fa.mp4';
+        };
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

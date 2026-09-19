@@ -12,8 +12,10 @@
 import { mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 
-// Linux fallback paths kept for the original sandbox host.
+// Linux fallback paths kept for the original sandbox host. CHROMIUM_PATH lets
+// a container/host override (set to /usr/bin/chromium in the deploy image).
 const CHROME_CANDIDATES = [
+  ...(process.env.CHROMIUM_PATH ? [process.env.CHROMIUM_PATH] : []),
   '/home/z/.cache/ms-playwright/chromium_headless_shell-1200/chrome-headless-shell-linux64/chrome-headless-shell',
   '/home/z/.cache/ms-playwright/chromium-1234/chrome-linux64/chrome',
 ];
