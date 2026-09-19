@@ -88,3 +88,6 @@ deploy/oracle_ed25519.pub
 
 # commit message scratch
 /COMMIT_MSG.txt
+/vercel-env.txt
+/_neon-import.sql
+/tools/
