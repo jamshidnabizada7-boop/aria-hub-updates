@@ -61,8 +61,8 @@ export const SEED_QUESTIONS_PART2: SeedQuestion[] = [
       ps: 'د پوهې د رسولو ځانګړی پلان لرم. لومړی، د راستنېدو لومړنۍ میاشت کې زموږ د ځوانانو شبکې ۲۵ غړو لپاره د پروګرام په موادو دوه ساعته ورکشاپ. دویم، زما یو ټیلیګرام چینل دی ۱۹۰۰ تعقیبوونکي لري چرته چې اونیزې لنډې خپروم — ټوله تجربه به هلته سند کړم. درېیم، له خپل پخواني ښوونځي مدیر سره هوکړه ده چې هر کورني سفر کې د ۱۱ او ۱۲ ټولګیو زده‌کوونکو ته د مسلکي لارښوونې غونډه وکړم.',
     },
     strongExample: {
-      en: '\u201CI will translate the program\u2019s leadership materials into Dari and Pashto and run three district-level workshops — I already have venue commitments from two district directors.\u201D',
-      fa: '\u00ABمواد رهبری برنامه را به دری و پشتو ترجمه می‌کنم و سه ورکشاپ در سطح ولسوالی اجرا خواهم کرد — از دو ریاست ولسوالی از قبل تعهد مکان دارم.\u00BB',
+      en: '\u201CI will translate the program\u2019s leadership materials into Farsi and Pashto and run three district-level workshops — I already have venue commitments from two district directors.\u201D',
+      fa: '\u00ABمواد رهبری برنامه را به فارسی و پشتو ترجمه می‌کنم و سه ورکشاپ در سطح ولسوالی اجرا خواهم کرد — از دو ریاست ولسوالی از قبل تعهد مکان دارم.\u00BB',
       ps: '\u00ABد پروګرام مشرتوب مواد به ښکلي او پښتو ژباړم او درې ولسوالۍ کچې ورکشاپونه به پلي کړم — له دوه ولسوالیو مدیرانو څخه د ځای ژمنې لرم.\u00BB',
     },
     weakExample: {
@@ -299,7 +299,7 @@ export const SEED_QUESTIONS_PART2: SeedQuestion[] = [
     difficulty: 'beginner',
     sampleAnswer: {
       en: 'Two years after this program, I see myself back in Kabul working as a junior lecturer and finishing a professional engineering license. By year five, I want to be teaching undergraduates while leading a small research unit on urban water systems at a university or a national agency. The exact employer may change, but the direction — building engineering capacity inside Afghanistan — will not.',
-      fa: 'دو سال پس از این برنامه، خودم را در کابل می‌بینم که به‌عنوان استاد پوهنځی تازه‌کار کار می‌کنم و لیسانس حرفه‌ای مهندسی را تکمیل می‌نمایم. تا سال پنجم می‌خواهم در کنار تدریس، یک واحد کوچک تحقیقاتی درباره سیستم‌های آب شهری را در یک دانشگاه یا اداره ملی رهبری کنم. کارفرمای دقیق ممکن است تغییر کند، اما جهت — ساختن ظرفیت مهندسی در داخل افغانستان — تغییر نخواهد کرد.',
+      fa: 'دو سال پس از این برنامه، خودم را در کابل می‌بینم که به‌عنوان استاد پوهنځی تازه‌کار کار می‌کنم و لیسانس حرفه‌ای مهندسی را تکمیل می‌نمایم. تا سال پنجم می‌خواهم در کنار تفارسیس، یک واحد کوچک تحقیقاتی درباره سیستم‌های آب شهری را در یک دانشگاه یا اداره ملی رهبری کنم. کارفرمای دقیق ممکن است تغییر کند، اما جهت — ساختن ظرفیت مهندسی در داخل افغانستان — تغییر نخواهد کرد.',
       ps: 'د دې پروګرام له دوه کلونو وروسته، ځان په کابل کې ګورم چې د نوې راتلونکې ښوونکي په توګه کار کوم او مسلکي انجینري جواز بشپړوم. تر پنځم کال پورې، غواړم له ښوونې سره سم په یو پوهنتون یا ملي اداره کې د ښاري د اوبو سیسټمونو کوچنې څېړنیزه برخه مشري وکړم. ځانګړی کارګمارونکی بدلېدلی شي، خو لوری — په افغانستان کې د انجینري ظرفیت جوړول — نه بدلیږي.',
     },
     strongExample: {
@@ -324,7 +324,7 @@ export const SEED_QUESTIONS_PART2: SeedQuestion[] = [
     },
     followUps: {
       en: ['What is your plan B if teaching jobs are scarce?', 'How does this program fit that five-year picture?'],
-      fa: ['اگر فرصت‌های تدریس کم باشد، پلان B شما چیست؟', 'این برنامه چگونه در تصویر پنج‌ساله شما می‌گنجد؟'],
+      fa: ['اگر فرصت‌های تفارسیس کم باشد، پلان B شما چیست؟', 'این برنامه چگونه در تصویر پنج‌ساله شما می‌گنجد؟'],
       ps: ['که ښوونکي دندې کمې وي، ستا پلان B څه ده؟', 'دا پروګرام ستا په پنځه کلنه انځور کې څنګه ځای نیسي؟'],
     },
     expectedDuration: '1-2 mins',
@@ -346,7 +346,7 @@ export const SEED_QUESTIONS_PART2: SeedQuestion[] = [
     },
     strongExample: {
       en: '\u201COur village received three inconsistent distributions from three agencies. I want to fix coordination from the inside — that\u2019s why I studied supply chains.\u201D',
-      fa: '\u00ABقریه ما سه توزیع ناهماهنگ از سه سازمان دریافت کرد. می‌خواهم هماهنگی را از درون اصلاح کنم — برای همین زنجیره تأمین خواندم.\u00BB',
+      fa: '\u00ABقریه ما سه توزیع ناهماهنگ از سه سازمان فارسیافت کرد. می‌خواهم هماهنگی را از درون اصلاح کنم — برای همین زنجیره تأمین خواندم.\u00BB',
       ps: '\u00ABزموږ کلي ته له درېو بنسټونو درې ناهمغږې وېشونه ورسېدل. غواړم همغږي له دننه سموم — ځکه مې پېرودنې زنځیر لوستی.\u00BB',
     },
     weakExample: {

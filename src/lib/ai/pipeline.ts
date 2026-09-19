@@ -3,7 +3,7 @@
  *
  * For each scraped listing it produces (with a single LLM call):
  *   1. A medium-length English summary (120-180 words) — readable in ~30s
- *   2. Natural Dari/Persian (fa) + Pashto (ps) translations of title & summary
+ *   2. Natural Farsi/Persian (fa) + Pashto (ps) translations of title & summary
  *   3. A category suggestion from the known category slugs
  *   4. Deterministic (non-AI) extraction of the EXACT application link:
  *      emails, Google Forms, survey links, explicit apply URLs
@@ -127,8 +127,8 @@ const ENRICH_SYSTEM = `You are an editor and translator for ARIA HUB, an Afghan 
 Given a scraped job/scholarship posting, respond ONLY with strict JSON:
 {
   "summary_en": "<120-180 word summary in English: what the role/program is, the organization, location, top 3 requirements, salary if stated, and how to apply. Skip company boilerplate and legal disclaimers. Plain text, no markdown headings.>",
-  "title_fa": "<Dari/Persian translation of the title, natural and fluent, RTL script. Keep org names like UNICEF/WHO transliterated or as-is>",
-  "summary_fa": "<Dari/Persian translation of summary_en, natural fluent professional tone, ~120 words, RTL script. Keep URLs, emails, dates, org names, and technical terms (TOEFL, IELTS) as-is>",
+  "title_fa": "<Farsi/Persian translation of the title, natural and fluent, RTL script. Keep org names like UNICEF/WHO transliterated or as-is>",
+  "summary_fa": "<Farsi/Persian translation of summary_en, natural fluent professional tone, ~120 words, RTL script. Keep URLs, emails, dates, org names, and technical terms (TOEFL, IELTS) as-is>",
   "title_ps": "<Pashto translation of the title, natural and fluent, RTL script>",
   "summary_ps": "<Pashto translation of summary_en, natural fluent professional tone, ~120 words, RTL script. Keep URLs, emails, dates, org names, technical terms as-is>",
   "category": "<one of: jobs, scholarships, internships, competitions, conferences, volunteer, exchange-programs, training>"
@@ -245,7 +245,7 @@ export async function runAIPipeline(
           summaryI18n.en = parsed.summary_en;
           if (originalLang !== 'en') summaryI18n[originalLang] = parsed.summary_en;
         }
-        // Dari/Persian
+        // Farsi/Persian
         if (parsed.title_fa) titleI18n.fa = parsed.title_fa;
         if (parsed.summary_fa) summaryI18n.fa = parsed.summary_fa;
         // Pashto
@@ -306,7 +306,7 @@ export async function runAIPipeline(
   }
 
   // ── Full trilingual bodies — one extra LLM call per NEW listing ─────────
-  // Translates description + all sections into Dari/Pashto so users of every
+  // Translates description + all sections into Farsi/Pashto so users of every
   // language see complete content (not an English body under a localized UI).
   if (provider) {
     try {
@@ -410,7 +410,7 @@ export function makeSlug(title: string): string {
 
 // ─── Full-section translation (fa + ps) ──────────────────────────────────────
 
-/** Sections that get fully translated into Dari and Pashto. */
+/** Sections that get fully translated into Farsi and Pashto. */
 export interface SectionInput {
   title?: string | null;
   description?: string | null;
@@ -457,7 +457,7 @@ export interface SectionTranslations {
 }
 
 const SECTION_SYSTEM = `You are a professional translator for ARIA HUB, an Afghan opportunities portal.
-Translate job/scholarship announcement sections into natural, professional Dari/Persian (fa) and Pashto (ps).
+Translate job/scholarship announcement sections into natural, professional Farsi/Persian (fa) and Pashto (ps).
 Respond ONLY with strict JSON — no markdown fences. For EVERY section provided in the input, output both "<section>_fa" and "<section>_ps" keys, preserving the section names exactly.
 Rules:
 - Translate MEANING faithfully; do not summarize, do not omit lists or details, do not invent facts.
@@ -467,7 +467,7 @@ Rules:
 - No markdown, no HTML tags in output — plain text only.`;
 
 const CHUNK_SYSTEM = `You are a professional translator for ARIA HUB, an Afghan opportunities portal.
-Translate the given announcement excerpt into natural, professional Dari/Persian (fa) and Pashto (ps).
+Translate the given announcement excerpt into natural, professional Farsi/Persian (fa) and Pashto (ps).
 Respond ONLY with strict JSON, no markdown fences: {"fa":"<translation>","ps":"<translation>"}
 Rules: translate MEANING faithfully, never summarize or omit details; mirror line structure with \\n and "- " bullets; keep URLs, emails, numbers, dates, org names and technical terms exactly as-is; plain text only.`;
 
@@ -568,7 +568,7 @@ async function translateChunkPair(
 }
 
 /**
- * Translate all content sections of a record into Dari (fa) + Pashto (ps).
+ * Translate all content sections of a record into Farsi (fa) + Pashto (ps).
  * Short sections go in one bounded JSON call; long descriptions are split
  * into ~900-char chunks translated separately (no truncation failures).
  * Returns null only if nothing at all could be translated.
@@ -584,7 +584,7 @@ export async function translateSections(
     try {
       const parsed = parseSectionTranslations(
         await chat(
-          'Translate the announcement title into Dari/Persian (fa) and Pashto (ps). Respond ONLY with strict JSON, no fences: {"title_fa":"...","title_ps":"..."}',
+          'Translate the announcement title into Farsi/Persian (fa) and Pashto (ps). Respond ONLY with strict JSON, no fences: {"title_fa":"...","title_ps":"..."}',
           sections.title,
         ),
       );

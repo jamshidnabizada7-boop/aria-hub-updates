@@ -4,10 +4,10 @@ const prisma = new PrismaClient();
 
 async function main() {
   console.log('🔄 Updating language names...');
-  console.log('   Dari → Persian');
-  console.log('   دری → فارسی\n');
+  console.log('   Farsi → Persian');
+  console.log('   فارسی → فارسی\n');
 
-  // Update Persian/Dari language
+  // Update Persian/Farsi language
   const persian = await prisma.language.updateMany({
     where: { code: 'fa' },
     data: {
@@ -19,8 +19,8 @@ async function main() {
   console.log('✅ Language names updated successfully!');
   console.log(`   Updated ${persian.count} language record(s)`);
   console.log('\n📝 Changes:');
-  console.log('   English name: Dari → Persian');
-  console.log('   Native name: دری → فارسی');
+  console.log('   English name: Farsi → Persian');
+  console.log('   Native name: فارسی → فارسی');
   
   // Fetch and display all languages
   const languages = await prisma.language.findMany({

@@ -5,7 +5,7 @@
  * General Afghan news feeds (ToloNews, Ariana, Amu TV, Etilaat Roz) publish
  * everything — war reports, crime, foreign conflicts, sport — which the
  * platform must NOT show. This module scores every RSS item BEFORE it reaches
- * the News table and keeps only platform-relevant items in English, Dari/Farsi
+ * the News table and keeps only platform-relevant items in English, Farsi/Farsi
  * and Pashto.
  *
  * RULE (tuned against the real 95-row R22 scrape):

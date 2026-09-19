@@ -49,8 +49,8 @@ const HIGHLIGHTS = [
   },
   {
     icon: Globe2,
-    en: 'Approved submissions are translated into Dari and Pashto',
-    fa: 'ارسال‌های تأییدشده به دری و پشتو ترجمه می‌شوند',
+    en: 'Approved submissions are translated into Farsi and Pashto',
+    fa: 'ارسال‌های تأییدشده به فارسی و پشتو ترجمه می‌شوند',
     ps: 'تصویب شوې لیږنې دري او پښتو ته ژباړل کیږي',
   },
   {

@@ -5,7 +5,7 @@ import type { Lang } from '@/lib/lang-route';
  * Shared locale-aware Gregorian date formatting.
  *
  * English → "October 15, 2026" (date-fns).
- * Dari/Pashto → Afghan-standard Gregorian month names + Eastern Arabic
+ * Farsi/Pashto → Afghan-standard Gregorian month names + Eastern Arabic
  * digits («۱۵ اکتوبر ۲۰۲۶»), UTC-safe so server/client render identically.
  */
 export const GREGORIAN_MONTHS: Record<'fa' | 'ps', string[]> = {

@@ -31,7 +31,7 @@ const vazirmatn = Vazirmatn({
 export const metadata: Metadata = {
   title: "ARIA HUB | آریا هاب — Jobs, Scholarships & Opportunities in Afghanistan",
   description:
-    "New jobs, scholarships, fellowships and training opportunities from trusted organizations — summarized and translated into Dari, Pashto and English. فرصت‌های شغلی، بورسیه و آموزشی به سه زبان.",
+    "New jobs, scholarships, fellowships and training opportunities from trusted organizations — summarized and translated into Farsi, Pashto and English. فرصت‌های شغلی، بورسیه و آموزشی به سه زبان.",
   keywords: [
     "ARIA HUB",
     "آریا هاب",
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "ARIA HUB | آریا هاب — Jobs, Scholarships & Opportunities in Afghanistan",
     description:
-      "New jobs, scholarships, fellowships and training opportunities — summarized and translated into Dari, Pashto and English.",
+      "New jobs, scholarships, fellowships and training opportunities — summarized and translated into Farsi, Pashto and English.",
     siteName: "ARIA HUB",
     type: "website",
   },
@@ -62,7 +62,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "ARIA HUB | آریا هاب — Jobs, Scholarships & Opportunities in Afghanistan",
     description:
-      "New jobs, scholarships, fellowships and training opportunities — summarized and translated into Dari, Pashto and English.",
+      "New jobs, scholarships, fellowships and training opportunities — summarized and translated into Farsi, Pashto and English.",
   },
 };
 

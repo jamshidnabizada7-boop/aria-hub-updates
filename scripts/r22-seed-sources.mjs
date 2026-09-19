@@ -52,7 +52,7 @@ const NEW_SOURCES = [
     name: 'Etilaat Roz News', type: 'news', scraperKey: 'rssNews',
     baseUrl: 'https://etilaatroz.com', enabled: true, autoPublish: true,
     config: { rssUrl: 'https://etilaatroz.com/feed/', maxItems: 30, categoryName: 'Afghanistan News' },
-    note: 'Dari-language Afghan news — base title stored in Dari; en fill via translation loop.',
+    note: 'Farsi-language Afghan news — base title stored in Farsi; en fill via translation loop.',
   },
 ];
 

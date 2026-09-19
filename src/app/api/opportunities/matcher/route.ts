@@ -40,7 +40,7 @@ interface ChatProvider {
 }
 
 const LANG_NAME: Record<string, string> = {
-  fa: 'Persian (Dari, Arabic script)',
+  fa: 'Persian (Farsi, Arabic script)',
   ps: 'Pashto (Arabic script)',
   en: 'English',
 };

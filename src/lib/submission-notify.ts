@@ -29,7 +29,7 @@ const COPY: Record<'en' | 'fa' | 'ps', Copy> = {
     headingApproved: 'Your opportunity is published!',
     headingRejected: 'We could not publish your submission',
     bodyApproved:
-      'Thank you for contributing to ARIA HUB. Your submission passed our review and is now live — together with its full Dari and Pashto versions, visible to thousands of Afghan job and scholarship seekers.',
+      'Thank you for contributing to ARIA HUB. Your submission passed our review and is now live — together with its full Farsi and Pashto versions, visible to thousands of Afghan job and scholarship seekers.',
     bodyRejected:
       'Thank you for contributing to ARIA HUB. After review we could not publish this submission. You are always welcome to submit an improved version — complete details and a working application link give the best chances.',
     viewButton: 'View the published opportunity',
@@ -44,14 +44,14 @@ const COPY: Record<'en' | 'fa' | 'ps', Copy> = {
     headingApproved: 'فرصت شما منتشر شد!',
     headingRejected: 'نتوانستیم ارسال شما را منتشر کنیم',
     bodyApproved:
-      'از همکاری شما با آریا هاب سپاسگزاریم. ارسال شما بررسی شد و هم‌اکنون منتشر است — همراه با نسخه‌های کامل دری و پشتو، در معرض دید هزاران جوینده کار و بورسیه در افغانستان.',
+      'از همکاری شما با آریا هاب سپاسگزاریم. ارسال شما بررسی شد و هم‌اکنون منتشر است — همراه با نسخه‌های کامل فارسی و پشتو، در معرض دید هزاران جوینده کار و بورسیه در افغانستان.',
     bodyRejected:
       'از همکاری شما با آریا هاب سپاسگزاریم. پس از بررسی نتوانستیم این ارسال را منتشر کنیم. همیشه می‌توانید نسخه بهبودیافته‌ای ثبت کنید — جزئیات کامل و لینک معتبر درخواست، شانس موفقیت را بیشتر می‌کند.',
     viewButton: 'مشاهده فرصت منتشرشده',
     refLabel: 'کد رهگیری',
     noteLabel: 'یادداشت بررسی‌کننده',
     footer:
-      'این ایمیل را دریافت کرده‌اید چون از طریق myariahub.com فرصتی ثبت کرده‌اید. ارسال‌ها ظرف ۲۴ ساعت بررسی می‌شوند.',
+      'این ایمیل را فارسیافت کرده‌اید چون از طریق myariahub.com فرصتی ثبت کرده‌اید. ارسال‌ها ظرف ۲۴ ساعت بررسی می‌شوند.',
   },
   ps: {
     subjectApproved: 'ستاسو لیږنه په آریا هب کې خپره شوه 🎉',

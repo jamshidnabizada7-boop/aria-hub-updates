@@ -20,7 +20,7 @@ const isSymbol = (s: string) => s.length <= 12 && SYMBOL_RE.test(s) && /[\d+%+]/
 
 const SYSTEM_PROMPT = `You are a professional translator for ARIA HUB, an Afghan opportunities portal (jobs, scholarships, visas, interviews).
 Translate the given English fields into TWO languages:
-- "fa": Dari/Persian (فارسی دری)
+- "fa": Farsi/Persian (فارسی فارسی)
 - "ps": Pashto (پښتو)
 Rules:
 - Natural, fluent, concise, professional tone for an Afghan audience. Correct RTL script.
@@ -42,7 +42,7 @@ function parseJsonLoose(raw: string): Record<string, { fa?: string; ps?: string 
 async function translateFields(fields: Record<string, string>): Promise<Record<string, { fa: string; ps: string }> | null> {
   const slots = await getProviderSlots();
   if (!slots.length) throw new Error('no ai provider configured');
-  const prompt = `Translate these fields to fa (Dari/Persian) and ps (Pashto).\nReturn JSON: {"<fieldKey>":{"fa":"…","ps":"…"}}.\n\n${JSON.stringify(fields, null, 1)}`;
+  const prompt = `Translate these fields to fa (Farsi/Persian) and ps (Pashto).\nReturn JSON: {"<fieldKey>":{"fa":"…","ps":"…"}}.\n\n${JSON.stringify(fields, null, 1)}`;
   const { text: raw, provider: servedBy } = await chatWithFailover(slots, SYSTEM_PROMPT, prompt);
   console.log(`[translate] served by: ${servedBy}`);
   const parsed = parseJsonLoose(raw);

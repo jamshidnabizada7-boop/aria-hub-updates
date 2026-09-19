@@ -249,7 +249,7 @@ const ROWS: Row[] = [
     ),
     description: i18n(
       '<h3>Fellowship package</h3><p>Fellows receive mentorship from senior journalists, a project grant, and publication support in partner outlets.</p><h4>Commitments</h4><ul><li>One long-form piece per month</li><li>Weekly online editorial sessions</li></ul>',
-      '<h3>بسته فلوشیپ</h3><p>فلوشیپ‌گیران رهنمایی ژورنالیستان ارشد، گرانت پروژه و پشتیبانی نشر در رسانه‌های شریک دریافت می‌کنند.</p><h4>تعهدات</h4><ul><li>یک نوشته مفصل در ماه</li><li>نشست‌های هفتگی آنلاین تحریریه</li></ul>',
+      '<h3>بسته فلوشیپ</h3><p>فلوشیپ‌گیران رهنمایی ژورنالیستان ارشد، گرانت پروژه و پشتیبانی نشر در رسانه‌های شریک فارسیافت می‌کنند.</p><h4>تعهدات</h4><ul><li>یک نوشته مفصل در ماه</li><li>نشست‌های هفتگی آنلاین تحریریه</li></ul>',
       '<h3>د فلوشیپ بنډل</h3><p>فلوشیپ اخیستونکي له مشهور ژورنالیستانو لارښوونه، د پروژې بورس او د شریکه رسنیو په خپرونو کې ملاتړ ترلاسه کوي.</p><h4>ژمنې</h4><ul><li>په میاشت کې یوه مفصله لیکنه</li><li>اونیزې آنلاین ادیتوریال ناستې</li></ul>'
     ),
     tags: i18n(['fellowship', 'writing', 'media'], ['فلوشیپ', 'نویسندگی', 'رسانه'], ['فلوشیپ', 'لیکل', 'رسنۍ']),
@@ -322,8 +322,8 @@ const ROWS: Row[] = [
     categorySlug: 'internships', salary: i18n('AFN 30,000 stipend', 'تنخواه ۳۰٬۰۰۰ افغانی', '۳۰,۰۰۰ افغانۍ تنخواه'),
     educationReq: null, experience: i18n('Interest in journalism', 'علاقه به ژورنالیسم', 'ژورنالیزم ته لېوالتیا'),
     summary: i18n(
-      'Four-month traineeship producing youth-focused radio segments in Dari and Pashto.',
-      'کارآموزی چهارماهه برای تولید برنامه‌های رادیویی جوانان به زبان‌های دری و پشتو.',
+      'Four-month traineeship producing youth-focused radio segments in Farsi and Pashto.',
+      'کارآموزی چهارماهه برای تولید برنامه‌های رادیویی جوانان به زبان‌های فارسی و پشتو.',
       'څلور میاشتنۍ کارآموزي چې په دري او پښتو د ځوانانو راډیویي برخې جوړوي.'
     ),
     description: i18n(

@@ -293,7 +293,7 @@ async function resolveCategoryId(db: NewsDb, categoryName: string | null): Promi
 }
 
 /**
- * Slug from the item title. Non-Latin titles (Dari/Pashto news) slugify to
+ * Slug from the item title. Non-Latin titles (Farsi/Pashto news) slugify to
  * the generic fallback, so they get a hash-based unique slug instead.
  */
 async function slugForTitle(db: NewsDb, title: string): Promise<string> {

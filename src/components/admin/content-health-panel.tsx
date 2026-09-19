@@ -143,7 +143,7 @@ export function ContentHealthPanel() {
           </div>
           {translation.englishOnly > 20 && (
             <p className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-700 dark:text-amber-400">
-              {translation.englishOnly} published records have no Dari/Pashto content yet — run the
+              {translation.englishOnly} published records have no Farsi/Pashto content yet — run the
               translation backfill to fill them in.
             </p>
           )}

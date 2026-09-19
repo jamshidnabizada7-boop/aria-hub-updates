@@ -1,5 +1,5 @@
 /**
- * Backfill — AI summaries + Dari/Pashto translations + apply-link extraction
+ * Backfill — AI summaries + Farsi/Pashto translations + apply-link extraction
  * + expired-status marking for ALL existing Opportunity rows.
  *
  * Resumable: only processes rows whose titleI18n is missing 'fa' or 'ps',
@@ -61,8 +61,8 @@ const ENRICH_SYSTEM = `You are an editor and translator for ARIA HUB, an Afghan 
 Given a scraped job/scholarship posting, respond ONLY with strict JSON:
 {
   "summary_en": "<120-180 word summary in English: what the role/program is, the organization, location, top 3 requirements, salary if stated, and how to apply. Skip company boilerplate and legal disclaimers. Plain text, no markdown headings.>",
-  "title_fa": "<Dari/Persian translation of the title, natural and fluent, RTL script. Keep org names like UNICEF/WHO transliterated or as-is>",
-  "summary_fa": "<Dari/Persian translation of summary_en, natural fluent professional tone, ~120 words, RTL script. Keep URLs, emails, dates, org names, and technical terms (TOEFL, IELTS) as-is>",
+  "title_fa": "<Farsi/Persian translation of the title, natural and fluent, RTL script. Keep org names like UNICEF/WHO transliterated or as-is>",
+  "summary_fa": "<Farsi/Persian translation of summary_en, natural fluent professional tone, ~120 words, RTL script. Keep URLs, emails, dates, org names, and technical terms (TOEFL, IELTS) as-is>",
   "title_ps": "<Pashto translation of the title, natural and fluent, RTL script>",
   "summary_ps": "<Pashto translation of summary_en, natural fluent professional tone, ~120 words, RTL script. Keep URLs, emails, dates, org names, technical terms as-is>",
   "category": "<one of: jobs, scholarships, internships, competitions, conferences, volunteer, exchange-programs, training>"

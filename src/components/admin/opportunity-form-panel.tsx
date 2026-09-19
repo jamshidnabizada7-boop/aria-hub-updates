@@ -362,7 +362,7 @@ function OpportunityFormDialog({
         }
         return next;
       });
-      toast({ title: 'Dari + Pashto drafts filled — review and save.' });
+      toast({ title: 'Farsi + Pashto drafts filled — review and save.' });
     } catch (e) {
       toast({ title: (e as Error).message, variant: 'destructive' });
     } finally {

@@ -5,7 +5,7 @@
  * Dynamically scans information_schema for EVERY table's `%I18n%` json columns,
  * finds rows where fa or ps is missing (source content = sibling base column
  * `x` or the JSON's own `en` member), and fills them with LLM translations
- * (fa = Dari/Persian, ps = Pashto) via z-ai-web-dev-sdk. ONE LLM call per row
+ * (fa = Farsi/Persian, ps = Pashto) via z-ai-web-dev-sdk. ONE LLM call per row
  * (all missing columns of the row batched together). Resumable via
  * scripts/.translate-progress.json checkpoint written after every row.
  *
@@ -128,7 +128,7 @@ async function getZai() {
 
 const SYSTEM_PROMPT = `You are a professional translator for ARIA HUB, an Afghan opportunities portal (jobs, scholarships, visas, interviews).
 Translate the given English fields into TWO languages:
-- "fa": Dari/Persian (فارسی دری)
+- "fa": Farsi/Persian (فارسی فارسی)
 - "ps": Pashto (پښتو)
 Rules:
 - Natural, fluent, concise, professional tone for an Afghan audience. Correct RTL script.
@@ -192,7 +192,7 @@ async function translateFields(fields, opts = {}) {
   const compress = opts.allowCompress
     ? '\n- The "content" field is long: translate the FULL text; you MAY tighten the wording to roughly 60-70% of the length but keep every key fact (deadlines, requirements, amounts, how to apply). Do NOT cut the ending.'
     : '';
-  const prompt = `Translate these fields to fa (Dari/Persian) and ps (Pashto).\nReturn JSON: {"<fieldKey>":{"fa":"…","ps":"…"}}.\n\n${JSON.stringify(fields, null, 1)}`;
+  const prompt = `Translate these fields to fa (Farsi/Persian) and ps (Pashto).\nReturn JSON: {"<fieldKey>":{"fa":"…","ps":"…"}}.\n\n${JSON.stringify(fields, null, 1)}`;
   let raw;
   try {
     raw = await chatWithRetry(SYSTEM_PROMPT + compress, prompt);

@@ -15,8 +15,8 @@ const DEFAULT_TAGLINES: Record<string, string> = {
 };
 
 const DEFAULT_DESCRIPTIONS: Record<string, string> = {
-  en: 'New jobs, scholarships, fellowships and training opportunities from trusted organizations — summarized and translated into Dari, Pashto and English.',
-  fa: 'جدیدترین وظایف، بورسیه‌ها و فرصت‌های آموزشی از سازمان‌های معتبر — خلاصه‌شده و به دری، پشتو و انگلیسی ترجمه‌شده.',
+  en: 'New jobs, scholarships, fellowships and training opportunities from trusted organizations — summarized and translated into Farsi, Pashto and English.',
+  fa: 'جدیدترین وظایف، بورسیه‌ها و فرصت‌های آموزشی از سازمان‌های معتبر — خلاصه‌شده و به فارسی، پشتو و انگلیسی ترجمه‌شده.',
   ps: 'تازه دندونې، بورسونه او د روزنې فرصتونه له باور وړ مؤسسو — لنډیز شوي او په دري، پښتو او انګلیسي ژباړل شوي.',
 };
 

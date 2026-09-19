@@ -133,7 +133,7 @@ function getDefaultSettings() {
     siteName: 'ARIA HUB',
     tagline: 'Jobs, Scholarships & Opportunities in Afghanistan',
     description:
-      'New jobs, scholarships, fellowships and training opportunities from trusted Afghan and international organizations — summarized, translated into Dari and Pashto, and updated daily.',
+      'New jobs, scholarships, fellowships and training opportunities from trusted Afghan and international organizations — summarized, translated into Farsi and Pashto, and updated daily.',
     logoUrl: null,
     logoDarkUrl: null,
   };

@@ -14,7 +14,7 @@ export const maxDuration = 120;
  * Returns: { fa: {...}, ps: {...} } — translations for the provided fields.
  *
  * Powers the "Auto-translate" button in the admin opportunity form so a
- * manager can write the English version and get complete Dari + Pashto
+ * manager can write the English version and get complete Farsi + Pashto
  * drafts in one click (still fully editable before saving).
  */
 export async function POST(req: NextRequest) {

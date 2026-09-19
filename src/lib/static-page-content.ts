@@ -112,7 +112,7 @@ export const PRIVACY_DOC: LocalDoc = {
         },
         {
           en: 'Contact Data includes billing address, delivery address, email address and telephone numbers.',
-          fa: 'داده‌های تماس: شامل نشانی صورتحساب، نشانی دریافت، ایمیل و شماره‌های تلفن.',
+          fa: 'داده‌های تماس: شامل نشانی صورتحساب، نشانی فارسیافت، ایمیل و شماره‌های تلفن.',
           ps: 'د اړیکې معلومات: د بل پته، د رسېدو پته، بریښنالیک او تلیفون شمېرې په بر کې نیسي.',
         },
         {

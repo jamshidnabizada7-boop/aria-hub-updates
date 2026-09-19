@@ -1,7 +1,7 @@
 # ARIA HUB — myariahub.com
 
 Business-opportunity platform for Afghanistan: **jobs, scholarships, internships,
-visa guidance, interview prep, and success stories** — in **Dari, Pashto, and
+visa guidance, interview prep, and success stories** — in **Farsi, Pashto, and
 English**, with automated content importing, AI-assisted enrichment/translation,
 and a built-in social-media Brand Studio.
 

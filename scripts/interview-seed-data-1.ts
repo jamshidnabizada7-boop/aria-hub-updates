@@ -1,6 +1,6 @@
 /**
  * Interview seed data — part 1: categories + scholarship/visa/job questions.
- * All content is trilingual: { en, fa (Dari), ps (Pashto) }.
+ * All content is trilingual: { en, fa (Farsi), ps (Pashto) }.
  */
 import type { Trilingual, TrilingualList } from './interview-seed-types';
 

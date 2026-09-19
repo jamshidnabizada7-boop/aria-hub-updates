@@ -16,7 +16,7 @@
 
 export const LANG_NAMES: Record<string, string> = {
   en: 'English',
-  fa: 'Dari/Persian (فارسی) — use a natural, professional tone, RTL script',
+  fa: 'Farsi/Persian (فارسی) — use a natural, professional tone, RTL script',
   ps: 'Pashto (پښتو) — use a natural, professional tone, RTL script',
 };
 

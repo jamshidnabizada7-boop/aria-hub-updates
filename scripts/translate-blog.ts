@@ -1,6 +1,6 @@
 /**
  * Trilingual blog translation — fills News.titleI18n / excerptI18n / contentI18n
- * with Dari (fa) and Pashto (ps) for rows that are still English-only.
+ * with Farsi (fa) and Pashto (ps) for rows that are still English-only.
  *
  * HTML-preserving: the content is split into top-level blocks (<h2>/<h3>/<p>/<ul>/<ol>),
  * blocks are batched (~900 chars) and the model must return the SAME tags with
@@ -83,7 +83,7 @@ function parseJsonLoose(raw: string): Array<{ fa: string; ps: string }> | null {
 
 const BLOCK_SYSTEM = `You are a professional translator for ARIA HUB, an Afghan opportunities portal.
 You receive numbered HTML blocks (headings, paragraphs, list items) from an educational blog article.
-Translate each block into natural, professional Dari/Persian ("fa") and Pashto ("ps").
+Translate each block into natural, professional Farsi/Persian ("fa") and Pashto ("ps").
 Respond ONLY with strict JSON — a single array, no markdown fences:
 [{"i":1,"fa":"<translated block with SAME tags>","ps":"<translated block with SAME tags>"}, ...]
 STRICT RULES:
@@ -190,7 +190,7 @@ async function main(): Promise<void> {
     try {
       // Title
       const titleRaw = await chat(
-        'Translate the article title into Dari/Persian (fa) and Pashto (ps). Respond ONLY with strict JSON, no fences: {"title_fa":"...","title_ps":"..."}',
+        'Translate the article title into Farsi/Persian (fa) and Pashto (ps). Respond ONLY with strict JSON, no fences: {"title_fa":"...","title_ps":"..."}',
         row.title,
       );
       let titleFa = '';
@@ -206,7 +206,7 @@ async function main(): Promise<void> {
       let exPs = '';
       if (row.excerpt) {
         const exRaw = await chat(
-          'Translate the article excerpt into Dari/Persian (fa) and Pashto (ps). Respond ONLY with strict JSON, no fences: {"fa":"...","ps":"..."}',
+          'Translate the article excerpt into Farsi/Persian (fa) and Pashto (ps). Respond ONLY with strict JSON, no fences: {"fa":"...","ps":"..."}',
           row.excerpt,
         );
         try {

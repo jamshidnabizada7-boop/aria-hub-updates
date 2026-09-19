@@ -95,7 +95,7 @@ const TYPE_FILTERS: { value: string; labelKey: string }[] = [
 ];
 
 const LANGS: { value: Lang; label: string }[] = [
-  { value: 'fa', label: 'دری / فارسی' },
+  { value: 'fa', label: 'فارسی / فارسی' },
   { value: 'ps', label: 'پښتو' },
   { value: 'en', label: 'English' },
 ];

@@ -56,7 +56,7 @@ export async function GET() {
   <channel>
     <title>ARIA HUB — Latest Opportunities for Afghans</title>
     <link>${BASE_URL}</link>
-    <description>Jobs, scholarships, internships and opportunities for Afghans — gathered from trusted sources, summarized and translated daily (English / دری / پښتو).</description>
+    <description>Jobs, scholarships, internships and opportunities for Afghans — gathered from trusted sources, summarized and translated daily (English / فارسی / پښتو).</description>
     <language>en</language>
     <managingEditor>${SITE_EMAIL} (ARIA HUB)</managingEditor>
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>

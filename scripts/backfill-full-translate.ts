@@ -5,7 +5,7 @@
  *   removal to the BASE (English) content fields — the DB then only holds
  *   display-ready content.
  * Pass 2 (translate): for every record whose descriptionI18n lacks fa/ps,
- *   translate title + description + all sections into Dari + Pashto with ONE
+ *   translate title + description + all sections into Farsi + Pashto with ONE
  *   LLM call per record, then persist into every *I18n field.
  *
  * Active (published, unexpired) records are processed first — they are what

@@ -17,7 +17,7 @@ import type { PostTemplate } from '@/lib/social/brand';
  */
 export const dynamic = 'force-dynamic';
 
-const LANG_NAME: Record<string, string> = { en: 'English', fa: 'Dari (Persian, Afghan style)', ps: 'Pashto' };
+const LANG_NAME: Record<string, string> = { en: 'English', fa: 'Farsi (Persian, Afghan style)', ps: 'Pashto' };
 
 function systemPrompt(lang: string): string {
   return [

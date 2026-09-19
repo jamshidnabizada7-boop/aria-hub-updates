@@ -714,7 +714,7 @@ function CrudForm({ model, fields, item, label, statusOptions, onClose, onSaved 
         }
         return next;
       });
-      toast({ title: 'Dari + Pashto drafts filled — review and save.' });
+      toast({ title: 'Farsi + Pashto drafts filled — review and save.' });
     } catch (e: any) {
       toast({ title: e.message, variant: 'destructive' });
     } finally {

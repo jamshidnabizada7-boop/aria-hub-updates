@@ -49,7 +49,7 @@ export async function POST(req: Request) {
 
     const langInstruction =
       lang === 'fa'
-        ? 'Respond in Dari/Persian (Afghanistan). '
+        ? 'Respond in Farsi/Persian (Afghanistan). '
         : lang === 'ps'
           ? 'Respond in Pashto. '
           : 'Respond in English. ';
