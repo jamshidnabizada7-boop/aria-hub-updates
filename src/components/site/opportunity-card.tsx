@@ -26,7 +26,7 @@ import {
   daysUntilDeadline,
   isOpportunityExpired,
   type OpportunityCardData,
-} from '@/lib/opportunity-queries';
+} from '@/lib/opportunity-shared';
 import type { Lang } from '@/lib/lang-route';
 
 /**

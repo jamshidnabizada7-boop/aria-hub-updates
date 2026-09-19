@@ -53,10 +53,10 @@ import { OpportunityCard } from './opportunity-card';
 import { Reveal } from './reveal';
 import { translate } from '@/lib/i18n';
 import { getLocalizedContent } from '@/lib/i18n-content';
-import { daysUntilDeadline } from '@/lib/opportunity-queries';
+import { daysUntilDeadline } from '@/lib/opportunity-shared';
 import type { Lang } from '@/lib/lang-route';
 import type { SiteData, Testimonial } from '@/lib/types';
-import type { CategoryFacet, OpportunityCardData } from '@/lib/opportunity-queries';
+import type { CategoryFacet, OpportunityCardData } from '@/lib/opportunity-shared';
 import type { StoryCard } from '@/lib/success-story-queries';
 import { translateStoryType } from '@/lib/success-story-queries';
 

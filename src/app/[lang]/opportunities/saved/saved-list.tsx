@@ -9,7 +9,7 @@ import { OpportunityCard } from '@/components/site/opportunity-card';
 import { getSavedSlugs, toggleSavedSlug } from '@/components/site/save-button';
 import { translate } from '@/lib/i18n';
 import type { Lang } from '@/lib/lang-route';
-import type { OpportunityCardData } from '@/lib/opportunity-queries';
+import type { OpportunityCardData } from '@/lib/opportunity-shared';
 
 type ApiItem = Omit<OpportunityCardData, 'deadline' | 'createdAt'> & {
   deadline: string | null;

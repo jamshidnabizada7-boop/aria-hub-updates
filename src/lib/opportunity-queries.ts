@@ -8,55 +8,23 @@
 import { db } from '@/lib/db';
 import { getLocalizedContent } from '@/lib/i18n-content';
 import { translate } from '@/lib/i18n';
-import { stripHtml } from '@/lib/import/utils';
 import type { Lang } from '@/lib/lang-route';
 import type { Prisma } from '@prisma/client';
+import {
+  categoryLabel,
+  cleanSummary,
+  daysUntilDeadline,
+  isOpportunityExpired,
+  type OpportunityCardData,
+  type OpportunityListResult,
+  type Facets,
+  type OpportunitySort,
+  type ListOpportunitiesOptions,
+} from '@/lib/opportunity-shared';
 
-export type OpportunitySort = 'newest' | 'deadline' | 'title';
-
-/** Slim, display-ready projection of an opportunity for cards & grids. */
-export interface OpportunityCardData {
-  id: string;
-  slug: string;
-  /** Localized via titleI18n fallback chain (server-side). */
-  title: string;
-  organization: string | null;
-  country: string | null;
-  jobType: string | null;
-  deadline: Date | null;
-  applyUrl: string | null;
-  sourceName: string | null;
-  categorySlug: string | null;
-  categoryLabel: string;
-  /** Promoted listing (admin-managed) — surfaces first + wears a badge. */
-  featured: boolean;
-  /** Localized via aiSummaryI18n fallback chain, capped at 220 chars. */
-  summary: string;
-  status: string;
-  createdAt: Date;
-}
-
-export interface OpportunityListResult {
-  items: OpportunityCardData[];
-  total: number;
-  page: number;
-  perPage: number;
-  totalPages: number;
-}
-
-export interface CategoryFacet {
-  slug: string;
-  name: string;
-  count: number;
-}
-
-export interface Facets {
-  categories: CategoryFacet[];
-  /** Top countries by active-opportunity count (label + count for filters). */
-  locations: { name: string; count: number }[];
-  /** Total active (published + unexpired) opportunities across all categories. */
-  totalActive: number;
-}
+// Re-export every client-safe type/helper so existing server importers of
+// this module keep working unchanged.
+export * from '@/lib/opportunity-shared';
 
 export type OpportunityDetail = Prisma.OpportunityGetPayload<{
   include: { category: true };
@@ -82,55 +50,9 @@ function activeWhere(): Prisma.OpportunityWhereInput {
   };
 }
 
-/** Legacy imported summaries sometimes begin with scraped boilerplate. */
-const ABOUT_COMPANY_RE = /^\s*about the company\s*[:\-–—]?\s*/i;
-
-/** Plain-text, single-line snippet capped at `max` characters. */
-export function cleanSummary(raw: string, max = 220): string {
-  if (!raw) return '';
-  let s = stripHtml(raw).replace(ABOUT_COMPANY_RE, '');
-  s = s.replace(/\s+/g, ' ').trim();
-  // A summary that is just a URL is scraped junk (sitemap seed that survived
-  // enrichment) — return empty so cards hide the summary line entirely.
-  if (/^https?:\/\/\S+$/i.test(s)) return '';
-  if (s.length > max) s = s.slice(0, max - 1).trimEnd() + '…';
-  return s;
-}
-
-const CATEGORY_LABEL_KEYS: Record<string, string> = {
-  jobs: 'opportunities.jobs',
-  scholarships: 'opportunities.scholarships',
-  internships: 'opportunities.internships',
-  competitions: 'opportunities.competitions',
-  conferences: 'opportunities.conferences',
-  volunteer: 'opportunities.volunteer',
-  'exchange-programs': 'opportunities.exchangePrograms',
-  training: 'opportunities.training',
-};
-
-/** Localized category label (static key → DB nameI18n → DB raw name). */
-export function categoryLabel(
-  lang: Lang,
-  slug: string | null | undefined,
-  fallbackName?: string | null,
-  fallbackNameI18n?: unknown
-): string {
-  const key = slug ? CATEGORY_LABEL_KEYS[slug] : undefined;
-  if (key) {
-    const label = translate(lang, key);
-    // translate() returns the key itself when a translation is missing.
-    if (label !== key) return label;
-  }
-  if (fallbackNameI18n) {
-    const localized = getLocalizedContent(
-      fallbackName ?? '',
-      fallbackNameI18n as Record<string, string> | null,
-      lang
-    );
-    if (localized) return localized;
-  }
-  return fallbackName ?? '';
-}
+// ---------------------------------------------------------------------------
+// card projection
+// ---------------------------------------------------------------------------
 
 const CARD_SELECT = {
   id: true,
@@ -179,22 +101,6 @@ function toCardData(row: CardRow, lang: Lang): OpportunityCardData {
 // ---------------------------------------------------------------------------
 // public queries
 // ---------------------------------------------------------------------------
-
-export interface ListOpportunitiesOptions {
-  lang: Lang;
-  category?: string; // category slug, or 'all'
-  q?: string;
-  location?: string; // exact country value, or 'all'
-  /** Only opportunities whose deadline lands within N days (7/30/90). */
-  deadlineDays?: number;
-  /** Exact sourceName filter, or 'all'. */
-  source?: string;
-  sort?: OpportunitySort;
-  page?: number; // 1-based
-  perPage?: number;
-  /** Include status:'expired' rows and opportunities whose deadline passed. */
-  includeExpired?: boolean;
-}
 
 export async function listOpportunities(
   opts: ListOpportunitiesOptions
@@ -521,40 +427,8 @@ export async function getFacets(lang?: Lang): Promise<Facets> {
 
 // ---------------------------------------------------------------------------
 // detail-page helpers
-// ---------------------------------------------------------------------------
-
-/** Localized + cleaned summary for meta descriptions & JSON-LD. */
-export function resolveSummary(
-  opportunity: Pick<OpportunityDetail, 'aiSummary' | 'aiSummaryI18n'>,
-  lang: Lang,
-  max = 155
-): string {
-  return cleanSummary(
-    getLocalizedContent(
-      opportunity.aiSummary,
-      opportunity.aiSummaryI18n as Record<string, string> | null,
-      lang
-    ),
-    max
-  );
-}
-
-/** Deadlines are date-based: anything before UTC midnight counts as expired. */
-export function isOpportunityExpired(
-  status: string,
-  deadline: Date | null
-): boolean {
-  if (status === 'expired') return true;
-  if (!deadline) return false;
-  const today = startOfTodayUtc();
-  return deadline.getTime() < today.getTime();
-}
-
-/** Whole days between "today" (UTC midnight) and the deadline. */
-export function daysUntilDeadline(deadline: Date): number {
-  const today = startOfTodayUtc();
-  return Math.round((deadline.getTime() - today.getTime()) / 86_400_000);
-}
+// (resolveSummary / isOpportunityExpired / daysUntilDeadline are re-exported
+// from '@/lib/opportunity-shared' above)
 
 // ---------------------------------------------------------------------------
 // Daily / weekly spotlight ("Opportunity of the Day", "Scholarship of the Week")
