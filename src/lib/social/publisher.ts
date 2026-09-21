@@ -9,7 +9,8 @@
  *
  * All times are stored UTC; slots are defined in AFT (UTC+4:30).
  */
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { existsSync } from 'node:fs';
 
 // Linux fallback paths kept for the original sandbox host. CHROMIUM_PATH lets
@@ -256,11 +257,22 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
 }
 
 // ── 2. renderer (playwright screenshots the CODE template) ──────────────────
-async function renderQueueImage(baseUrl: string, props: CanvasProps): Promise<{ file: string; publicUrl: string } | null> {
-  // Shared resolver: env CHROME_PATH → Windows Chrome/Edge → Linux sandbox
-  // paths (was hard-coded to one machine's /home/z cache — rendering silently
-  // returned null everywhere else, killing the whole Instagram flow).
-  const exe = resolveExecutable() ?? CHROME_CANDIDATES.find((p) => existsSync(p)) ?? null;
+async function renderQueueImage(baseUrl: string, props: CanvasProps): Promise<{ file: string; publicUrl: string; localPath: string | null } | null> {
+  // Chrome resolution order: env override → known local installs (self-host /
+  // workstation) → @sparticuz/chromium (serverless bundle for Vercel). Without
+  // the serverless fallback the render step silently returned null on Vercel
+  // and every platform fell back to text-only posts.
+  let exe = resolveExecutable() ?? CHROME_CANDIDATES.find((p) => existsSync(p)) ?? null;
+  let launchArgs = ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu'];
+  if (!exe) {
+    try {
+      const chromium = (await import('@sparticuz/chromium')).default;
+      exe = await chromium.executablePath();
+      launchArgs = [...chromium.args];
+    } catch {
+      return null;
+    }
+  }
   if (!exe) return null;
   let browser: import('playwright-core').Browser | null = null;
   try {
@@ -268,7 +280,7 @@ async function renderQueueImage(baseUrl: string, props: CanvasProps): Promise<{ 
     await mkdir(PUBLIC_DIR, { recursive: true });
     browser = await chromium.launch({
       executablePath: exe,
-      args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+      args: launchArgs,
     });
     const vh = props.size === 'story' ? 2100 : props.size === 'portrait' ? 1500 : 1180;
     const page = await browser.newPage({ viewport: { width: 1180, height: vh } });
@@ -279,8 +291,22 @@ async function renderQueueImage(baseUrl: string, props: CanvasProps): Promise<{ 
     const el = await page.$('[data-studio-canvas="1"]');
     if (!el) throw new Error('canvas element not found');
     const file = `post-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.png`;
-    await el.screenshot({ path: join(PUBLIC_DIR, file) });
-    return { file, publicUrl: `${PUBLIC_BASE}/${file}` };
+    const shotPath = join(tmpdir(), file);
+    await el.screenshot({ path: shotPath });
+    const buf = await readFile(shotPath).catch(() => null);
+    if (!buf) return null;
+
+    // Public URL: Vercel Blob when configured (serverless FS is ephemeral —
+    // files under public/ are not served). Self-host keeps the local flow.
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      try {
+        const { put } = await import('@vercel/blob');
+        const blob = await put(`generated-posts/${file}`, buf, { access: 'public', addRandomSuffix: false });
+        return { file, publicUrl: blob.url, localPath: null };
+      } catch { /* blob failed → try local persistence below */ }
+    }
+    await writeFile(join(PUBLIC_DIR, file), buf);
+    return { file, publicUrl: `${PUBLIC_BASE}/${file}`, localPath: join(PUBLIC_DIR, file) };
   } catch {
     return null;
   } finally {
@@ -341,7 +367,7 @@ export async function renderOneQueueRow(id: string, baseUrl = 'http://127.0.0.1:
   if (!row) return false;
   // Re-check memory right before launching chrome — a compile wave may have
   // started between the tick's gate and this call.
-  if (Math.floor(os.freemem() / 1024 / 1024) < 1200) return false;
+  if (Math.floor(os.freemem() / 1024 / 1024) < 900) return false;
   await db.socialPostQueue.update({ where: { id }, data: { status: 'rendering', claimedAt: new Date() } });
   const img = await renderQueueImage(baseUrl, row.contentJson as CanvasProps);
   await db.socialPostQueue.update({
@@ -349,7 +375,7 @@ export async function renderOneQueueRow(id: string, baseUrl = 'http://127.0.0.1:
     data: {
       status: 'ready',
       imageStatus: img ? 'ready' : 'failed',
-      ...(img ? { imagePaths: { square: img.publicUrl, local: join(PUBLIC_DIR, img.file) } } : {}),
+      ...(img ? { imagePaths: { square: img.publicUrl, ...(img.localPath ? { local: img.localPath } : {}) } } : {}),
     },
   });
   return Boolean(img);

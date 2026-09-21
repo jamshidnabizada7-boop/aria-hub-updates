@@ -1,0 +1,8 @@
+{
+  "functions": {
+    "src/app/api/admin/pipeline/tick/route.ts": {
+      "memory": 3009,
+      "maxDuration": 300
+    }
+  }
+}

@@ -43,6 +43,7 @@
     "examples",
     "node_modules",
     "scripts",
-    "_video-studio"
+    "_video-studio",
+    "auto-translate.ts"
   ]
 }
