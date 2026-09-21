@@ -38,10 +38,32 @@ function readingMinutes(html: string): number {
   return Math.max(1, Math.round(words / 200));
 }
 
-/** Minimal shape the mapper needs — includes narrow `category` to a subset. */
-type NewsRowForCard = Omit<News, 'category'> & {
+/** Exactly the fields the card mapper reads (list select + detail rows both satisfy it). */
+type NewsRowForCard = {
+  id: string;
+  slug: string;
+  title: string;
+  titleI18n: unknown;
+  excerpt: string | null;
+  excerptI18n: unknown;
+  content: string | null;
+  contentI18n?: unknown;
+  author: string | null;
+  image: string | null;
+  featured: boolean;
+  publishedAt: Date;
   category: { slug: string; name: string; nameI18n: unknown } | null;
 };
+
+// Transfer-safety: list views only need an approximate reading time — the
+// English `content` suffices. The fa+ps `contentI18n` copies (the largest
+// blobs) ship ONLY in getBlogPost's detail fetch.
+const CARD_SELECT = {
+  id: true, slug: true, title: true, titleI18n: true,
+  excerpt: true, excerptI18n: true, content: true,
+  author: true, image: true, featured: true, publishedAt: true,
+  category: { select: { slug: true, name: true, nameI18n: true } },
+} as const;
 
 function toCard(row: NewsRowForCard, lang: Lang): BlogCard {
   const title = getLocalizedContent(row.title, row.titleI18n as Record<string, string> | null, lang);
@@ -77,9 +99,9 @@ export async function listBlogPosts(
     },
     orderBy: [{ featured: 'desc' }, { publishedAt: 'desc' }],
     take,
-    include: { category: { select: { slug: true, name: true, nameI18n: true } } },
+    select: CARD_SELECT,
   });
-  return rows.map((row) => toCard(row, lang));
+  return rows.map((row) => toCard(row as unknown as NewsRowForCard, lang));
 }
 
 /** Distinct categories that actually have published posts (for filter chips). */
@@ -141,7 +163,7 @@ export async function listRelatedPosts(
     },
     orderBy: { publishedAt: 'desc' },
     take,
-    include: { category: { select: { slug: true, name: true, nameI18n: true } } },
+    select: CARD_SELECT,
   });
   return rows.map((row) => toCard(row, lang));
 }

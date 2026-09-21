@@ -67,6 +67,9 @@ function toCard(row: StoryRow, lang: Lang, maxExcerpt = 180): StoryCard {
   };
 }
 
+// Transfer-safety: lists derive a 180-char excerpt from the English `content`;
+// the multi-language `contentI18n` blob (largest column) ships only in the
+// detail fetch (getStory).
 const LIST_SELECT: Prisma.SuccessStorySelect = {
   id: true,
   title: true,
@@ -77,7 +80,6 @@ const LIST_SELECT: Prisma.SuccessStorySelect = {
   visaType: true,
   year: true,
   content: true,
-  contentI18n: true,
   authorAlias: true,
   featured: true,
   likes: true,

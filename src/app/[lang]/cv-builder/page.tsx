@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   description: 'Create professional and scholar CVs to boost your global opportunities.',
 };
 
-export const revalidate = 60;
+export const revalidate = 1800;
 
 export default async function CVBuilderPage() {
   const data = await getSiteData();

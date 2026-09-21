@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   description: 'Find your perfect global business, visa, or educational opportunity.',
 };
 
-export const revalidate = 60;
+export const revalidate = 1800;
 
 export default async function OpportunityMatcherPage() {
   const data = await getSiteData();

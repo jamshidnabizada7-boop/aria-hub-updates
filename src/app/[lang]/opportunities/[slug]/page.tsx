@@ -65,7 +65,7 @@ const getOpportunity = cache((slug: string) => getOpportunityBySlug(slug));
 // Opportunity content changes with imports + AI enrichment backfills —
 // re-render at most 60s stale so deadline counts and cleaned content stay
 // fresh without sacrificing the static-render performance win.
-export const revalidate = 60;
+export const revalidate = 600;
 
 // ---------------------------------------------------------------------------
 // helpers

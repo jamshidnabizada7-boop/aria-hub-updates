@@ -7,7 +7,7 @@ import { isLang, type Lang } from '@/lib/lang-route';
 import { getClosingSoon, getDailySpotlight, getFacets, getWeeklyScholarship, listOpportunities } from '@/lib/opportunity-queries';
 import { getFeaturedStoryCard } from '@/lib/success-story-queries';
 
-export const revalidate = 60;
+export const revalidate = 300;
 
 export default async function Page({
   params,

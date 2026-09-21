@@ -7,7 +7,7 @@ import { isLang, type Lang } from '@/lib/lang-route';
 
 const SITE_URL = 'https://www.myariahub.com';
 
-export const revalidate = 300;
+export const revalidate = 1800;
 
 export async function generateMetadata({
   params,

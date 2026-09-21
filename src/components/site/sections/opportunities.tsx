@@ -107,9 +107,14 @@ export function OpportunitiesSection({
 function OpportunityCard({ opportunity, t }: { opportunity: Opportunity; t: (k: string) => string }) {
   const lang = useLangStore((s) => s.code);
 
-  // Get localized content
+  // Get localized content. Cards show a 2-line snippet — prefer the compact
+  // aiSummary (getSiteData no longer ships full 3-language descriptions to
+  // cut hosted-DB transfer); fall back to description when present.
   const title = getLocalizedContent(opportunity.title, opportunity.titleI18n as any, lang);
-  const description = getLocalizedContent(opportunity.description, opportunity.descriptionI18n as any, lang);
+  const o = opportunity as any;
+  const description =
+    getLocalizedContent(o.aiSummary ?? '', o.aiSummaryI18n, lang) ||
+    getLocalizedContent(o.description ?? '', o.descriptionI18n, lang);
 
   const deadline = opportunity.deadline ? new Date(opportunity.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : null;
   const plainDescription = description ? description.replace(/<[^>]*>?/gm, '') : '';

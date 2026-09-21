@@ -69,7 +69,13 @@ export async function POST(req: NextRequest) {
         status: 'published',
         OR: [{ deadline: null }, { deadline: { gt: now } }],
       },
-      include: { category: true },
+      // Transfer-safety: scoring only reads title/type/country/org — never
+      // pull the full 3-language description blobs here.
+      select: {
+        id: true, slug: true, title: true, titleI18n: true,
+        jobType: true, jobTypeI18n: true, country: true, organization: true,
+        category: { select: { name: true } },
+      },
       orderBy: { createdAt: 'desc' },
       take: 150,
     });

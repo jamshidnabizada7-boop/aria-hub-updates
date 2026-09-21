@@ -13,7 +13,7 @@ import { isLang, type Lang } from '@/lib/lang-route';
 import { stripHtml } from '@/lib/import/utils';
 import type { Service } from '@/lib/types';
 
-export const revalidate = 60;
+export const revalidate = 1800;
 
 export async function generateMetadata({
   params,

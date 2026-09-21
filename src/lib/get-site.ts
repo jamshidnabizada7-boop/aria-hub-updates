@@ -1,7 +1,28 @@
+import { cache } from 'react';
 import { db } from '@/lib/db';
 import type { SiteData, MenuItem } from '@/lib/types';
 
-export async function getSiteData(): Promise<SiteData> {
+// Transfer-safety: card grids render a 2-line snippet — pull only the fields
+// they use, never the full 3-language description/JSON blobs. Full rows
+// belong to the detail page queries (opportunity-queries).
+const OPP_SELECT = {
+  id: true, slug: true, title: true, titleI18n: true,
+  aiSummary: true, aiSummaryI18n: true,
+  image: true, country: true, organization: true,
+  jobType: true, jobTypeI18n: true,
+  deadline: true, applyUrl: true, featured: true,
+  sort: true, status: true, createdAt: true,
+  category: { select: { slug: true, name: true, nameI18n: true } },
+} as const;
+
+const NEWS_SELECT = {
+  id: true, slug: true, title: true, titleI18n: true,
+  excerpt: true, excerptI18n: true, image: true,
+  publishedAt: true, createdAt: true, status: true,
+  category: { select: { slug: true, name: true, nameI18n: true } },
+} as const;
+
+export const getSiteData = cache(async (): Promise<SiteData> => {
   try {
     const [
       settings,
@@ -39,14 +60,14 @@ export async function getSiteData(): Promise<SiteData> {
       db.service.findMany({ where: { status: 'published' }, orderBy: { sort: 'asc' }, include: { category: true } }).catch(() => []),
       db.visa.findMany({ where: { status: 'published' }, orderBy: { sort: 'asc' } }).catch(() => []),
       db.opportunityCategory.findMany({ orderBy: { order: 'asc' } }).catch(() => []),
-      db.opportunity.findMany({ where: { status: 'published' }, orderBy: [{ sort: 'asc' }, { createdAt: 'desc' }], take: 60, include: { category: true } }).catch(() => []),
+      db.opportunity.findMany({ where: { status: 'published' }, orderBy: [{ sort: 'asc' }, { createdAt: 'desc' }], take: 60, select: OPP_SELECT }).catch(() => []),
       db.galleryItem.findMany({ orderBy: { order: 'asc' } }).catch(() => []),
       db.paymentMethod.findMany({ where: { status: 'active' }, orderBy: { order: 'asc' } }).catch(() => []),
       db.testimonial.findMany({ where: { status: 'published' }, orderBy: { order: 'asc' } }).catch(() => []),
       db.partner.findMany({ where: { status: 'active' }, orderBy: { order: 'asc' } }).catch(() => []),
       db.counter.findMany({ orderBy: { order: 'asc' } }).catch(() => []),
       db.faq.findMany({ where: { status: 'published' }, orderBy: { order: 'asc' } }).catch(() => []),
-      db.news.findMany({ where: { status: 'published' }, orderBy: { publishedAt: 'desc' }, take: 6, include: { category: true } }).catch(() => []),
+      db.news.findMany({ where: { status: 'published' }, orderBy: { publishedAt: 'desc' }, take: 6, select: NEWS_SELECT }).catch(() => []),
       db.socialLink.findMany({ where: { enabled: true }, orderBy: { order: 'asc' } }).catch(() => []),
       db.footerLink.findMany({ orderBy: { order: 'asc' } }).catch(() => []),
       db.department.findMany({ orderBy: { order: 'asc' } }).catch(() => []),
@@ -125,7 +146,7 @@ export async function getSiteData(): Promise<SiteData> {
       whyFeatures: [],
     };
   }
-}
+});
 
 function getDefaultSettings() {
   return {
