@@ -78,6 +78,8 @@ export interface SocialCanvasProps {
   packages?: { value: string; label: string; sub?: string }[];
   /** Day template: date badge above the headline (e.g. "۱۴ ژوئن" / "14 June"). */
   dateBadge?: { big: string; small?: string };
+  /** Studio visual (statue/scientist/flag…) layered behind the poster. */
+  visualUrl?: string | null;
 }
 
 // ─── shared pieces ───────────────────────────────────────────────────────────
@@ -186,6 +188,7 @@ function KickerChip({ icon, label, theme, layout }: { icon: ReactNode; label: st
 // differently. All colors come from StudioTheme tokens so every palette works.
 
 interface ShellProps {
+  visualUrl?: string | null;
   lang: Lang;
   size: PosterSize;
   theme: StudioTheme;
@@ -200,8 +203,8 @@ interface ShellProps {
 
 const SHELL_LAYOUTS = new Set<StudioLayout>(['split', 'frame', 'stack', 'glass', 'banner', 'ticket', 'cinema']);
 
-function ShellRoot({ lang, size, theme, style, children }: {
-  lang: Lang; size: PosterSize; theme: StudioTheme; style?: CSSProperties; children: ReactNode;
+function ShellRoot({ lang, size, theme, style, visualUrl, children }: {
+  lang: Lang; size: PosterSize; theme: StudioTheme; style?: CSSProperties; visualUrl?: string | null; children: ReactNode;
 }) {
   const rtl = lang !== 'en';
   return (
@@ -216,6 +219,12 @@ function ShellRoot({ lang, size, theme, style, children }: {
         ...style,
       }}
     >
+      {visualUrl ? (
+        <>
+          <img src={visualUrl} alt="" aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.38 }} />
+          <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, ${theme.bgTop}66 0%, ${theme.bgMid}AA 55%, ${theme.bgBottom}F2 100%)` }} />
+        </>
+      ) : null}
       {children}
     </div>
   );
@@ -775,7 +784,7 @@ function StudioShell(props: ShellProps) {
 
 /** Shared brand shell: canvas + ambience + header lockup + footer CTA band. */
 export function BrandShell({
-  lang, size, kicker, kickerIcon, ctaLabel, qrDataUrl, theme, layout, children,
+  lang, size, kicker, kickerIcon, ctaLabel, qrDataUrl, theme, layout, visualUrl, children,
 }: {
   lang: Lang;
   size: PosterSize;
@@ -785,6 +794,7 @@ export function BrandShell({
   qrDataUrl?: string | null;
   theme: StudioTheme;
   layout: StudioLayout;
+  visualUrl?: string | null;
   children: ReactNode;
 }) {
   // Distinct composition families — each is its own shell, not a reskin.
@@ -793,7 +803,7 @@ export function BrandShell({
     || layout === 'cinema') {
     return (
       <StudioShell
-        lang={lang} size={size} theme={theme} layout={layout}
+        lang={lang} size={size} theme={theme} layout={layout} visualUrl={visualUrl}
         kicker={String(kicker)} kickerIcon={kickerIcon}
         cta={ctaLabel ?? translate(lang, 'poster.cta')}
         tagline={translate(lang, 'poster.tagline')}
@@ -825,6 +835,9 @@ export function BrandShell({
       }}
     >
       <Ambience portrait={portrait} theme={theme} layout={layout} />
+      {visualUrl ? (
+        <img src={visualUrl} alt="" aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.32 }} />
+      ) : null}
 
       {/* top accent hairline */}
       <div
@@ -1031,6 +1044,7 @@ export function SocialCanvas(props: SocialCanvasProps) {
   const story = size === 'story';
   const theme = resolveTheme(props.themeId);
   const layout = resolveLayout(props.layout);
+  const visualUrl = props.visualUrl ?? null;
 
   // Spotlight delegates to the proven opportunity poster (QR + deadline card).
   // if (template === 'spotlight') — handled by the caller (needs PosterData).
@@ -1044,7 +1058,7 @@ export function SocialCanvas(props: SocialCanvasProps) {
     const bold = layout === 'bold';
     return (
       <BrandShell
-        lang={lang} size={size} theme={theme} layout={layout}
+        lang={lang} size={size} theme={theme} layout={layout} visualUrl={visualUrl}
         kicker={t('social.post.kicker.deadline')}
         kickerIcon={<AlarmClock style={{ width: 26, height: 26 }} />}
         qrDataUrl={qrDataUrl}
@@ -1092,7 +1106,7 @@ export function SocialCanvas(props: SocialCanvasProps) {
   if (template === 'tip') {
     return (
       <BrandShell
-        lang={lang} size={size} theme={theme} layout={layout}
+        lang={lang} size={size} theme={theme} layout={layout} visualUrl={visualUrl}
         kicker={t('social.post.tipLabel', { n: toEasternDigits(String(seriesNo ?? 1), lang) })}
         kickerIcon={<Lightbulb style={{ width: 26, height: 26 }} />}
         qrDataUrl={qrDataUrl}
@@ -1121,7 +1135,7 @@ export function SocialCanvas(props: SocialCanvasProps) {
     const glyphSize = layout === 'bold' ? 220 : 170;
     return (
       <BrandShell
-        lang={lang} size={size} theme={theme} layout={layout}
+        lang={lang} size={size} theme={theme} layout={layout} visualUrl={visualUrl}
         kicker={t('social.post.kicker.quote')}
         kickerIcon={<QuoteGlyph style={{ width: 26, height: 26 }} />}
         ctaLabel={t('social.post.quoteCta')}
@@ -1162,7 +1176,7 @@ export function SocialCanvas(props: SocialCanvasProps) {
     const rows = props.checklist && props.checklist.length ? props.checklist : [];
     return (
       <BrandShell
-        lang={lang} size={size} theme={theme} layout={layout}
+        lang={lang} size={size} theme={theme} layout={layout} visualUrl={visualUrl}
         kicker={t('social.post.kicker.promo')}
         kickerIcon={<Sparkles style={{ width: 26, height: 26 }} />}
         qrDataUrl={qrDataUrl}
@@ -1188,7 +1202,7 @@ export function SocialCanvas(props: SocialCanvasProps) {
     const nd = props.newsDate ? new Date(props.newsDate) : null;
     return (
       <BrandShell
-        lang={lang} size={size} theme={theme} layout={layout}
+        lang={lang} size={size} theme={theme} layout={layout} visualUrl={visualUrl}
         kicker={t('social.post.kicker.news')}
         kickerIcon={<Newspaper style={{ width: 26, height: 26 }} />}
         qrDataUrl={qrDataUrl}
@@ -1223,7 +1237,7 @@ export function SocialCanvas(props: SocialCanvasProps) {
     const bold = layout === 'bold';
     return (
       <BrandShell
-        lang={lang} size={size} theme={theme} layout={layout}
+        lang={lang} size={size} theme={theme} layout={layout} visualUrl={visualUrl}
         kicker={t('social.post.kicker.stat')}
         kickerIcon={<BarChart3 style={{ width: 26, height: 26 }} />}
         qrDataUrl={qrDataUrl}
@@ -1256,7 +1270,7 @@ export function SocialCanvas(props: SocialCanvasProps) {
     const cards = (props.packages ?? []).filter((c) => c && (c.value || c.label));
     return (
       <BrandShell
-        lang={lang} size={size} theme={theme} layout={layout}
+        lang={lang} size={size} theme={theme} layout={layout} visualUrl={visualUrl}
         kicker={t('social.post.kicker.packages')}
         kickerIcon={<Package style={{ width: 26, height: 26 }} />}
         qrDataUrl={qrDataUrl}
@@ -1310,7 +1324,7 @@ export function SocialCanvas(props: SocialCanvasProps) {
   if (template === 'teaser') {
     return (
       <BrandShell
-        lang={lang} size={size} theme={theme} layout={layout}
+        lang={lang} size={size} theme={theme} layout={layout} visualUrl={visualUrl}
         kicker={t('social.post.kicker.teaser')}
         kickerIcon={<Telescope style={{ width: 26, height: 26 }} />}
         qrDataUrl={qrDataUrl}
@@ -1345,7 +1359,7 @@ export function SocialCanvas(props: SocialCanvasProps) {
   if (template === 'greeting') {
     return (
       <BrandShell
-        lang={lang} size={size} theme={theme} layout={layout}
+        lang={lang} size={size} theme={theme} layout={layout} visualUrl={visualUrl}
         kicker={t('social.post.kicker.greeting')}
         kickerIcon={<Moon style={{ width: 26, height: 26 }} />}
         qrDataUrl={qrDataUrl}
@@ -1393,7 +1407,7 @@ export function SocialCanvas(props: SocialCanvasProps) {
     const rtlFlip = lang !== 'en';
     return (
       <BrandShell
-        lang={lang} size={size} theme={theme} layout={layout}
+        lang={lang} size={size} theme={theme} layout={layout} visualUrl={visualUrl}
         kicker={t('social.post.kicker.hiring')}
         kickerIcon={<Megaphone style={{ width: 26, height: 26 }} />}
         qrDataUrl={qrDataUrl}
@@ -1479,7 +1493,7 @@ export function SocialCanvas(props: SocialCanvasProps) {
     );
     return (
       <BrandShell
-        lang={lang} size={size} theme={theme} layout={layout}
+        lang={lang} size={size} theme={theme} layout={layout} visualUrl={visualUrl}
         kicker={t('social.post.kicker.follow')}
         kickerIcon={<UserPlus style={{ width: 26, height: 26 }} />}
         qrDataUrl={qrDataUrl}
@@ -1549,7 +1563,7 @@ export function SocialCanvas(props: SocialCanvasProps) {
     const tiles = (props.checklist ?? []).slice(0, 2);
     return (
       <BrandShell
-        lang={lang} size={size} theme={theme} layout={layout}
+        lang={lang} size={size} theme={theme} layout={layout} visualUrl={visualUrl}
         kicker={t('social.post.kicker.pick')}
         kickerIcon={<MousePointerClick style={{ width: 26, height: 26 }} />}
         qrDataUrl={qrDataUrl}
@@ -1618,7 +1632,7 @@ export function SocialCanvas(props: SocialCanvasProps) {
     const badge = props.dateBadge;
     return (
       <BrandShell
-        lang={lang} size={size} theme={theme} layout={layout}
+        lang={lang} size={size} theme={theme} layout={layout} visualUrl={visualUrl}
         kicker={t('social.post.kicker.day')}
         kickerIcon={<Sparkles style={{ width: 26, height: 26 }} />}
         qrDataUrl={qrDataUrl}
@@ -1663,7 +1677,7 @@ export function SocialCanvas(props: SocialCanvasProps) {
   const person = props.person;
   return (
     <BrandShell
-      lang={lang} size={size} theme={theme} layout={layout}
+      lang={lang} size={size} theme={theme} layout={layout} visualUrl={visualUrl}
       kicker={t('social.post.kicker.story')}
       kickerIcon={<GraduationCap style={{ width: 26, height: 26 }} />}
       qrDataUrl={qrDataUrl}

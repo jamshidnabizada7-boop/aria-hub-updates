@@ -1334,3 +1334,15 @@ model Page {
   updatedAt       DateTime @updatedAt
 }
 
+
+/// Reusable branded visuals (statues, scientists, flags, landmarks…) that the
+/// Brand Studio can layer behind posters. Admin-managed via /api/admin/studio/visuals.
+model StudioVisual {
+  id        String   @id @default(cuid())
+  label     String
+  category  String   @default("general")
+  url       String
+  enabled   Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+}
