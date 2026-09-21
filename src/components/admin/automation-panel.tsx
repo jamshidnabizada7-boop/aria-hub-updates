@@ -11,8 +11,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-  Activity, Bot, CalendarClock, Check, Clock, Facebook, Instagram, Loader2,
-  Play, RefreshCw, Send, Settings2, Twitter, X as XIcon, Zap, Sparkles } from 'lucide-react';
+  Activity, Bot, CalendarClock, Check, Clock, Facebook, Instagram, Linkedin,
+  Loader2, MessageCircle, Play, RefreshCw, Send, Settings2, Twitter, X as XIcon, Zap, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -55,6 +55,8 @@ const PLATFORM_META: Record<string, { icon: React.ComponentType<{ className?: st
   facebook: { icon: Facebook, credFields: [{ key: 'pageId', label: 'Page ID' }, { key: 'accessToken', label: 'Page access token' }] },
   instagram: { icon: Instagram, credFields: [{ key: 'igUserId', label: 'Instagram business user ID' }, { key: 'accessToken', label: 'Access token' }] },
   x: { icon: XIcon, credFields: [{ key: 'accessToken', label: 'OAuth 2.0 access token' }] },
+  linkedin: { icon: Linkedin, credFields: [{ key: 'accessToken', label: 'LinkedIn access token' }, { key: 'authorUrn', label: 'Author URN (urn:li:person:… / organization)' }] },
+  whatsapp: { icon: MessageCircle, credFields: [{ key: 'accessToken', label: 'WhatsApp access token' }, { key: 'channelId', label: 'WhatsApp Channel ID' }] },
 };
 
 const ALL_TIMES = ['07:00', '08:00', '09:00', '12:00', '12:30', '13:00', '17:00', '19:00', '20:00', '21:00'];

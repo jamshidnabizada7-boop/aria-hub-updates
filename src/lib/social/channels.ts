@@ -14,6 +14,8 @@
  *   facebook  → { pageId, accessToken }
  *   x         → { accessToken, apiSecret? }   (OAuth2 user-context token)
  *   instagram → { igUserId, accessToken }     (Graph API container flow)
+ *   linkedin  → { accessToken, authorUrn }    (urn:li:person:… / urn:li:organization:…)
+ *   whatsapp  → { accessToken, channelId }    (WhatsApp Business channel — Cloud API)
  *
  * Images are passed as PUBLIC urls (https://…/generated-posts/…) — required
  * by Facebook/Instagram/Telegram-by-url. When only a local file exists,
@@ -257,11 +259,131 @@ async function publishInstagram(creds: Record<string, unknown>, input: PublishIn
   }
 }
 
+// ── LinkedIn (official API — member or organization posts) ───────────────────
+// Credentials: { accessToken, authorUrn } — authorUrn is "urn:li:person:…" or
+// "urn:li:organization:…". Token comes from a LinkedIn developer app with the
+// "Share on LinkedIn" product; expires ~60 days → tokenExpired triggers the
+// standard reauthorization flow.
+
+const LINKEDIN_HEADERS = (accessToken: string): Record<string, string> => ({
+  Authorization: `Bearer ${accessToken}`,
+  'Content-Type': 'application/json',
+  'X-Restli-Protocol-Version': '2.0.0',
+  'LinkedIn-Version': '202411',
+});
+
+async function publishLinkedIn(creds: Record<string, unknown>, input: PublishInput): Promise<PublishResult> {
+  const accessToken = String(creds.accessToken || '');
+  const authorUrn = String(creds.authorUrn || '');
+  if (!accessToken || !authorUrn) return { ok: false, error: 'linkedin: missing accessToken/authorUrn' };
+  try {
+    let mediaUrn: string | null = null;
+    // Image post: register an upload asset, PUT the binary, reference the URN.
+    if (input.imageUrl) {
+      const reg = await safeFetch('https://api.linkedin.com/v2/assets?action=registerUpload', {
+        method: 'POST',
+        headers: LINKEDIN_HEADERS(accessToken),
+        body: JSON.stringify({
+          registerUploadRequest: {
+            recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
+            owner: authorUrn,
+            serviceRelationships: [{ relationshipType: 'OWNER', identifier: 'urn:li:userGeneratedContent' }],
+          },
+        }),
+      });
+      const rj = reg.json as { value?: { uploadUrl?: string; asset?: string } } | null;
+      const uploadUrl = rj?.value?.uploadUrl;
+      mediaUrn = rj?.value?.asset ?? null;
+      if (!reg.ok || !uploadUrl || !mediaUrn) {
+        const tokenExpired = reg.status === 401 || reg.status === 403;
+        return { ok: false, error: `linkedin: register upload ${reg.status} ${reg.text.slice(0, 120)}`, ...(tokenExpired ? { tokenExpired } : {}) };
+      }
+      const img = await fetch(input.imageUrl);
+      if (!img.ok) return { ok: false, error: `linkedin: image fetch ${img.status}` };
+      const buf = await img.arrayBuffer();
+      const up = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/octet-stream' },
+        body: Buffer.from(buf),
+      });
+      if (!up.ok) return { ok: false, error: `linkedin: image upload ${up.status}` };
+    }
+
+    const body: Record<string, unknown> = {
+      author: authorUrn,
+      lifecycleState: 'PUBLISHED',
+      specificContent: {
+        'com.linkedin.ugc.ShareContent': {
+          shareCommentary: { text: input.caption.slice(0, 2900) },
+          shareMediaCategory: mediaUrn ? 'IMAGE' : 'NONE',
+          ...(mediaUrn
+            ? { media: [{ status: 'READY', media: mediaUrn, title: { text: 'ARIA HUB' } }] }
+            : {}),
+        },
+      },
+      visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' },
+    };
+    const r = await safeFetch('https://api.linkedin.com/v2/ugcPosts', {
+      method: 'POST',
+      headers: LINKEDIN_HEADERS(accessToken),
+      body: JSON.stringify(body),
+    });
+    if (r.ok) {
+      const id = (r.json as { id?: string } | null)?.id ?? null;
+      return { ok: true, id, permalink: id ? `https://www.linkedin.com/feed/update/${id}` : null };
+    }
+    if (r.status === 429) return { ok: false, error: 'linkedin: 429 rate limited', rateLimited: true };
+    if (r.status === 401 || r.status === 403) return { ok: false, error: `linkedin: ${r.status} ${r.text.slice(0, 120)}`, tokenExpired: true };
+    return { ok: false, error: `linkedin: ${r.status} ${r.text.slice(0, 160)}` };
+  } catch (e) {
+    return { ok: false, error: `linkedin: ${errOf(e)}` };
+  }
+}
+
+// ── WhatsApp Channel (Meta Cloud API — official Channels support) ────────────
+// Credentials: { accessToken, channelId } — channelId is the WhatsApp Channel
+// ID from a WhatsApp Business Account (Channels are one-way broadcasts).
+// NOTE: posting to WhatsApp GROUPS is not possible via any official API —
+// groups would require unofficial automation that violates WhatsApp ToS and
+// risks number bans. Use a Channel instead; share the channel link anywhere.
+async function publishWhatsApp(creds: Record<string, unknown>, input: PublishInput): Promise<PublishResult> {
+  const accessToken = String(creds.accessToken || '');
+  const channelId = String(creds.channelId || '');
+  if (!accessToken || !channelId) return { ok: false, error: 'whatsapp: missing accessToken/channelId' };
+  try {
+    const text = input.link ? `${input.caption}\n\n🔗 ${input.link}` : input.caption;
+    const body: Record<string, unknown> = {
+      messaging_product: 'whatsapp',
+      to: channelId,
+      type: input.imageUrl ? 'image' : 'text',
+      ...(input.imageUrl
+        ? { image: { link: input.imageUrl, caption: text.slice(0, 1000) } }
+        : { text: { preview_url: true, body: text.slice(0, 4000) } }),
+    };
+    const r = await safeFetch(`https://graph.facebook.com/v21.0/${encodeURIComponent(channelId)}/messages`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (r.ok) {
+      const j = r.json as { messages?: { id?: string }[] } | null;
+      const id = j?.messages?.[0]?.id ?? null;
+      return { ok: true, id };
+    }
+    const cls = classifyGraph(r.json, r.status);
+    return { ok: false, error: `whatsapp: ${r.status} ${r.text.slice(0, 160)}`, ...cls };
+  } catch (e) {
+    return { ok: false, error: `whatsapp: ${errOf(e)}` };
+  }
+}
+
 const ADAPTERS: Record<string, (creds: Record<string, unknown>, input: PublishInput) => Promise<PublishResult>> = {
   telegram: publishTelegram,
   facebook: publishFacebook,
   x: publishX,
   instagram: publishInstagram,
+  linkedin: publishLinkedIn,
+  whatsapp: publishWhatsApp,
 };
 
 /** Platforms that can post text-only (used for honest test messages). */
