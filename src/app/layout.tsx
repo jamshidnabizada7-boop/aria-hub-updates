@@ -29,12 +29,12 @@ const vazirmatn = Vazirmatn({
   display: "swap",
   preload: true,
   fallback: [
+    "Noto Sans Arabic",
+    "Tahoma",
+    "Segoe UI Historic",
     "system-ui",
     "-apple-system",
     "BlinkMacSystemFont",
-    "Segoe UI",
-    "Roboto",
-    "Noto Sans Arabic",
     "sans-serif",
   ],
 });

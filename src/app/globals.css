@@ -49,9 +49,12 @@
 
 :root {
   --radius: 0.875rem;
-  /* Font Stacks: Latin primary for EN, Vazirmatn primary for FA/PS */
-  --font-sans-latin: var(--font-geist-sans), var(--font-vazirmatn), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-sans-rtl: var(--font-vazirmatn), var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Arabic", sans-serif;
+  /* Font Stacks:
+   * --font-sans-latin: Geist primary for Latin, Vazirmatn for Persian/Pashto, system fallbacks
+   * --font-sans-rtl: Vazirmatn primary for Persian & Pashto, Geist for Latin, Arabic system fallbacks
+   */
+  --font-sans-latin: "Geist", var(--font-vazirmatn), var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans-rtl: var(--font-vazirmatn), "Geist", var(--font-geist-sans), "Noto Sans Arabic", "Tahoma", "Segoe UI Historic", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --font-family-sans: var(--font-sans-latin);
 
   /* Premium Corporate Blue — Light */
@@ -88,14 +91,22 @@
   --sidebar-ring: oklch(0.48 0.18 258);
 }
 
-/* Persian and Pashto activate Vazirmatn as the primary font family */
+/* Persian (fa) and Pashto (ps) RTL contexts activate Vazirmatn as the primary font family */
 :root[dir="rtl"],
 :root[lang="fa"],
 :root[lang="ps"],
 [dir="rtl"],
 [lang="fa"],
-[lang="ps"] {
+[lang="ps"],
+.rtl-text {
   --font-family-sans: var(--font-sans-rtl);
+}
+
+/* Explicit LTR or English containers inside RTL inherit Latin primary font stack */
+[dir="ltr"],
+[lang="en"],
+.ltr-text {
+  --font-family-sans: var(--font-sans-latin);
 }
 
 .dark {
@@ -145,253 +156,120 @@
   html {
     scroll-behavior: smooth;
   }
+
+  /* ==========================================================================
+     Persian (fa) & Pashto (ps) Typography System — Modern Vazirmatn Design
+     ========================================================================== */
+
+  /* 1. Base Typography & Antialiasing in RTL */
+  :is([dir="rtl"], [lang="fa"], [lang="ps"], .rtl-text) {
+    font-family: var(--font-sans-rtl);
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  :is([dir="rtl"], [lang="fa"], [lang="ps"], .rtl-text) body {
+    font-feature-settings: normal;
+    line-height: 1.75;
+  }
+
+  /* 2. Body Text, Paragraphs, Lists & Descriptions: comfortable 1.75 line-height */
+  :is([dir="rtl"], [lang="fa"], [lang="ps"], .rtl-text) :is(p, li, dd, dt, blockquote) {
+    line-height: 1.75;
+  }
+
+  /* 3. Headings & Titles: 700 / 600 weight with generous clearance for dots */
+  :is([dir="rtl"], [lang="fa"], [lang="ps"], .rtl-text) :is(h1, h2, h3) {
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  :is([dir="rtl"], [lang="fa"], [lang="ps"], .rtl-text) :is(h4, h5, h6) {
+    font-weight: 600;
+    line-height: 1.45;
+  }
+
+  :is([dir="rtl"], [lang="fa"], [lang="ps"], .rtl-text) [data-slot="card-title"] {
+    font-weight: 600;
+    line-height: 1.45;
+  }
+
+  :is([dir="rtl"], [lang="fa"], [lang="ps"], .rtl-text) [data-slot="card-description"] {
+    line-height: 1.7;
+  }
+
+  /* 4. Navigation & Dropdown Menus: 500 weight (Medium) for crisp, readable labels */
+  :is([dir="rtl"], [lang="fa"], [lang="ps"], .rtl-text) :is(nav a, nav button, [data-slot*="menu-item"], [data-slot*="menu-label"], [data-slot*="navigation-menu"]) {
+    font-weight: 500;
+    line-height: 1.5;
+  }
+
+  /* 5. Buttons: default 500 weight (Medium) with 1.5 line-height (allows utility overrides) */
+  :is([dir="rtl"], [lang="fa"], [lang="ps"], .rtl-text) :is(button, [role="button"], [data-slot="button"]) {
+    font-weight: 500;
+    line-height: 1.5;
+  }
+
+  /* 6. Form Controls: generous 1.6 line-height to avoid diacritic dot clipping */
+  :is([dir="rtl"], [lang="fa"], [lang="ps"], .rtl-text) :is(input, textarea, select, optgroup, label, [data-slot="label"]) {
+    line-height: 1.6;
+  }
+
+  :is([dir="rtl"], [lang="fa"], [lang="ps"], .rtl-text) :is(input::placeholder, textarea::placeholder) {
+    font-family: var(--font-family-sans);
+    font-weight: 400;
+  }
+
+  /* 7. Badges, Chips & Tags: 500 weight for clear UI badges */
+  :is([dir="rtl"], [lang="fa"], [lang="ps"], .rtl-text) :is([data-slot="badge"], .badge) {
+    font-weight: 500;
+    line-height: 1.45;
+  }
+
+  /* 8. Tables: start alignment and proportional row heights */
+  :is([dir="rtl"], [lang="fa"], [lang="ps"], .rtl-text) th {
+    font-weight: 600;
+    text-align: start;
+  }
+
+  :is([dir="rtl"], [lang="fa"], [lang="ps"], .rtl-text) td {
+    font-weight: 400;
+    line-height: 1.65;
+    text-align: start;
+  }
 }
 
 /* ==========================================================================
-   Persian (fa) & Pashto (ps) Typography System — Vazirmatn
+   Persian/Pashto Cursive Ligature & Diacritic Dot Protection Utilities
    ========================================================================== */
 
-/* 1. Global Font Assignment in RTL */
-[dir="rtl"],
-[lang="fa"],
-[lang="ps"],
-.rtl-text {
-  font-family: var(--font-sans-rtl) !important;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-[dir="rtl"] body,
-[lang="fa"] body,
-[lang="ps"] body {
-  font-family: var(--font-sans-rtl) !important;
-  font-feature-settings: normal;
-  line-height: 1.75;
-}
-
-/* 2. All Body Copy, Paragraphs, Lists, and Text Containers */
-[dir="rtl"] p,
-[lang="fa"] p,
-[lang="ps"] p,
-[dir="rtl"] span,
-[lang="fa"] span,
-[lang="ps"] span,
-[dir="rtl"] a,
-[lang="fa"] a,
-[lang="ps"] a,
-[dir="rtl"] li,
-[lang="fa"] li,
-[lang="ps"] li,
-[dir="rtl"] dd,
-[lang="fa"] dd,
-[lang="ps"] dd,
-[dir="rtl"] dt,
-[lang="fa"] dt,
-[lang="ps"] dt,
-[dir="rtl"] blockquote,
-[lang="fa"] blockquote,
-[lang="ps"] blockquote {
-  font-family: var(--font-sans-rtl);
-}
-
-[dir="rtl"] p,
-[lang="fa"] p,
-[lang="ps"] p {
-  line-height: 1.8;
-}
-
-/* 3. Neutralize letter-spacing in RTL (connected Arabic script must not break) */
-[dir="rtl"],
-[dir="rtl"] *,
-[lang="fa"],
-[lang="fa"] *,
-[lang="ps"],
-[lang="ps"] * {
-  letter-spacing: 0;
-}
-
-[dir="rtl"] [class*="tracking-"],
-[lang="fa"] [class*="tracking-"],
-[lang="ps"] [class*="tracking-"] {
+/* Neutralize negative tracking that breaks connected Arabic/Persian/Pashto script ligatures */
+:is([dir="rtl"], [lang="fa"], [lang="ps"], .rtl-text) :is(.tracking-tighter, .tracking-tight, [class*="tracking-[-"]):not([dir="ltr"]):not([lang="en"]) {
   letter-spacing: 0 !important;
 }
 
-/* 4. Headings & Titles in RTL */
-[dir="rtl"] h1,
-[dir="rtl"] h2,
-[dir="rtl"] h3,
-[lang="fa"] h1,
-[lang="fa"] h2,
-[lang="fa"] h3,
-[lang="ps"] h1,
-[lang="ps"] h2,
-[lang="ps"] h3,
-[dir="rtl"] [data-slot="card-title"],
-[lang="fa"] [data-slot="card-title"],
-[lang="ps"] [data-slot="card-title"] {
-  font-family: var(--font-sans-rtl) !important;
-  font-weight: 700;
-  line-height: 1.45 !important;
+/* Ensure default Arabic/Persian/Pashto text does not inherit negative letter-spacing */
+:is([dir="rtl"], [lang="fa"], [lang="ps"], .rtl-text) :is(p, span, a, h1, h2, h3, h4, h5, h6, button, label, input, textarea):not([dir="ltr"]):not([lang="en"]):not(.font-mono):not([class*="tracking-wid"]):not([class*="tracking-exp"]) {
+  letter-spacing: normal;
 }
 
-[dir="rtl"] h4,
-[dir="rtl"] h5,
-[dir="rtl"] h6,
-[lang="fa"] h4,
-[lang="fa"] h5,
-[lang="fa"] h6,
-[lang="ps"] h4,
-[lang="ps"] h5,
-[lang="ps"] h6 {
-  font-family: var(--font-sans-rtl) !important;
-  font-weight: 600;
-  line-height: 1.5 !important;
-}
-
-/* Subtitles, Card descriptions, Excerpts */
-[dir="rtl"] [data-slot="card-description"],
-[lang="fa"] [data-slot="card-description"],
-[lang="ps"] [data-slot="card-description"],
-[dir="rtl"] .line-clamp-2,
-[dir="rtl"] .line-clamp-3,
-[lang="fa"] .line-clamp-2,
-[lang="fa"] .line-clamp-3,
-[lang="ps"] .line-clamp-2,
-[lang="ps"] .line-clamp-3 {
-  font-family: var(--font-sans-rtl);
-  line-height: 1.75;
-}
-
-/* 5. Navigation, Menu Items, Dropdowns */
-[dir="rtl"] nav,
-[dir="rtl"] nav a,
-[dir="rtl"] nav button,
-[lang="fa"] nav,
-[lang="fa"] nav a,
-[lang="fa"] nav button,
-[lang="ps"] nav,
-[lang="ps"] nav a,
-[lang="ps"] nav button,
-[dir="rtl"] [data-slot="dropdown-menu-item"],
-[lang="fa"] [data-slot="dropdown-menu-item"],
-[lang="ps"] [data-slot="dropdown-menu-item"],
-[dir="rtl"] [data-slot="dropdown-menu-label"],
-[lang="fa"] [data-slot="dropdown-menu-label"],
-[lang="ps"] [data-slot="dropdown-menu-label"],
-[dir="rtl"] [data-slot="navigation-menu-item"],
-[lang="fa"] [data-slot="navigation-menu-item"],
-[lang="ps"] [data-slot="navigation-menu-item"] {
-  font-family: var(--font-sans-rtl) !important;
-  font-weight: 500;
-  line-height: 1.5;
-}
-
-/* 6. Buttons & Interactive Controls */
-[dir="rtl"] button,
-[dir="rtl"] [role="button"],
-[dir="rtl"] [data-slot="button"],
-[lang="fa"] button,
-[lang="fa"] [role="button"],
-[lang="fa"] [data-slot="button"],
-[lang="ps"] button,
-[lang="ps"] [role="button"],
-[lang="ps"] [data-slot="button"] {
-  font-family: var(--font-sans-rtl) !important;
-  font-weight: 500;
-  line-height: 1.5;
-}
-
-/* 7. Forms, Inputs, Textareas, Selects & Labels */
-[dir="rtl"] input,
-[dir="rtl"] textarea,
-[dir="rtl"] select,
-[dir="rtl"] optgroup,
-[dir="rtl"] label,
-[dir="rtl"] [data-slot="label"],
-[lang="fa"] input,
-[lang="fa"] textarea,
-[lang="fa"] select,
-[lang="fa"] optgroup,
-[lang="fa"] label,
-[lang="fa"] [data-slot="label"],
-[lang="ps"] input,
-[lang="ps"] textarea,
-[lang="ps"] select,
-[lang="ps"] optgroup,
-[lang="ps"] label,
-[lang="ps"] [data-slot="label"] {
-  font-family: var(--font-sans-rtl) !important;
-  line-height: 1.6;
-}
-
-[dir="rtl"] input::placeholder,
-[dir="rtl"] textarea::placeholder,
-[lang="fa"] input::placeholder,
-[lang="fa"] textarea::placeholder,
-[lang="ps"] input::placeholder,
-[lang="ps"] textarea::placeholder {
-  font-family: var(--font-sans-rtl);
-  font-weight: 400;
-}
-
-/* 8. Badges, Chips, Tags, Small UI indicators */
-[dir="rtl"] [data-slot="badge"],
-[lang="fa"] [data-slot="badge"],
-[lang="ps"] [data-slot="badge"],
-[dir="rtl"] .badge,
-[lang="fa"] .badge,
-[lang="ps"] .badge {
-  font-family: var(--font-sans-rtl) !important;
-  font-weight: 500;
-  line-height: 1.45;
-}
-
-/* 9. Tables */
-[dir="rtl"] table,
-[dir="rtl"] th,
-[dir="rtl"] td,
-[lang="fa"] table,
-[lang="fa"] th,
-[lang="fa"] td,
-[lang="ps"] table,
-[lang="ps"] th,
-[lang="ps"] td {
-  font-family: var(--font-sans-rtl) !important;
-}
-
-[dir="rtl"] th,
-[lang="fa"] th,
-[lang="ps"] th {
-  font-weight: 600;
-  text-align: start;
-}
-
-[dir="rtl"] td,
-[lang="fa"] td,
-[lang="ps"] td {
-  font-weight: 400;
-  line-height: 1.65;
-  text-align: start;
-}
-
-/* 10. Prevent line-height clipping on Arabic diacritics and dots */
-[dir="rtl"] .leading-none,
-[lang="fa"] .leading-none,
-[lang="ps"] .leading-none {
+/* Prevent clipping of Persian (پ, چ, ژ) & Pashto (ښ, ږ, څ, ځ, ړ, ډ, ڼ) dots and marks */
+:is([dir="rtl"], [lang="fa"], [lang="ps"], .rtl-text) .leading-none:not([dir="ltr"]):not([lang="en"]) {
   line-height: 1.4 !important;
 }
 
-[dir="rtl"] .leading-tight,
-[lang="fa"] .leading-tight,
-[lang="ps"] .leading-tight {
+:is([dir="rtl"], [lang="fa"], [lang="ps"], .rtl-text) .leading-tight:not([dir="ltr"]):not([lang="en"]) {
   line-height: 1.45 !important;
 }
 
-[dir="rtl"] .leading-snug,
-[lang="fa"] .leading-snug,
-[lang="ps"] .leading-snug {
+:is([dir="rtl"], [lang="fa"], [lang="ps"], .rtl-text) .leading-snug:not([dir="ltr"]):not([lang="en"]) {
   line-height: 1.55 !important;
+}
+
+/* Preserve monospace font stack on code, kbd, pre, and .font-mono elements in RTL mode */
+:is([dir="rtl"], [lang="fa"], [lang="ps"], .rtl-text) :is(code, kbd, pre, samp, .font-mono, [class*="font-mono"]) {
+  font-family: var(--font-mono) !important;
 }
 
 /* ── Premium utilities ─────────────────────────────────────── */

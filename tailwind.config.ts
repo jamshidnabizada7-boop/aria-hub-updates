@@ -13,7 +13,7 @@ const config: Config = {
   theme: {
   	extend: {
   		fontFamily: {
-  			sans: ['var(--font-sans)', 'sans-serif'],
+  			sans: ['var(--font-family-sans)', 'sans-serif'],
   			vazirmatn: ['var(--font-vazirmatn)', 'sans-serif'],
   			mono: ['var(--font-geist-mono)', 'monospace'],
   		},
