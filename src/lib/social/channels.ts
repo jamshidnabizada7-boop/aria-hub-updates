@@ -359,10 +359,13 @@ async function publishLinkedIn(creds: Record<string, unknown>, input: PublishInp
 // risks number bans. Use a Channel instead; share the channel link anywhere.
 async function publishWhatsApp(creds: Record<string, unknown>, input: PublishInput): Promise<PublishResult> {
   const accessToken = String(creds.accessToken || '');
+  const phoneNumberId = String(creds.phoneNumberId || '');
   const channelId = String(creds.channelId || '');
-  if (!accessToken || !channelId) return { ok: false, error: 'whatsapp: missing accessToken/channelId' };
+  if (!accessToken || !phoneNumberId || !channelId) return { ok: false, error: 'whatsapp: missing accessToken/phoneNumberId/channelId' };
   try {
-    const text = input.link ? `${input.caption}\n\n🔗 ${input.link}` : input.caption;
+    const text = input.link ? `${input.caption}
+
+🔗 ${input.link}` : input.caption;
     const body: Record<string, unknown> = {
       messaging_product: 'whatsapp',
       to: channelId,
@@ -371,7 +374,7 @@ async function publishWhatsApp(creds: Record<string, unknown>, input: PublishInp
         ? { image: { link: input.imageUrl, caption: text.slice(0, 1000) } }
         : { text: { preview_url: true, body: text.slice(0, 4000) } }),
     };
-    const r = await safeFetch(`https://graph.facebook.com/v21.0/${encodeURIComponent(channelId)}/messages`, {
+    const r = await safeFetch(`https://graph.facebook.com/v21.0/${encodeURIComponent(phoneNumberId)}/messages`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -383,7 +386,7 @@ async function publishWhatsApp(creds: Record<string, unknown>, input: PublishInp
     }
     const cls = classifyGraph(r.json, r.status);
     const hint = r.text.includes('does not exist')
-      ? ' (hint: channelId must be the API Channel ID owned by your WABA - get it via GET /<WABA_ID>/channel_ids with a system-user token that has whatsapp_business_messaging; the whatsapp.com/channel/ link id will NOT work)'
+      ? ' (hint: phoneNumberId = your WhatsApp phone number ID from Meta Business; channelId = the API channel ID — the whatsapp.com/channel/ link id will NOT work)'
       : '';
     return { ok: false, error: `whatsapp: ${r.status} ${r.text.slice(0, 140)}${hint}`, ...cls };
   } catch (e) {

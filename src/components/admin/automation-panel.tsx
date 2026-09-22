@@ -56,7 +56,7 @@ const PLATFORM_META: Record<string, { icon: React.ComponentType<{ className?: st
   instagram: { icon: Instagram, credFields: [{ key: 'igUserId', label: 'Instagram business user ID' }, { key: 'accessToken', label: 'Access token' }] },
   x: { icon: XIcon, credFields: [{ key: 'accessToken', label: 'OAuth 2.0 access token' }] },
   linkedin: { icon: Linkedin, credFields: [{ key: 'accessToken', label: 'LinkedIn access token' }, { key: 'authorUrn', label: 'Author URN (urn:li:person:… / organization)' }] },
-  whatsapp: { icon: MessageCircle, credFields: [{ key: 'accessToken', label: 'WhatsApp access token' }, { key: 'channelId', label: 'WhatsApp Channel ID' }] },
+  whatsapp: { icon: MessageCircle, credFields: [{ key: 'accessToken', label: 'WhatsApp system-user access token' }, { key: 'phoneNumberId', label: 'Phone Number ID (Meta Business)' }, { key: 'channelId', label: 'Channel ID' }] },
 };
 
 const ALL_TIMES = ['07:00', '08:00', '09:00', '12:00', '12:30', '13:00', '17:00', '19:00', '20:00', '21:00'];
