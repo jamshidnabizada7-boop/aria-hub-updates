@@ -7,13 +7,16 @@ const config: Config = {
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/components/*.{js,ts,jsx,tsx}",
-    "./src/scenes/**/*.{js,ts,jsx,tsx}",
-    "./src/Root.tsx",
+    "./src/**/*.{js,ts,jsx,tsx,mdx}",
     "./remotion/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
   	extend: {
+  		fontFamily: {
+  			sans: ['var(--font-sans)', 'sans-serif'],
+  			vazirmatn: ['var(--font-vazirmatn)', 'sans-serif'],
+  			mono: ['var(--font-geist-mono)', 'monospace'],
+  		},
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',

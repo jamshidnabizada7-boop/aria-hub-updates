@@ -22,5 +22,12 @@ export function LangSync({ lang, languages }: { lang: string; languages: Languag
     if (lang !== current) setLang(lang);
   }, [lang, current, setLang]);
 
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = lang;
+      document.documentElement.dir = lang === 'en' ? 'ltr' : 'rtl';
+    }
+  }, [lang]);
+
   return null;
 }
