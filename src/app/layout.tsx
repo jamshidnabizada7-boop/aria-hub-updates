@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { isLang } from "@/lib/i18n-config";
 import { Providers } from "@/components/providers";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { Analytics } from "@vercel/analytics/react";
+import { Analytics } from "@vercel/analytics/next";
 
 const LANGS = ["en", "fa", "ps"];
 const DEFAULT_LANG = "fa";
