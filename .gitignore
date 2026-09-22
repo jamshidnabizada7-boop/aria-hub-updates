@@ -162,6 +162,8 @@ AUDIT-REPORT.md
 /scripts/probe-*.mjs
 /scripts/verify-samples.mjs
 /scripts/verify-all-complete.mjs
+/scripts/run-pg-daemon.cjs
+
 
 .vercel
 .env*

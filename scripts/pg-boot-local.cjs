@@ -29,7 +29,7 @@ const logLine = (...a) => {
 
 function listening() {
   try {
-    return /:5433\s/.test(execSync('netstat -ano | findstr ":5433" | findstr LISTENING').toString());
+    return /127\.0\.0\.1:5433\s/.test(execSync('netstat -ano | findstr ":5433" | findstr LISTENING').toString());
   } catch {
     return false;
   }
