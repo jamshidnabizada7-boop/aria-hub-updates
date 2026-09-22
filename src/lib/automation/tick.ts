@@ -195,7 +195,7 @@ export async function runTick(baseUrl = 'http://127.0.0.1:3000', opts?: { skipIm
     //    when it fired during boot compiles). Publish still runs without image.
     try {
       let rendered = 0;
-      if (freeMb() >= MIN_FREE_MB_RENDER) {
+      if (process.env.VERCEL || freeMb() >= MIN_FREE_MB_RENDER) {
         const r = await renderDueQueue(baseUrl);
         rendered = r.rendered;
       }

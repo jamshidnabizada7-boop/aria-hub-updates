@@ -367,7 +367,7 @@ export async function renderOneQueueRow(id: string, baseUrl = 'http://127.0.0.1:
   if (!row) return false;
   // Re-check memory right before launching chrome — a compile wave may have
   // started between the tick's gate and this call.
-  if (Math.floor(os.freemem() / 1024 / 1024) < 900) return false;
+  if (!process.env.VERCEL && Math.floor(os.freemem() / 1024 / 1024) < 900) return false;
   await db.socialPostQueue.update({ where: { id }, data: { status: 'rendering', claimedAt: new Date() } });
   const img = await renderQueueImage(baseUrl, row.contentJson as CanvasProps);
   await db.socialPostQueue.update({
