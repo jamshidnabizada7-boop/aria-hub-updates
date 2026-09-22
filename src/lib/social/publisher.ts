@@ -307,7 +307,8 @@ async function renderQueueImage(baseUrl: string, props: CanvasProps): Promise<{ 
     }
     await writeFile(join(PUBLIC_DIR, file), buf);
     return { file, publicUrl: `${PUBLIC_BASE}/${file}`, localPath: join(PUBLIC_DIR, file) };
-  } catch {
+  } catch (e) {
+    console.error('[render] failed:', e instanceof Error ? e.message : String(e));
     return null;
   } finally {
     try { await browser?.close(); } catch { /* noop */ }
