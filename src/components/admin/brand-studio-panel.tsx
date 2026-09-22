@@ -146,6 +146,11 @@ export function BrandStudioPanel() {
   const fetchSeq = useRef(0);
   const [themeId, setThemeId] = useState<StudioThemeId>('midnight');
   const [layout, setLayout] = useState<StudioLayout>('classic');
+  const [visualUrl, setVisualUrl] = useState<string | null>(null);
+  const [visuals, setVisuals] = useState<{ id: string; label: string; category: string; url: string }[]>([]);
+  useEffect(() => {
+    fetch('/api/admin/studio/visuals').then((r) => (r.ok ? r.json() : null)).then((d) => setVisuals(d?.visuals ?? [])).catch(() => {});
+  }, []);
   const [overrides, setOverrides] = useState<Record<string, Record<string, unknown>>>({});
   const [savingDesign, setSavingDesign] = useState(false);
   const [publishingDesign, setPublishingDesign] = useState(false);
@@ -376,7 +381,7 @@ export function BrandStudioPanel() {
         size,
         overrides: activeOverrides,
       },
-      contentJson: socialPropsFor(activePost, lang, size, qrDataUrl, loc, tr, { themeId, layout, overrides: activeOverrides }),
+      contentJson: socialPropsFor(activePost, lang, size, qrDataUrl, loc, tr, { themeId, layout, overrides: activeOverrides, visualUrl }),
       captionJson: { [lang]: activeCaption },
     };
   }, [activePost, themeId, layout, size, activeOverrides, lang, qrDataUrl, loc, tr, activeCaption]);
@@ -542,7 +547,7 @@ export function BrandStudioPanel() {
       if (activeOverrides.deadlineDate) data.deadline = activeOverrides.deadlineDate as string;
       return <OpportunityPoster data={data} lang={lang} size={size} themeId={themeId} qrDataUrl={qrDataUrl} />;
     }
-    return <SocialCanvas {...socialPropsFor(activePost, lang, size, qrDataUrl, loc, tr, { themeId, layout, overrides: activeOverrides })} />;
+    return <SocialCanvas {...socialPropsFor(activePost, lang, size, qrDataUrl, loc, tr, { themeId, layout, overrides: activeOverrides, visualUrl })} />;
   }, [activePost, lang, size, qrDataUrl, loc, tr, themeId, layout, activeOverrides]);
 
   return (
@@ -824,6 +829,38 @@ export function BrandStudioPanel() {
                     Set as default
                   </Button>
                 </div>
+
+                {/* studio visuals — statues, scientists, landmarks… layered behind the poster */}
+                {visuals.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] font-semibold text-muted-foreground">Visual</span>
+                    <button
+                      type="button"
+                      onClick={() => setVisualUrl(null)}
+                      aria-pressed={visualUrl === null}
+                      className={cn(
+                        'rounded-lg px-2 py-1 text-[11px] font-semibold transition-colors',
+                        visualUrl === null ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground',
+                      )}
+                    >
+                      None
+                    </button>
+                    {visuals.map((v) => (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => setVisualUrl(visualUrl === v.url ? null : v.url)}
+                        aria-pressed={visualUrl === v.url}
+                        title={`${v.label} (${v.category})`}
+                        className={cn(
+                          'h-9 w-9 overflow-hidden rounded-lg border-2 bg-cover bg-center transition-transform',
+                          visualUrl === v.url ? 'border-primary scale-110' : 'border-border hover:scale-105',
+                        )}
+                        style={{ backgroundImage: `url(${v.url})` }}
+                      />
+                    ))}
+                  </div>
+                )}
 
                 {/* content editing */}
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -1241,6 +1278,7 @@ function socialPropsFor(
     themeId: StudioThemeId;
     layout: StudioLayout;
     overrides: Record<string, unknown>;
+    visualUrl?: string | null;
   },
 ): Parameters<typeof SocialCanvas>[0] {
   const o = design?.overrides ?? {};
@@ -1250,6 +1288,7 @@ function socialPropsFor(
   const base = {
     template: post.template, lang, size, qrDataUrl,
     themeId: design?.themeId, layout: design?.layout, title,
+    visualUrl: design?.visualUrl ?? null,
   };
   switch (post.template) {
     case 'deadline':

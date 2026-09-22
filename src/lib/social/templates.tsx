@@ -332,14 +332,14 @@ function bigGlyph(icon: ReactNode, px: number, color: string, opacity = 1): Reac
 
 // ── Split panel: solid accent side column + content column ──────────────────
 
-function SplitShell({ lang, size, theme, kicker, kickerIcon, cta, tagline, qrDataUrl, children }: ShellProps) {
+function SplitShell({ visualUrl, lang, size, theme, kicker, kickerIcon, cta, tagline, qrDataUrl, children }: ShellProps) {
   const rtl = lang !== 'en';
   const story = size === 'story';
   const portrait = size === 'portrait';
   const panelW = story ? 316 : 282;
   const pad = story ? 84 : portrait ? 70 : 58;
   return (
-    <ShellRoot lang={lang} size={size} theme={theme} style={{ display: 'flex', flexDirection: 'row' }}>
+    <ShellRoot visualUrl={visualUrl} lang={lang} size={size} theme={theme} style={{ display: 'flex', flexDirection: 'row' }}>
       {/* accent side panel — flips sides automatically under dir=rtl */}
       <div
         style={{
@@ -400,7 +400,7 @@ function SplitShell({ lang, size, theme, kicker, kickerIcon, cta, tagline, qrDat
 
 // ── Framed: double-line frame, corner ticks, centered composition ───────────
 
-function FrameShell({ lang, size, theme, kicker, kickerIcon, cta, tagline, qrDataUrl, children }: ShellProps) {
+function FrameShell({ visualUrl, lang, size, theme, kicker, kickerIcon, cta, tagline, qrDataUrl, children }: ShellProps) {
   const rtl = lang !== 'en';
   const story = size === 'story';
   const margin = story ? 84 : size === 'portrait' ? 72 : 62;
@@ -414,7 +414,7 @@ function FrameShell({ lang, size, theme, kicker, kickerIcon, cta, tagline, qrDat
     return <div key={pos} style={base} />;
   };
   return (
-    <ShellRoot lang={lang} size={size} theme={theme}>
+    <ShellRoot visualUrl={visualUrl} lang={lang} size={size} theme={theme}>
       <Dots theme={theme} opacity={0.15} />
       <div style={{ position: 'absolute', inset: margin, border: `2.5px solid ${theme.accentLine}`, borderRadius: 8, pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', inset: margin + 14, border: `1px solid ${theme.accentFaint}`, borderRadius: 3, pointerEvents: 'none' }} />
@@ -447,13 +447,13 @@ function FrameShell({ lang, size, theme, kicker, kickerIcon, cta, tagline, qrDat
 
 // ── Big-type stack: Swiss poster, oversized glyph, rule lines ────────────────
 
-function StackShell({ lang, size, theme, kicker, kickerIcon, cta, tagline, qrDataUrl, children }: ShellProps) {
+function StackShell({ visualUrl, lang, size, theme, kicker, kickerIcon, cta, tagline, qrDataUrl, children }: ShellProps) {
   const rtl = lang !== 'en';
   const story = size === 'story';
   const portrait = size === 'portrait';
   const pad = story ? 96 : portrait ? 84 : 72;
   return (
-    <ShellRoot lang={lang} size={size} theme={theme}>
+    <ShellRoot visualUrl={visualUrl} lang={lang} size={size} theme={theme}>
       <div style={{ position: 'absolute', top: -190, insetInlineEnd: -260, width: 560, height: 330, background: theme.accentFaint, transform: 'rotate(-18deg)', borderRadius: 44 }} />
       <div style={{ position: 'absolute', top: -110, insetInlineEnd: -310, width: 560, height: 54, background: theme.accentSoft, transform: 'rotate(-18deg)', borderRadius: 999 }} />
       <div style={{ position: 'absolute', bottom: story ? 320 : 160, insetInlineEnd: -70, opacity: 0.55, pointerEvents: 'none' }}>
@@ -495,13 +495,13 @@ function StackShell({ lang, size, theme, kicker, kickerIcon, cta, tagline, qrDat
 
 // ── Glass card: floating panel with overlapping badge ────────────────────────
 
-function GlassShell({ lang, size, theme, kicker, kickerIcon, cta, tagline, qrDataUrl, children }: ShellProps) {
+function GlassShell({ visualUrl, lang, size, theme, kicker, kickerIcon, cta, tagline, qrDataUrl, children }: ShellProps) {
   const rtl = lang !== 'en';
   const story = size === 'story';
   const portrait = size === 'portrait';
   const pad = story ? 88 : portrait ? 76 : 64;
   return (
-    <ShellRoot lang={lang} size={size} theme={theme}>
+    <ShellRoot visualUrl={visualUrl} lang={lang} size={size} theme={theme}>
       <div style={{ position: 'absolute', top: -200, insetInlineEnd: -170, width: 560, height: 560, borderRadius: '50%', background: `radial-gradient(circle, ${theme.glowA} 0%, rgba(0,0,0,0) 68%)` }} />
       <div style={{ position: 'absolute', bottom: -240, insetInlineStart: -190, width: 660, height: 660, borderRadius: '50%', background: `radial-gradient(circle, ${theme.glowB} 0%, rgba(0,0,0,0) 70%)` }} />
       <Dots theme={theme} opacity={0.24} />
@@ -557,14 +557,14 @@ function GlassShell({ lang, size, theme, kicker, kickerIcon, cta, tagline, qrDat
 
 // ── Top banner: solid header band + flush CTA strip ──────────────────────────
 
-function BannerShell({ lang, size, theme, kicker, kickerIcon, cta, tagline, qrDataUrl, children }: ShellProps) {
+function BannerShell({ visualUrl, lang, size, theme, kicker, kickerIcon, cta, tagline, qrDataUrl, children }: ShellProps) {
   const rtl = lang !== 'en';
   const story = size === 'story';
   const portrait = size === 'portrait';
   const pad = story ? 96 : portrait ? 84 : 72;
   const band = story ? 470 : portrait ? 384 : 330;
   return (
-    <ShellRoot lang={lang} size={size} theme={theme} style={{ display: 'flex', flexDirection: 'column' }}>
+    <ShellRoot visualUrl={visualUrl} lang={lang} size={size} theme={theme} style={{ display: 'flex', flexDirection: 'column' }}>
       <div
         style={{
           height: band, flexShrink: 0, position: 'relative', overflow: 'hidden',
@@ -614,7 +614,7 @@ function BannerShell({ lang, size, theme, kicker, kickerIcon, cta, tagline, qrDa
 
 // ── Ticket stub: perforated card with QR stub ────────────────────────────────
 
-function TicketShell({ lang, size, theme, kicker, kickerIcon, cta, tagline, qrDataUrl, children }: ShellProps) {
+function TicketShell({ visualUrl, lang, size, theme, kicker, kickerIcon, cta, tagline, qrDataUrl, children }: ShellProps) {
   const rtl = lang !== 'en';
   const story = size === 'story';
   const inset = story ? 76 : 56;
@@ -631,7 +631,7 @@ function TicketShell({ lang, size, theme, kicker, kickerIcon, cta, tagline, qrDa
     />
   );
   return (
-    <ShellRoot lang={lang} size={size} theme={theme}>
+    <ShellRoot visualUrl={visualUrl} lang={lang} size={size} theme={theme}>
       <Dots theme={theme} opacity={0.2} />
       <Watermark portrait={size === 'portrait'} theme={theme} />
       <div
@@ -680,7 +680,7 @@ function TicketShell({ lang, size, theme, kicker, kickerIcon, cta, tagline, qrDa
 // spheres, double-chevron brand mark, white footer strip). Colors stay on the
 // StudioTheme tokens — pair with the `crimson` theme for the classic look.
 
-function CinemaShell({ lang, size, theme, kicker, kickerIcon, cta, tagline, qrDataUrl, children }: ShellProps) {
+function CinemaShell({ visualUrl, lang, size, theme, kicker, kickerIcon, cta, tagline, qrDataUrl, children }: ShellProps) {
   const rtl = lang !== 'en';
   const story = size === 'story';
   const portrait = size === 'portrait';
@@ -707,7 +707,7 @@ function CinemaShell({ lang, size, theme, kicker, kickerIcon, cta, tagline, qrDa
   );
   return (
     <ShellRoot
-      lang={lang} size={size} theme={theme}
+      visualUrl={visualUrl} lang={lang} size={size} theme={theme}
       style={{
         background: `radial-gradient(ellipse 130% 92% at 50% 34%, ${theme.bgMid} 0%, ${theme.bgTop} 52%, ${theme.bgBottom} 100%)`,
       }}
