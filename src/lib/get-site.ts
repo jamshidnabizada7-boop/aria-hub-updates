@@ -24,6 +24,7 @@ const NEWS_SELECT = {
 
 export const getSiteData = cache(async (): Promise<SiteData> => {
   try {
+    // ── Batch 1: core site config ─────────────────────────────────────────
     const [
       settings,
       languages,
@@ -33,6 +34,19 @@ export const getSiteData = cache(async (): Promise<SiteData> => {
       services,
       visas,
       opportunityCategories,
+    ] = await Promise.all([
+      db.siteSetting.findFirst().catch(() => null),
+      db.language.findMany({ where: { enabled: true }, orderBy: { order: 'asc' } }).catch(() => []),
+      db.section.findMany({ orderBy: { order: 'asc' } }).catch(() => []),
+      db.menuItem.findMany({ where: { visible: true }, orderBy: { order: 'asc' } }).catch(() => []),
+      db.serviceCategory.findMany({ orderBy: { order: 'asc' } }).catch(() => []),
+      db.service.findMany({ where: { status: 'published' }, orderBy: { sort: 'asc' }, include: { category: true } }).catch(() => []),
+      db.visa.findMany({ where: { status: 'published' }, orderBy: { sort: 'asc' } }).catch(() => []),
+      db.opportunityCategory.findMany({ orderBy: { order: 'asc' } }).catch(() => []),
+    ]);
+
+    // ── Batch 2: content tables ──────────────────────────────────────────
+    const [
       opportunities,
       galleryItems,
       paymentMethods,
@@ -43,23 +57,7 @@ export const getSiteData = cache(async (): Promise<SiteData> => {
       news,
       socialLinks,
       footerLinks,
-      departments,
-      branches,
-      processSteps,
-      pricingPackages,
-      teamMembers,
-      comparisonRows,
-      ctaBanners,
-      whyFeatures,
     ] = await Promise.all([
-      db.siteSetting.findFirst().catch(() => null),
-      db.language.findMany({ where: { enabled: true }, orderBy: { order: 'asc' } }).catch(() => []),
-      db.section.findMany({ orderBy: { order: 'asc' } }).catch(() => []),
-      db.menuItem.findMany({ where: { visible: true }, orderBy: { order: 'asc' } }).catch(() => []),
-      db.serviceCategory.findMany({ orderBy: { order: 'asc' } }).catch(() => []),
-      db.service.findMany({ where: { status: 'published' }, orderBy: { sort: 'asc' }, include: { category: true } }).catch(() => []),
-      db.visa.findMany({ where: { status: 'published' }, orderBy: { sort: 'asc' } }).catch(() => []),
-      db.opportunityCategory.findMany({ orderBy: { order: 'asc' } }).catch(() => []),
       db.opportunity.findMany({ where: { status: 'published' }, orderBy: [{ sort: 'asc' }, { createdAt: 'desc' }], take: 60, select: OPP_SELECT }).catch(() => []),
       db.galleryItem.findMany({ orderBy: { order: 'asc' } }).catch(() => []),
       db.paymentMethod.findMany({ where: { status: 'active' }, orderBy: { order: 'asc' } }).catch(() => []),
@@ -70,6 +68,19 @@ export const getSiteData = cache(async (): Promise<SiteData> => {
       db.news.findMany({ where: { status: 'published' }, orderBy: { publishedAt: 'desc' }, take: 6, select: NEWS_SELECT }).catch(() => []),
       db.socialLink.findMany({ where: { enabled: true }, orderBy: { order: 'asc' } }).catch(() => []),
       db.footerLink.findMany({ orderBy: { order: 'asc' } }).catch(() => []),
+    ]);
+
+    // ── Batch 3: secondary / smaller tables ──────────────────────────────
+    const [
+      departments,
+      branches,
+      processSteps,
+      pricingPackages,
+      teamMembers,
+      comparisonRows,
+      ctaBanners,
+      whyFeatures,
+    ] = await Promise.all([
       db.department.findMany({ orderBy: { order: 'asc' } }).catch(() => []),
       db.branch.findMany({ orderBy: { order: 'asc' } }).catch(() => []),
       db.processStep.findMany({ where: { status: 'published' }, orderBy: { order: 'asc' } }).catch(() => []),
