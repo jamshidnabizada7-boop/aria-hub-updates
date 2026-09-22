@@ -272,9 +272,20 @@ const LINKEDIN_HEADERS = (accessToken: string): Record<string, string> => ({
   'LinkedIn-Version': '202411',
 });
 
+/** Normalize whatever the admin pasted into a proper LinkedIn URN.
+ * Accepts: full URN, /in/slug profile URL, bare person slug, bare numeric org id. */
+function normalizeLinkedInUrn(raw: string): string {
+  const v = raw.trim();
+  if (v.startsWith('urn:li:')) return v;
+  const inMatch = v.match(/linkedin\.com\/(?:in|company)\/([^/?#]+)/i);
+  if (inMatch) return /company/i.test(v) ? 'urn:li:organization:' + inMatch[1] : 'urn:li:person:' + inMatch[1];
+  if (/^\d+$/.test(v)) return 'urn:li:organization:' + v;
+  return 'urn:li:person:' + v;
+}
+
 async function publishLinkedIn(creds: Record<string, unknown>, input: PublishInput): Promise<PublishResult> {
   const accessToken = String(creds.accessToken || '');
-  const authorUrn = String(creds.authorUrn || '');
+  const authorUrn = normalizeLinkedInUrn(String(creds.authorUrn || ''));
   if (!accessToken || !authorUrn) return { ok: false, error: 'linkedin: missing accessToken/authorUrn' };
   try {
     let mediaUrn: string | null = null;
@@ -371,7 +382,10 @@ async function publishWhatsApp(creds: Record<string, unknown>, input: PublishInp
       return { ok: true, id };
     }
     const cls = classifyGraph(r.json, r.status);
-    return { ok: false, error: `whatsapp: ${r.status} ${r.text.slice(0, 160)}`, ...cls };
+    const hint = r.text.includes('does not exist')
+      ? ' (hint: channelId must be the API Channel ID owned by your WABA - get it via GET /<WABA_ID>/channel_ids with a system-user token that has whatsapp_business_messaging; the whatsapp.com/channel/ link id will NOT work)'
+      : '';
+    return { ok: false, error: `whatsapp: ${r.status} ${r.text.slice(0, 140)}${hint}`, ...cls };
   } catch (e) {
     return { ok: false, error: `whatsapp: ${errOf(e)}` };
   }
