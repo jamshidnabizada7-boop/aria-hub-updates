@@ -54,9 +54,9 @@ export async function GET() {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>ARIA HUB — Latest Opportunities for Afghans</title>
+    <title>ARIA HUB — Latest Opportunities in Afghanistan</title>
     <link>${BASE_URL}</link>
-    <description>Jobs, scholarships, internships and opportunities for Afghans — gathered from trusted sources, summarized and translated daily (English / فارسی / پښتو).</description>
+    <description>Jobs, scholarships, internships and opportunities in Afghanistan — gathered from trusted sources, summarized and translated daily (English / فارسی / پښتو).</description>
     <language>en</language>
     <managingEditor>${SITE_EMAIL} (ARIA HUB)</managingEditor>
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>

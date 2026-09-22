@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
 import { getLocalizedContent } from '@/lib/i18n-content';
 import { ABOUT_DOC, pickTril } from '@/lib/static-page-content';
@@ -21,11 +22,15 @@ export default async function AboutPage({
 
   try {
     const page = await db.page.findUnique({ where: { slug: 'about' } });
-    if (page && page.status === 'published') {
+    if (page) {
+      if (page.status !== 'published') {
+        notFound();
+      }
       title = getLocalizedContent(page.title, page.titleI18n as Record<string, string> | null, lang) || title;
       dbHtml = getLocalizedContent(page.content, page.contentI18n as Record<string, string> | null, lang);
     }
-  } catch {
+  } catch (e: any) {
+    if (e?.digest?.includes('NEXT_NOT_FOUND')) throw e;
     // DB or table might not exist yet — built-in trilingual doc covers it.
   }
 

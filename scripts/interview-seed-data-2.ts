@@ -346,7 +346,7 @@ export const SEED_QUESTIONS_PART2: SeedQuestion[] = [
     },
     strongExample: {
       en: '\u201COur village received three inconsistent distributions from three agencies. I want to fix coordination from the inside — that\u2019s why I studied supply chains.\u201D',
-      fa: '\u00ABقریه ما سه توزیع ناهماهنگ از سه سازمان فارسیافت کرد. می‌خواهم هماهنگی را از درون اصلاح کنم — برای همین زنجیره تأمین خواندم.\u00BB',
+      fa: '\u00ABقریه ما سه توزیع ناهماهنگ از سه سازمان دریافت کرد. می‌خواهم هماهنگی را از درون اصلاح کنم — برای همین زنجیره تأمین خواندم.\u00BB',
       ps: '\u00ABزموږ کلي ته له درېو بنسټونو درې ناهمغږې وېشونه ورسېدل. غواړم همغږي له دننه سموم — ځکه مې پېرودنې زنځیر لوستی.\u00BB',
     },
     weakExample: {

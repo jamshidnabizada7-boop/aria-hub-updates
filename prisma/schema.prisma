@@ -78,8 +78,8 @@ model SiteSetting {
 model Language {
   id           String   @id @default(cuid())
   code         String   @unique // en, fa, ps
-  name         String // English, Dari, Pashto
-  nativeName   String // English, دری, پښتو
+  name         String // English, Persian, Pashto
+  nativeName   String // English, فارسی, پښتو
   direction    String   @default("ltr") // ltr | rtl
   enabled      Boolean  @default(true)
   isDefault    Boolean  @default(false)
@@ -654,7 +654,7 @@ model OpportunitySubmission {
 }
 
 // ─── Monetization Orders (paid postings & promotions — Phase-2 revenue) ──────
-// Self-serve order funnel adapted to Afghan payment reality: buyer requests a
+// Self-serve order funnel adapted to Afghanistan payment reality: buyer requests a
 // product → pays via hawala/AfPay/hesabPay/bank/cash (or Payoneer/Wise for
 // internationals) → claims payment with a reference → admin verifies → the
 // platform auto-delivers (features the listing, schedules the sponsored slot).

@@ -109,8 +109,9 @@ export function Home({ data, lang, home }: { data: SiteData; lang: Lang; home: H
   const services = data.services.slice(0, 6);
   const testimonials = data.testimonials.slice(0, 2);
   // CMS gate: every DB-backed section below can be toggled from Admin → Sections.
-  // Absent row OR enabled=true both render (fail-open), only explicit enabled=false hides.
-  const on = (key: string) => data.sections.find((s) => s.key === key)?.enabled !== false;
+  // A section renders ONLY if it exists in the database AND enabled === true.
+  // If deleted or enabled === false, it is hidden immediately.
+  const on = (key: string) => Boolean(data.sections.find((s) => s.key === key)?.enabled);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -144,10 +145,11 @@ export function Home({ data, lang, home }: { data: SiteData; lang: Lang; home: H
 
       <main className="flex-1">
         {/* A — Focused, search-first hero with real counts */}
-        <Hero lang={lang} stats={home.stats} />
+        {on('hero') && <Hero lang={lang} stats={home.stats} />}
 
         {/* A2 — "How it works" guidance strip (fixes user confusion) */}
-        <section aria-labelledby="home-how" className="py-10 sm:py-16">
+        {on('process') && (
+          <section aria-labelledby="home-how" className="py-10 sm:py-16">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <Reveal>
             <div className="rounded-2xl border border-border/60 bg-card/50 p-5 backdrop-blur-sm sm:p-6">
@@ -189,18 +191,22 @@ export function Home({ data, lang, home }: { data: SiteData; lang: Lang; home: H
             </Reveal>
           </div>
         </section>
-
-        {/* B0 — Daily / weekly spotlight (homepage changes every day) */}
-        {(home.spotlight || home.weeklyScholarship) && (
-          <SpotlightBand lang={lang} daily={home.spotlight} weekly={home.weeklyScholarship} t={t} />
         )}
 
-        {/* B0.5 — Success story teaser (social proof + UGC funnel) */}
-        {home.featuredStory && <StoryTeaser lang={lang} story={home.featuredStory} t={t} />}
+        {/* Opportunities block: spotlight, stories, closing soon, categories, latest */}
+        {on('opportunities') && (
+          <>
+            {/* B0 — Daily / weekly spotlight (homepage changes every day) */}
+            {(home.spotlight || home.weeklyScholarship) && (
+              <SpotlightBand lang={lang} daily={home.spotlight} weekly={home.weeklyScholarship} t={t} />
+            )}
 
-        {/* B — Closing soon: deadline urgency strip (daily-visit driver) */}
-        {home.closingSoon.length > 0 && (
-          <section aria-labelledby="home-closing" className="py-10 sm:py-16">
+            {/* B0.5 — Success story teaser (social proof + UGC funnel) */}
+            {home.featuredStory && <StoryTeaser lang={lang} story={home.featuredStory} t={t} />}
+
+            {/* B — Closing soon: deadline urgency strip (daily-visit driver) */}
+            {home.closingSoon.length > 0 && (
+              <section aria-labelledby="home-closing" className="py-10 sm:py-16">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
               <Reveal>
               <div className="rounded-2xl border border-rose-500/25 bg-gradient-to-br from-rose-500/[0.07] via-card/60 to-amber-500/[0.07] p-5 sm:p-6">
@@ -406,8 +412,10 @@ export function Home({ data, lang, home }: { data: SiteData; lang: Lang; home: H
                 {t('empty.opportunities')}
               </div>
             )}
-          </div>
-        </section>
+            </div>
+          </section>
+          </>
+        )}
 
         {/* C2 — Impact counters (DB: Counter) */}
         {on('counters') && (
@@ -426,15 +434,17 @@ export function Home({ data, lang, home }: { data: SiteData; lang: Lang; home: H
         )}
 
         {/* D — Services strip (6 cards) */}
-        <ServicesSection
-          services={services}
-          heading={{
-            eyebrow: t('services.eyebrow'),
-            title: t('home.servicesTitle'),
-            subtitle: t('home.servicesSubtitle'),
-          }}
-          viewAllHref={`/${lang}/services`}
-        />
+        {on('services') && services.length > 0 && (
+          <ServicesSection
+            services={services}
+            heading={{
+              eyebrow: t('services.eyebrow'),
+              title: t('home.servicesTitle'),
+              subtitle: t('home.servicesSubtitle'),
+            }}
+            viewAllHref={`/${lang}/services`}
+          />
+        )}
 
         {/* D2 — Featured visas (DB: Visa) */}
         {on('visas') && data.visas.length > 0 && <VisasSection visas={data.visas} />}
@@ -443,38 +453,40 @@ export function Home({ data, lang, home }: { data: SiteData; lang: Lang; home: H
         {on('promote') && <PromoteSection />}
 
         {/* E — Trust + testimonials (compact band) */}
-        <section aria-label={t('home.trustBadge4')} className="border-y border-border/40 bg-card/30 py-16 sm:py-24">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <Reveal>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {TRUST_ITEMS.map(({ icon: Icon, key }) => (
-                <div
-                  key={key}
-                  className="flex items-center gap-3 rounded-xl border border-border/50 bg-card/60 px-4 py-3 backdrop-blur-sm"
-                >
-                  <span
-                    aria-hidden="true"
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-primary/15 to-chart-2/15 text-primary"
+        {on('testimonials') && (
+          <section aria-label={t('home.trustBadge4')} className="border-y border-border/40 bg-card/30 py-16 sm:py-24">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+              <Reveal>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {TRUST_ITEMS.map(({ icon: Icon, key }) => (
+                  <div
+                    key={key}
+                    className="flex items-center gap-3 rounded-xl border border-border/50 bg-card/60 px-4 py-3 backdrop-blur-sm"
                   >
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <span dir="auto" className="text-sm font-semibold leading-tight">
-                    {t(key)}
-                  </span>
-                </div>
-              ))}
-            </div>
-            </Reveal>
-
-            {testimonials.length > 0 && (
-              <div className="mx-auto mt-8 grid max-w-4xl gap-4 sm:grid-cols-2">
-                {testimonials.map((tm) => (
-                  <TestimonialCard key={tm.id} testimonial={tm} lang={lang} />
+                    <span
+                      aria-hidden="true"
+                      className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-primary/15 to-chart-2/15 text-primary"
+                    >
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <span dir="auto" className="text-sm font-semibold leading-tight">
+                      {t(key)}
+                    </span>
+                  </div>
                 ))}
               </div>
-            )}
-          </div>
-        </section>
+              </Reveal>
+
+              {testimonials.length > 0 && (
+                <div className="mx-auto mt-8 grid max-w-4xl gap-4 sm:grid-cols-2">
+                  {testimonials.map((tm) => (
+                    <TestimonialCard key={tm.id} testimonial={tm} lang={lang} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* E2 — Rate card (DB: PricingPackage) + accepted payment methods (DB: PaymentMethod) */}
         {on('pricing') && data.pricingPackages.length > 0 && <PricingSection packages={data.pricingPackages} />}
@@ -500,59 +512,63 @@ export function Home({ data, lang, home }: { data: SiteData; lang: Lang; home: H
         {on('whyChooseUs') && data.whyFeatures.length > 0 && <WhyChooseUsSection features={data.whyFeatures} />}
 
         {/* F — CTA + contact-lite */}
-        {data.ctaBanners.length > 0 ? (
-          <CtaBannerSection banners={data.ctaBanners} />
-        ) : (
-          <section className="py-16 sm:py-24">
-            <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
-              <Reveal>
-              <div className="rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-chart-2/10 p-8 text-center shadow-premium sm:p-12">
-                <h2 dir="auto" className="text-balance text-2xl font-bold tracking-tight sm:text-3xl">
-                  {t('home.heroTitle')} {t('home.heroHighlight')}?
-                </h2>
-                <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                  <Link
-                    href={`/${lang}/contact`}
-                    className="inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-chart-2 px-6 text-sm font-semibold text-primary-foreground shadow-float transition-opacity hover:opacity-90"
-                  >
-                    {t('contact.title')}
-                    <ArrowRight className="h-4 w-4 rtl-flip" aria-hidden="true" />
-                  </Link>
-                  <Link
-                    href={`/${lang}/contact`}
-                    className="inline-flex h-11 items-center rounded-xl border border-border bg-card/50 px-6 text-sm font-semibold transition-colors hover:bg-accent"
-                  >
-                    {t('home.advertise')}
-                  </Link>
+        {on('ctaBanner') && (
+          data.ctaBanners.length > 0 ? (
+            <CtaBannerSection banners={data.ctaBanners} />
+          ) : (
+            <section className="py-16 sm:py-24">
+              <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
+                <Reveal>
+                <div className="rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-chart-2/10 p-8 text-center shadow-premium sm:p-12">
+                  <h2 dir="auto" className="text-balance text-2xl font-bold tracking-tight sm:text-3xl">
+                    {t('home.heroTitle')} {t('home.heroHighlight')}?
+                  </h2>
+                  <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                    <Link
+                      href={`/${lang}/contact`}
+                      className="inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-chart-2 px-6 text-sm font-semibold text-primary-foreground shadow-float transition-opacity hover:opacity-90"
+                    >
+                      {t('contact.title')}
+                      <ArrowRight className="h-4 w-4 rtl-flip" aria-hidden="true" />
+                    </Link>
+                    <Link
+                      href={`/${lang}/contact`}
+                      className="inline-flex h-11 items-center rounded-xl border border-border bg-card/50 px-6 text-sm font-semibold transition-colors hover:bg-accent"
+                    >
+                      {t('home.advertise')}
+                    </Link>
+                  </div>
                 </div>
+                </Reveal>
               </div>
-              </Reveal>
-            </div>
-          </section>
+            </section>
+          )
         )}
 
         {/* Contact-lite: advertise + direct contact links */}
-        <div className="pb-12 text-center">
-          <p dir="auto" className="text-sm text-muted-foreground">
-            {t('home.advertiseSubtitle')}
-          </p>
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm font-medium">
-            <Link
-              href={`/${lang}/contact`}
-              className="inline-flex items-center gap-1.5 text-primary transition-colors hover:underline"
-            >
-              {t('contact.title')}
-              <ArrowRight className="h-3.5 w-3.5 rtl-flip" aria-hidden="true" />
-            </Link>
-            <span aria-hidden="true" className="text-border">|</span>
-            <Link
-              href={`/${lang}/contact`}
-              className="text-muted-foreground transition-colors hover:text-foreground hover:underline"
-            >
-              {t('home.advertise')}
-            </Link>
+        {on('contact') && (
+          <div id="contact" className="pb-12 text-center">
+            <p dir="auto" className="text-sm text-muted-foreground">
+              {t('home.advertiseSubtitle')}
+            </p>
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm font-medium">
+              <Link
+                href={`/${lang}/contact`}
+                className="inline-flex items-center gap-1.5 text-primary transition-colors hover:underline"
+              >
+                {t('contact.title')}
+                <ArrowRight className="h-3.5 w-3.5 rtl-flip" aria-hidden="true" />
+              </Link>
+              <span aria-hidden="true" className="text-border">|</span>
+              <Link
+                href={`/${lang}/contact`}
+                className="text-muted-foreground transition-colors hover:text-foreground hover:underline"
+              >
+                {t('home.advertise')}
+              </Link>
+            </div>
           </div>
-        </div>
+        )}
       </main>
 
       <Footer

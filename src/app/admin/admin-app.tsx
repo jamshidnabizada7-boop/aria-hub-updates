@@ -443,11 +443,32 @@ function CrudTable({ model }: { model: string }) {
     else toast({ title: t('admin.toast.failedDelete'), variant: 'destructive' });
   };
 
+  const handleToggle = async (item: any, field: string) => {
+    const newVal = !item[field];
+    setItems((prev) => prev.map((it) => it.id === item.id ? { ...it, [field]: newVal } : it));
+    try {
+      const res = await fetch('/api/admin/crud', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, id: item.id, data: { [field]: newVal } }),
+      });
+      if (res.ok) {
+        toast({ title: t('admin.toast.saved') });
+      } else {
+        setItems((prev) => prev.map((it) => it.id === item.id ? { ...it, [field]: !newVal } : it));
+        toast({ title: t('admin.toast.failedSave'), variant: 'destructive' });
+      }
+    } catch {
+      setItems((prev) => prev.map((it) => it.id === item.id ? { ...it, [field]: !newVal } : it));
+      toast({ title: t('admin.toast.failedSave'), variant: 'destructive' });
+    }
+  };
+
   // Items are already filtered on server side
   const filtered = items;
 
   // Pick display columns: always show status/featured if present, plus first few text fields.
-  const priority = ['title', 'name', 'country', 'question', 'label', 'company', 'platform', 'column', 'code'];
+  const priority = ['key', 'slug', 'title', 'name', 'country', 'question', 'label', 'company', 'platform', 'column', 'code'];
   const displayFields = [
     ...priority.filter((p) => fields.includes(p)),
     ...fields.filter((f) => !priority.includes(f) && f !== 'id' && !['description', 'content', 'answer', 'message', 'instructions', 'bio', 'eligibility', 'benefits', 'applicationProcess', 'requirements', 'documents', 'gallery', 'tags', 'features', 'faqs', 'attachments', 'seoTitle', 'seoDescription', 'translations'].includes(f)),
@@ -520,7 +541,7 @@ function CrudTable({ model }: { model: string }) {
                     </td>
                     {displayFields.map((f) => (
                       <td key={f} className="max-w-[200px] px-4 py-3">
-                        {renderCell(item, f)}
+                        {renderCell(item, f, handleToggle)}
                       </td>
                     ))}
                     {showStatus && <td className="px-4 py-3">{renderCell(item, 'status')}</td>}
@@ -623,10 +644,30 @@ function CrudTable({ model }: { model: string }) {
   );
 }
 
-function renderCell(item: any, field: string) {
+function renderCell(item: any, field: string, onToggle?: (item: any, field: string) => void) {
   const val = item[field];
-  if (val === true) return <span className="rounded-full bg-chart-3/15 px-2 py-0.5 text-xs font-semibold text-chart-3">Yes</span>;
-  if (val === false) return <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">No</span>;
+  if (val === true || val === false) {
+    if (['enabled', 'visible', 'featured', 'isMain', 'isDefault'].includes(field) && onToggle) {
+      return (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onToggle(item, field); }}
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold cursor-pointer transition-all hover:scale-105 select-none border',
+            val
+              ? 'border-chart-3/30 bg-chart-3/15 text-chart-3 hover:bg-chart-3/25'
+              : 'border-muted-foreground/20 bg-muted text-muted-foreground hover:bg-muted/80'
+          )}
+          title={`Click to ${val ? 'disable / hide' : 'enable / show'}`}
+        >
+          <span className={cn('h-1.5 w-1.5 rounded-full', val ? 'bg-chart-3' : 'bg-muted-foreground')} />
+          {val ? 'Enabled' : 'Disabled'}
+        </button>
+      );
+    }
+    if (val === true) return <span className="rounded-full bg-chart-3/15 px-2 py-0.5 text-xs font-semibold text-chart-3">Yes</span>;
+    return <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">No</span>;
+  }
   if (val === null || val === undefined) return <span className="text-muted-foreground">—</span>;
   if (field === 'image' || field === 'avatar' || field === 'photo' || field === 'logo') {
     return val ? <img src={val} alt="" className="h-8 w-8 rounded object-cover" /> : <span className="text-muted-foreground">—</span>;
@@ -857,7 +898,8 @@ function FieldInput({ field, value, item, model, allFields = [], statusOptions, 
       comparisonRow: ['feature', 'ariaValue', 'othersValue', 'order', 'status'],
       ctaBanner: ['title', 'buttonText', 'buttonUrl', 'accent', 'order', 'status'],
       menuItem: ['label', 'order', 'visible', 'openInNewTab'],
-      section: ['enabled', 'order'],
+      page: ['title', 'slug', 'content', 'status'],
+      section: ['key', 'title', 'enabled', 'order'],
       language: ['code', 'name', 'nativeName', 'direction', 'enabled', 'isDefault', 'order'],
       serviceCategory: ['name', 'slug', 'order'],
       opportunityCategory: ['name', 'slug', 'order'],

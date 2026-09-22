@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentAdmin, logAction } from '@/lib/admin-auth';
 import { Prisma } from '@prisma/client';
+import { revalidatePath } from 'next/cache';
 
 // Model registry: maps model key → prisma delegate + editable fields
 const MODELS: Record<string, { delegate: any; fields: string[]; label: string; statusOptions?: string[] }> = {
@@ -30,8 +31,7 @@ const MODELS: Record<string, { delegate: any; fields: string[]; label: string; s
   menuItem: { label: 'Menu Items', delegate: db.menuItem, fields: ['label', 'labelI18n', 'url', 'parentId', 'icon', 'order', 'visible', 'openInNewTab'] },
   documentCategory: { label: 'Document Categories', delegate: db.documentCategory, fields: ['name', 'nameI18n', 'slug', 'description', 'descriptionI18n', 'icon', 'order'] },
   documentTemplate: { label: 'Document Templates', delegate: db.documentTemplate, fields: ['title', 'slug', 'excerpt', 'content', 'status', 'isPremium', 'categoryId', 'requiredFields', 'writingTips', 'commonMistakes'], statusOptions: ['published', 'draft', 'archived'] },
-  // section: `key` is NOT editable — renaming it would silently break the homepage sectionMap mapping.
-  section: { label: 'Sections', delegate: db.section, fields: ['title', 'subtitle', 'enabled', 'order'] },
+  section: { label: 'Sections', delegate: db.section, fields: ['key', 'title', 'subtitle', 'enabled', 'order'] },
   language: { label: 'Languages', delegate: db.language, fields: ['code', 'name', 'nativeName', 'direction', 'enabled', 'isDefault', 'flag', 'order', 'translations'] },
   serviceCategory: { label: 'Service Categories', delegate: db.serviceCategory, fields: ['name', 'slug', 'icon', 'description', 'order'] },
   opportunityCategory: { label: 'Opportunity Categories', delegate: db.opportunityCategory, fields: ['name', 'nameI18n', 'slug', 'icon', 'order'] },
@@ -98,7 +98,8 @@ function isRequiredField(model: string, field: string): boolean {
     menuItem: ['label', 'order', 'visible', 'openInNewTab'],
     documentCategory: ['name', 'slug', 'order'],
     documentTemplate: ['title', 'slug', 'status'],
-    section: ['enabled', 'order'],
+    page: ['title', 'slug', 'content', 'status'],
+    section: ['key', 'title', 'enabled', 'order'],
     language: ['code', 'name', 'nativeName', 'direction', 'enabled', 'isDefault', 'order'],
     serviceCategory: ['name', 'slug', 'order'],
     opportunityCategory: ['name', 'slug', 'order'],
@@ -399,6 +400,7 @@ export async function POST(req: NextRequest) {
   try {
     const item = await delegate.create({ data: clean });
     await logAction({ userId: admin.id, action: 'create', entity: model, entityId: item.id, req });
+    try { revalidatePath('/', 'layout'); } catch (e) { console.error('[crud] revalidate error:', e); }
     return NextResponse.json({ success: true, item });
   } catch (e: any) {
     return handleError(e);
@@ -414,7 +416,7 @@ export async function PUT(req: NextRequest) {
     const body = await req.json();
     model = body.model;
     id = body.id;
-    data = body.data;
+    data = body.data ?? body;
   } catch {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
@@ -453,6 +455,7 @@ export async function PUT(req: NextRequest) {
   try {
     const item = await delegate.update({ where: { id }, data: clean });
     await logAction({ userId: admin.id, action: 'update', entity: model, entityId: id, req });
+    try { revalidatePath('/', 'layout'); } catch (e) { console.error('[crud] revalidate error:', e); }
     return NextResponse.json({ success: true, item });
   } catch (e: any) {
     return handleError(e);
@@ -478,6 +481,7 @@ export async function DELETE(req: NextRequest) {
       await delegate.delete({ where: { id: ids[0] } });
       await logAction({ userId: admin.id, action: 'delete', entity: model, entityId: ids[0], req });
     }
+    try { revalidatePath('/', 'layout'); } catch (e) { console.error('[crud] revalidate error:', e); }
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return handleError(e);

@@ -29,7 +29,7 @@ const COPY: Record<'en' | 'fa' | 'ps', Copy> = {
     headingApproved: 'Your opportunity is published!',
     headingRejected: 'We could not publish your submission',
     bodyApproved:
-      'Thank you for contributing to ARIA HUB. Your submission passed our review and is now live — together with its full Farsi and Pashto versions, visible to thousands of Afghan job and scholarship seekers.',
+      'Thank you for contributing to ARIA HUB. Your submission passed our review and is now live — together with its full Farsi and Pashto versions, visible to thousands of job and scholarship seekers in Afghanistan.',
     bodyRejected:
       'Thank you for contributing to ARIA HUB. After review we could not publish this submission. You are always welcome to submit an improved version — complete details and a working application link give the best chances.',
     viewButton: 'View the published opportunity',
@@ -51,7 +51,7 @@ const COPY: Record<'en' | 'fa' | 'ps', Copy> = {
     refLabel: 'کد رهگیری',
     noteLabel: 'یادداشت بررسی‌کننده',
     footer:
-      'این ایمیل را فارسیافت کرده‌اید چون از طریق myariahub.com فرصتی ثبت کرده‌اید. ارسال‌ها ظرف ۲۴ ساعت بررسی می‌شوند.',
+      'این ایمیل را دریافت کرده‌اید چون از طریق myariahub.com فرصتی ثبت کرده‌اید. ارسال‌ها ظرف ۲۴ ساعت بررسی می‌شوند.',
   },
   ps: {
     subjectApproved: 'ستاسو لیږنه په آریا هب کې خپره شوه 🎉',
