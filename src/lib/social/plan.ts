@@ -23,15 +23,16 @@ import type { Lang } from '@/lib/lang-route';
 import { dayIndex, type PostTemplate } from '@/lib/social/brand';
 import { buildCaption, captionBrief, type CaptionInput } from '@/lib/social/captions';
 
-/** Weekday mix — index = JS getUTCDay() (0 = Sunday). 3 posts per day. */
+/** Weekday mix — index = JS getUTCDay() (0 = Sunday). 5 posts per day
+ *  (spotlight + deadline first for engagement, then variety). */
 const WEEK_MIX: PostTemplate[][] = [
-  ['spotlight', 'deadline', 'quote'], // Sun
-  ['spotlight', 'tip', 'stat'], // Mon
-  ['spotlight', 'news', 'quote'], // Tue
-  ['spotlight', 'deadline', 'promo'], // Wed
-  ['spotlight', 'tip', 'story'], // Thu
-  ['spotlight', 'news', 'stat'], // Fri
-  ['spotlight', 'quote', 'promo'], // Sat
+  ['spotlight', 'deadline', 'quote', 'tip', 'stat'], // Sun
+  ['spotlight', 'tip', 'stat', 'quote', 'promo'], // Mon
+  ['spotlight', 'news', 'quote', 'deadline', 'tip'], // Tue
+  ['spotlight', 'deadline', 'promo', 'stat', 'quote'], // Wed
+  ['spotlight', 'tip', 'story', 'news', 'deadline'], // Thu
+  ['spotlight', 'news', 'stat', 'quote', 'promo'], // Fri
+  ['spotlight', 'quote', 'promo', 'deadline', 'tip'], // Sat
 ];
 
 export interface PlanOpp {

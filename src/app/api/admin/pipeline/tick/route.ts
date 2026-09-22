@@ -9,7 +9,7 @@ import { runTick } from '@/lib/automation/tick';
  * (lets the platform's 15-min cron trigger the pipeline without a session).
  */
 export const dynamic = 'force-dynamic';
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 export async function POST(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
