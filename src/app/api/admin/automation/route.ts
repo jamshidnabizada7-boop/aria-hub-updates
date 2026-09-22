@@ -23,9 +23,9 @@ import { getProviderHealth } from '@/lib/ai/failover';
  */
 export const dynamic = 'force-dynamic';
 
-const PLATFORMS = ['telegram', 'facebook', 'instagram', 'x'] as const;
+const PLATFORMS = ['telegram', 'facebook', 'instagram', 'x', 'linkedin', 'whatsapp'] as const;
 /** Per-platform caption budgets (same table the publisher uses). */
-const CAPTION_LIMITS: Record<string, number> = { telegram: 1000, facebook: 4500, x: 270, instagram: 2100 };
+const CAPTION_LIMITS: Record<string, number> = { telegram: 1000, facebook: 4500, x: 270, instagram: 2100, linkedin: 2900, whatsapp: 3800 };
 
 export async function GET() {
   const admin = await getCurrentAdmin();
