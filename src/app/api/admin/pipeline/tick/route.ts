@@ -18,7 +18,9 @@ export async function POST(req: NextRequest) {
     const admin = await getCurrentAdmin();
     if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const result = await runTick();
+  const origin = new URL(req.url).origin;
+  const onlyRender = new URL(req.url).searchParams.get('only') === 'render';
+  const result = await runTick(origin, onlyRender ? { skipImport: true, skipTranslate: true } : undefined);
   return NextResponse.json({ ok: true, result });
 }
 

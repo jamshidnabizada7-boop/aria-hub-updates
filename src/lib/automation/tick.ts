@@ -134,7 +134,7 @@ async function stepTranslate(state: Awaited<ReturnType<typeof getState>>, errors
   }
 }
 
-export async function runTick(baseUrl = 'http://127.0.0.1:3000'): Promise<TickResult> {
+export async function runTick(baseUrl = 'http://127.0.0.1:3000', opts?: { skipImport?: boolean; skipTranslate?: boolean }): Promise<TickResult> {
   const g = globalThis as unknown as { __ariaTickRunning?: boolean };
   if (g.__ariaTickRunning) return { ran: false, reason: 'tick_already_running', errors: [] };
   if (freeMb() < MIN_FREE_MB) return { ran: false, reason: `low_memory_${freeMb()}mb`, errors: [] };
@@ -175,11 +175,11 @@ export async function runTick(baseUrl = 'http://127.0.0.1:3000'): Promise<TickRe
   try {
     const state = await getState();
 
-    // 1. import due sources
-    result.import = await stepImport(state, run.id, result.errors);
+    // 1. import due sources (skippable via cron fast-path)
+    if (!opts?.skipImport) result.import = await stepImport(state, run.id, result.errors);
 
-    // 2. translate a small batch
-    result.translate = await stepTranslate(state, result.errors);
+    // 2. translate a small batch (skippable via cron fast-path)
+    if (!opts?.skipTranslate) result.translate = await stepTranslate(state, result.errors);
 
     // 3. build today's social queue (once/day)
     try {
