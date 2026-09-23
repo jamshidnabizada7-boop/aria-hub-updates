@@ -55,7 +55,7 @@ const SEO_TITLES: Record<string, string> = {
 };
 
 const SEO_DESCRIPTIONS: Record<string, string> = {
-  en: 'Discover verified scholarships, international jobs, fellowships, training programs, and career opportunities for Afghans. Real-time updates translated in Dari, Pashto, and English.',
+  en: 'Discover verified scholarships, international jobs, fellowships, training programs, and career opportunities for Afghans with updates in Dari, Pashto, and English.',
   fa: 'مرجع معتبر جدیدترین بورسیه‌های تحصیلی، فرصت‌های شغلی، کارآموزی و برنامه‌های بین‌المللی برای افغان‌ها — خلاصه‌شده و ترجمه‌شده به فارسی، پشتو و انگلیسی.',
   ps: 'د افغانانو او نړیوالو غوښتونکو لپاره باوري تحصیلي بورسونه، کاري فرصتونه، انٹرنشیپونه او تحصیلي لارښوونې — په پښتو، دري او انګلیسي ژبو په آریا هاب کې.',
 };
@@ -79,7 +79,7 @@ export async function generateMetadata({
     metadataBase: new URL('https://www.myariahub.com'),
     title: {
       default: title,
-      template: `%s | ${siteName}`,
+      template: `%s`,
     },
     description,
     alternates: {
