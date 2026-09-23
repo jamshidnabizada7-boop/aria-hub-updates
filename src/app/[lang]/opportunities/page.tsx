@@ -27,9 +27,9 @@ const PER_PAGE = 12;
 export const revalidate = 60;
 
 const OPPORTUNITIES_TITLES: Record<Lang, string> = {
-  en: 'Latest Scholarships, Jobs & Opportunities | ARIA HUB',
-  fa: 'جدیدترین بورسیه‌های تحصیلی، وظایف و فرصت‌ها | آریا هاب',
-  ps: 'وروستي تحصیلي بورسونه، کاري فرصتونه او دندې | آریا هاب',
+  en: 'Latest Scholarships, Jobs & Opportunities',
+  fa: 'جدیدترین بورسیه‌های تحصیلی، وظایف و فرصت‌ها',
+  ps: 'وروستي تحصیلي بورسونه، کاري فرصتونه او دندې',
 };
 
 const OPPORTUNITIES_DESCRIPTIONS: Record<Lang, string> = {
