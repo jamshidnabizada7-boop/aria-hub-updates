@@ -26,6 +26,18 @@ const PER_PAGE = 12;
 // New records land via periodic imports — keep the listing at most 60s stale.
 export const revalidate = 60;
 
+const OPPORTUNITIES_TITLES: Record<Lang, string> = {
+  en: 'Latest Scholarships, Jobs & Opportunities | ARIA HUB',
+  fa: 'جدیدترین بورسیه‌های تحصیلی، وظایف و فرصت‌ها | آریا هاب',
+  ps: 'وروستي تحصیلي بورسونه، کاري فرصتونه او دندې | آریا هاب',
+};
+
+const OPPORTUNITIES_DESCRIPTIONS: Record<Lang, string> = {
+  en: 'Browse verified scholarships, fellowships, international employment, and career development programs with application deadlines and eligibility guides on ARIA HUB.',
+  fa: 'مشاهده و دریافت معتبرترین بورسیه‌های تحصیلی، فرصت‌های شغلی بین‌المللی، فلوشیپ‌ها و کارآموزی به همراه ددلاین و شرایط پذیرش در آریا هاب.',
+  ps: 'د باوري تحصیلي بورسونو، نړیوالو دندو، فیلوشیپونو او کاري فرصتونو کتنه د غوښتنلیک د وروستۍ نېټې او لارښود سره په آریا هاب کې.',
+};
+
 export async function generateMetadata({
   params,
 }: {
@@ -33,11 +45,13 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { lang: rawLang } = await params;
   const lang: Lang = isLang(rawLang) ? rawLang : 'fa';
-  const title = translate(lang, 'opportunities.title');
+  const title = OPPORTUNITIES_TITLES[lang] || OPPORTUNITIES_TITLES.en;
+  const description = OPPORTUNITIES_DESCRIPTIONS[lang] || OPPORTUNITIES_DESCRIPTIONS.en;
+
   return {
     metadataBase: new URL('https://www.myariahub.com'),
-    title: `${title} | ARIA HUB`,
-    description: translate(lang, 'opportunities.subtitle'),
+    title,
+    description,
     alternates: {
       canonical: `/${lang}/opportunities`,
       languages: {
@@ -47,8 +61,8 @@ export async function generateMetadata({
       },
     },
     openGraph: {
-      title: `${title} | ARIA HUB`,
-      description: translate(lang, 'opportunities.subtitle'),
+      title,
+      description,
       locale: lang,
       type: 'website',
     },
@@ -161,6 +175,36 @@ export default async function OpportunitiesPage({
       />
 
       <main className="flex-1 pt-24 pb-20">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'CollectionPage',
+              name: OPPORTUNITIES_TITLES[lang] || OPPORTUNITIES_TITLES.en,
+              description: OPPORTUNITIES_DESCRIPTIONS[lang] || OPPORTUNITIES_DESCRIPTIONS.en,
+              url: `https://www.myariahub.com/${lang}/opportunities`,
+              inLanguage: lang,
+              breadcrumb: {
+                '@type': 'BreadcrumbList',
+                itemListElement: [
+                  {
+                    '@type': 'ListItem',
+                    position: 1,
+                    name: 'ARIA HUB',
+                    item: `https://www.myariahub.com/${lang}`,
+                  },
+                  {
+                    '@type': 'ListItem',
+                    position: 2,
+                    name: t('opportunities.title'),
+                    item: `https://www.myariahub.com/${lang}/opportunities`,
+                  },
+                ],
+              },
+            }).replace(/</g, '\\u003c'),
+          }}
+        />
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           {/* Page header */}
           <div className="flex max-w-3xl flex-wrap items-start justify-between gap-3">

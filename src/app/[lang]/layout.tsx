@@ -48,6 +48,18 @@ async function getSettings(): Promise<SiteSettings | null> {
   }
 }
 
+const SEO_TITLES: Record<string, string> = {
+  en: 'ARIA HUB — Scholarships, Jobs & Opportunities in Afghanistan',
+  fa: 'آریا هاب — بورسیه‌های تحصیلی، وظایف و فرصت‌های شغلی',
+  ps: 'آریا هاب — تحصیلي بورسونه، کاري فرصتونه او دندې',
+};
+
+const SEO_DESCRIPTIONS: Record<string, string> = {
+  en: 'Discover verified scholarships, international jobs, fellowships, training programs, and career opportunities for Afghans. Real-time updates translated in Dari, Pashto, and English.',
+  fa: 'مرجع معتبر جدیدترین بورسیه‌های تحصیلی، فرصت‌های شغلی، کارآموزی و برنامه‌های بین‌المللی برای افغان‌ها — خلاصه‌شده و ترجمه‌شده به فارسی، پشتو و انگلیسی.',
+  ps: 'د افغانانو او نړیوالو غوښتونکو لپاره باوري تحصیلي بورسونه، کاري فرصتونه، انٹرنشیپونه او تحصیلي لارښوونې — په پښتو، دري او انګلیسي ژبو په آریا هاب کې.',
+};
+
 export async function generateMetadata({
   params,
 }: {
@@ -57,19 +69,18 @@ export async function generateMetadata({
   const valid = LANGS.includes(lang) ? lang : 'fa';
   const settings = await getSettings();
   const siteName = getLocalizedContent(settings?.siteName || 'ARIA HUB', settings?.siteNameI18n, valid);
-  const tagline = getLocalizedContent(
-    settings?.tagline || DEFAULT_TAGLINES[valid] || DEFAULT_TAGLINES.en,
-    settings?.taglineI18n,
-    valid
-  );
+  const title = SEO_TITLES[valid] || `${siteName} — Scholarships & Jobs`;
   const description =
+    SEO_DESCRIPTIONS[valid] ||
     getLocalizedContent(settings?.description, settings?.descriptionI18n, valid) ||
-    DEFAULT_DESCRIPTIONS[valid] ||
-    `${siteName} — ${tagline}`;
+    DEFAULT_DESCRIPTIONS[valid];
 
   return {
     metadataBase: new URL('https://www.myariahub.com'),
-    title: `${siteName} | ${tagline}`,
+    title: {
+      default: title,
+      template: `%s | ${siteName}`,
+    },
     description,
     alternates: {
       canonical: `/${valid}`,
@@ -80,7 +91,7 @@ export async function generateMetadata({
       },
     },
     openGraph: {
-      title: `${siteName} | ${tagline}`,
+      title,
       description,
       siteName,
       locale: valid,

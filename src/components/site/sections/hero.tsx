@@ -86,7 +86,13 @@ export function Hero({ lang, stats }: { lang: Lang; stats: HeroStats }) {
       <div className="absolute inset-0 -z-10">
         <SmartImage
           src="/images/hero/hero-bg.webp"
-          alt=""
+          alt={
+            lang === 'fa'
+              ? 'آریا هاب — پورتال جامع بورسیه‌های تحصیلی، وظایف و فرصت‌های جهانی'
+              : lang === 'ps'
+              ? 'آریا هاب — د تحصیلي بورسونو، کاري فرصتونو او نړیوالو امکاناتو پورتال'
+              : 'ARIA HUB — Global Opportunities, Scholarships, and Career Platform'
+          }
           priority={true}
           sizes="100vw"
           className="absolute inset-0 h-full w-full opacity-60 dark:opacity-80"

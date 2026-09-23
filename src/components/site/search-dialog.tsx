@@ -284,7 +284,7 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean; onOpenChan
                       {r.image ? (
                         <img
                           src={r.image}
-                          alt=""
+                          alt={r.title}
                           loading="lazy"
                           className="h-11 w-11 shrink-0 rounded-lg border border-border/50 bg-muted object-cover"
                           onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
