@@ -21,6 +21,8 @@ import { Footer } from '@/components/site/footer';
 import { translate } from '@/lib/i18n';
 import { isLang, type Lang } from '@/lib/lang-route';
 
+import { getPageSeo } from '@/lib/seo-metadata';
+
 export const revalidate = 3600;
 
 export async function generateMetadata({
@@ -30,11 +32,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { lang: rawLang } = await params;
   const lang: Lang = isLang(rawLang) ? rawLang : 'fa';
-  const title = translate(lang, 'employers.title');
+  const seo = getPageSeo('employers', lang);
   return {
     metadataBase: new URL('https://www.myariahub.com'),
-    title: `${title} | ARIA HUB`,
-    description: translate(lang, 'employers.subtitle'),
+    title: seo.title,
+    description: seo.description,
     alternates: {
       canonical: `/${lang}/employers`,
       languages: {
@@ -44,8 +46,8 @@ export async function generateMetadata({
       },
     },
     openGraph: {
-      title: `${title} | ARIA HUB`,
-      description: translate(lang, 'employers.subtitle'),
+      title: seo.title,
+      description: seo.description,
       locale: lang,
       type: 'website',
     },

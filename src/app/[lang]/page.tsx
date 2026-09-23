@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { getSiteData } from '@/lib/get-site';
 import { translate } from '@/lib/i18n';
 import { db } from '@/lib/db';
@@ -8,6 +9,47 @@ import { getClosingSoon, getDailySpotlight, getFacets, getWeeklyScholarship, lis
 import { getFeaturedStoryCard } from '@/lib/success-story-queries';
 
 export const revalidate = 60;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}): Promise<Metadata> {
+  const { lang: rawLang } = await params;
+  const lang: Lang = isLang(rawLang) ? rawLang : 'fa';
+
+  const titles: Record<Lang, string> = {
+    en: 'ARIA HUB | Jobs, Scholarships & Opportunities in Afghanistan',
+    fa: 'آریا هاب | معتبرترین بورسیه‌ها و فرصت‌های شغلی افغانستان',
+    ps: 'آریا هاب | د افغانستان باوري تحصیلي بورسونه او دندې',
+  };
+
+  const descriptions: Record<Lang, string> = {
+    en: 'Discover verified scholarships, international jobs, fellowships, and training opportunities in Afghanistan with trilingual updates in Dari, Pashto & English.',
+    fa: 'کشف جدیدترین بورسیه‌های تحصیلی، فرصت‌های شغلی بین‌المللی و برنامه‌های آموزشی معتبر برای جوانان افغانستان به همراه ددلاین و راهنمای ثبت‌نام آنلاین.',
+    ps: 'په افغانستان کې باوري تحصیلي بورسونه، نړیوالې دندې او روزنیز پروګرامونه په آریا هاب کې ومومئ. د غوښتنلیک لارښود او تازه معلومات په پښتو او دري ژبو.',
+  };
+
+  return {
+    metadataBase: new URL('https://www.myariahub.com'),
+    title: titles[lang] || titles.en,
+    description: descriptions[lang] || descriptions.en,
+    alternates: {
+      canonical: `/${lang}`,
+      languages: {
+        en: '/en',
+        fa: '/fa',
+        ps: '/ps',
+      },
+    },
+    openGraph: {
+      title: titles[lang] || titles.en,
+      description: descriptions[lang] || descriptions.en,
+      locale: lang,
+      type: 'website',
+    },
+  };
+}
 
 export default async function Page({
   params,

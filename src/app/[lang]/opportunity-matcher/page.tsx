@@ -1,15 +1,42 @@
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
 import { getSiteData } from '@/lib/get-site';
 import { Navbar } from '@/components/site/navbar';
 import { Footer } from '@/components/site/footer';
 import { OpportunityMatcherClient } from './client';
-
-export const metadata: Metadata = {
-  title: 'Opportunity Matcher | ARIA HUB',
-  description: 'Find your perfect global business, visa, or educational opportunity.',
-};
+import { isLang, type Lang } from '@/lib/lang-route';
+import { getPageSeo } from '@/lib/seo-metadata';
 
 export const revalidate = 1800;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}): Promise<Metadata> {
+  const { lang: rawLang } = await params;
+  const lang: Lang = isLang(rawLang) ? rawLang : 'fa';
+  const seo = getPageSeo('opportunityMatcher', lang);
+
+  return {
+    metadataBase: new URL('https://www.myariahub.com'),
+    title: seo.title,
+    description: seo.description,
+    alternates: {
+      canonical: `/${lang}/opportunity-matcher`,
+      languages: {
+        en: '/en/opportunity-matcher',
+        fa: '/fa/opportunity-matcher',
+        ps: '/ps/opportunity-matcher',
+      },
+    },
+    openGraph: {
+      title: seo.title,
+      description: seo.description,
+      locale: lang,
+      type: 'website',
+    },
+  };
+}
 
 export default async function OpportunityMatcherPage() {
   const data = await getSiteData();

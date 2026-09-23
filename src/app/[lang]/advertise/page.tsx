@@ -37,6 +37,8 @@ function fmtAfn(n: number, lang: Lang): string {
   return lang === 'en' ? s : toEasternDigits(s, lang);
 }
 
+import { getPageSeo } from '@/lib/seo-metadata';
+
 export async function generateMetadata({
   params,
 }: {
@@ -44,18 +46,18 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { lang: rawLang } = await params;
   const lang: Lang = isLang(rawLang) ? rawLang : 'fa';
-  const title = translate(lang, 'advertise.title');
+  const seo = getPageSeo('advertise', lang);
   return {
     metadataBase: new URL('https://www.myariahub.com'),
-    title: `${translate(lang, 'advertise.eyebrow')} — ARIA HUB`,
-    description: translate(lang, 'advertise.subtitle'),
+    title: seo.title,
+    description: seo.description,
     alternates: {
       canonical: `/${lang}/advertise`,
       languages: { en: '/en/advertise', fa: '/fa/advertise', ps: '/ps/advertise' },
     },
     openGraph: {
-      title: `${title} | ARIA HUB`,
-      description: translate(lang, 'advertise.subtitle'),
+      title: seo.title,
+      description: seo.description,
       locale: lang,
       type: 'website',
     },

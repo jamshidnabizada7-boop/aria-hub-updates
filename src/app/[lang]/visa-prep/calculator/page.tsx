@@ -7,10 +7,47 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-export const metadata = {
-  title: 'Visa Cost Calculator | ARIA HUB',
-  description: 'Calculate and estimate your total visa application costs, including medical, biometrics, and other fees.'
-};
+import type { Metadata } from 'next';
+import { isLang, type Lang } from '@/lib/lang-route';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}): Promise<Metadata> {
+  const { lang: rawLang } = await params;
+  const lang: Lang = isLang(rawLang) ? rawLang : 'fa';
+  const titles: Record<Lang, string> = {
+    en: 'Visa Cost Calculator & Expense Estimator | ARIA HUB',
+    fa: 'محاسبه‌گر هزینه‌های ویزا و سفارت | ARIA HUB',
+    ps: 'د ویزې او سفارت د لګښتونو محاسبه کوونکی | ARIA HUB',
+  };
+  const descriptions: Record<Lang, string> = {
+    en: 'Estimate total visa application costs, government fees, medical exams, biometrics, and translation expenses with ARIA HUB interactive cost calculator.',
+    fa: 'محاسبه دقیق تمامی هزینه‌های درخواست ویزا شامل فیس سفارت، معاینات صحی، بایومتریک و ترجمه اسناد با ابزار رایگان محاسبه‌گر هزینه در آریا هاب.',
+    ps: 'د ویزې د غوښتنلیک ټول لګښتونه لکه د سفارت فیس، روغتیايي معاینات، بایومټریک او د اسنادو ژباړه د آریا هاب په وړیا محاسبه کوونکي کې اټکل کړئ.',
+  };
+
+  return {
+    metadataBase: new URL('https://www.myariahub.com'),
+    title: titles[lang] || titles.en,
+    description: descriptions[lang] || descriptions.en,
+    alternates: {
+      canonical: `/${lang}/visa-prep/calculator`,
+      languages: {
+        en: '/en/visa-prep/calculator',
+        fa: '/fa/visa-prep/calculator',
+        ps: '/ps/visa-prep/calculator',
+      },
+    },
+    openGraph: {
+      title: titles[lang] || titles.en,
+      description: descriptions[lang] || descriptions.en,
+      locale: lang,
+      type: 'website',
+    },
+  };
+}
 
 export default async function VisaCostCalculatorPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;

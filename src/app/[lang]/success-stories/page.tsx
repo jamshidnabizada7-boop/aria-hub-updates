@@ -48,6 +48,8 @@ const TYPE_STYLES: Record<string, string> = {
   other: 'bg-primary/10 text-primary',
 };
 
+import { getPageSeo } from '@/lib/seo-metadata';
+
 export async function generateMetadata({
   params,
 }: {
@@ -55,18 +57,18 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { lang } = await params;
   const l: Lang = isLang(lang) ? lang : 'fa';
-  const t = (key: string) => translate(l, key);
+  const seo = getPageSeo('successStories', l);
   return {
     metadataBase: new URL('https://www.myariahub.com'),
-    title: `${t('stories.title')} | ARIA HUB`,
-    description: t('stories.subtitle'),
+    title: seo.title,
+    description: seo.description,
     alternates: {
       canonical: `/${l}/success-stories`,
       languages: Object.fromEntries(LANGS.map((x) => [x, `/${x}/success-stories`])),
     },
     openGraph: {
-      title: `${t('stories.title')} | ARIA HUB`,
-      description: t('stories.subtitle'),
+      title: seo.title,
+      description: seo.description,
       locale: l,
       type: 'website',
     },

@@ -8,6 +8,7 @@ import { translate } from '@/lib/i18n';
 import type { Lang } from '@/lib/i18n-config';
 import { ShareBar } from '@/components/site/share-bar';
 import { sanitizeListingHtml } from '@/lib/content-html';
+import { ensureSeoDescription } from '@/lib/seo-metadata';
 
 const LANGS = ['en', 'fa', 'ps'];
 
@@ -25,9 +26,20 @@ export async function generateMetadata({
   // streamed page render the headers are already gone and it ships as 200.
   if (!post) notFound();
 
-  const title = post.seoTitle || post.title;
-  const description = post.seoDescription || post.excerpt;
+  const rawTitle = post.seoTitle || post.title;
+  const title = rawTitle.length < 25 ? `${rawTitle} — Expert Guide` : rawTitle;
+  const description = ensureSeoDescription(
+    post.seoDescription || post.excerpt,
+    typedLang,
+    typedLang === 'fa'
+      ? 'راهنماهای کاربردی بورسیه، نکات ویزا و ارتقای شغلی در وبلاگ آریا هاب.'
+      : typedLang === 'ps'
+      ? 'د تحصیلي بورسونو لارښوونې، د ویزې نکتې او مسلکي پرمختګ په آریا هاب کې.'
+      : 'Expert scholarship guides, visa advice, and career tips on ARIA HUB.'
+  );
+
   return {
+    metadataBase: new URL('https://www.myariahub.com'),
     title: `${title} | ARIA HUB`,
     description,
     alternates: {
@@ -35,7 +47,7 @@ export async function generateMetadata({
       languages: Object.fromEntries(LANGS.map((l) => [l, `/${l}/blog/${slug}`])),
     },
     openGraph: {
-      title,
+      title: `${title} | ARIA HUB`,
       description,
       type: 'article',
       publishedTime: post.publishedAt.toISOString(),

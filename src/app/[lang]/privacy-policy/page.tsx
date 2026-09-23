@@ -1,14 +1,41 @@
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
 import { getLocalizedContent } from '@/lib/i18n-content';
 import { PRIVACY_DOC, PRIVACY_ADSENSE_TAIL, lastUpdatedLine, pickTril } from '@/lib/static-page-content';
 import { PageShell } from '@/components/site/page-shell';
+import { isLang, type Lang } from '@/lib/lang-route';
+import { getPageSeo } from '@/lib/seo-metadata';
 
-export const metadata: Metadata = {
-  title: 'Privacy Policy | ARIA HUB',
-  description: 'Privacy Policy for ARIA HUB services.',
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}): Promise<Metadata> {
+  const { lang: rawLang } = await params;
+  const lang: Lang = isLang(rawLang) ? rawLang : 'fa';
+  const seo = getPageSeo('privacyPolicy', lang);
+
+  return {
+    metadataBase: new URL('https://www.myariahub.com'),
+    title: seo.title,
+    description: seo.description,
+    alternates: {
+      canonical: `/${lang}/privacy-policy`,
+      languages: {
+        en: '/en/privacy-policy',
+        fa: '/fa/privacy-policy',
+        ps: '/ps/privacy-policy',
+      },
+    },
+    openGraph: {
+      title: seo.title,
+      description: seo.description,
+      locale: lang,
+      type: 'website',
+    },
+  };
+}
 
 export default async function PrivacyPolicyPage({
   params,

@@ -27,13 +27,13 @@ const PER_PAGE = 12;
 export const revalidate = 60;
 
 const OPPORTUNITIES_TITLES: Record<Lang, string> = {
-  en: 'Latest Scholarships, Jobs & Opportunities',
-  fa: 'جدیدترین بورسیه‌های تحصیلی، وظایف و فرصت‌ها',
-  ps: 'وروستي تحصیلي بورسونه، کاري فرصتونه او دندې',
+  en: 'Latest Scholarships, Jobs & Opportunities | ARIA HUB',
+  fa: 'جدیدترین بورسیه‌های تحصیلی، وظایف و فرصت‌ها | ARIA HUB',
+  ps: 'وروستي تحصیلي بورسونه، کاري فرصتونه او دندې | ARIA HUB',
 };
 
 const OPPORTUNITIES_DESCRIPTIONS: Record<Lang, string> = {
-  en: 'Browse verified scholarships, fellowships, international employment, and career development programs with application deadlines and eligibility guides on ARIA HUB.',
+  en: 'Browse verified scholarships, fellowships, jobs, and career development programs with application deadlines and eligibility requirements on ARIA HUB.',
   fa: 'مشاهده و دریافت معتبرترین بورسیه‌های تحصیلی، فرصت‌های شغلی بین‌المللی، فلوشیپ‌ها و کارآموزی به همراه ددلاین و شرایط پذیرش در آریا هاب.',
   ps: 'د باوري تحصیلي بورسونو، نړیوالو دندو، فیلوشیپونو او کاري فرصتونو کتنه د غوښتنلیک د وروستۍ نېټې او لارښود سره په آریا هاب کې.',
 };

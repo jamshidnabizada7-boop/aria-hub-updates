@@ -11,19 +11,30 @@ export const revalidate = 300;
 
 const LANGS = ['en', 'fa', 'ps'];
 
+import { getPageSeo } from '@/lib/seo-metadata';
+import { isLang } from '@/lib/lang-route';
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ lang: string }>;
 }): Promise<Metadata> {
-  const { lang } = await params;
-  const t = (key: string) => translate(lang, key);
+  const { lang: rawLang } = await params;
+  const lang = isLang(rawLang) ? rawLang : 'fa';
+  const seo = getPageSeo('blog', lang);
   return {
-    title: `${t('blog.title')} | ARIA HUB`,
-    description: t('blog.subtitle'),
+    metadataBase: new URL('https://www.myariahub.com'),
+    title: seo.title,
+    description: seo.description,
     alternates: {
       canonical: `/${lang}/blog`,
       languages: Object.fromEntries(LANGS.map((l) => [l, `/${l}/blog`])),
+    },
+    openGraph: {
+      title: seo.title,
+      description: seo.description,
+      locale: lang,
+      type: 'website',
     },
   };
 }

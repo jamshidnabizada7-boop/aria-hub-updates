@@ -1,14 +1,41 @@
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
 import { getLocalizedContent } from '@/lib/i18n-content';
 import { ABOUT_DOC, pickTril } from '@/lib/static-page-content';
 import { PageShell } from '@/components/site/page-shell';
+import { isLang, type Lang } from '@/lib/lang-route';
+import { getPageSeo } from '@/lib/seo-metadata';
 
-export const metadata: Metadata = {
-  title: 'About Us | ARIA HUB',
-  description: 'Learn about ARIA HUB, our mission, and our team.',
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}): Promise<Metadata> {
+  const { lang: rawLang } = await params;
+  const lang: Lang = isLang(rawLang) ? rawLang : 'fa';
+  const seo = getPageSeo('about', lang);
+
+  return {
+    metadataBase: new URL('https://www.myariahub.com'),
+    title: seo.title,
+    description: seo.description,
+    alternates: {
+      canonical: `/${lang}/about`,
+      languages: {
+        en: '/en/about',
+        fa: '/fa/about',
+        ps: '/ps/about',
+      },
+    },
+    openGraph: {
+      title: seo.title,
+      description: seo.description,
+      locale: lang,
+      type: 'website',
+    },
+  };
+}
 
 export default async function AboutPage({
   params,

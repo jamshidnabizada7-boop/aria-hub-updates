@@ -7,10 +7,49 @@ import { MessageSquare, Star, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 
-export const metadata = {
-  title: 'Interview Community | ARIA HUB',
-  description: 'Read and share real scholarship interview experiences.'
-};
+import type { Metadata } from 'next';
+import { isLang, type Lang } from '@/lib/lang-route';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}): Promise<Metadata> {
+  const { lang: rawLang } = await params;
+  const lang: Lang = isLang(rawLang) ? rawLang : 'fa';
+
+  const titles: Record<Lang, string> = {
+    en: 'Scholarship Interview Experiences & Community | ARIA HUB',
+    fa: 'تجربه‌های مصاحبه بورسیه و تجارب دانشجویان | ARIA HUB',
+    ps: 'د بورسونو مرکو ریښتینې تجربې او ټولنه | ARIA HUB',
+  };
+
+  const descriptions: Record<Lang, string> = {
+    en: 'Read and share real scholarship interview questions, tips, and personal experiences from Afghan students accepted to top global universities on ARIA HUB.',
+    fa: 'تجارب واقعی مصاحبه‌های بورسیه، سوالات مطرح‌شده و نکات طلایی قبولی محصلان افغان در دانشگاه‌های معتبر بین‌المللی را در آریا هاب بخوانید و به اشتراک بگذارید.',
+    ps: 'د نړیوالو تحصیلي بورسونو د مرکو ریښتینې تجربې، پوښتنې او د افغان محصلینو ګټورې سپارښتنې په آریا هاب کې ولولئ او خپله تجربه له نورو سره شریکه کړئ.',
+  };
+
+  return {
+    metadataBase: new URL('https://www.myariahub.com'),
+    title: titles[lang] || titles.en,
+    description: descriptions[lang] || descriptions.en,
+    alternates: {
+      canonical: `/${lang}/interview-prep/community`,
+      languages: {
+        en: '/en/interview-prep/community',
+        fa: '/fa/interview-prep/community',
+        ps: '/ps/interview-prep/community',
+      },
+    },
+    openGraph: {
+      title: titles[lang] || titles.en,
+      description: descriptions[lang] || descriptions.en,
+      locale: lang,
+      type: 'website',
+    },
+  };
+}
 
 export default async function InterviewCommunityPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;

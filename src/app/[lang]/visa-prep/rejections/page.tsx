@@ -8,16 +8,30 @@ import { db as prisma } from '@/lib/db';
 import { translate } from '@/lib/i18n';
 import type { Metadata } from 'next';
 
+import { ensureSeoDescription } from '@/lib/seo-metadata';
+import { isLang, type Lang } from '@/lib/lang-route';
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ lang: string }>;
 }): Promise<Metadata> {
-  const { lang } = await params;
+  const { lang: rawLang } = await params;
+  const lang: Lang = isLang(rawLang) ? rawLang : 'fa';
   const t = (key: string) => translate(lang, key);
+
+  const titles: Record<Lang, string> = {
+    en: 'Visa Rejection Reasons & Mitigation Guide | ARIA HUB',
+    fa: 'دلایل رایج رد شدن ویزا و راهکارهای قبولی | ARIA HUB',
+    ps: 'د ویزې د رد کېدو لاملونه او د حل لارښود | ARIA HUB',
+  };
+
+  const description = ensureSeoDescription(t('visaRej.subtitle'), lang);
+
   return {
-    title: `${t('visaRej.title')} | ARIA HUB`,
-    description: t('visaRej.subtitle'),
+    metadataBase: new URL('https://www.myariahub.com'),
+    title: titles[lang] || titles.en,
+    description,
     alternates: {
       canonical: `/${lang}/visa-prep/rejections`,
       languages: {
@@ -25,6 +39,12 @@ export async function generateMetadata({
         fa: '/fa/visa-prep/rejections',
         ps: '/ps/visa-prep/rejections',
       },
+    },
+    openGraph: {
+      title: titles[lang] || titles.en,
+      description,
+      locale: lang,
+      type: 'website',
     },
   };
 }

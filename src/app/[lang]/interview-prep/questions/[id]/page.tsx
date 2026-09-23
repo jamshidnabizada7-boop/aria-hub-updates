@@ -8,16 +8,66 @@ import Link from 'next/link';
 import { getLocalizedContent } from '@/lib/i18n-content';
 import { translate, formatDuration } from '@/lib/i18n';
 import type { Metadata } from 'next';
+import { ensureSeoDescription } from '@/lib/seo-metadata';
+import { isLang, type Lang } from '@/lib/lang-route';
 
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ lang: string; id: string }>;
 }): Promise<Metadata> {
-  const { lang } = await params;
+  const { lang: rawLang, id } = await params;
+  const lang: Lang = isLang(rawLang) ? rawLang : 'fa';
+  const question = await prisma.interviewQuestion.findUnique({
+    where: { id },
+    include: { category: true },
+  });
+
+  if (!question || question.status !== 'published') {
+    return {
+      metadataBase: new URL('https://www.myariahub.com'),
+      title: 'Interview Question Practice | ARIA HUB',
+      description: 'Practice high-impact scholarship and job interview questions with curated sample answers and AI feedback on ARIA HUB.',
+    };
+  }
+
+  const qText = getLocalizedContent(question.question, question.questionI18n, lang);
+  const sampleAnswer = getLocalizedContent(question.sampleAnswer, question.sampleAnswerI18n, lang);
+
+  const title = qText.length < 25
+    ? `${qText} — Interview Prep Question | ARIA HUB`
+    : qText.length > 45
+    ? `${qText.slice(0, 42)}... | ARIA HUB`
+    : `${qText} | ARIA HUB`;
+
+  const description = ensureSeoDescription(
+    sampleAnswer || qText,
+    lang,
+    lang === 'fa'
+      ? 'پاسخ تشریحی، نکات کلیدی و نمونه پاسخ‌های قوی برای مصاحبه در آریا هاب.'
+      : lang === 'ps'
+      ? 'بشپړ ځواب، مهمې سپارښتنې او د مرکې لارښود په آریا هاب کې وګورئ.'
+      : 'Review complete model answers, key tips, and expert strategies on ARIA HUB.'
+  );
+
   return {
-    title: `${translate(lang, 'interview.title')} | ARIA HUB`,
-    alternates: { canonical: `/${lang}/interview-prep` },
+    metadataBase: new URL('https://www.myariahub.com'),
+    title,
+    description,
+    alternates: {
+      canonical: `/${lang}/interview-prep/questions/${id}`,
+      languages: {
+        en: `/en/interview-prep/questions/${id}`,
+        fa: `/fa/interview-prep/questions/${id}`,
+        ps: `/ps/interview-prep/questions/${id}`,
+      },
+    },
+    openGraph: {
+      title,
+      description,
+      locale: lang,
+      type: 'article',
+    },
   };
 }
 

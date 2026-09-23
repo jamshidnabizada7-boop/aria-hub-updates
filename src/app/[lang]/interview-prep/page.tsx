@@ -7,6 +7,8 @@ import { db as prisma } from '@/lib/db';
 import { getLocalizedContent } from '@/lib/i18n-content';
 import { translate } from '@/lib/i18n';
 import type { Metadata } from 'next';
+import { getPageSeo } from '@/lib/seo-metadata';
+import { isLang, type Lang } from '@/lib/lang-route';
 
 const CATEGORY_ICONS: Record<string, typeof BookOpen> = {
   GraduationCap: BookOpen,
@@ -21,14 +23,22 @@ export async function generateMetadata({
 }: {
   params: Promise<{ lang: string }>;
 }): Promise<Metadata> {
-  const { lang } = await params;
-  const t = (key: string) => translate(lang, key);
+  const { lang: rawLang } = await params;
+  const lang: Lang = isLang(rawLang) ? rawLang : 'fa';
+  const seo = getPageSeo('interviewPrep', lang);
   return {
-    title: `${t('interview.title')} | ARIA HUB`,
-    description: t('interview.subtitle'),
+    metadataBase: new URL('https://www.myariahub.com'),
+    title: seo.title,
+    description: seo.description,
     alternates: {
       canonical: `/${lang}/interview-prep`,
       languages: { en: '/en/interview-prep', fa: '/fa/interview-prep', ps: '/ps/interview-prep' },
+    },
+    openGraph: {
+      title: seo.title,
+      description: seo.description,
+      locale: lang,
+      type: 'website',
     },
   };
 }

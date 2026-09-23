@@ -7,10 +7,47 @@ import Link from 'next/link';
 import { ArrowLeft, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-export const metadata = {
-  title: 'Success Stories | ARIA HUB',
-  description: 'Read inspiring success stories from applicants who have successfully navigated the visa process.'
-};
+import type { Metadata } from 'next';
+import { isLang, type Lang } from '@/lib/lang-route';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}): Promise<Metadata> {
+  const { lang: rawLang } = await params;
+  const lang: Lang = isLang(rawLang) ? rawLang : 'fa';
+  const titles: Record<Lang, string> = {
+    en: 'Visa Community Experiences & Success | ARIA HUB',
+    fa: 'تجربیات واقعی متقاضیان ویزا | ARIA HUB',
+    ps: 'د ویزې غوښتونکو ریښتینې تجربې | ARIA HUB',
+  };
+  const descriptions: Record<Lang, string> = {
+    en: 'Read authentic embassy interview experiences and success tips shared by applicants who obtained student, work, and immigrant visas through ARIA HUB.',
+    fa: 'مطالعه تجربیات موثق و دست‌اول متقاضیانی که موفق به دریافت ویزای تحصیلی، کاری و اقامتی شده‌اند. تجربیات مصاحبه و نکات طلایی قبولی در آریا هاب.',
+    ps: 'د هغو غوښتونکو ریښتینې تجربې او د بریا لارښوونې ولولئ چې تحصیلي، کاري او کډوالۍ ویزې یې ترلاسه کړې دي. په آریا هاب کې د مرکو مهمې نکتې زده کړئ.',
+  };
+
+  return {
+    metadataBase: new URL('https://www.myariahub.com'),
+    title: titles[lang] || titles.en,
+    description: descriptions[lang] || descriptions.en,
+    alternates: {
+      canonical: `/${lang}/visa-prep/community`,
+      languages: {
+        en: '/en/visa-prep/community',
+        fa: '/fa/visa-prep/community',
+        ps: '/ps/visa-prep/community',
+      },
+    },
+    openGraph: {
+      title: titles[lang] || titles.en,
+      description: descriptions[lang] || descriptions.en,
+      locale: lang,
+      type: 'website',
+    },
+  };
+}
 
 export default async function VisaCommunityPage({
   params,

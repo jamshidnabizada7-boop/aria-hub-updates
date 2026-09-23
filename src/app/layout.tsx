@@ -40,9 +40,9 @@ const vazirmatn = Vazirmatn({
 });
 
 export const metadata: Metadata = {
-  title: "ARIA HUB | آریا هاب — Jobs, Scholarships & Opportunities in Afghanistan",
+  title: "ARIA HUB — Jobs, Scholarships & Opportunities in Afghanistan",
   description:
-    "New jobs, scholarships, fellowships and training opportunities from trusted organizations — summarized and translated into Farsi, Pashto and English. فرصت‌های شغلی، بورسیه و آموزشی به سه زبان.",
+    "Discover verified scholarships, international jobs, fellowships, and career opportunities for Afghans with real-time updates in Dari, Pashto, and English.",
   keywords: [
     "ARIA HUB",
     "آریا هاب",
@@ -63,17 +63,17 @@ export const metadata: Metadata = {
     apple: "/images/logo-mark.webp",
   },
   openGraph: {
-    title: "ARIA HUB | آریا هاب — Jobs, Scholarships & Opportunities in Afghanistan",
+    title: "ARIA HUB — Jobs, Scholarships & Opportunities in Afghanistan",
     description:
-      "New jobs, scholarships, fellowships and training opportunities — summarized and translated into Farsi, Pashto and English.",
+      "Discover verified scholarships, international jobs, fellowships, and career opportunities for Afghans with real-time updates in Dari, Pashto, and English.",
     siteName: "ARIA HUB",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "ARIA HUB | آریا هاب — Jobs, Scholarships & Opportunities in Afghanistan",
+    title: "ARIA HUB — Jobs, Scholarships & Opportunities in Afghanistan",
     description:
-      "New jobs, scholarships, fellowships and training opportunities — summarized and translated into Farsi, Pashto and English.",
+      "Discover verified scholarships, international jobs, fellowships, and career opportunities for Afghans with real-time updates in Dari, Pashto, and English.",
   },
 };
 
@@ -98,6 +98,13 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${vazirmatn.variable}`}
     >
       <head>
+        {/* Microsoft Clarity session recording and heatmaps (Project ID: ymu0ma5xzk) */}
+        <script
+          type="text/javascript"
+          dangerouslySetInnerHTML={{
+            __html: `(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i+"?ref=bwt";y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window, document, "clarity", "script", "ymu0ma5xzk");`,
+          }}
+        />
         {/* google-adsense-account meta + the AdSense script itself live in
             /[lang]/layout.tsx so ONLY public pages load ads — /admin and
             non-public routes stay ad-free (invalid-impression protection). */}

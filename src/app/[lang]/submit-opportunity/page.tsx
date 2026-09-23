@@ -10,6 +10,8 @@ import { isLang, type Lang } from '@/lib/lang-route';
 
 export const revalidate = 3600;
 
+import { getPageSeo } from '@/lib/seo-metadata';
+
 export async function generateMetadata({
   params,
 }: {
@@ -17,11 +19,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { lang: rawLang } = await params;
   const lang: Lang = isLang(rawLang) ? rawLang : 'fa';
-  const title = translate(lang, 'submit.title');
+  const seo = getPageSeo('submitOpportunity', lang);
   return {
     metadataBase: new URL('https://www.myariahub.com'),
-    title: `${title} | ARIA HUB`,
-    description: translate(lang, 'submit.subtitle'),
+    title: seo.title,
+    description: seo.description,
     alternates: {
       canonical: `/${lang}/submit-opportunity`,
       languages: {
@@ -31,8 +33,8 @@ export async function generateMetadata({
       },
     },
     openGraph: {
-      title: `${title} | ARIA HUB`,
-      description: translate(lang, 'submit.subtitle'),
+      title: seo.title,
+      description: seo.description,
       locale: lang,
       type: 'website',
     },

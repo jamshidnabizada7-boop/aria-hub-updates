@@ -16,6 +16,8 @@ import LikeButton from '@/components/site/like-button';
 
 const LANGS = ['en', 'fa', 'ps'];
 
+import { ensureSeoDescription } from '@/lib/seo-metadata';
+
 export const revalidate = 300;
 
 export async function generateMetadata({
@@ -26,18 +28,33 @@ export async function generateMetadata({
   const { lang, id } = await params;
   const l: Lang = isLang(lang) ? lang : 'fa';
   const story = await getSuccessStory(id, l);
-  if (!story) return { title: 'ARIA HUB' };
+  if (!story) return { title: 'Success Story | ARIA HUB' };
+
+  const title = story.title.length < 24
+    ? `${story.title} — Success Story | ARIA HUB`
+    : `${story.title} | ARIA HUB`;
+
+  const description = ensureSeoDescription(
+    story.excerpt,
+    l,
+    l === 'fa'
+      ? 'داستان الهام‌بخش قبولی و تجربه موفقیت در پلتفرم آریا هاب.'
+      : l === 'ps'
+      ? 'د بریا الهام بښونکې کیسه او تجربه په آریا هاب کې ولولئ.'
+      : 'Inspiring success story and admissions experience shared on ARIA HUB.'
+  );
+
   return {
     metadataBase: new URL('https://www.myariahub.com'),
-    title: `${story.title} | ARIA HUB`,
-    description: story.excerpt,
+    title,
+    description,
     alternates: {
       canonical: `/${l}/success-stories/${id}`,
       languages: Object.fromEntries(LANGS.map((x) => [x, `/${x}/success-stories/${id}`])),
     },
     openGraph: {
-      title: story.title,
-      description: story.excerpt,
+      title,
+      description,
       locale: l,
       type: 'article',
     },

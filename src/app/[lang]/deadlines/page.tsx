@@ -27,6 +27,8 @@ import {
 } from '@/lib/opportunity-queries';
 import { cn } from '@/lib/utils';
 
+import { getPageSeo } from '@/lib/seo-metadata';
+
 const PER_PAGE = 12;
 
 // New records land via periodic imports — keep the page at most 60s stale.
@@ -39,11 +41,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { lang: rawLang } = await params;
   const lang: Lang = isLang(rawLang) ? rawLang : 'fa';
-  const title = translate(lang, 'deadlines.title');
+  const seo = getPageSeo('deadlines', lang);
   return {
     metadataBase: new URL('https://www.myariahub.com'),
-    title: `${title} | ARIA HUB`,
-    description: translate(lang, 'deadlines.subtitle'),
+    title: seo.title,
+    description: seo.description,
     alternates: {
       canonical: `/${lang}/deadlines`,
       languages: {
@@ -53,8 +55,8 @@ export async function generateMetadata({
       },
     },
     openGraph: {
-      title: `${title} | ARIA HUB`,
-      description: translate(lang, 'deadlines.subtitle'),
+      title: seo.title,
+      description: seo.description,
       locale: lang,
       type: 'website',
     },

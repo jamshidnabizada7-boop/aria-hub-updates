@@ -7,6 +7,8 @@ import { isLang } from '@/lib/lang-route';
 
 const LANGS = ['en', 'fa', 'ps'];
 
+import { ensureSeoDescription } from '@/lib/seo-metadata';
+
 export async function generateMetadata({
   params,
 }: {
@@ -15,13 +17,34 @@ export async function generateMetadata({
   const { lang } = await params;
   const l: Lang = isLang(lang) ? lang : 'fa';
   const t = (key: string) => translate(l, key);
+  const rawTitle = t('stories.shareTitle');
+  const title = rawTitle.length < 24
+    ? `${rawTitle} — Inspire Others | ARIA HUB`
+    : `${rawTitle} | ARIA HUB`;
+
+  const description = ensureSeoDescription(
+    t('stories.shareSubtitle'),
+    l,
+    l === 'fa'
+      ? 'داستان موفقیت، پذیرش بورسیه و استخدام کاری خود را با جامعه آریا هاب به اشتراک بگذارید.'
+      : l === 'ps'
+      ? 'د خپلې بریا کیسه، ترلاسه شوی بورس او دنده د آریا هاب د ټولنې سره شریکه کړئ.'
+      : 'Submit your scholarship, job, or visa success story to inspire Afghan students on ARIA HUB.'
+  );
+
   return {
     metadataBase: new URL('https://www.myariahub.com'),
-    title: `${t('stories.shareTitle')} | ARIA HUB`,
-    description: t('stories.shareSubtitle'),
+    title,
+    description,
     alternates: {
       canonical: `/${l}/success-stories/share`,
       languages: Object.fromEntries(LANGS.map((x) => [x, `/${x}/success-stories/share`])),
+    },
+    openGraph: {
+      title,
+      description,
+      locale: l,
+      type: 'website',
     },
   };
 }

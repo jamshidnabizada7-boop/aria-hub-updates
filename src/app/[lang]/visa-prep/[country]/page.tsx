@@ -18,6 +18,71 @@ const getCategoryIcon = (name: string) => {
   return <FileText className="h-5 w-5" />;
 };
 
+import type { Metadata } from 'next';
+import { ensureSeoDescription } from '@/lib/seo-metadata';
+import { isLang, type Lang } from '@/lib/lang-route';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string; country: string }>;
+}): Promise<Metadata> {
+  const { lang: rawLang, country: countryCode } = await params;
+  const lang: Lang = isLang(rawLang) ? rawLang : 'fa';
+  const country = await prisma.visaCountry.findUnique({
+    where: { code: countryCode.toUpperCase() },
+  });
+
+  if (!country || country.status !== 'published') {
+    return {
+      metadataBase: new URL('https://www.myariahub.com'),
+      title: 'Visa Preparation Guide | ARIA HUB',
+      description: 'Prepare for embassy visa interviews with questions, document checklists, and requirements on ARIA HUB.',
+    };
+  }
+
+  const name =
+    typeof country.nameI18n === 'object' && country.nameI18n !== null && (country.nameI18n as any)[lang]
+      ? (country.nameI18n as any)[lang]
+      : country.name;
+
+  const title =
+    lang === 'fa'
+      ? `آمادگی مصاحبه و مدارک ویزای ${name} | ARIA HUB`
+      : lang === 'ps'
+      ? `د ${name} د ویزې مرکو او اسنادو چمتووالی | ARIA HUB`
+      : `${name} Visa Interview Preparation & Documents | ARIA HUB`;
+
+  const rawDesc =
+    lang === 'fa'
+      ? `راهنمای کامل اخذ ویزای ${name}: سوالات مصاحبه سفارت، چک‌لیست مدارک مورد نیاز و زمان‌بندی برای متقاضیان افغان.`
+      : lang === 'ps'
+      ? `د ${name} د ویزې ترلاسه کولو بشپړ لارښود: د سفارت د مرکې پوښتنې، د اړینو اسنادو لست او مهالوېش په آریا هاب کې.`
+      : `Comprehensive ${name} visa guide: embassy interview questions, document checklist, costs, and processing times on ARIA HUB.`;
+
+  const description = ensureSeoDescription(rawDesc, lang);
+
+  return {
+    metadataBase: new URL('https://www.myariahub.com'),
+    title,
+    description,
+    alternates: {
+      canonical: `/${lang}/visa-prep/${countryCode.toLowerCase()}`,
+      languages: {
+        en: `/en/visa-prep/${countryCode.toLowerCase()}`,
+        fa: `/fa/visa-prep/${countryCode.toLowerCase()}`,
+        ps: `/ps/visa-prep/${countryCode.toLowerCase()}`,
+      },
+    },
+    openGraph: {
+      title,
+      description,
+      locale: lang,
+      type: 'website',
+    },
+  };
+}
+
 export default async function VisaCountryPage({ params }: { params: Promise<{ lang: string; country: string }> }) {
   const { lang, country: countryCode } = await params;
   

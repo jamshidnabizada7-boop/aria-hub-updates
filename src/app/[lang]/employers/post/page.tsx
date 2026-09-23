@@ -7,6 +7,8 @@ import { EmployerPostForm } from './employer-post-form';
 import { translate } from '@/lib/i18n';
 import { isLang, type Lang } from '@/lib/lang-route';
 
+import { getPageSeo } from '@/lib/seo-metadata';
+
 export const revalidate = 3600;
 
 export async function generateMetadata({
@@ -16,11 +18,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { lang: rawLang } = await params;
   const lang: Lang = isLang(rawLang) ? rawLang : 'fa';
-  const title = translate(lang, 'employers.post.title');
+  const seo = getPageSeo('employersPost', lang);
   return {
     metadataBase: new URL('https://www.myariahub.com'),
-    title: `${title} | ARIA HUB`,
-    description: translate(lang, 'employers.post.subtitle'),
+    title: seo.title,
+    description: seo.description,
     alternates: {
       canonical: `/${lang}/employers/post`,
       languages: {
@@ -30,8 +32,8 @@ export async function generateMetadata({
       },
     },
     openGraph: {
-      title: `${title} | ARIA HUB`,
-      description: translate(lang, 'employers.post.subtitle'),
+      title: seo.title,
+      description: seo.description,
       locale: lang,
       type: 'website',
     },

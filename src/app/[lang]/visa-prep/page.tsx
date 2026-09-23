@@ -7,10 +7,38 @@ import { db as prisma } from '@/lib/db';
 import { translate } from '@/lib/i18n';
 import { isLang, type Lang } from '@/lib/lang-route';
 
-export const metadata = {
-  title: 'Visa Interview Preparation | ARIA HUB',
-  description: 'Master your visa interview with country-specific questions and AI mock interviews.'
-};
+import type { Metadata } from 'next';
+import { getPageSeo } from '@/lib/seo-metadata';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}): Promise<Metadata> {
+  const { lang: rawLang } = await params;
+  const lang: Lang = isLang(rawLang) ? rawLang : 'fa';
+  const seo = getPageSeo('visaPrep', lang);
+
+  return {
+    metadataBase: new URL('https://www.myariahub.com'),
+    title: seo.title,
+    description: seo.description,
+    alternates: {
+      canonical: `/${lang}/visa-prep`,
+      languages: {
+        en: '/en/visa-prep',
+        fa: '/fa/visa-prep',
+        ps: '/ps/visa-prep',
+      },
+    },
+    openGraph: {
+      title: seo.title,
+      description: seo.description,
+      locale: lang,
+      type: 'website',
+    },
+  };
+}
 
 export default async function VisaPrepPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang: rawLang } = await params;

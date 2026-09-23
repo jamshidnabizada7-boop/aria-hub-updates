@@ -13,19 +13,41 @@ const DIFFICULTY_STYLES: Record<string, string> = {
   hard: 'bg-red-500/10 text-red-600 dark:text-red-400',
 };
 
+import type { Metadata } from 'next';
+import { ensureSeoDescription } from '@/lib/seo-metadata';
+import { isLang, type Lang } from '@/lib/lang-route';
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ lang: string; slug: string }>;
-}) {
-  const { lang, slug } = await params;
+}): Promise<Metadata> {
+  const { lang: rawLang, slug } = await params;
+  const lang: Lang = isLang(rawLang) ? rawLang : 'fa';
   const category = await prisma.interviewCategory.findUnique({ where: { slug } });
-  if (!category) return { title: 'Not Found | ARIA HUB' };
+  if (!category) return { title: 'Interview Category | ARIA HUB' };
+
   const name = getLocalizedContent(category.name, category.nameI18n, lang);
   const desc = getLocalizedContent(category.description, category.descriptionI18n, lang);
+
+  const title = name.length < 24
+    ? `${name} Interview Prep & Questions | ARIA HUB`
+    : `${name} | ARIA HUB`;
+
+  const description = ensureSeoDescription(
+    desc,
+    lang,
+    lang === 'fa'
+      ? `بانک کامل سوالات مصاحبه ${name} همراه با نمونه پاسخ و تمرین آنلاین در آریا هاب.`
+      : lang === 'ps'
+      ? `د ${name} د مرکې پوښتنو بشپړ بانک د نمونو ځوابونو او تمرین سره په آریا هاب کې.`
+      : `Master ${name} interview questions with proven model answers, common mistakes, and practice on ARIA HUB.`
+  );
+
   return {
-    title: `${name} | ARIA HUB`,
-    description: desc || undefined,
+    metadataBase: new URL('https://www.myariahub.com'),
+    title,
+    description,
     alternates: {
       canonical: `/${lang}/interview-prep/category/${slug}`,
       languages: {
@@ -33,6 +55,12 @@ export async function generateMetadata({
         fa: `/fa/interview-prep/category/${slug}`,
         ps: `/ps/interview-prep/category/${slug}`,
       },
+    },
+    openGraph: {
+      title,
+      description,
+      locale: lang,
+      type: 'website',
     },
   };
 }

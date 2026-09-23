@@ -1,15 +1,42 @@
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
 import { getSiteData } from '@/lib/get-site';
 import { Navbar } from '@/components/site/navbar';
 import { Footer } from '@/components/site/footer';
 import { CVBuilderClient } from './client';
-
-export const metadata: Metadata = {
-  title: 'CV Builder | ARIA HUB',
-  description: 'Create professional and scholar CVs to boost your global opportunities.',
-};
+import { isLang, type Lang } from '@/lib/lang-route';
+import { getPageSeo } from '@/lib/seo-metadata';
 
 export const revalidate = 1800;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}): Promise<Metadata> {
+  const { lang: rawLang } = await params;
+  const lang: Lang = isLang(rawLang) ? rawLang : 'fa';
+  const seo = getPageSeo('cvBuilder', lang);
+
+  return {
+    metadataBase: new URL('https://www.myariahub.com'),
+    title: seo.title,
+    description: seo.description,
+    alternates: {
+      canonical: `/${lang}/cv-builder`,
+      languages: {
+        en: '/en/cv-builder',
+        fa: '/fa/cv-builder',
+        ps: '/ps/cv-builder',
+      },
+    },
+    openGraph: {
+      title: seo.title,
+      description: seo.description,
+      locale: lang,
+      type: 'website',
+    },
+  };
+}
 
 export default async function CVBuilderPage() {
   const data = await getSiteData();

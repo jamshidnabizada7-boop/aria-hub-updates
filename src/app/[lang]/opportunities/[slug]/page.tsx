@@ -56,6 +56,7 @@ import {
   type OpportunityDetail,
 } from '@/lib/opportunity-queries';
 import { cn } from '@/lib/utils';
+import { ensureSeoDescription } from '@/lib/seo-metadata';
 
 const SITE_URL = 'https://www.myariahub.com';
 
@@ -118,14 +119,24 @@ export async function generateMetadata({
   if (!opp) return {};
 
   const title = localize(opp.title, opp.titleI18n as I18nJson, lang);
-  let description = resolveSummary(opp, lang);
-  if (!description) {
-    description = cleanSummary(localize(opp.description, opp.descriptionI18n as I18nJson, lang), 155);
-  }
+  const rawDesc = resolveSummary(opp, lang) || cleanSummary(localize(opp.description, opp.descriptionI18n as I18nJson, lang), 155);
+  const description = ensureSeoDescription(
+    rawDesc,
+    lang,
+    lang === 'fa'
+      ? 'جزئیات کامل، شرایط ثبت‌نام و راهنمای اپلای این موقعیت در آریا هاب.'
+      : lang === 'ps'
+      ? 'بشپړ معلومات، شرایط او د غوښتنلیک لارښود په آریا هاب کې ترلاسه کړئ.'
+      : 'Find eligibility requirements, deadline, and application instructions on ARIA HUB.'
+  );
+
+  const pageTitle = title.length < 24
+    ? `${title} — Scholarship & Job Listing | ARIA HUB`
+    : `${title} | ARIA HUB`;
 
   return {
     metadataBase: new URL(SITE_URL),
-    title: `${title} | ARIA HUB`,
+    title: pageTitle,
     description,
     alternates: {
       canonical: `/${lang}/opportunities/${slug}`,
@@ -136,7 +147,7 @@ export async function generateMetadata({
       },
     },
     openGraph: {
-      title,
+      title: pageTitle,
       description,
       url: `/${lang}/opportunities/${slug}`,
       siteName: 'ARIA HUB',

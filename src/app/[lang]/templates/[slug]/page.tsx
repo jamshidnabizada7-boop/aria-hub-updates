@@ -1,4 +1,5 @@
 import React from 'react';
+import type { Metadata } from 'next';
 import { PageShell } from '@/components/site/page-shell';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -6,8 +7,54 @@ import { PrismaClient } from '@prisma/client';
 import { BookOpen, Copy, Download, Share2, Sparkles, CheckCircle, AlertTriangle, Lightbulb, Bookmark } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { TranslatedText } from '@/components/ui/translated-text';
+import { isLang, type Lang } from '@/lib/lang-route';
+import { ensureSeoDescription } from '@/lib/seo-metadata';
 
 const prisma = new PrismaClient();
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string; slug: string }>;
+}): Promise<Metadata> {
+  const { lang, slug } = await params;
+  const template = await prisma.documentTemplate.findUnique({
+    where: { slug },
+    select: { title: true, excerpt: true },
+  });
+  if (!template) return { title: 'Template | ARIA HUB' };
+
+  const rawTitle = `${template.title} — Template & Guide`;
+  const l: Lang = isLang(lang) ? lang : 'fa';
+  const description = ensureSeoDescription(
+    template.excerpt,
+    l,
+    l === 'fa'
+      ? 'دانلود قالب آماده مدارک بورسیه و راهنمای گام‌به‌گام نگارش در آریا هاب.'
+      : l === 'ps'
+      ? 'د بورسونو او استخدام لپاره چمتو فارمټونه او د لیکلو لارښود په آریا هاب کې.'
+      : 'Download verified document templates and step-by-step writing guidelines on ARIA HUB.'
+  );
+
+  return {
+    metadataBase: new URL('https://www.myariahub.com'),
+    title: `${rawTitle} | ARIA HUB`,
+    description,
+    alternates: {
+      canonical: `/${lang}/templates/${slug}`,
+      languages: {
+        en: `/en/templates/${slug}`,
+        fa: `/fa/templates/${slug}`,
+        ps: `/ps/templates/${slug}`,
+      },
+    },
+    openGraph: {
+      title: `${rawTitle} | ARIA HUB`,
+      description,
+      type: 'article',
+    },
+  };
+}
 
 export default async function TemplateDetailPage({ params }: { params: Promise<{ lang: string; slug: string }> }) {
   const { lang, slug } = await params;

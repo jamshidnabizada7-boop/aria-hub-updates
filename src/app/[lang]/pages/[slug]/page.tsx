@@ -5,6 +5,8 @@ import { getLocalizedContent } from '@/lib/i18n-content';
 import { PageShell } from '@/components/site/page-shell';
 import type { Lang } from '@/lib/lang-route';
 
+import { ensureSeoDescription } from '@/lib/seo-metadata';
+
 export async function generateMetadata({
   params,
 }: {
@@ -16,9 +18,38 @@ export async function generateMetadata({
     return { title: 'Page Not Found | ARIA HUB' };
   }
   const title = getLocalizedContent(page.title, page.titleI18n as Record<string, string> | null, lang as Lang) || page.title;
+  const pageTitle = title.length < 24
+    ? `${title} — Official Information | ARIA HUB`
+    : `${title} | ARIA HUB`;
+
+  const description = ensureSeoDescription(
+    page.seoDescription || page.title,
+    lang as Lang,
+    lang === 'fa'
+      ? 'اطلاعات کامل، راهنما و شرایط این بخش در سامانه آریا هاب.'
+      : lang === 'ps'
+      ? 'بشپړ معلومات، لارښود او شرایط په آریا هاب کې ولولئ.'
+      : 'Find official guidelines, updates, and comprehensive information on ARIA HUB.'
+  );
+
   return {
-    title: `${title} | ARIA HUB`,
-    description: page.seoDescription || page.title,
+    metadataBase: new URL('https://www.myariahub.com'),
+    title: pageTitle,
+    description,
+    alternates: {
+      canonical: `/${lang}/pages/${slug}`,
+      languages: {
+        en: `/en/pages/${slug}`,
+        fa: `/fa/pages/${slug}`,
+        ps: `/ps/pages/${slug}`,
+      },
+    },
+    openGraph: {
+      title: pageTitle,
+      description,
+      locale: lang,
+      type: 'website',
+    },
   };
 }
 
