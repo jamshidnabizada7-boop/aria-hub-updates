@@ -54,12 +54,16 @@ export async function generateMetadata({
 export default async function InterviewCommunityPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
   
-  // Fetch published interview experiences
-  const experiences = await prisma.interviewExperience.findMany({
-    where: { status: 'published' },
-    orderBy: { createdAt: 'desc' },
-    take: 20
-  });
+  let experiences: any[] = [];
+  try {
+    experiences = await prisma.interviewExperience.findMany({
+      where: { status: 'published' },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    });
+  } catch {
+    experiences = [];
+  }
 
   return (
     <PageShell lang={lang} className="pt-12 pb-16">

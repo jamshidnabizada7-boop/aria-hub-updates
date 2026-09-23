@@ -55,10 +55,15 @@ export default async function VisaCommunityPage({
   params: Promise<{ lang: string }>;
 }) {
   const { lang } = await params;
-  const stories = await prisma.successStory.findMany({
-    where: { status: 'published' },
-    orderBy: { createdAt: 'desc' }
-  });
+  let stories: any[] = [];
+  try {
+    stories = await prisma.successStory.findMany({
+      where: { status: 'published' },
+      orderBy: { createdAt: 'desc' },
+    });
+  } catch {
+    stories = [];
+  }
 
   return (
     <PageShell lang={lang} className="pt-12 pb-16">

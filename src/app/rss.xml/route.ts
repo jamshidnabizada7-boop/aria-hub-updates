@@ -25,7 +25,14 @@ function cdata(value: string): string {
  * the description.
  */
 export async function GET() {
-  const { items } = await listOpportunities({ lang: 'en', sort: 'newest', page: 1, perPage: 50 });
+  let items: any[] = [];
+  try {
+    const res = await listOpportunities({ lang: 'en', sort: 'newest', page: 1, perPage: 50 });
+    items = res?.items || [];
+  } catch (err) {
+    // DB may be unreachable during static prerender in build or CI
+    items = [];
+  }
 
   const itemsXml = items
     .map((item) => {

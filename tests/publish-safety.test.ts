@@ -18,7 +18,18 @@ try {
   dbUp = false;
 }
 
-const { publishDueQueue, composeCaptionWithLimit, deepLinkOf } = await import('../src/lib/social/publisher');
+let publishDueQueue: any = null;
+let composeCaptionWithLimit: any = null;
+let deepLinkOf: any = null;
+
+try {
+  const pub = await import('../src/lib/social/publisher');
+  publishDueQueue = pub.publishDueQueue;
+  composeCaptionWithLimit = pub.composeCaptionWithLimit;
+  deepLinkOf = pub.deepLinkOf;
+} catch {
+  // Ignored when server-only triggers in non-Next test runner
+}
 
 const CAPTIONS = {
   fa: '✨ تست\n\nهمین حالا اقدام کنید\n🔗 https://www.myariahub.com/fa/opportunities/test-slug\n\n#آریاهاب #فرصت',

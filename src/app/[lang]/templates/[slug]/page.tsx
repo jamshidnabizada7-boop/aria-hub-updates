@@ -3,14 +3,12 @@ import type { Metadata } from 'next';
 import { PageShell } from '@/components/site/page-shell';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { PrismaClient } from '@prisma/client';
+import { db } from '@/lib/db';
 import { BookOpen, Copy, Download, Share2, Sparkles, CheckCircle, AlertTriangle, Lightbulb, Bookmark } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { TranslatedText } from '@/components/ui/translated-text';
 import { isLang, type Lang } from '@/lib/lang-route';
 import { ensureSeoDescription } from '@/lib/seo-metadata';
-
-const prisma = new PrismaClient();
 
 export async function generateMetadata({
   params,
@@ -18,11 +16,16 @@ export async function generateMetadata({
   params: Promise<{ lang: string; slug: string }>;
 }): Promise<Metadata> {
   const { lang, slug } = await params;
-  const template = await prisma.documentTemplate.findUnique({
-    where: { slug },
-    select: { title: true, excerpt: true },
-  });
-  if (!template) return { title: 'Template | ARIA HUB' };
+  let template: any = null;
+  try {
+    template = await db.documentTemplate.findUnique({
+      where: { slug },
+      select: { title: true, excerpt: true },
+    });
+  } catch {
+    template = null;
+  }
+  if (!template) return { title: 'Template Document & Guide | ARIA HUB' };
 
   const rawTitle = `${template.title} — Template & Guide`;
   const l: Lang = isLang(lang) ? lang : 'fa';
@@ -58,12 +61,17 @@ export async function generateMetadata({
 
 export default async function TemplateDetailPage({ params }: { params: Promise<{ lang: string; slug: string }> }) {
   const { lang, slug } = await params;
-  const template = await prisma.documentTemplate.findUnique({
-    where: { slug },
-    include: {
-      category: true,
-    }
-  });
+  let template: any = null;
+  try {
+    template = await db.documentTemplate.findUnique({
+      where: { slug },
+      include: {
+        category: true,
+      },
+    });
+  } catch {
+    template = null;
+  }
 
   if (!template) {
     notFound();

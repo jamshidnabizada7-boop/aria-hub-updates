@@ -24,7 +24,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { lang: rawLang, slug } = await params;
   const lang: Lang = isLang(rawLang) ? rawLang : 'fa';
-  const category = await prisma.interviewCategory.findUnique({ where: { slug } });
+  let category: any = null;
+  try {
+    category = await prisma.interviewCategory.findUnique({ where: { slug } });
+  } catch {
+    category = null;
+  }
   if (!category) return { title: 'Interview Category | ARIA HUB' };
 
   const name = getLocalizedContent(category.name, category.nameI18n, lang);
@@ -74,15 +79,20 @@ export default async function InterviewCategoryPage({
   const t = (key: string, params?: Record<string, string | number>) =>
     translate(lang, key, params);
 
-  const category = await prisma.interviewCategory.findUnique({
-    where: { slug },
-    include: {
-      questions: {
-        where: { status: 'published' },
-        orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+  let category: any = null;
+  try {
+    category = await prisma.interviewCategory.findUnique({
+      where: { slug },
+      include: {
+        questions: {
+          where: { status: 'published' },
+          orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+        },
       },
-    },
-  });
+    });
+  } catch {
+    category = null;
+  }
 
   if (!category) notFound();
 

@@ -29,9 +29,14 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { lang: rawLang, country: countryCode } = await params;
   const lang: Lang = isLang(rawLang) ? rawLang : 'fa';
-  const country = await prisma.visaCountry.findUnique({
-    where: { code: countryCode.toUpperCase() },
-  });
+  let country: any = null;
+  try {
+    country = await prisma.visaCountry.findUnique({
+      where: { code: countryCode.toUpperCase() },
+    });
+  } catch {
+    country = null;
+  }
 
   if (!country || country.status !== 'published') {
     return {
@@ -86,22 +91,29 @@ export async function generateMetadata({
 export default async function VisaCountryPage({ params }: { params: Promise<{ lang: string; country: string }> }) {
   const { lang, country: countryCode } = await params;
   
-  const country = await prisma.visaCountry.findUnique({
-    where: { code: countryCode.toUpperCase() },
-    include: {
-      documents: {
-        orderBy: { order: 'asc' }
+  let country: any = null;
+  let categories: any[] = [];
+  try {
+    country = await prisma.visaCountry.findUnique({
+      where: { code: countryCode.toUpperCase() },
+      include: {
+        documents: {
+          orderBy: { order: 'asc' },
+        },
+        questions: {
+          where: { status: 'published' },
+          take: 5, // preview
+        },
       },
-      questions: {
-        where: { status: 'published' },
-        take: 5 // preview
-      }
-    }
-  });
+    });
 
-  const categories = await prisma.visaCategory.findMany({
-    orderBy: { order: 'asc' }
-  });
+    categories = await prisma.visaCategory.findMany({
+      orderBy: { order: 'asc' },
+    });
+  } catch {
+    country = null;
+    categories = [];
+  }
 
   if (!country || country.status !== 'published') {
     notFound();

@@ -8,7 +8,7 @@
     "build": "next build && node -e \"const fs=require('fs'); if (fs.existsSync('.next/standalone')) { fs.cpSync('.next/static','.next/standalone/.next/static',{recursive:true}); fs.cpSync('public','.next/standalone/public',{recursive:true}); }\"",
     "start": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
     "lint": "eslint .",
-    "test": "bun test tests/",
+    "test": "bun test ./tests/",
     "db:push": "prisma db push",
     "db:deploy": "prisma migrate deploy",
     "db:generate": "prisma generate",

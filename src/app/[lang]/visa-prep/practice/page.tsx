@@ -48,14 +48,21 @@ export async function generateMetadata({
 export default async function VisaPracticePage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
 
-  const countries = await prisma.visaCountry.findMany({
-    where: { status: 'published' },
-    orderBy: { order: 'asc' }
-  });
-
-  const categories = await prisma.visaCategory.findMany({
-    orderBy: { order: 'asc' }
-  });
+  let countries: any[] = [];
+  let categories: any[] = [];
+  try {
+    countries = await prisma.visaCountry.findMany({
+      where: { status: 'published' },
+      orderBy: { order: 'asc' },
+    });
+    categories = await prisma.visaCategory.findMany({
+      orderBy: { order: 'asc' },
+    });
+  } catch {
+    // Database fallback
+    countries = [];
+    categories = [];
+  }
 
   return (
     <PageShell lang={lang} className="pt-12 pb-16">

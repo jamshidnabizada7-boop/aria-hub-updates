@@ -253,6 +253,7 @@ export function getPageSeo(pageKey: keyof typeof SEO_PAGE_DATA, lang: Lang) {
 
 /**
  * Ensures any dynamic or article description is within Bing's recommended 120-160 characters.
+ * Guarantees output is strictly between 120 and 160 characters across all languages and inputs.
  */
 export function ensureSeoDescription(
   rawDesc: string | null | undefined,
@@ -264,32 +265,47 @@ export function ensureSeoDescription(
     return clean;
   }
   if (clean.length > 160) {
-    // Cut cleanly at the last space before 157 and append ellipsis
     const truncated = clean.slice(0, 157);
     const lastSpace = truncated.lastIndexOf(' ');
-    return (lastSpace > 100 ? truncated.slice(0, lastSpace) : truncated) + '...';
+    return (lastSpace >= 117 ? truncated.slice(0, lastSpace) : truncated) + '...';
   }
-  // Too short (< 120 chars) -> enrich with localized context note
-  const suffix =
-    contextNote ||
-    (lang === 'fa'
-      ? ' جزئیات کامل، ددلاین و شرایط درخواست آنلاین در پلتفرم آریا هاب.'
-      : lang === 'ps'
-      ? ' بشپړ معلومات، وروستۍ نېټه او د آنلاین غوښتنلیک لارښود په آریا هاب کې.'
-      : ' Discover verified eligibility guidelines, deadlines, and application steps on ARIA HUB.');
 
-  let combined = clean ? `${clean}${suffix.startsWith(' ') ? '' : ' '}${suffix}` : suffix.trim();
-  if (combined.length < 120) {
-    if (lang === 'fa') {
-      combined = `${combined} مرجع معتبر جدیدترین بورسیه‌ها و فرصت‌های شغلی در آریا هاب.`;
-    } else if (lang === 'ps') {
-      combined = `${combined} په آریا هاب کې د باوري تحصیلي بورسونو او نړیوالو دندو بشپړ لارښود.`;
-    } else {
-      combined = `${combined} Find verified scholarship programs and career opportunities on ARIA HUB.`;
-    }
+  const fragments: Record<Lang, string[]> = {
+    fa: [
+      contextNote || '',
+      'جزئیات کامل، شرایط ثبت‌نام و راهنمای اپلای آنلاین در پلتفرم تخصصی آریا هاب.',
+      'مرجع معتبر جدیدترین بورسیه‌ها و فرصت‌های شغلی بین‌المللی برای جوانان افغانستان.',
+    ],
+    ps: [
+      contextNote || '',
+      'بشپړ معلومات، د نوم لیکنې شرایط او د آنلاین غوښتنلیک لارښود په آریا هاب کې.',
+      'په افغانستان کې د باوري تحصیلي بورسونو او نړیوالو دندو بشپړ او معتبر لارښود.',
+    ],
+    en: [
+      contextNote || '',
+      'Discover verified eligibility guidelines, deadlines, and application steps on ARIA HUB.',
+      'Find top international scholarships, fellowships, and career opportunities for Afghans.',
+    ],
+  };
+
+  const pool = (fragments[lang] || fragments.en).filter(Boolean);
+  let combined = clean;
+
+  for (const frag of pool) {
+    if (combined.length >= 120) break;
+    combined = combined ? `${combined} ${frag}` : frag;
   }
+
+  while (combined.length < 120) {
+    const extra = (fragments[lang] || fragments.en)[1];
+    combined = combined ? `${combined} ${extra}` : extra;
+  }
+
   if (combined.length > 160) {
-    return combined.slice(0, 157) + '...';
+    const truncated = combined.slice(0, 157);
+    const lastSpace = truncated.lastIndexOf(' ');
+    return (lastSpace >= 117 ? truncated.slice(0, lastSpace) : truncated) + '...';
   }
+
   return combined;
 }

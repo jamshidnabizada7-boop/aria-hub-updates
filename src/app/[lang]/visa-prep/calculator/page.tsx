@@ -52,27 +52,34 @@ export async function generateMetadata({
 export default async function VisaCostCalculatorPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
 
-  const countries = await prisma.visaCountry.findMany({
-    where: { status: 'published' },
-    orderBy: { order: 'asc' },
-    select: {
-      id: true,
-      name: true,
-      nameI18n: true,
-      code: true,
-      costEstimate: true,
-    }
-  });
+  let countries: any[] = [];
+  let categories: any[] = [];
+  try {
+    countries = await prisma.visaCountry.findMany({
+      where: { status: 'published' },
+      orderBy: { order: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        nameI18n: true,
+        code: true,
+        costEstimate: true,
+      },
+    });
 
-  const categories = await prisma.visaCategory.findMany({
-    orderBy: { name: 'asc' },
-    select: {
-      id: true,
-      name: true,
-      nameI18n: true,
-      slug: true,
-    }
-  });
+    categories = await prisma.visaCategory.findMany({
+      orderBy: { name: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        nameI18n: true,
+        slug: true,
+      },
+    });
+  } catch {
+    countries = [];
+    categories = [];
+  }
 
   return (
     <PageShell lang={lang} className="pt-12 pb-16">

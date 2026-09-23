@@ -18,10 +18,15 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { lang: rawLang, id } = await params;
   const lang: Lang = isLang(rawLang) ? rawLang : 'fa';
-  const question = await prisma.interviewQuestion.findUnique({
-    where: { id },
-    include: { category: true },
-  });
+  let question: any = null;
+  try {
+    question = await prisma.interviewQuestion.findUnique({
+      where: { id },
+      include: { category: true },
+    });
+  } catch {
+    question = null;
+  }
 
   if (!question || question.status !== 'published') {
     return {
@@ -79,10 +84,15 @@ export default async function QuestionDetailPage({
   const { lang, id } = await params;
   const t = (key: string, p?: Record<string, string | number>) => translate(lang, key, p);
 
-  const question = await prisma.interviewQuestion.findUnique({
-    where: { id },
-    include: { category: true },
-  });
+  let question: any = null;
+  try {
+    question = await prisma.interviewQuestion.findUnique({
+      where: { id },
+      include: { category: true },
+    });
+  } catch {
+    question = null;
+  }
 
   if (!question || question.status !== 'published') {
     notFound();
