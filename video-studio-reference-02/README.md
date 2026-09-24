@@ -13,13 +13,17 @@ Kinetic verbs → ARIA HUB discovery/application actions.
 Pinterest logo particle resolve → ARIA HUB navy/gold logo resolve.  
 Reference creator outro → owned ARIA HUB end card.
 
-The implementation uses repository-owned assets only:
+The production is self-contained inside `video-studio-reference-02/`.
 
-- `public/images/logo-vector.svg`
-- `public/fonts/Vazirmatn-Medium.ttf`
-- `public/fonts/Vazirmatn-Bold.ttf`
-- `public/fonts/Vazirmatn-Black.ttf`
-- `public/advideo/audio-30s.wav`
+Typography:
+- **Vazirmatn Variable** — UI, search, cards and supporting Persian text
+- **Noto Kufi Arabic Variable** — cinematic headings and kinetic display typography
+
+Audio:
+- `public/audio/reference-02-original.m4a` — audio extracted directly from the supplied second reference video (AAC stereo, 44.1 kHz)
+
+Brand mark:
+- `public/logo-vector.svg` — isolated copy of the ARIA HUB vector mark for this production
 
 ## Run
 
