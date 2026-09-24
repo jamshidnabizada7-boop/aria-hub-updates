@@ -31,6 +31,7 @@ export interface TickResult {
   import?: { ran: number; ok: number; error?: string };
   translate?: { processed: number; failed: number; rateLimited: boolean; skipped: boolean; error?: string };
   queue?: { created: number; error?: string };
+  groupDistribution?: { campaigns: number; jobs: number; skipped?: boolean; error?: string };
   publish?: { rendered: number; published: number; failed: number; error?: string };
   /** step-level failures — a tick with errors is recorded as 'partial', never 'ok' */
   errors: string[];
@@ -190,7 +191,24 @@ export async function runTick(baseUrl = 'http://127.0.0.1:3000', opts?: { skipIm
       result.errors.push(`queue: ${msg}`);
     }
 
-    // 4. render + publish due posts — rendering spawns a headless chrome,
+    // 4. prepare Facebook Group distribution campaigns. Meta currently has no
+    // public Groups publishing API, so this creates reviewable manual-assist
+    // destination jobs only; it never sends a Group post from the tick.
+    try {
+      if (state.facebookGroupsEnabled !== false && state.facebookGroupPaused !== true) {
+        const { ensureAutoCampaigns } = await import('@/lib/facebook-group-distribution');
+        const gd = await ensureAutoCampaigns();
+        result.groupDistribution = { campaigns: gd.created, jobs: gd.jobs };
+      } else {
+        result.groupDistribution = { campaigns: 0, jobs: 0, skipped: true };
+      }
+    } catch (e) {
+      const msg = (e instanceof Error ? e.message : String(e)).slice(0, 160);
+      result.groupDistribution = { campaigns: 0, jobs: 0, error: msg };
+      result.errors.push(`group-distribution: ${msg}`);
+    }
+
+    // 5. render + publish due posts — rendering spawns a headless chrome,
     //    so it only runs with real memory headroom (OOM-killed the dev server
     //    when it fired during boot compiles). Publish still runs without image.
     try {
