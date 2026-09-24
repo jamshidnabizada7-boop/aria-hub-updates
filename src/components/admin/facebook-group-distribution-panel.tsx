@@ -59,6 +59,7 @@ const tone = (s: string) =>
 export function FacebookGroupDistributionPanel() {
   const { toast } = useToast();
   const [data, setData] = useState<Data | null>(null);
+  const [loadError, setLoadError] = useState<{ migrationRequired?: boolean; message: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [groupDraft, setGroupDraft] = useState({
     name: '', url: '', tags: '', language: 'any', region: '', audience: '', approvalRequired: false,
@@ -72,9 +73,17 @@ export function FacebookGroupDistributionPanel() {
     try {
       const r = await fetch('/api/admin/facebook-groups', { cache: 'no-store' });
       const j = await r.json();
-      if (j.ok) setData(j);
+      if (j.ok) {
+        setData(j);
+        setLoadError(null);
+      } else {
+        setLoadError({
+          migrationRequired: Boolean(j.migrationRequired),
+          message: String(j.message || j.error || 'Failed to load Facebook Group Distribution'),
+        });
+      }
     } catch {
-      // Keep the previous snapshot on a transient admin-network failure.
+      setLoadError({ message: 'Failed to load Facebook Group Distribution status.' });
     }
   }, []);
 
@@ -104,6 +113,29 @@ export function FacebookGroupDistributionPanel() {
   const queueById = useMemo(() => new Map((data?.queue ?? []).map((q) => [q.id, q])), [data?.queue]);
 
   if (!data) {
+    if (loadError) {
+      return (
+        <section className="rounded-2xl border bg-card p-4">
+          <div className="flex items-start gap-3">
+            <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+            <div>
+              <h3 className="text-sm font-bold">
+                {loadError.migrationRequired ? 'Facebook Group Distribution — database migration required' : 'Facebook Group Distribution unavailable'}
+              </h3>
+              <p className="mt-1 text-xs text-muted-foreground">{loadError.message}</p>
+              {loadError.migrationRequired ? (
+                <p className="mt-2 text-[11px] text-muted-foreground">
+                  The existing Automation system can still be used. Apply the Facebook Group Distribution migration to this environment to enable this section.
+                </p>
+              ) : null}
+              <Button size="sm" variant="outline" className="mt-3" onClick={() => void load()}>
+                <RefreshCw className="me-1 h-3.5 w-3.5" /> Retry
+              </Button>
+            </div>
+          </div>
+        </section>
+      );
+    }
     return (
       <section className="rounded-2xl border bg-card p-4">
         <div className="flex items-center gap-2 text-sm font-bold"><Loader2 className="h-4 w-4 animate-spin" /> Loading Facebook Group Distribution…</div>
