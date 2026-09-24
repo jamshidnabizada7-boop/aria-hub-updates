@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   extractGroupMatchMetadata,
   facebookGroupRuleApplies,
-} from '../src/lib/facebook-group-distribution';
+} from '../src/lib/facebook-group-matching';
 
 describe('Facebook Group Distribution matching', () => {
   test('extracts opportunity category, country and caption languages from queue snapshot', () => {
