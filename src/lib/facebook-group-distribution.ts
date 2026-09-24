@@ -24,7 +24,7 @@ function norm(v: unknown): string {
 }
 
 
-function rowMetadata(row: QueueSnapshot) {
+export function extractGroupMatchMetadata(row: QueueSnapshot) {
   const c = (row.contentJson && typeof row.contentJson === 'object'
     ? row.contentJson
     : {}) as Record<string, unknown>;
@@ -47,7 +47,7 @@ function rowMetadata(row: QueueSnapshot) {
   return { kind, category, country, langs };
 }
 
-function ruleApplies(
+export function facebookGroupRuleApplies(
   rule: {
     contentKinds: string[];
     contentCategories: string[];
@@ -69,7 +69,7 @@ function ruleApplies(
 }
 
 export async function matchGroupsForQueueRow(row: QueueSnapshot): Promise<GroupMatch[]> {
-  const meta = rowMetadata(row);
+  const meta = extractGroupMatchMetadata(row);
   const [groups, rules] = await Promise.all([
     db.facebookGroup.findMany({
       where: { active: true, postingEligible: true },
@@ -91,7 +91,7 @@ export async function matchGroupsForQueueRow(row: QueueSnapshot): Promise<GroupM
     let excluded = false;
 
     for (const rule of rules) {
-      if (!ruleApplies(rule, meta)) continue;
+      if (!facebookGroupRuleApplies(rule, meta)) continue;
       const includeIds = rule.includeGroupIds.map(norm);
       const excludeIds = rule.excludeGroupIds.map(norm);
       const includeTags = rule.includeTags.map(norm);
