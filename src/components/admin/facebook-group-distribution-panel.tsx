@@ -203,6 +203,23 @@ export function FacebookGroupDistributionPanel() {
                       <p className="mt-1 text-[10px] text-muted-foreground">{[g.language, g.region, g.audience].filter(Boolean).join(' · ') || 'No targeting metadata'}</p>
                     </div>
                     <div className="flex items-center gap-1">
+                      <Switch
+                        checked={g.active && g.postingEligible}
+                        onCheckedChange={(enabled) => void act({
+                          action: 'save-group',
+                          id: g.id,
+                          name: g.name,
+                          url: g.url,
+                          groupId: g.groupId,
+                          language: g.language,
+                          audience: g.audience,
+                          region: g.region,
+                          tags: g.tags.map((tag) => tag.name),
+                          active: enabled,
+                          postingEligible: enabled,
+                          approvalRequired: g.approvalRequired,
+                        }, `toggle-group-${g.id}`, enabled ? 'Group resumed' : 'Group paused')}
+                      />
                       <Badge variant="outline" className={cn('text-[10px]', g.active && g.postingEligible ? 'border-emerald-400/60 text-emerald-600' : 'text-muted-foreground')}>{g.active && g.postingEligible ? 'active' : 'paused'}</Badge>
                       <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => void act({ action: 'remove-group', id: g.id }, `rm-${g.id}`, 'Group removed/archived')}><Trash2 className="h-3 w-3" /></Button>
                     </div>
