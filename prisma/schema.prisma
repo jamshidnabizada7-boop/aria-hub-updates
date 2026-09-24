@@ -1275,6 +1275,9 @@ model SocialPostQueue {
   publishedAt   DateTime?
   claimedAt     DateTime? // set when a worker claims the row (publishing/rendering)
   notifiedAt    DateTime? // admin failure alert sent
+  facebookGroupDistribution Boolean @default(false)
+  facebookGroupMode         String  @default("auto") // auto | manual
+  facebookGroupCampaigns    FacebookGroupCampaign[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -1317,6 +1320,124 @@ model AutomationState {
   id        String   @id @default("singleton")
   state     Json     @default("{}") // { translateBackoffUntil, lastQueueBuildDate, … }
   updatedAt DateTime @updatedAt
+}
+
+// ─── Facebook Group Distribution ──────────────────────────────────────────────
+// Meta removed the public Groups API in April 2024. These models intentionally
+// keep destination management/queueing independent from the transport so an
+// official transport can replace today's manual-assist path without changing
+// ARIA HUB content, scheduling, matching, or history.
+model FacebookGroup {
+  id                         String   @id @default(cuid())
+  name                       String
+  groupId                    String?  @unique
+  url                        String   @unique
+  language                   String? // fa | ps | en | any
+  audience                   String?
+  region                     String?
+  active                     Boolean  @default(true)
+  postingEligible            Boolean  @default(true)
+  approvalRequired           Boolean  @default(false)
+  notes                      String?  @db.Text
+  lastSuccessfulDistribution DateTime?
+  lastFailure                DateTime?
+  lastError                  String?
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+  tagLinks                   FacebookGroupTagLink[]
+  jobs                       FacebookGroupDistributionJob[]
+
+  @@index([active, postingEligible])
+  @@index([language, region])
+}
+
+model FacebookGroupTag {
+  id         String   @id @default(cuid())
+  name       String
+  slug       String   @unique
+  createdAt  DateTime @default(now())
+  groupLinks FacebookGroupTagLink[]
+}
+
+model FacebookGroupTagLink {
+  groupId String
+  tagId   String
+  group   FacebookGroup    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  tag     FacebookGroupTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, tagId])
+  @@index([tagId])
+}
+
+model FacebookGroupDistributionRule {
+  id                   String   @id @default(cuid())
+  name                 String
+  enabled              Boolean  @default(true)
+  contentKinds         String[] @default([])
+  contentCategories    String[] @default([])
+  includeTags          String[] @default([])
+  excludeTags          String[] @default([])
+  languages            String[] @default([])
+  regions              String[] @default([])
+  includeGroupIds      String[] @default([])
+  excludeGroupIds      String[] @default([])
+  requireLanguageMatch Boolean  @default(false)
+  requireRegionMatch   Boolean  @default(false)
+  priority             Int      @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([enabled, priority])
+}
+
+model FacebookGroupCampaign {
+  id               String   @id @default(cuid())
+  sourceQueueId    String?
+  sourceQueue      SocialPostQueue? @relation(fields: [sourceQueueId], references: [id], onDelete: SetNull)
+  sourceContentRef String?
+  selectionMode    String   @default("auto") // auto | manual
+  transport        String   @default("manual_assist")
+  status           String   @default("requires_review")
+  scheduledFor     DateTime?
+  autoSourceKey    String?  @unique
+  createdByAdminId String?
+  summary          Json?
+  completedAt      DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  jobs             FacebookGroupDistributionJob[]
+
+  @@index([status, createdAt])
+  @@index([sourceQueueId])
+}
+
+model FacebookGroupDistributionJob {
+  id              String   @id @default(cuid())
+  campaignId      String
+  campaign        FacebookGroupCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  groupId         String
+  group           FacebookGroup @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  sourceQueueId   String
+  status          String   @default("requires_review") // pending | queued | processing | completed | failed | cancelled | paused | requires_review | approval_required
+  transport       String   @default("manual_assist")
+  scheduledFor    DateTime?
+  attemptCount    Int      @default(0)
+  lastAttemptAt   DateTime?
+  nextAttemptAt   DateTime?
+  matchReasons    Json     @default("[]")
+  errorType       String?
+  errorMessage    String?
+  retryable       Boolean?
+  suggestedAction String?
+  externalReference String?
+  completedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([campaignId, groupId])
+  @@unique([sourceQueueId, groupId])
+  @@index([status, scheduledFor])
+  @@index([groupId, createdAt])
 }
 
 // ─── Static Pages (CMS) ────────────────────────────────────────────────────────
