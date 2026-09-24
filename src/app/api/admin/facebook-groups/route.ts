@@ -47,6 +47,7 @@ export async function GET() {
   const admin = await getCurrentAdmin();
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  try {
   const [state, groups, rules, campaigns, jobs, queue] = await Promise.all([
     getState(),
     db.facebookGroup.findMany({
@@ -119,6 +120,20 @@ export async function GET() {
     jobs,
     queue,
   });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    const missingSchema = /FacebookGroup|facebookGroupDistribution|facebookGroupMode|does not exist|unknown column|column .* does not exist|relation .* does not exist/i.test(message);
+    if (missingSchema) {
+      return NextResponse.json({
+        ok: false,
+        error: 'facebook_group_schema_not_migrated',
+        migrationRequired: true,
+        message: 'Facebook Group Distribution is installed in code, but its database migration has not been applied to this environment yet.',
+      }, { status: 503 });
+    }
+    console.error('[facebook-groups] status failed:', message.slice(0, 500));
+    return NextResponse.json({ ok: false, error: 'facebook_group_status_failed' }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {
