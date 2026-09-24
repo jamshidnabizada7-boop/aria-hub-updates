@@ -1,0 +1,21 @@
+{
+  "name": "aria-hub-reference-02",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "studio": "remotion studio src/index.ts --public-dir=../public",
+    "render": "remotion render src/index.ts ARIA-HUB-Reference-02 out/aria-hub-reference-02-1920x1080.mp4 --public-dir=../public --codec=h264 --crf=16 --audio-bitrate=320k",
+    "render:4k": "remotion render src/index.ts ARIA-HUB-Reference-02-4K out/aria-hub-reference-02-3840x2160.mp4 --public-dir=../public --codec=h264 --crf=15 --audio-bitrate=320k"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.375",
+    "remotion": "^4.0.375",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.7.0"
+  }
+}
