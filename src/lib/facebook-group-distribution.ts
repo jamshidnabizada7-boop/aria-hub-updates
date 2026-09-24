@@ -54,7 +54,7 @@ export function facebookGroupRuleApplies(
     languages: string[];
     regions: string[];
   },
-  meta: ReturnType<typeof rowMetadata>,
+  meta: ReturnType<typeof extractGroupMatchMetadata>,
 ) {
   const kinds = rule.contentKinds.map(norm);
   const categories = rule.contentCategories.map(norm);
