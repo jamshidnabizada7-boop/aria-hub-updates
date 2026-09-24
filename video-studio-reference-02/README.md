@@ -20,7 +20,8 @@ Typography:
 - **Noto Kufi Arabic Variable** — cinematic headings and kinetic display typography
 
 Audio:
-- `public/audio/reference-02-original.m4a` — audio extracted directly from the supplied second reference video (AAC stereo, 44.1 kHz)
+- `public/audio/reference-02-original.m4a` — the original soundtrack extracted directly from the supplied second reference video (AAC stereo, 44.1 kHz)
+- Recreate it from the reference at any time with: `./scripts/extract-reference-audio.sh /path/to/reference-video.mp4`
 
 Brand mark:
 - `public/logo-vector.svg` — isolated copy of the ARIA HUB vector mark for this production
