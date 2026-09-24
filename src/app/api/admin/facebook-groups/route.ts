@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { Prisma } from '@prisma/client';
 import { getCurrentAdmin } from '@/lib/admin-auth';
 import { db } from '@/lib/db';
 import { getState, patchState } from '@/lib/social/publisher';
@@ -272,7 +273,7 @@ export async function POST(req: NextRequest) {
         if (!job) return NextResponse.json({ error: 'job_not_found' }, { status: 404 });
 
         const now = new Date();
-        let data: Record<string, unknown>;
+        let data: Prisma.FacebookGroupDistributionJobUpdateInput;
         if (op === 'complete') {
           data = {
             status: 'completed',
