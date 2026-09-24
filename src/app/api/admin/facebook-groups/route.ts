@@ -240,7 +240,7 @@ export async function POST(req: NextRequest) {
           where: { id: queueId },
           data: { facebookGroupDistribution: enabled, facebookGroupMode: mode },
         });
-        let campaign = null;
+        let campaign: Awaited<ReturnType<typeof createCampaignForQueueRow>> | null = null;
         if (enabled && mode === 'auto') {
           campaign = await createCampaignForQueueRow(queueId, { adminId: admin.id, selectionMode: 'auto' });
         }
