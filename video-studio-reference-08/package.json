@@ -1,0 +1,23 @@
+{
+  "name": "aria-hub-reference-08",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "studio": "remotion studio src/index.ts --public-dir=public",
+    "render": "remotion render src/index.ts ARIA-HUB-Reference-08 out/aria-hub-reference-08-1920x1080.mp4 --public-dir=public --codec=h264 --crf=15 --audio-bitrate=320k --pixel-format=yuv420p",
+    "render:4k": "remotion render src/index.ts ARIA-HUB-Reference-08-4K out/aria-hub-reference-08-3840x2160.mp4 --public-dir=public --codec=h264 --crf=14 --audio-bitrate=320k --pixel-format=yuv420p"
+  },
+  "dependencies": {
+    "@fontsource-variable/noto-kufi-arabic": "^5.2.6",
+    "@fontsource-variable/vazirmatn": "^5.2.6",
+    "@remotion/cli": "^4.0.375",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "remotion": "^4.0.375"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.8.0"
+  }
+}
