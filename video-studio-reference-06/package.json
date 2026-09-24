@@ -3,9 +3,9 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "studio": "remotion studio src/index.ts --public-dir=../public",
-    "render": "remotion render src/index.ts ARIA-HUB-Reference-06 out/aria-hub-reference-06-1920x1080.mp4 --public-dir=../public --codec=h264 --crf=15 --pixel-format=yuv420p",
-    "render:4k": "remotion render src/index.ts ARIA-HUB-Reference-06-4K out/aria-hub-reference-06-3840x2160.mp4 --public-dir=../public --codec=h264 --crf=14 --pixel-format=yuv420p"
+    "studio": "remotion studio src/index.ts --public-dir=public",
+    "render": "remotion render src/index.ts ARIA-HUB-Reference-06 out/aria-hub-reference-06-1920x1080.mp4 --public-dir=public --codec=h264 --crf=15 --pixel-format=yuv420p",
+    "render:4k": "remotion render src/index.ts ARIA-HUB-Reference-06-4K out/aria-hub-reference-06-3840x2160.mp4 --public-dir=public --codec=h264 --crf=14 --pixel-format=yuv420p"
   },
   "dependencies": {
     "@fontsource-variable/noto-kufi-arabic": "^5.2.6",
