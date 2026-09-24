@@ -23,9 +23,6 @@ function norm(v: unknown): string {
   return String(v ?? '').trim().toLowerCase();
 }
 
-function arr(v: unknown): string[] {
-  return Array.isArray(v) ? v.map(norm).filter(Boolean) : [];
-}
 
 function rowMetadata(row: QueueSnapshot) {
   const c = (row.contentJson && typeof row.contentJson === 'object'
