@@ -416,6 +416,76 @@ async function publishWhatsApp(creds: Record<string, unknown>, input: PublishInp
   }
 }
 
+export interface ConnectionCheckResult {
+  ok: boolean;
+  error?: string;
+  identity?: string;
+  details?: Record<string, string | number | boolean | null>;
+}
+
+async function checkFacebookConnection(creds: Record<string, unknown>): Promise<ConnectionCheckResult> {
+  const pageId = String(creds.pageId || '');
+  const accessToken = String(creds.accessToken || '');
+  if (!pageId || !accessToken) return { ok: false, error: 'facebook: missing pageId/accessToken' };
+
+  const r = await safeFetch(
+    graphUrl(`${encodeURIComponent(pageId)}?fields=id,name&access_token=${encodeURIComponent(accessToken)}`),
+  );
+  if (!r.ok) {
+    const cls = classifyGraph(r.json, r.status);
+    const msg = (r.json as { error?: { message?: string } } | null)?.error?.message || r.text.slice(0, 160);
+    return {
+      ok: false,
+      error: cls.tokenExpired ? `facebook: token rejected — ${msg}` : `facebook: ${r.status} ${msg}`,
+    };
+  }
+  const data = r.json as { id?: string; name?: string } | null;
+  return {
+    ok: true,
+    identity: data?.name || data?.id || pageId,
+    details: {
+      pageId: data?.id || pageId,
+      graphVersion: META_GRAPH_VERSION,
+    },
+  };
+}
+
+async function checkInstagramConnection(creds: Record<string, unknown>): Promise<ConnectionCheckResult> {
+  const igUserId = String(creds.igUserId || '');
+  const accessToken = String(creds.accessToken || '');
+  if (!igUserId || !accessToken) return { ok: false, error: 'instagram: missing igUserId/accessToken' };
+
+  const r = await safeFetch(
+    graphUrl(`${encodeURIComponent(igUserId)}?fields=id,username&access_token=${encodeURIComponent(accessToken)}`),
+  );
+  if (!r.ok) {
+    const cls = classifyGraph(r.json, r.status);
+    const msg = (r.json as { error?: { message?: string } } | null)?.error?.message || r.text.slice(0, 160);
+    return {
+      ok: false,
+      error: cls.tokenExpired ? `instagram: token rejected — ${msg}` : `instagram: ${r.status} ${msg}`,
+    };
+  }
+  const data = r.json as { id?: string; username?: string } | null;
+  return {
+    ok: true,
+    identity: data?.username ? `@${data.username}` : data?.id || igUserId,
+    details: {
+      igUserId: data?.id || igUserId,
+      graphVersion: META_GRAPH_VERSION,
+    },
+  };
+}
+
+export async function checkPlatformConnection(
+  platform: string,
+  creds: Record<string, unknown>,
+): Promise<ConnectionCheckResult> {
+  if (platform === 'facebook') return checkFacebookConnection(creds);
+  if (platform === 'instagram') return checkInstagramConnection(creds);
+  return { ok: false, error: `${platform}: non-posting connection check is not implemented yet` };
+}
+
 const ADAPTERS: Record<string, (creds: Record<string, unknown>, input: PublishInput) => Promise<PublishResult>> = {
   telegram: publishTelegram,
   facebook: publishFacebook,
