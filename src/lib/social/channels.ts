@@ -27,6 +27,8 @@ export interface PublishInput {
   imageUrl?: string | null; // public absolute URL
   imagePath?: string | null; // local FS path (server-side upload fallback)
   link?: string | null;
+  /** Opportunity automation requires a real media post; never silently downgrade. */
+  requireImage?: boolean;
 }
 
 export interface PublishResult {
@@ -114,6 +116,13 @@ async function publishTelegram(creds: Record<string, unknown>, input: PublishInp
       if (r.ok) return { ok: true, id: j?.result?.message_id ? String(j.result.message_id) : null };
       last = { ok: false, error: `telegram: ${r.status} sendPhoto failed` };
     }
+    if (input.requireImage && (input.imagePath || input.imageUrl)) {
+      return last ?? { ok: false, error: 'telegram: image required but photo publishing failed' };
+    }
+    if (input.requireImage && !input.imagePath && !input.imageUrl) {
+      return { ok: false, error: 'telegram: image required but no rendered media was provided' };
+    }
+
     const r2 = await safeFetch(api('sendMessage'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -154,9 +163,14 @@ async function publishFacebook(creds: Record<string, unknown>, input: PublishInp
       const msg = (r.json as { error?: { message?: string } } | null)?.error?.message || r.text.slice(0, 160);
       if (cls.tokenExpired) return { ok: false, error: `facebook: token rejected — ${msg}`, tokenExpired: true };
       if (cls.rateLimited) return { ok: false, error: `facebook: rate limited — ${msg}`, rateLimited: true };
-      // Fall through to a text-only feed post, but SAY so — silent downgrades
-      // used to ship image-less posts with no trace.
+      if (input.requireImage) {
+        return { ok: false, error: `facebook: image publish failed — ${msg}`, ...cls };
+      }
+      // Editorial/manual text fallback remains available when the caller did
+      // not require media.
       photoError = msg;
+    } else if (input.requireImage) {
+      return { ok: false, error: 'facebook: image required but no rendered media was provided' };
     }
     const r2 = await safeFetch(`https://graph.facebook.com/v21.0/${pageId}/feed`, {
       method: 'POST',
@@ -188,6 +202,9 @@ async function publishFacebook(creds: Record<string, unknown>, input: PublishInp
 // ── X (Twitter) — text-only v2 ───────────────────────────────────────────────
 async function publishX(creds: Record<string, unknown>, input: PublishInput): Promise<PublishResult> {
   const accessToken = String(creds.accessToken || '');
+  if (input.requireImage) {
+    return { ok: false, error: 'x: image-required opportunity publishing is not implemented for this connection' };
+  }
   if (!accessToken) return { ok: false, error: 'x: missing accessToken' };
   try {
     const r = await safeFetch('https://api.twitter.com/2/tweets', {

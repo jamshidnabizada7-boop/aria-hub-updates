@@ -38,6 +38,7 @@ import {
 import { buildCaption, type CaptionInput } from '@/lib/social/captions';
 import { publishToPlatform } from '@/lib/social/channels';
 import { notifyAdmin } from '@/lib/social/notify';
+import { ensureSocialDelivery, markDeliveryPublishing, markDeliveryResult } from '@/lib/social/delivery';
 import { decryptCredentials } from '@/lib/social/credentials';
 import { resolveExecutable } from '@/lib/import/scrapers/browser-fetch';
 import type { Lang } from '@/lib/i18n-config';
@@ -298,6 +299,24 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
 }
 
 // ── 2. renderer (playwright screenshots the CODE template) ──────────────────
+async function verifyPublicImageUrl(url: string): Promise<boolean> {
+  try {
+    const head = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+    const type = head.headers.get('content-type') || '';
+    if (head.ok && type.startsWith('image/')) return true;
+
+    const get = await fetch(url, {
+      method: 'GET',
+      cache: 'no-store',
+      headers: { Range: 'bytes=0-32' },
+    });
+    const getType = get.headers.get('content-type') || '';
+    return get.ok && getType.startsWith('image/');
+  } catch {
+    return false;
+  }
+}
+
 async function renderQueueImage(baseUrl: string, props: CanvasProps): Promise<{ file: string; publicUrl: string; localPath: string | null } | null> {
   // Chrome resolution order: env override → known local installs (self-host /
   // workstation) → @sparticuz/chromium (serverless bundle for Vercel). Without
@@ -337,15 +356,29 @@ async function renderQueueImage(baseUrl: string, props: CanvasProps): Promise<{ 
     const buf = await readFile(shotPath).catch(() => null);
     if (!buf) return null;
 
-    // Public URL: Vercel Blob when configured (serverless FS is ephemeral —
-    // files under public/ are not served). Self-host keeps the local flow.
-    if (process.env.BLOB_READ_WRITE_TOKEN) {
+    // Vercel serverless filesystems are ephemeral and cannot be used as a
+    // durable media origin for Meta/LinkedIn. Production on Vercel therefore
+    // requires Blob storage; never fabricate a public URL for a temp file.
+    if (process.env.VERCEL) {
+      if (!process.env.BLOB_READ_WRITE_TOKEN) {
+        console.error('[render] durable media unavailable: BLOB_READ_WRITE_TOKEN is missing on Vercel');
+        return null;
+      }
       try {
         const { put } = await import('@vercel/blob');
         const blob = await put(`generated-posts/${file}`, buf, { access: 'public', addRandomSuffix: false });
+        if (!(await verifyPublicImageUrl(blob.url))) {
+          console.error('[render] blob uploaded but public verification failed:', blob.url);
+          return null;
+        }
         return { file, publicUrl: blob.url, localPath: null };
-      } catch { /* blob failed → try local persistence below */ }
+      } catch (e) {
+        console.error('[render] blob upload failed:', e instanceof Error ? e.message : String(e));
+        return null;
+      }
     }
+
+    // Persistent/self-hosted deployments can serve files written under public/.
     await writeFile(join(PUBLIC_DIR, file), buf);
     return { file, publicUrl: `${PUBLIC_BASE}/${file}`, localPath: join(PUBLIC_DIR, file) };
   } catch (e) {
@@ -415,8 +448,10 @@ export async function renderOneQueueRow(id: string, baseUrl = 'http://127.0.0.1:
   await db.socialPostQueue.update({
     where: { id },
     data: {
-      status: 'ready',
+      status: img ? 'ready' : 'failed',
       imageStatus: img ? 'ready' : 'failed',
+      claimedAt: null,
+      error: img ? null : 'media render/upload failed — opportunity posts will not publish without a durable image',
       ...(img ? { imagePaths: { square: img.publicUrl, ...(img.localPath ? { local: img.localPath } : {}) } } : {}),
     },
   });
@@ -475,7 +510,15 @@ export async function publishDueQueue(limit = 2): Promise<{ published: number; f
   const due = await db.socialPostQueue.findMany({
     // 'partial' rows are retried per-channel (channels already ok are skipped
     // below), so they are due again — they used to be frozen forever.
-    where: { status: { in: ['ready', 'failed', 'partial'] }, scheduledFor: { lte: new Date() }, attempts: { lt: 3 } },
+    where: {
+      status: { in: ['ready', 'failed', 'partial'] },
+      scheduledFor: { lte: new Date() },
+      attempts: { lt: 3 },
+      OR: [
+        { imageStatus: 'ready' },
+        { templateType: { notIn: ['spotlight', 'deadline'] } },
+      ],
+    },
     orderBy: { scheduledFor: 'asc' },
     take: limit,
   });
@@ -496,19 +539,40 @@ export async function publishDueQueue(limit = 2): Promise<{ published: number; f
     if (claim.count === 0) continue; // another worker claimed it first
 
     const prevResults = (row.results ?? {}) as Record<string, { ok?: boolean; error?: string }>;
+    const prevExternal = (row.externalIds ?? {}) as Record<string, { id?: string | null; permalink?: string | null }>;
     const results: Record<string, { ok: boolean; error?: string; downgraded?: string }> = {};
     const external: Record<string, { id: string | null; permalink: string | null }> = {};
     let anyOk = false;
     let tokenExpiredChannel: string | null = null;
 
     for (const ch of channels) {
-      // Per-channel retry: channels that already succeeded in an earlier run
-      // must NOT be posted to again (that's how partial rows froze/duplicated).
-      if (prevResults[ch.platform]?.ok) {
+      const legacyOk = Boolean(prevResults[ch.platform]?.ok);
+      const delivery = await ensureSocialDelivery(
+        row.id,
+        ch,
+        legacyOk,
+        prevExternal[ch.platform],
+      );
+
+      // Per-channel idempotency: a successful delivery is never sent again.
+      if (legacyOk || delivery.status === 'published') {
         results[ch.platform] = { ok: true };
         anyOk = true;
         continue;
       }
+
+      // Respect delivery-specific backoff/terminal states.
+      if (delivery.status === 'blocked' || delivery.status === 'cancelled' || delivery.status === 'failed') {
+        results[ch.platform] = { ok: false, error: delivery.error ?? `${ch.platform}: delivery ${delivery.status}` };
+        continue;
+      }
+      if (delivery.status === 'retry_wait' && delivery.nextAttemptAt && delivery.nextAttemptAt > new Date()) {
+        results[ch.platform] = { ok: false, error: delivery.error ?? `${ch.platform}: retry scheduled` };
+        continue;
+      }
+
+      await markDeliveryPublishing(delivery.id);
+
       const caption = composeCaptionWithLimit(row.captionJson, langs, CAPTION_LIMITS[ch.platform] ?? 2200);
       const creds = decryptCredentials(ch.credentials);
       const r = await publishToPlatform(ch.platform, creds, {
@@ -516,7 +580,10 @@ export async function publishDueQueue(limit = 2): Promise<{ published: number; f
         imageUrl: images.square ?? null,
         imagePath: images.local ?? null,
         link: deepLinkOf(caption) || (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.myariahub.com'),
+        requireImage: ['spotlight', 'deadline'].includes(row.templateType),
       });
+      await markDeliveryResult(delivery.id, r, delivery.attempts);
+
       results[ch.platform] = { ok: r.ok, ...(r.error ? { error: r.error } : {}), ...(r.downgraded ? { downgraded: r.downgraded } : {}) };
       if (r.ok) {
         anyOk = true;
@@ -526,7 +593,6 @@ export async function publishDueQueue(limit = 2): Promise<{ published: number; f
           data: { lastStatus: 'ok', lastError: null, lastPublishedAt: new Date() },
         });
       } else if (r.tokenExpired) {
-        // Dead token: disable the channel and alert — retrying for days is noise.
         tokenExpiredChannel = ch.platform;
         await db.publishChannel.update({
           where: { id: ch.id },
@@ -537,7 +603,9 @@ export async function publishDueQueue(limit = 2): Promise<{ published: number; f
           where: { id: ch.id },
           data: { lastStatus: 'error', lastError: r.error ?? 'unknown' },
         });
-        if (r.rateLimited) break; // platform-wide throttle — skip its remaining posts this run
+        // A rate limit belongs to this platform/delivery. Do not prevent
+        // Facebook/LinkedIn/etc. later in the loop from attempting their post.
+        if (r.rateLimited) continue;
       }
     }
 
