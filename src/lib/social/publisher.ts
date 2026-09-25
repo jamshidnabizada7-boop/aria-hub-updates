@@ -24,6 +24,17 @@ import { join } from 'node:path';
 import os from 'node:os';
 import { db } from '@/lib/db';
 import { buildDailyPlan, type PlanPost } from '@/lib/social/plan';
+import {
+  buildOpportunityDistributionPlan,
+  DEFAULT_OPPORTUNITY_BATCH_SIZE,
+  DEFAULT_OPPORTUNITY_BATCH_TIMES_AFT,
+  DEFAULT_OPPORTUNITY_DAILY_TARGET,
+  DEFAULT_OPPORTUNITY_REPEAT_DAYS,
+} from '@/lib/social/opportunity-distribution';
+import {
+  opportunityDistributionCapacity,
+  opportunityScheduleForIndex,
+} from '@/lib/social/opportunity-distribution-schedule';
 import { buildCaption, type CaptionInput } from '@/lib/social/captions';
 import { publishToPlatform } from '@/lib/social/channels';
 import { notifyAdmin } from '@/lib/social/notify';
@@ -67,6 +78,11 @@ type AutomationStateShape = {
   translateBackoffUntil?: string | null;
   lastQueueBuildDate?: string | null;
   tickRunning?: boolean;
+  opportunityOnlyAutomation?: boolean;
+  opportunityDailyTarget?: number;
+  opportunityBatchSize?: number;
+  opportunityRepeatDays?: number;
+  opportunityBatchTimes?: string[];
 };
 
 export async function getState(): Promise<AutomationStateShape> {
@@ -186,10 +202,11 @@ function captionInputOf(post: PlanPost, lang: Lang): CaptionInput {
 // ── 1. queue builder ─────────────────────────────────────────────────────────
 export async function buildTodaysQueue(): Promise<{ created: number }> {
   const state = await getState();
-  const todayUtc = new Date().toISOString().slice(0, 10);
-  if (state.lastQueueBuildDate === todayUtc) return { created: 0 };
+  const aftNow = new Date(Date.now() + AFT_OFFSET_MIN * 60000);
+  const todayAft = aftNow.toISOString().slice(0, 10);
+  if (state.lastQueueBuildDate === todayAft) return { created: 0 };
 
-  const slots = state.publishTimes?.length ? state.publishTimes : DEFAULT_SLOTS_AFT;
+  const opportunityOnly = state.opportunityOnlyAutomation !== false;
   const captionLangs: Lang[] = state.captionLangs?.length ? state.captionLangs : ['fa', 'ps', 'en'];
 
   // Studio defaults (theme/layout chosen in the Brand Studio apply to every
@@ -199,10 +216,35 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
     layout: state.studioLayout,
   };
 
-  // Deterministic plan — same order in every language (zip by index).
-  const plans = await Promise.all((['fa', 'ps', 'en'] as Lang[]).map((l) => buildDailyPlan(l)));
+  const langs = ['fa', 'ps', 'en'] as Lang[];
+  let slots: string[];
+  let batchSize = 1;
+  let plans: { posts: PlanPost[] }[];
+
+  if (opportunityOnly) {
+    slots = state.opportunityBatchTimes?.length
+      ? state.opportunityBatchTimes
+      : DEFAULT_OPPORTUNITY_BATCH_TIMES_AFT;
+    batchSize = Math.min(10, Math.max(1, state.opportunityBatchSize ?? DEFAULT_OPPORTUNITY_BATCH_SIZE));
+    const configuredTarget = Math.min(50, Math.max(1, state.opportunityDailyTarget ?? DEFAULT_OPPORTUNITY_DAILY_TARGET));
+    const capacity = opportunityDistributionCapacity(slots, batchSize);
+    const target = Math.min(configuredTarget, capacity);
+    const repeatDays = Math.min(90, Math.max(1, state.opportunityRepeatDays ?? DEFAULT_OPPORTUNITY_REPEAT_DAYS));
+
+    const opportunityPlans = await Promise.all(
+      langs.map((lang) => buildOpportunityDistributionPlan(lang, { target, repeatDays })),
+    );
+    plans = opportunityPlans.map((posts) => ({ posts }));
+  } else {
+    slots = state.publishTimes?.length ? state.publishTimes : DEFAULT_SLOTS_AFT;
+    plans = await Promise.all(langs.map((lang) => buildDailyPlan(lang)));
+  }
+
   const base = plans[0];
-  if (!base || base.posts.length === 0) return { created: 0 };
+  if (!base || base.posts.length === 0) {
+    await patchState({ lastQueueBuildDate: todayAft });
+    return { created: 0 };
+  }
 
   // Per-post designs saved from the Brand Studio override the defaults.
   type StudioDesignRow = {
@@ -210,7 +252,7 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
     size: string; overrides: unknown; captionOverride: unknown;
   };
   const designs = (await db.studioDesign
-    .findMany({ where: { forDate: todayUtc } })
+    .findMany({ where: { forDate: todayAft } })
     .catch(() => [] as StudioDesignRow[])) as StudioDesignRow[];
   const designByRef = new Map<string, StudioDesignRow>(designs.map((d) => [d.contentRef, d]));
 
@@ -220,25 +262,27 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
   }[] = [];
 
   base.posts.forEach((post, idx) => {
-    const slot = slots[idx % slots.length];
-    // Today's slots that already passed stay today (publish tick picks them up
-    // immediately); future ones wait. Rows for the whole day are created at once.
-    const scheduledFor = aftSlotToUtc(slot);
+    const opportunitySchedule = opportunityOnly
+      ? opportunityScheduleForIndex(idx, slots, batchSize)
+      : { slot: slots[idx % slots.length], offsetMinutes: 0 };
+    if (!opportunitySchedule) return;
+    const scheduledFor = new Date(
+      aftSlotToUtc(opportunitySchedule.slot).getTime() + opportunitySchedule.offsetMinutes * 60000,
+    );
+
     const captions: Record<string, string> = {};
-    (['fa', 'ps', 'en'] as Lang[]).forEach((l, li) => {
+    langs.forEach((lang, li) => {
       const p = plans[li]?.posts[idx];
-      if (p) captions[l] = p.caption;
+      if (p) captions[lang] = p.caption;
     });
-    // primary canvas language: first captionLang (fa default)
+
     const primary: Lang = captionLangs[0] ?? 'fa';
-    const primaryIdx = (['fa', 'ps', 'en'] as Lang[]).indexOf(primary);
+    const primaryIdx = langs.indexOf(primary);
     const primaryPost = plans[primaryIdx]?.posts[idx] ?? post;
     const ref = post.opp?.slug ?? post.news?.slug ?? post.idea?.id ?? post.story?.id ?? post.stat?.labelKey ?? null;
-    if (ref && designByRef.has(ref)) {
-      // A saved StudioDesign owns this post's queue row for today (created via
-      // the studio save flow) — building the plan row as well would double-post.
-      return;
-    }
+
+    if (ref && designByRef.has(ref)) return;
+
     rows.push({
       scheduledFor,
       templateType: post.template,
@@ -248,12 +292,9 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
     });
   });
 
-  // skipDuplicates + the (contentRef, scheduledFor) unique index make the
-  // build idempotent even if two ticks race past the daily cursor check.
   const res = await db.socialPostQueue.createMany({ data: rows, skipDuplicates: true });
-  await patchState({ lastQueueBuildDate: todayUtc });
-  void res;
-  return { created: rows.length };
+  await patchState({ lastQueueBuildDate: todayAft });
+  return { created: res.count };
 }
 
 // ── 2. renderer (playwright screenshots the CODE template) ──────────────────

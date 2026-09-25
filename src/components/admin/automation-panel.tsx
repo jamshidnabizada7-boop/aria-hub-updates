@@ -42,6 +42,11 @@ interface Status {
   state: {
     publishTimes: string[]; captionLangs?: string[]; translateBatch?: number;
     autoImport?: boolean; autoPublish?: boolean; translateBackoffUntil?: string | null;
+    opportunityOnlyAutomation?: boolean;
+    opportunityDailyTarget?: number;
+    opportunityBatchSize?: number;
+    opportunityRepeatDays?: number;
+    opportunityBatchTimes?: string[];
   };
   channels: Channel[];
   queue: QueueRow[];
@@ -60,6 +65,7 @@ const PLATFORM_META: Record<string, { icon: React.ComponentType<{ className?: st
 };
 
 const ALL_TIMES = ['07:00', '08:00', '09:00', '12:00', '12:30', '13:00', '17:00', '19:00', '20:00', '21:00'];
+const OPPORTUNITY_TIMES = ['07:00', '08:00', '09:00', '10:30', '12:00', '13:00', '15:30', '17:00', '18:00', '19:00', '20:30', '21:00'];
 
 const statusTone = (s: string) =>
   s === 'published' || s === 'ok' ? 'border-emerald-400/60 text-emerald-600 dark:text-emerald-400'
@@ -119,6 +125,13 @@ export function AutomationPanel() {
     const cur = status.state.publishTimes || [];
     const next = cur.includes(slot) ? cur.filter((x) => x !== slot) : [...cur, slot].sort();
     if (next.length) void act({ action: 'save-state', publishTimes: next }, 'times');
+  };
+
+  const toggleOpportunityTime = (slot: string) => {
+    if (!status) return;
+    const cur = status.state.opportunityBatchTimes || [];
+    const next = cur.includes(slot) ? cur.filter((x) => x !== slot) : [...cur, slot].sort();
+    if (next.length) void act({ action: 'save-state', opportunityBatchTimes: next }, 'opp-times');
   };
 
   const saveChannel = async (platform: string, enabled: boolean) => {
@@ -192,6 +205,94 @@ export function AutomationPanel() {
       <div className="grid gap-4 xl:grid-cols-2">
         {/* ── schedule & settings ── */}
         <div className="space-y-4">
+          <section className="rounded-2xl border border-primary/20 bg-card p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="flex items-center gap-2 text-sm font-bold">
+                  <CalendarClock className="h-4 w-4 text-primary" />
+                  Opportunity distribution
+                </h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Automatic social publishing uses opportunities only. Quotes, tips, stats, stories and news remain available in Brand Studio for manual use.
+                </p>
+              </div>
+              <Switch
+                checked={state.opportunityOnlyAutomation !== false}
+                onCheckedChange={(v) => act({ action: 'save-state', opportunityOnlyAutomation: v }, 'opp-only')}
+              />
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div>
+                <Label className="text-xs">Daily target</Label>
+                <Select
+                  value={String(state.opportunityDailyTarget ?? 30)}
+                  onValueChange={(v) => act({ action: 'save-state', opportunityDailyTarget: Number(v) }, 'opp-target')}
+                >
+                  <SelectTrigger className="mt-1 h-9 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[10, 20, 30, 40].map((n) => <SelectItem key={n} value={String(n)}>{n} posts/day</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Posts per batch</Label>
+                <Select
+                  value={String(state.opportunityBatchSize ?? 5)}
+                  onValueChange={(v) => act({ action: 'save-state', opportunityBatchSize: Number(v) }, 'opp-batch')}
+                >
+                  <SelectTrigger className="mt-1 h-9 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4, 5].map((n) => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Repeat cooldown</Label>
+                <Select
+                  value={String(state.opportunityRepeatDays ?? 14)}
+                  onValueChange={(v) => act({ action: 'save-state', opportunityRepeatDays: Number(v) }, 'opp-repeat')}
+                >
+                  <SelectTrigger className="mt-1 h-9 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[7, 14, 21, 30].map((n) => <SelectItem key={n} value={String(n)}>{n} days</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <div className="flex items-center justify-between gap-3">
+                <Label className="text-xs">Batch windows (Afghanistan time)</Label>
+                <span className="text-[10px] text-muted-foreground">
+                  Capacity: {(state.opportunityBatchTimes?.length ?? 0) * (state.opportunityBatchSize ?? 5)} posts/day
+                </span>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {OPPORTUNITY_TIMES.map((slot) => {
+                  const active = (state.opportunityBatchTimes || []).includes(slot);
+                  return (
+                    <button
+                      key={slot}
+                      type="button"
+                      onClick={() => toggleOpportunityTime(slot)}
+                      className={cn(
+                        'rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
+                        active ? 'border-primary bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-muted',
+                      )}
+                    >
+                      <Clock className="me-1 inline h-3 w-3" />
+                      {slot}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-[10px] text-muted-foreground">
+                Posts inside each batch are staggered by 2 minutes instead of being sent simultaneously.
+              </p>
+            </div>
+          </section>
+
           <section className="rounded-2xl border bg-card p-4">
             <h3 className="flex items-center gap-2 text-sm font-bold"><CalendarClock className="h-4 w-4 text-primary" /> {t('admin.automation.schedule')}</h3>
             <p className="mt-1 text-xs text-muted-foreground" dir="auto">{t('admin.automation.scheduleHint')}</p>
