@@ -5,7 +5,7 @@ import { BriefcaseBusiness, CalendarDays, FileText, MapPin } from 'lucide-react'
 import { formatDateLong } from '@/lib/date-format';
 import { resolveTheme, CANVAS_SIZES } from '@/lib/social/themes';
 import { MediaLayer } from '@/lib/social/studio/media-layer';
-import { resolveDesignFamily } from '@/lib/social/studio/registry';
+import { defaultMediaForDesignFamily, resolveDesignFamily } from '@/lib/social/studio/registry';
 import type { PremiumCanvasProps, StudioMediaConfig } from '@/lib/social/studio/types';
 
 const W = 1080;
@@ -418,7 +418,20 @@ function Surreal({ props }: { props:PremiumCanvasProps }) {
   );
 }
 export function PremiumSocialCanvas(raw: PremiumCanvasProps) {
-  const props={...raw,designFamily:resolveDesignFamily(raw.designFamily)};
+  const designFamily = resolveDesignFamily(raw.designFamily);
+  const defaults = defaultMediaForDesignFamily(designFamily);
+  const props: PremiumCanvasProps = {
+    ...raw,
+    designFamily,
+    media: {
+      ...defaults,
+      ...(raw.media ?? {}),
+      background: { ...(defaults.background ?? {}), ...(raw.media?.background ?? {}) },
+      hero: { ...(defaults.hero ?? {}), ...(raw.media?.hero ?? {}) },
+      foreground: { ...(defaults.foreground ?? {}), ...(raw.media?.foreground ?? {}) },
+      overlay: { ...(defaults.overlay ?? {}), ...(raw.media?.overlay ?? {}) },
+    },
+  };
   switch(props.designFamily){
     case 'global-portal': return <SplitEditorial props={props}/>;
     case 'document-desk': return <DocumentAlert props={props}/>;
