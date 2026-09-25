@@ -467,7 +467,7 @@ async function processListing(
         ...(categoryId ? { categoryId } : {}),
         slug: newSlug,
         status: resolveImportedOpportunityStatus({
-          existingStatus: existing?.status ?? dedupe.existing.status,
+          existingStatus: existing?.status ?? 'draft',
           autoPublish: source.autoPublish,
           deadline: importFields.deadline,
         }),
