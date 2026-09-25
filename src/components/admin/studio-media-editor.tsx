@@ -85,7 +85,7 @@ export function StudioMediaEditor({
     .filter((v) => v.enabled !== false)
     .sort((a, b) => {
       const ar = recommended.some((cat) => cat.toLowerCase() === v.category.toLowerCase()) ? 0 : 1;
-      const br = recommended.some((cat) => cat.toLowerCase() === v.category.toLowerCase()) ? 0 : 1;
+      const br = recommended.some((cat) => cat.toLowerCase() === b.category.toLowerCase()) ? 0 : 1;
       return ar - br || a.label.localeCompare(b.label);
     });
 
