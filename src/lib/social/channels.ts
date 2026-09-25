@@ -53,7 +53,7 @@ export const META_GRAPH_VERSION = rawMetaVersion.startsWith('v') ? rawMetaVersio
 const graphUrl = (path: string) =>
   `https://graph.facebook.com/${META_GRAPH_VERSION}/${path.replace(/^\/+/, '')}`;
 
-async function safeFetch(url: string, init: RequestInit & { body?: BodyInit | undefined } = {}): Promise<{ ok: boolean; status: number; json: Record<string, unknown> | null; text: string }> {
+async function safeFetch(url: string, init: RequestInit & { body?: BodyInit | undefined } = {}): Promise<{ ok: boolean; status: number; json: Record<string, unknown> | null; text: string; headers: Headers }> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
@@ -61,7 +61,7 @@ async function safeFetch(url: string, init: RequestInit & { body?: BodyInit | un
     const text = await res.text();
     let json: Record<string, unknown> | null = null;
     try { json = JSON.parse(text); } catch { /* non-json */ }
-    return { ok: res.ok, status: res.status, json, text };
+    return { ok: res.ok, status: res.status, json, text, headers: res.headers };
   } finally {
     clearTimeout(t);
   }
@@ -281,97 +281,177 @@ async function publishInstagram(creds: Record<string, unknown>, input: PublishIn
   }
 }
 
-// ── LinkedIn (official API — member or organization posts) ───────────────────
-// Credentials: { accessToken, authorUrn } — authorUrn is "urn:li:person:…" or
-// "urn:li:organization:…". Token comes from a LinkedIn developer app with the
-// "Share on LinkedIn" product; expires ~60 days → tokenExpired triggers the
-// standard reauthorization flow.
-
+// ── LinkedIn (current REST APIs — member or organization posts) ───────────────
+const LINKEDIN_VERSION = (process.env.LINKEDIN_API_VERSION || '202609').trim();
 const LINKEDIN_HEADERS = (accessToken: string): Record<string, string> => ({
   Authorization: `Bearer ${accessToken}`,
   'Content-Type': 'application/json',
   'X-Restli-Protocol-Version': '2.0.0',
-  'LinkedIn-Version': '202411',
+  'LinkedIn-Version': LINKEDIN_VERSION,
 });
 
-/** Normalize whatever the admin pasted into a proper LinkedIn URN.
- * Accepts: full URN, /in/slug profile URL, bare person slug, bare numeric org id. */
-function normalizeLinkedInUrn(raw: string): string {
+/**
+ * LinkedIn organization identifiers are numeric IDs, not public company slugs.
+ * Accept only a full person/organization URN or a bare numeric organization ID.
+ */
+export function normalizeLinkedInAuthorUrn(raw: string): string | null {
   const v = raw.trim();
-  if (v.startsWith('urn:li:')) return v;
-  const inMatch = v.match(/linkedin\.com\/(?:in|company)\/([^/?#]+)/i);
-  if (inMatch) return /company/i.test(v) ? 'urn:li:organization:' + inMatch[1] : 'urn:li:person:' + inMatch[1];
-  if (/^\d+$/.test(v)) return 'urn:li:organization:' + v;
-  return 'urn:li:person:' + v;
+  if (/^urn:li:(?:organization|person):[A-Za-z0-9_-]+$/.test(v)) return v;
+  if (/^\d+$/.test(v)) return `urn:li:organization:${v}`;
+  return null;
+}
+
+async function waitLinkedInImageAvailable(
+  imageUrn: string,
+  accessToken: string,
+): Promise<{ ready: boolean; error?: string }> {
+  for (let attempt = 0; attempt < 8; attempt++) {
+    if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, 1500));
+    const r = await safeFetch(
+      `https://api.linkedin.com/rest/images/${encodeURIComponent(imageUrn)}`,
+      { headers: LINKEDIN_HEADERS(accessToken) },
+    );
+    if (!r.ok) {
+      if (r.status === 401 || r.status === 403) {
+        return { ready: false, error: `linkedin: image status ${r.status} ${r.text.slice(0, 120)}` };
+      }
+      continue;
+    }
+    const status = String((r.json as { status?: string } | null)?.status || '');
+    if (status === 'AVAILABLE') return { ready: true };
+    if (status === 'PROCESSING_FAILED') {
+      return { ready: false, error: 'linkedin: image processing failed' };
+    }
+  }
+  return { ready: false, error: 'linkedin: image not AVAILABLE before timeout' };
 }
 
 async function publishLinkedIn(creds: Record<string, unknown>, input: PublishInput): Promise<PublishResult> {
   const accessToken = String(creds.accessToken || '');
-  const authorUrn = normalizeLinkedInUrn(String(creds.authorUrn || ''));
-  if (!accessToken || !authorUrn) return { ok: false, error: 'linkedin: missing accessToken/authorUrn' };
+  const rawAuthor = String(creds.authorUrn || creds.organizationId || '');
+  const authorUrn = normalizeLinkedInAuthorUrn(rawAuthor);
+
+  if (!accessToken) return { ok: false, error: 'linkedin: missing accessToken' };
+  if (!authorUrn) {
+    return {
+      ok: false,
+      error: 'linkedin: author must be a full person/organization URN or numeric organization ID; LinkedIn company URL slugs are not valid organization URNs',
+    };
+  }
+  if (input.requireImage && !input.imageUrl) {
+    return { ok: false, error: 'linkedin: image required but no durable image URL was provided' };
+  }
+
   try {
     let mediaUrn: string | null = null;
-    // Image post: register an upload asset, PUT the binary, reference the URN.
+
     if (input.imageUrl) {
-      const reg = await safeFetch('https://api.linkedin.com/v2/assets?action=registerUpload', {
+      const init = await safeFetch('https://api.linkedin.com/rest/images?action=initializeUpload', {
         method: 'POST',
         headers: LINKEDIN_HEADERS(accessToken),
         body: JSON.stringify({
-          registerUploadRequest: {
-            recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
-            owner: authorUrn,
-            serviceRelationships: [{ relationshipType: 'OWNER', identifier: 'urn:li:userGeneratedContent' }],
-          },
+          initializeUploadRequest: { owner: authorUrn },
         }),
       });
-      const rj = reg.json as { value?: { uploadUrl?: string; asset?: string } } | null;
-      const uploadUrl = rj?.value?.uploadUrl;
-      mediaUrn = rj?.value?.asset ?? null;
-      if (!reg.ok || !uploadUrl || !mediaUrn) {
-        const tokenExpired = reg.status === 401 || reg.status === 403;
-        return { ok: false, error: `linkedin: register upload ${reg.status} ${reg.text.slice(0, 120)}`, ...(tokenExpired ? { tokenExpired } : {}) };
+
+      const value = (init.json as {
+        value?: { uploadUrl?: string; image?: string };
+      } | null)?.value;
+      const uploadUrl = value?.uploadUrl;
+      mediaUrn = value?.image ?? null;
+
+      if (!init.ok || !uploadUrl || !mediaUrn) {
+        if (init.status === 429) {
+          return { ok: false, error: 'linkedin: image initialize rate limited', rateLimited: true };
+        }
+        if (init.status === 401 || init.status === 403) {
+          return {
+            ok: false,
+            error: `linkedin: image initialize ${init.status} ${init.text.slice(0, 160)}`,
+            tokenExpired: true,
+          };
+        }
+        return { ok: false, error: `linkedin: image initialize ${init.status} ${init.text.slice(0, 160)}` };
       }
-      const img = await fetch(input.imageUrl);
-      if (!img.ok) return { ok: false, error: `linkedin: image fetch ${img.status}` };
-      const buf = await img.arrayBuffer();
-      const up = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/octet-stream' },
-        body: Buffer.from(buf),
+
+      const imageFetch = await fetch(input.imageUrl, {
+        headers: { Accept: 'image/*' },
       });
-      if (!up.ok) return { ok: false, error: `linkedin: image upload ${up.status}` };
+      if (!imageFetch.ok) {
+        return { ok: false, error: `linkedin: image fetch ${imageFetch.status}` };
+      }
+      const contentType = imageFetch.headers.get('content-type') || 'image/png';
+      const bytes = await imageFetch.arrayBuffer();
+
+      const upload = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': contentType,
+        },
+        body: Buffer.from(bytes),
+      });
+      if (!upload.ok) {
+        return { ok: false, error: `linkedin: image upload ${upload.status}` };
+      }
+
+      const ready = await waitLinkedInImageAvailable(mediaUrn, accessToken);
+      if (!ready.ready) return { ok: false, error: ready.error || 'linkedin: image processing failed' };
     }
 
     const body: Record<string, unknown> = {
       author: authorUrn,
-      lifecycleState: 'PUBLISHED',
-      specificContent: {
-        'com.linkedin.ugc.ShareContent': {
-          shareCommentary: { text: input.caption.slice(0, 2900) },
-          shareMediaCategory: mediaUrn ? 'IMAGE' : 'NONE',
-          ...(mediaUrn
-            ? { media: [{ status: 'READY', media: mediaUrn, title: { text: 'ARIA HUB' } }] }
-            : {}),
-        },
+      commentary: input.caption.slice(0, 2900),
+      visibility: 'PUBLIC',
+      distribution: {
+        feedDistribution: 'MAIN_FEED',
+        targetEntities: [],
+        thirdPartyDistributionChannels: [],
       },
-      visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' },
+      ...(mediaUrn
+        ? {
+            content: {
+              media: {
+                id: mediaUrn,
+                title: 'ARIA HUB',
+              },
+            },
+          }
+        : {}),
+      lifecycleState: 'PUBLISHED',
+      isReshareDisabledByAuthor: false,
     };
-    const r = await safeFetch('https://api.linkedin.com/v2/ugcPosts', {
+
+    const r = await safeFetch('https://api.linkedin.com/rest/posts', {
       method: 'POST',
       headers: LINKEDIN_HEADERS(accessToken),
       body: JSON.stringify(body),
     });
+
     if (r.ok) {
-      const id = (r.json as { id?: string } | null)?.id ?? null;
-      return { ok: true, id, permalink: id ? `https://www.linkedin.com/feed/update/${id}` : null };
+      const id =
+        r.headers.get('x-restli-id') ||
+        (r.json as { id?: string } | null)?.id ||
+        null;
+      return {
+        ok: true,
+        id,
+        permalink: id ? `https://www.linkedin.com/feed/update/${encodeURIComponent(id)}` : null,
+      };
     }
     if (r.status === 429) return { ok: false, error: 'linkedin: 429 rate limited', rateLimited: true };
-    if (r.status === 401 || r.status === 403) return { ok: false, error: `linkedin: ${r.status} ${r.text.slice(0, 120)}`, tokenExpired: true };
-    return { ok: false, error: `linkedin: ${r.status} ${r.text.slice(0, 160)}` };
+    if (r.status === 401) {
+      return { ok: false, error: `linkedin: 401 ${r.text.slice(0, 160)}`, tokenExpired: true };
+    }
+    if (r.status === 403) {
+      return { ok: false, error: `linkedin: 403 permission denied ${r.text.slice(0, 160)}` };
+    }
+    return { ok: false, error: `linkedin: ${r.status} ${r.text.slice(0, 180)}` };
   } catch (e) {
     return { ok: false, error: `linkedin: ${errOf(e)}` };
   }
 }
+
 
 // ── WhatsApp Channel (Meta Cloud API — official Channels support) ────────────
 // Credentials: { accessToken, channelId } — channelId is the WhatsApp Channel
@@ -483,6 +563,26 @@ export async function checkPlatformConnection(
 ): Promise<ConnectionCheckResult> {
   if (platform === 'facebook') return checkFacebookConnection(creds);
   if (platform === 'instagram') return checkInstagramConnection(creds);
+  if (platform === 'linkedin') {
+    const accessToken = String(creds.accessToken || '');
+    const authorUrn = normalizeLinkedInAuthorUrn(String(creds.authorUrn || creds.organizationId || ''));
+    if (!accessToken) return { ok: false, error: 'linkedin: missing accessToken' };
+    if (!authorUrn) {
+      return {
+        ok: false,
+        error: 'linkedin: enter a numeric organization ID or a full urn:li:organization / urn:li:person value',
+      };
+    }
+    return {
+      ok: true,
+      identity: authorUrn,
+      details: {
+        authorUrn,
+        linkedinVersion: LINKEDIN_VERSION,
+        note: 'Configuration format is valid. End-to-end permissions are verified by a queued media post.',
+      },
+    };
+  }
   return { ok: false, error: `${platform}: non-posting connection check is not implemented yet` };
 }
 

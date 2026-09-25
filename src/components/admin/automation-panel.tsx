@@ -71,7 +71,7 @@ const PLATFORM_META: Record<string, { icon: React.ComponentType<{ className?: st
   facebook: { icon: Facebook, credFields: [{ key: 'pageId', label: 'Page ID' }, { key: 'accessToken', label: 'Page access token' }] },
   instagram: { icon: Instagram, credFields: [{ key: 'igUserId', label: 'Instagram business user ID' }, { key: 'accessToken', label: 'Access token' }] },
   x: { icon: XIcon, credFields: [{ key: 'accessToken', label: 'OAuth 2.0 access token' }] },
-  linkedin: { icon: Linkedin, credFields: [{ key: 'accessToken', label: 'LinkedIn access token' }, { key: 'authorUrn', label: 'Author URN (urn:li:person:… / organization)' }] },
+  linkedin: { icon: Linkedin, credFields: [{ key: 'accessToken', label: 'LinkedIn access token' }, { key: 'authorUrn', label: 'Organization numeric ID or full author URN' }] },
   whatsapp: { icon: MessageCircle, credFields: [{ key: 'accessToken', label: 'WhatsApp system-user access token' }, { key: 'phoneNumberId', label: 'Phone Number ID (Meta Business)' }, { key: 'channelId', label: 'Channel ID' }] },
 };
 
