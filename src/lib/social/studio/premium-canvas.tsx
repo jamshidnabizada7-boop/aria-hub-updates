@@ -210,22 +210,96 @@ function CenterObject({ props, objectKind='cap', document=false }: { props:Premi
 
 function FullBleedEditorial({ props, bigType=false }: { props:PremiumCanvasProps; bigType?:boolean }) {
   const theme=resolveTheme(props.themeId); const accent=theme.accent; const rtl=props.lang!=='en';
+  const family = props.designFamily;
+
+  if (family === 'editorial-break') {
+    return (
+      <CanvasRoot props={props}>
+        <HeroLayers media={props.media}/>
+        {!props.media?.background?.url && !props.media?.hero?.url ? (
+          <div style={{position:'absolute',left:0,right:0,top:0,height:'54%',background:'linear-gradient(135deg,#3a4d78,#111b35)'}}/>
+        ) : null}
+        <div style={{position:'absolute',left:0,right:0,top:0,height:'54%',zIndex:9,background:'linear-gradient(180deg,rgba(7,12,28,.06),rgba(7,12,28,.55))'}}/>
+        <div style={{position:'absolute',left:0,right:0,bottom:0,height:'48%',zIndex:10,background:'#0B142A'}}/>
+        <PremiumHeader accent={accent} eyebrow={props.eyebrow || props.badge}/>
+        <div style={{position:'absolute',left:72,right:72,top:'57%',bottom:180,zIndex:14,textAlign:rtl?'right':'left'}}>
+          <div style={{display:'flex',alignItems:'center',gap:14,fontSize:18,fontWeight:900,color:accent,letterSpacing:1.5}}>
+            <span style={{width:52,height:4,borderRadius:999,background:accent}}/>
+            {props.badge || 'ARIA HUB UPDATE'}
+          </div>
+          <div style={{fontSize:clampTextSize(props.title,76,60,48),fontWeight:950,lineHeight:1.08,marginTop:20,maxWidth:920}}>
+            {props.title}
+          </div>
+          {props.note ? <div style={{fontSize:24,lineHeight:1.5,fontWeight:600,color:'rgba(255,255,255,.70)',marginTop:16,maxWidth:780}}>{props.note}</div> : null}
+        </div>
+        <Footer props={props}/>
+      </CanvasRoot>
+    );
+  }
+
+  if (family === 'talent-profile') {
+    return (
+      <CanvasRoot props={props}>
+        <Ambient accent={accent}/><HeroLayers media={props.media}/>
+        <div style={{position:'absolute',right:0,top:0,bottom:0,width:'48%',zIndex:7,background:'linear-gradient(180deg,rgba(11,18,39,.08),rgba(11,18,39,.75))'}}/>
+        {!props.media?.hero?.url ? <div style={{position:'absolute',right:95,top:170,width:360,height:680,zIndex:8,borderRadius:'190px 190px 44px 44px',background:'radial-gradient(circle at 50% 18%,#6077a8,#20345b 45%,#0b1429 82%)',boxShadow:'0 40px 95px rgba(0,0,0,.5)'}}/> : null}
+        <PremiumHeader accent={accent} eyebrow={props.eyebrow || props.badge}/>
+        <div style={{position:'absolute',left:74,right:555,top:240,bottom:190,zIndex:14,display:'flex',flexDirection:'column',justifyContent:'center',alignItems:rtl?'flex-end':'flex-start'}}>
+          <div style={{width:78,height:6,borderRadius:999,background:accent}}/>
+          <div style={{fontSize:clampTextSize(props.title,76,60,47),fontWeight:950,lineHeight:1.08,marginTop:24,textAlign:rtl?'right':'left'}}>
+            {props.title}
+          </div>
+          {props.organization ? <div style={{fontSize:27,fontWeight:800,color:accent,marginTop:15}}>{props.organization}</div> : null}
+          {props.note ? <div style={{fontSize:23,lineHeight:1.52,fontWeight:600,color:'rgba(255,255,255,.72)',marginTop:15,textAlign:rtl?'right':'left'}}>{props.note}</div> : null}
+          <MetaRow props={props} accent={accent}/>
+        </div>
+        <Footer props={props}/>
+      </CanvasRoot>
+    );
+  }
+
+  if (family === 'big-type-story') {
+    return (
+      <CanvasRoot props={props} style={{background:'linear-gradient(145deg,#F5F0E6,#FFFDF7 58%,#E9E0CF)',color:'#18223E'}}>
+        <div style={{position:'absolute',left:30,right:30,top:170,fontSize:172,fontWeight:1000,lineHeight:.82,color:'#18223E',opacity:.055,whiteSpace:'nowrap',overflow:'hidden',zIndex:2}}>
+          {props.badge || 'ARIA HUB'}
+        </div>
+        <MediaLayer layer={props.media?.hero} role="hero" style={{zIndex:8,width:'42%',height:'42%',left:'78%',top:'38%'}}/>
+        <div style={{position:'absolute',left:70,right:70,top:44,display:'flex',alignItems:'center',justifyContent:'space-between',direction:'ltr',zIndex:20}}>
+          <Eyebrow accent="#9A761F">{props.eyebrow || props.badge}</Eyebrow>
+          <LogoLockup dark={false}/>
+        </div>
+        <div style={{position:'absolute',left:70,right:265,top:360,bottom:190,zIndex:12,textAlign:rtl?'right':'left'}}>
+          <div style={{fontSize:20,fontWeight:900,color:'#9A761F',letterSpacing:1.5}}>ARIA HUB EDITORIAL</div>
+          <div style={{fontSize:clampTextSize(props.title,92,72,54),fontWeight:1000,lineHeight:1.03,marginTop:20,color:'#18223E'}}>
+            {props.title}
+          </div>
+          {props.note ? <div style={{fontSize:25,lineHeight:1.5,fontWeight:650,color:'rgba(24,34,62,.68)',marginTop:20,maxWidth:720}}>{props.note}</div> : null}
+          <div style={{width:88,height:7,borderRadius:999,background:accent,marginTop:28}}/>
+        </div>
+        <div style={{position:'absolute',left:58,right:58,bottom:44,display:'flex',alignItems:'flex-end',justifyContent:'space-between',direction:'ltr',zIndex:20}}>
+          <QR src={props.qrDataUrl}/>
+          <div style={{textAlign:'right',color:'#18223E'}}><div style={{fontSize:27,fontWeight:900}}>myariahub.com</div><div style={{fontSize:16,fontWeight:650,opacity:.58,marginTop:5}}>Discover the opportunity</div></div>
+        </div>
+      </CanvasRoot>
+    );
+  }
+
   return (
     <CanvasRoot props={props}>
       <HeroLayers media={props.media}/>
       {!props.media?.background?.url && !props.media?.hero?.url ? <div style={{position:'absolute',inset:0,background:'linear-gradient(135deg,#0b1227 0%,#24365e 55%,#0d1730 100%)'}}/>:null}
-      <div style={{position:'absolute',inset:0,zIndex:10,background:'linear-gradient(180deg,rgba(5,10,25,.16),rgba(5,10,25,.38) 44%,rgba(5,10,25,.96) 88%)'}}/>
+      <div style={{position:'absolute',inset:0,zIndex:10,background:'linear-gradient(180deg,rgba(5,10,25,.12),rgba(5,10,25,.32) 44%,rgba(5,10,25,.96) 88%)'}}/>
       <PremiumHeader accent={accent} eyebrow={props.eyebrow || props.badge}/>
       <div style={{position:'absolute',left:70,right:70,bottom:205,zIndex:14,textAlign:rtl?'right':'left'}}>
-        {bigType?<div style={{fontSize:150,fontWeight:1000,lineHeight:.82,color:accent,opacity:.14,position:'absolute',bottom:75,left:0,right:0,whiteSpace:'nowrap',overflow:'hidden'}}>{props.badge || 'ARIA HUB'}</div>:null}
-        <div style={{fontSize:clampTextSize(props.title,bigType?92:76,bigType?72:60,52),fontWeight:950,lineHeight:1.08,maxWidth:920,textShadow:'0 12px 38px rgba(0,0,0,.48)'}}>{props.title}</div>
+        <div style={{fontSize:18,fontWeight:900,letterSpacing:2,color:accent}}>{family === 'cinematic-person' ? 'STORY' : 'ARIA HUB'}</div>
+        <div style={{fontSize:clampTextSize(props.title,bigType?92:78,bigType?72:61,52),fontWeight:950,lineHeight:1.06,maxWidth:920,textShadow:'0 12px 38px rgba(0,0,0,.48)',marginTop:12}}>{props.title}</div>
         {props.note?<div style={{fontSize:25,lineHeight:1.5,fontWeight:600,color:'rgba(255,255,255,.75)',marginTop:17,maxWidth:760}}>{props.note}</div>:null}
       </div>
       <Footer props={props}/>
     </CanvasRoot>
   );
 }
-
 function DocumentAlert({ props }: { props:PremiumCanvasProps }) {
   const theme=resolveTheme(props.themeId); const accent=theme.accent; const rtl=props.lang!=='en';
   return (
