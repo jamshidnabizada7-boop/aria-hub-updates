@@ -54,7 +54,8 @@ import {
   getStudioTemplateDefinition,
   type StudioVisualRole,
 } from '@/lib/social/studio/registry';
-import { normalizeStudioMedia } from '@/lib/social/studio/media';
+import { normalizeStudioMedia, studioMediaHasAny } from '@/lib/social/studio/media';
+import { defaultMediaForFamily } from '@/lib/social/studio/assets';
 import { buildStudioCanvasProps, type StudioPosterData } from '@/lib/social/studio/canvas-props';
 
 const TEMPLATES: PostTemplate[] = TEMPLATE_DEFS.map((d) => d.key);
@@ -916,6 +917,9 @@ export function BrandStudioPanel() {
                         type="button"
                         onClick={() => {
                           setOverride('designFamily', family.id);
+                          if (family.premium && !studioMediaHasAny(activeMedia)) {
+                            setOverride('media', defaultMediaForFamily(family.id));
+                          }
                           setThemeId(family.defaultTheme);
                           if (family.recommendedLayouts[0]) setLayout(family.recommendedLayouts[0]);
                           if (family.visualSlots[0]) setMediaRole(family.visualSlots[0].role);
