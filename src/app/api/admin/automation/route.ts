@@ -92,10 +92,13 @@ export async function GET() {
 
   // Credentials NEVER leave the server — the panel gets "which fields are
   // configured" flags + public identifiers only.
-  const safeChannels = channels.map((ch) => ({
-    ...ch,
-    credentials: maskCredentials(ch.credentials),
-  }));
+  const safeChannels = channels.map((ch) => {
+    const credentials = maskCredentials(ch.credentials);
+    if (ch.platform === 'whatsapp' && !credentials.mode && typeof credentials.channelId === 'string') {
+      credentials.mode = 'channel';
+    }
+    return { ...ch, credentials };
+  });
 
   return NextResponse.json({
     ok: true,
