@@ -58,6 +58,12 @@ interface Status {
     opportunityBatchSize?: number;
     opportunityRepeatDays?: number;
     opportunityBatchTimes?: string[];
+    lastSocialTickAt?: string | null;
+    lastSocialTickStatus?: string | null;
+    lastSocialTickRendered?: number;
+    lastSocialTickPublished?: number;
+    lastSocialTickFailed?: number;
+    lastSocialTickError?: string | null;
   };
   channels: Channel[];
   queue: QueueRow[];
@@ -253,6 +259,34 @@ export function AutomationPanel() {
                 checked={state.opportunityOnlyAutomation !== false}
                 onCheckedChange={(v) => act({ action: 'save-state', opportunityOnlyAutomation: v }, 'opp-only')}
               />
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border bg-background/50 px-3 py-2 text-[11px]">
+              <span className="font-semibold">Social worker:</span>
+              {state.lastSocialTickAt ? (
+                <>
+                  <Badge variant="outline" className={cn('text-[10px]', statusTone(state.lastSocialTickStatus || 'pending'))}>
+                    {state.lastSocialTickStatus || 'unknown'}
+                  </Badge>
+                  <span className="text-muted-foreground">
+                    last cycle {new Date(state.lastSocialTickAt).toLocaleString()}
+                  </span>
+                  <span className="text-muted-foreground">
+                    · rendered {state.lastSocialTickRendered ?? 0}
+                    {' · '}published {state.lastSocialTickPublished ?? 0}
+                    {' · '}failed {state.lastSocialTickFailed ?? 0}
+                  </span>
+                  {state.lastSocialTickError ? (
+                    <span className="w-full truncate text-destructive" title={state.lastSocialTickError}>
+                      {state.lastSocialTickError}
+                    </span>
+                  ) : null}
+                </>
+              ) : (
+                <span className="text-amber-600 dark:text-amber-400">
+                  no dedicated social-worker heartbeat recorded yet
+                </span>
+              )}
             </div>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
