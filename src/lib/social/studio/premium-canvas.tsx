@@ -1,8 +1,7 @@
 'use client';
 
 import type { CSSProperties, ReactNode } from 'react';
-import { BriefcaseBusiness, CalendarDays, ExternalLink, FileText, GraduationCap, MapPin, Sparkles } from 'lucide-react';
-import { translate } from '@/lib/i18n';
+import { BriefcaseBusiness, CalendarDays, FileText, MapPin } from 'lucide-react';
 import { formatDateLong } from '@/lib/date-format';
 import { resolveTheme, CANVAS_SIZES } from '@/lib/social/themes';
 import { MediaLayer } from '@/lib/social/studio/media-layer';
