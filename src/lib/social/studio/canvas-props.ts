@@ -12,6 +12,23 @@ export interface StudioDesignSnapshot {
   overrides?: Record<string, unknown> | null;
 }
 
+export interface StudioPosterData {
+  slug: string;
+  title: string;
+  titleI18n: Record<string, string> | null;
+  organization: string | null;
+  country: string | null;
+  deadline: string | null;
+  featured: boolean;
+  salary: string | null;
+  salaryI18n: Record<string, string> | null;
+  category: { name: string; nameI18n: Record<string, string> | null } | null;
+}
+
+export type StudioCanvasProps = SocialCanvasProps & {
+  posterData?: StudioPosterData | null;
+};
+
 function str(v: unknown): string | undefined {
   return typeof v === 'string' && v.trim() ? v.trim() : undefined;
 }
@@ -38,7 +55,7 @@ export function buildStudioCanvasProps(
   lang: Lang,
   size: PosterSize,
   design?: StudioDesignSnapshot | null,
-): SocialCanvasProps & { posterData?: Record<string, unknown> | null } {
+): StudioCanvasProps {
   const o = design?.overrides ?? {};
   const tr = (key: string, params?: Record<string, string | number>) => translate(lang, key, params);
   const title = str(o.title) ?? post.title;
