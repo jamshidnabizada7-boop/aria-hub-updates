@@ -19,6 +19,7 @@ export interface StudioVisualItem {
   category: string;
   url: string;
   enabled?: boolean;
+  builtIn?: boolean;
 }
 
 interface Props {
