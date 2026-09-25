@@ -38,15 +38,25 @@ import { translate } from '@/lib/i18n';
 import { getLocalizedContent } from '@/lib/i18n-content';
 import { toEasternDigits, formatDateLong } from '@/lib/date-format';
 import type { Lang } from '@/lib/lang-route';
-import { OpportunityPoster, buildPosterData } from '@/components/site/opportunity-poster';
+import { OpportunityPoster } from '@/components/site/opportunity-poster';
 import { SocialCanvas, type PosterSize } from '@/lib/social/templates';
+import { StudioFieldsEditor } from '@/components/admin/studio-fields-editor';
+import { StudioMediaEditor, type StudioVisualItem } from '@/components/admin/studio-media-editor';
 import {
-  STUDIO_THEME_LIST, LAYOUTS, resolveTheme, canvasHeight,
+  STUDIO_THEME_LIST, LAYOUTS, resolveTheme, resolveLayout, resolveSize, canvasHeight,
   type StudioThemeId, type StudioLayout,
 } from '@/lib/social/themes';
 import { TEMPLATE_DEFS, type PostTemplate } from '@/lib/social/brand';
 import { buildCaption, type CaptionInput } from '@/lib/social/captions';
 import type { DailyPlan, PlanIdea, PlanNews, PlanOpp, PlanPost, PlanStat, PlanStory } from '@/lib/social/plan';
+import {
+  getCompatibleDesignFamilies,
+  getStudioDesignFamily,
+  getStudioTemplateDefinition,
+  type StudioVisualRole,
+} from '@/lib/social/studio/registry';
+import { normalizeStudioMedia } from '@/lib/social/studio/media';
+import { buildStudioCanvasProps, type StudioPosterData } from '@/lib/social/studio/canvas-props';
 
 const TEMPLATES: PostTemplate[] = TEMPLATE_DEFS.map((d) => d.key);
 
@@ -84,6 +94,18 @@ interface SearchedOpp {
   salaryI18n: Record<string, string> | null;
   country: string | null;
   category: { name: string; nameI18n: Record<string, string> | null; slug: string } | null;
+}
+
+interface SavedStudioDesign {
+  id: string;
+  contentRef: string;
+  forDate: string;
+  templateType: string;
+  themeId: string;
+  layout: string;
+  size: string;
+  overrides: Record<string, unknown> | null;
+  captionOverride: Record<string, string> | null;
 }
 
 const TYPE_FILTERS: { value: string; labelKey: string }[] = [
@@ -146,10 +168,14 @@ export function BrandStudioPanel() {
   const fetchSeq = useRef(0);
   const [themeId, setThemeId] = useState<StudioThemeId>('midnight');
   const [layout, setLayout] = useState<StudioLayout>('classic');
-  const [visualUrl, setVisualUrl] = useState<string | null>(null);
-  const [visuals, setVisuals] = useState<{ id: string; label: string; category: string; url: string }[]>([]);
+  const [visuals, setVisuals] = useState<StudioVisualItem[]>([]);
+  const [mediaRole, setMediaRole] = useState<StudioVisualRole>('background');
+  const [savedDesigns, setSavedDesigns] = useState<Record<string, SavedStudioDesign>>({});
   useEffect(() => {
-    fetch('/api/admin/studio/visuals').then((r) => (r.ok ? r.json() : null)).then((d) => setVisuals(d?.visuals ?? [])).catch(() => {});
+    fetch('/api/admin/studio/visuals')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setVisuals(Array.isArray(d?.visuals) ? d.visuals : []))
+      .catch(() => {});
   }, []);
   const [overrides, setOverrides] = useState<Record<string, Record<string, unknown>>>({});
   const [savingDesign, setSavingDesign] = useState(false);
