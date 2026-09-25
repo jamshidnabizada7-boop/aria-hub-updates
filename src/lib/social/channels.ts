@@ -374,14 +374,9 @@ async function publishLinkedIn(creds: Record<string, unknown>, input: PublishInp
         return { ok: false, error: `linkedin: image initialize ${init.status} ${init.text.slice(0, 160)}` };
       }
 
-      const imageResponse = await safeFetch(input.imageUrl, {
+      const imageFetch = await fetch(input.imageUrl, {
         headers: { Accept: 'image/*' },
       });
-      if (!imageResponse.ok) {
-        return { ok: false, error: `linkedin: image fetch ${imageResponse.status}` };
-      }
-
-      const imageFetch = await fetch(input.imageUrl);
       if (!imageFetch.ok) {
         return { ok: false, error: `linkedin: image fetch ${imageFetch.status}` };
       }
