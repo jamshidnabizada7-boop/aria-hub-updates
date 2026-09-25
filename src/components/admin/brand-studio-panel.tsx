@@ -41,6 +41,7 @@ import { OpportunityPoster } from '@/components/site/opportunity-poster';
 import { SocialCanvas, type PosterSize } from '@/lib/social/templates';
 import { StudioFieldsEditor } from '@/components/admin/studio-fields-editor';
 import { StudioMediaEditor, type StudioVisualItem } from '@/components/admin/studio-media-editor';
+import { StudioAssetLibraryManager } from '@/components/admin/studio-asset-library-manager';
 import {
   STUDIO_THEME_LIST, LAYOUTS, resolveTheme, resolveLayout, resolveSize, canvasHeight,
   type StudioThemeId, type StudioLayout,
@@ -171,12 +172,18 @@ export function BrandStudioPanel() {
   const [visuals, setVisuals] = useState<StudioVisualItem[]>([]);
   const [mediaRole, setMediaRole] = useState<StudioVisualRole>('background');
   const [savedDesigns, setSavedDesigns] = useState<Record<string, SavedStudioDesign>>({});
-  useEffect(() => {
-    fetch('/api/admin/studio/visuals')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => setVisuals(Array.isArray(d?.visuals) ? d.visuals : []))
-      .catch(() => {});
+  const loadVisuals = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/studio/visuals', { cache: 'no-store' });
+      const data = res.ok ? await res.json() : null;
+      setVisuals(Array.isArray(data?.visuals) ? data.visuals : []);
+    } catch {
+      // Deterministic built-in fallback art keeps the Studio usable.
+    }
   }, []);
+  useEffect(() => {
+    void loadVisuals();
+  }, [loadVisuals]);
   const [overrides, setOverrides] = useState<Record<string, Record<string, unknown>>>({});
   const [savingDesign, setSavingDesign] = useState(false);
   const [publishingDesign, setPublishingDesign] = useState(false);
@@ -1034,6 +1041,9 @@ export function BrandStudioPanel() {
                     onRoleChange={setMediaRole}
                     onChange={(next) => setOverride('media', next)}
                   />
+                  <div className="mt-3">
+                    <StudioAssetLibraryManager visuals={visuals} onChanged={loadVisuals} />
+                  </div>
                 </section>
 
                 <div className="flex flex-wrap items-center gap-1.5 border-t pt-3">
