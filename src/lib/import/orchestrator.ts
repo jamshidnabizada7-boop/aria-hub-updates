@@ -18,6 +18,7 @@
  */
 
 import type { PrismaClient, Prisma, OpportunityStatus } from '@prisma/client';
+import { resolveImportedOpportunityStatus } from './publication-policy';
 import { db } from '@/lib/db';
 import { getScraper } from './registry';
 import { computeHash, findExisting } from './dedupe';
@@ -443,13 +444,15 @@ async function processListing(
     logoUrl: logo.path || null,
     publishedDate: listing.publishedDate || null,  // String field in schema, no conversion needed
     canonicalUrl: listing.sourceUrl,
-    status: (source.autoPublish ? 'published' : 'draft') as OpportunityStatus,
     extractedData: listing.extractedData || {},
   };
 
   if (dedupe.action === 'update') {
     // Update existing (preserve id, slug unless title changed)
-    const existing = await db.opportunity.findUnique({ where: { id: dedupe.existing.id }, select: { slug: true, title: true } });
+    const existing = await db.opportunity.findUnique({
+      where: { id: dedupe.existing.id },
+      select: { slug: true, title: true, status: true },
+    });
     let newSlug = existing?.slug || slugBase;
     if (existing && slugify(listing.title) !== slugify(existing.title)) {
       newSlug = await ensureUniqueSlug(db, slugBase, dedupe.existing.id);
@@ -459,6 +462,7 @@ async function processListing(
       data: {
         ...pipeline.data,
         ...importFields,
+        status: resolveImportedOpportunityStatus(existing?.status, source.autoPublish),
         ...(categoryId ? { categoryId } : {}),
         slug: newSlug,
         importStatus: 'updated',
@@ -472,6 +476,7 @@ async function processListing(
       data: {
         ...pipeline.data,
         ...importFields,
+        status: resolveImportedOpportunityStatus(null, source.autoPublish),
         slug,
         sort: 0,
         categoryId,
