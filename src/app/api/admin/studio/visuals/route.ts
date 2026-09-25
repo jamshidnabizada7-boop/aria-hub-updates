@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentAdmin } from '@/lib/admin-auth';
 import { db } from '@/lib/db';
+import { isAllowedStudioMediaUrl } from '@/lib/social/studio/media-url';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,10 +25,14 @@ export async function POST(req: NextRequest) {
   try {
     if (body.action === 'add') {
       if (!body.url || !body.label) return NextResponse.json({ error: 'label and url required' }, { status: 400 });
+      if (!isAllowedStudioMediaUrl(body.url)) return NextResponse.json({ error: 'Use a site asset or durable public Blob URL' }, { status: 400 });
       const row = await db.studioVisual.create({ data: { label: body.label.slice(0, 80), category: (body.category || 'General').slice(0, 40), url: body.url, order: 0 } });
       return NextResponse.json({ ok: true, row });
     }
     if (body.action === 'update' && body.id) {
+      if (body.url !== undefined && !isAllowedStudioMediaUrl(body.url)) {
+        return NextResponse.json({ error: 'Use a site asset or durable public Blob URL' }, { status: 400 });
+      }
       const existing = await db.studioVisual.findUnique({ where: { id: body.id } });
       if (!existing) return NextResponse.json({ error: 'not found' }, { status: 404 });
       const row = await db.studioVisual.update({
@@ -35,7 +40,7 @@ export async function POST(req: NextRequest) {
         data: {
           label: typeof body.label === 'string' && body.label.trim() ? body.label.trim().slice(0, 80) : existing.label,
           category: typeof body.category === 'string' && body.category.trim() ? body.category.trim().slice(0, 40) : existing.category,
-          url: typeof body.url === 'string' && /^https?:\/\//i.test(body.url) ? body.url : existing.url,
+          url: typeof body.url === 'string' ? body.url : existing.url,
           enabled: typeof body.enabled === 'boolean' ? body.enabled : existing.enabled,
           order: typeof body.order === 'number' && Number.isFinite(body.order) ? Math.trunc(body.order) : existing.order,
         },

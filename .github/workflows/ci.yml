@@ -38,10 +38,12 @@ jobs:
       - name: Prisma schema validation + client generation
         run: |
           bunx prisma validate
-          bunx prisma generate
+          bun run db:generate
 
-      - name: Push schema to test database
-        run: bunx prisma db push --skip-generate
+      - name: Deploy and verify test database migrations
+        run: |
+          bun run db:deploy
+          bunx prisma migrate diff --from-url "$DIRECT_URL" --to-schema-datamodel prisma/schema.prisma --exit-code
 
       - name: Type check
         run: bunx tsc --noEmit
@@ -49,5 +51,10 @@ jobs:
       - name: Tests (unit, scraper fixtures, publish safety, security guards*)
         run: bun test tests/
         # * The api-guards tests skip automatically: no running server in CI.
-        #   The publish-safety + utils + fixture tests run against the service
-        #   Postgres — a real DB pass in CI on every push.
+        #   Publish-safety cases also report skips if the server-only publisher
+        #   cannot load in Bun's standalone test runner.
+
+      - name: Production build
+        run: |
+          export ADMIN_SESSION_SECRET="$(openssl rand -hex 32)"
+          bun run build

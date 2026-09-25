@@ -1,4 +1,5 @@
 import { db } from '@/lib/db';
+import { randomUUID } from 'node:crypto';
 import {
   buildTodaysQueue,
   publishDueQueue,
@@ -17,10 +18,10 @@ export interface SocialTickResult {
   errors: string[];
 }
 
-async function acquireSocialLock(): Promise<boolean> {
+async function acquireSocialLock(owner: string): Promise<boolean> {
   const now = new Date().toISOString();
   const stale = new Date(Date.now() - SOCIAL_LOCK_STALE_MS).toISOString();
-  const claim = JSON.stringify({ socialTickRunning: true, socialTickStartedAt: now });
+  const claim = JSON.stringify({ socialTickRunning: true, socialTickStartedAt: now, socialTickOwner: owner });
   const n = await db.$executeRaw`
     INSERT INTO "AutomationState" (id, state, "updatedAt")
     VALUES ('singleton', ${claim}::jsonb, now())
@@ -32,11 +33,11 @@ async function acquireSocialLock(): Promise<boolean> {
   return n === 1;
 }
 
-async function releaseSocialLock(): Promise<void> {
+async function releaseSocialLock(owner: string): Promise<void> {
   await db.$executeRaw`
     UPDATE "AutomationState"
     SET state = state || '{"socialTickRunning":false}'::jsonb
-    WHERE id = 'singleton'`;
+    WHERE id = 'singleton' AND state->>'socialTickOwner' = ${owner}`;
 }
 
 async function recordSocialHeartbeat(
@@ -68,14 +69,12 @@ export async function runSocialTick(
   baseUrl: string,
   options: { renderLimit?: number; publishLimit?: number } = {},
 ): Promise<SocialTickResult> {
-  if (!(await acquireSocialLock())) {
+  const owner = randomUUID();
+  if (!(await acquireSocialLock(owner))) {
     return { ran: false, reason: 'social_tick_locked_elsewhere', rendered: 0, published: 0, failed: 0, errors: [] };
   }
 
-  const run = await db.pipelineRun.create({
-    data: { kind: 'social_publish', status: 'running' },
-  });
-
+  const startedAt = new Date();
   const result: SocialTickResult = {
     ran: true,
     rendered: 0,
@@ -111,30 +110,34 @@ export async function runSocialTick(
     }
 
     const runStatus = result.errors.length || result.failed ? 'partial' : 'ok';
-    await db.pipelineRun.update({
-      where: { id: run.id },
-      data: {
-        status: runStatus,
-        stats: result as unknown as object,
-        finishedAt: new Date(),
-      },
-    });
+    if (result.queue?.created || result.rendered || result.published || result.failed || result.errors.length) {
+      await db.pipelineRun.create({
+        data: {
+          kind: 'social_publish',
+          status: runStatus,
+          stats: result as unknown as object,
+          startedAt,
+          finishedAt: new Date(),
+        },
+      });
+    }
     await recordSocialHeartbeat(runStatus, result).catch(() => undefined);
   } catch (error) {
     const message = (error instanceof Error ? error.message : String(error)).slice(0, 180);
     result.errors.push(message);
-    await db.pipelineRun.update({
-      where: { id: run.id },
+    await db.pipelineRun.create({
       data: {
+        kind: 'social_publish',
         status: 'error',
         message,
         stats: result as unknown as object,
+        startedAt,
         finishedAt: new Date(),
       },
     }).catch(() => undefined);
     await recordSocialHeartbeat('error', result).catch(() => undefined);
   } finally {
-    await releaseSocialLock().catch(() => undefined);
+    await releaseSocialLock(owner).catch(() => undefined);
   }
 
   return result;

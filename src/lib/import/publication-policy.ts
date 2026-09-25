@@ -13,10 +13,8 @@ export interface ImportedOpportunityStatusInput {
  *
  * Rules:
  * - New records follow the source's autoPublish policy.
- * - Existing published/draft/archived records keep their moderation state.
- * - Existing expired records are reactivated only when a trusted auto-publish
- *   source discovers that the deadline moved back into the future.
- * - A known past deadline always resolves to expired.
+ * - Existing records keep their publication state on scraper refresh.
+ * - A new record with a known past deadline starts expired.
  */
 export function resolveImportedOpportunityStatus({
   existingStatus = null,
@@ -24,18 +22,7 @@ export function resolveImportedOpportunityStatus({
   deadline = null,
   now = new Date(),
 }: ImportedOpportunityStatusInput): OpportunityStatus {
+  if (existingStatus) return existingStatus;
   if (deadline && deadline.getTime() < now.getTime()) return 'expired';
-
-  if (!existingStatus) return autoPublish ? 'published' : 'draft';
-
-  if (existingStatus === 'archived') return 'archived';
-  if (existingStatus === 'published') return 'published';
-  if (existingStatus === 'draft') return 'draft';
-
-  // Existing expired record whose source extended/removed the deadline.
-  if (existingStatus === 'expired') {
-    return autoPublish ? 'published' : 'expired';
-  }
-
-  return existingStatus;
+  return autoPublish ? 'published' : 'draft';
 }

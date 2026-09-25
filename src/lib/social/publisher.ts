@@ -23,7 +23,7 @@ const CHROME_CANDIDATES = [
 import { join } from 'node:path';
 import os from 'node:os';
 import { db } from '@/lib/db';
-import { buildDailyPlan, type PlanPost } from '@/lib/social/plan';
+import type { PlanPost } from '@/lib/social/plan';
 import {
   buildOpportunityDistributionPlan,
   DEFAULT_OPPORTUNITY_BATCH_SIZE,
@@ -40,6 +40,7 @@ import { publishToPlatform } from '@/lib/social/channels';
 import { notifyAdmin } from '@/lib/social/notify';
 import { ensureSocialDelivery, markDeliveryPublishing, markDeliveryResult } from '@/lib/social/delivery';
 import { decryptCredentials } from '@/lib/social/credentials';
+import { isAllowedStudioMediaUrl } from '@/lib/social/studio/media-url';
 import { resolveExecutable } from '@/lib/import/scrapers/browser-fetch';
 import type { Lang } from '@/lib/i18n-config';
 import type { PostTemplate } from '@/lib/social/brand';
@@ -94,14 +95,13 @@ export async function getState(): Promise<AutomationStateShape> {
 }
 
 export async function patchState(patch: Partial<AutomationStateShape>): Promise<AutomationStateShape> {
-  const current = await getState();
-  const next = { ...current, ...patch };
-  await db.automationState.upsert({
-    where: { id: 'singleton' },
-    create: { id: 'singleton', state: next as unknown as object },
-    update: { state: next as unknown as object },
-  });
-  return next;
+  const json = JSON.stringify(patch);
+  await db.$executeRaw`
+    INSERT INTO "AutomationState" (id, state, "updatedAt")
+    VALUES ('singleton', ${json}::jsonb, now())
+    ON CONFLICT (id) DO UPDATE
+    SET state = "AutomationState".state || ${json}::jsonb, "updatedAt" = now()`;
+  return getState();
 }
 
 // ── canvas props from a plan post (mirrors the studio preview exactly) ───────
@@ -209,7 +209,6 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
   const todayAft = aftNow.toISOString().slice(0, 10);
   if (state.lastQueueBuildDate === todayAft) return { created: 0 };
 
-  const opportunityOnly = state.opportunityOnlyAutomation !== false;
   const captionLangs: Lang[] = state.captionLangs?.length ? state.captionLangs : ['fa', 'ps', 'en'];
 
   // Studio defaults (theme/layout chosen in the Brand Studio apply to every
@@ -220,28 +219,18 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
   };
 
   const langs = ['fa', 'ps', 'en'] as Lang[];
-  let slots: string[];
-  let batchSize = 1;
-  let plans: { posts: PlanPost[] }[];
-
-  if (opportunityOnly) {
-    slots = state.opportunityBatchTimes?.length
-      ? state.opportunityBatchTimes
-      : DEFAULT_OPPORTUNITY_BATCH_TIMES_AFT;
-    batchSize = Math.min(10, Math.max(1, state.opportunityBatchSize ?? DEFAULT_OPPORTUNITY_BATCH_SIZE));
-    const configuredTarget = Math.min(50, Math.max(1, state.opportunityDailyTarget ?? DEFAULT_OPPORTUNITY_DAILY_TARGET));
-    const capacity = opportunityDistributionCapacity(slots, batchSize);
-    const target = Math.min(configuredTarget, capacity);
-    const repeatDays = Math.min(90, Math.max(1, state.opportunityRepeatDays ?? DEFAULT_OPPORTUNITY_REPEAT_DAYS));
-
-    const opportunityPlans = await Promise.all(
-      langs.map((lang) => buildOpportunityDistributionPlan(lang, { target, repeatDays })),
-    );
-    plans = opportunityPlans.map((posts) => ({ posts }));
-  } else {
-    slots = state.publishTimes?.length ? state.publishTimes : DEFAULT_SLOTS_AFT;
-    plans = await Promise.all(langs.map((lang) => buildDailyPlan(lang)));
-  }
+  const slots = state.opportunityBatchTimes?.length
+    ? state.opportunityBatchTimes
+    : DEFAULT_OPPORTUNITY_BATCH_TIMES_AFT;
+  const batchSize = Math.min(10, Math.max(1, state.opportunityBatchSize ?? DEFAULT_OPPORTUNITY_BATCH_SIZE));
+  const configuredTarget = Math.min(50, Math.max(1, state.opportunityDailyTarget ?? DEFAULT_OPPORTUNITY_DAILY_TARGET));
+  const capacity = opportunityDistributionCapacity(slots, batchSize);
+  const target = Math.min(configuredTarget, capacity);
+  const repeatDays = Math.min(90, Math.max(1, state.opportunityRepeatDays ?? DEFAULT_OPPORTUNITY_REPEAT_DAYS));
+  const opportunityPlans = await Promise.all(
+    langs.map((lang) => buildOpportunityDistributionPlan(lang, { target, repeatDays })),
+  );
+  const plans: { posts: PlanPost[] }[] = opportunityPlans.map((posts) => ({ posts }));
 
   const base = plans[0];
   if (!base || base.posts.length === 0) {
@@ -265,9 +254,7 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
   }[] = [];
 
   base.posts.forEach((post, idx) => {
-    const opportunitySchedule = opportunityOnly
-      ? opportunityScheduleForIndex(idx, slots, batchSize)
-      : { slot: slots[idx % slots.length], offsetMinutes: 0 };
+    const opportunitySchedule = opportunityScheduleForIndex(idx, slots, batchSize);
     if (!opportunitySchedule) return;
     const scheduledFor = new Date(
       aftSlotToUtc(opportunitySchedule.slot).getTime() + opportunitySchedule.offsetMinutes * 60000,
@@ -319,7 +306,7 @@ async function verifyPublicImageUrl(url: string): Promise<boolean> {
   }
 }
 
-async function renderQueueImage(baseUrl: string, props: CanvasProps): Promise<{ file: string; publicUrl: string; localPath: string | null } | null> {
+async function renderQueueImage(baseUrl: string, props: CanvasProps, requireDurableMedia: boolean): Promise<{ file: string; publicUrl: string; localPath: string | null } | null> {
   // Chrome resolution order: env override → known local installs (self-host /
   // workstation) → @sparticuz/chromium (serverless bundle for Vercel). Without
   // the serverless fallback the render step silently returned null on Vercel
@@ -346,6 +333,21 @@ async function renderQueueImage(baseUrl: string, props: CanvasProps): Promise<{ 
     });
     const vh = props.size === 'story' ? 2100 : props.size === 'portrait' ? 1500 : 1180;
     const page = await browser.newPage({ viewport: { width: 1180, height: vh } });
+    const renderOrigin = new URL(baseUrl).origin;
+    await page.route('**/*', async (route) => {
+      const requestUrl = route.request().url();
+      try {
+        const url = new URL(requestUrl);
+        if (url.protocol === 'data:' || url.protocol === 'blob:' ||
+            url.origin === renderOrigin || isAllowedStudioMediaUrl(requestUrl)) {
+          await route.continue();
+        } else {
+          await route.abort();
+        }
+      } catch {
+        await route.abort();
+      }
+    });
     const qs = encodeURIComponent(JSON.stringify(props));
     const token = process.env.SOCIAL_RENDER_TOKEN ? `&t=${encodeURIComponent(process.env.SOCIAL_RENDER_TOKEN)}` : '';
     await page.goto(`${baseUrl}/fa/studio-render?p=${qs}${token}`, { waitUntil: 'networkidle', timeout: 45000 });
@@ -376,9 +378,9 @@ async function renderQueueImage(baseUrl: string, props: CanvasProps): Promise<{ 
       }
     }
 
-    // Vercel is always ephemeral. External workers can opt into the same hard
-    // requirement with SOCIAL_REQUIRE_DURABLE_MEDIA=1.
-    if (process.env.VERCEL || process.env.SOCIAL_REQUIRE_DURABLE_MEDIA === '1') {
+    // Opportunity posts always need a durable URL, regardless of host setup.
+    // Vercel is ephemeral, and other workers can require this for manual posts.
+    if (requireDurableMedia || process.env.VERCEL || process.env.SOCIAL_REQUIRE_DURABLE_MEDIA === '1') {
       console.error('[render] durable media unavailable: BLOB_READ_WRITE_TOKEN is required');
       return null;
     }
@@ -429,7 +431,12 @@ export async function renderDueQueue(baseUrl: string, limit = 2): Promise<{ rend
     data: { status: 'pending', claimedAt: null },
   }).catch(() => undefined);
   const rows = await db.socialPostQueue.findMany({
-    where: { status: 'pending', scheduledFor: { lte: new Date(Date.now() + 3600000) } },
+    where: {
+      status: 'pending',
+      requiresManualPublish: false,
+      templateType: { in: ['spotlight', 'deadline'] },
+      scheduledFor: { lte: new Date(Date.now() + 3600000) },
+    },
     orderBy: { scheduledFor: 'asc' },
     take: limit,
   });
@@ -464,7 +471,7 @@ export async function renderOneQueueRow(id: string, baseUrl = 'http://127.0.0.1:
   });
   if (claim.count === 0) return false;
 
-  const img = await renderQueueImage(baseUrl, row.contentJson as CanvasProps);
+  const img = await renderQueueImage(baseUrl, row.contentJson as CanvasProps, ['spotlight', 'deadline'].includes(row.templateType));
   await db.socialPostQueue.update({
     where: { id },
     data: {
@@ -532,12 +539,10 @@ export async function publishDueQueue(limit = 2): Promise<{ published: number; f
     // below), so they are due again — they used to be frozen forever.
     where: {
       status: { in: ['ready', 'failed', 'partial'] },
+      requiresManualPublish: false,
+      templateType: { in: ['spotlight', 'deadline'] },
       scheduledFor: { lte: new Date() },
-      attempts: { lt: 3 },
-      OR: [
-        { imageStatus: 'ready' },
-        { templateType: { notIn: ['spotlight', 'deadline'] } },
-      ],
+      imageStatus: 'ready',
     },
     orderBy: { scheduledFor: 'asc' },
     take: limit,
@@ -563,6 +568,7 @@ export async function publishDueQueue(limit = 2): Promise<{ published: number; f
     const results: Record<string, { ok: boolean; error?: string; downgraded?: string }> = {};
     const external: Record<string, { id: string | null; permalink: string | null }> = {};
     let anyOk = false;
+    let attempted = false;
     let tokenExpiredChannel: string | null = null;
 
     for (const ch of channels) {
@@ -591,6 +597,7 @@ export async function publishDueQueue(limit = 2): Promise<{ published: number; f
         continue;
       }
 
+      attempted = true;
       await markDeliveryPublishing(delivery.id);
 
       const caption = composeCaptionWithLimit(row.captionJson, langs, CAPTION_LIMITS[ch.platform] ?? 2200);
@@ -627,6 +634,16 @@ export async function publishDueQueue(limit = 2): Promise<{ published: number; f
         // Facebook/LinkedIn/etc. later in the loop from attempting their post.
         if (r.rateLimited) continue;
       }
+    }
+
+    // A delivery-specific retry delay must not consume a queue-level attempt.
+    // The individual SocialDelivery row enforces its own three-attempt limit.
+    if (!attempted) {
+      await db.socialPostQueue.update({
+        where: { id: row.id },
+        data: { status: row.status, claimedAt: null },
+      });
+      continue;
     }
 
     // Merge over previous results so a partially-succeeded row keeps its wins.

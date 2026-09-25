@@ -41,13 +41,13 @@ describe('import publication policy', () => {
     })).toBe('archived');
   });
 
-  test('expired record can reactivate when a trusted source extends its deadline', () => {
+  test('expired record stays expired when a trusted source extends its deadline', () => {
     expect(resolveImportedOpportunityStatus({
       existingStatus: 'expired',
       autoPublish: true,
       deadline: future,
       now,
-    })).toBe('published');
+    })).toBe('expired');
   });
 
   test('expired record stays expired when source is review-only', () => {
@@ -59,12 +59,20 @@ describe('import publication policy', () => {
     })).toBe('expired');
   });
 
-  test('a past deadline always resolves to expired', () => {
+  test('a past deadline makes a new record expired', () => {
     expect(resolveImportedOpportunityStatus({
-      existingStatus: 'published',
       autoPublish: true,
       deadline: past,
       now,
     })).toBe('expired');
+  });
+
+  test('a scraper refresh does not demote an existing published record', () => {
+    expect(resolveImportedOpportunityStatus({
+      existingStatus: 'published',
+      autoPublish: false,
+      deadline: past,
+      now,
+    })).toBe('published');
   });
 });

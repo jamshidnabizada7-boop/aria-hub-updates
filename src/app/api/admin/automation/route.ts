@@ -130,7 +130,7 @@ export async function GET() {
     state: {
       ...state,
       publishTimes: state.publishTimes?.length ? state.publishTimes : DEFAULT_SLOTS_AFT,
-      opportunityOnlyAutomation: state.opportunityOnlyAutomation !== false,
+      opportunityOnlyAutomation: true,
       opportunityDailyTarget: state.opportunityDailyTarget ?? DEFAULT_OPPORTUNITY_DAILY_TARGET,
       opportunityBatchSize: state.opportunityBatchSize ?? DEFAULT_OPPORTUNITY_BATCH_SIZE,
       opportunityRepeatDays: state.opportunityRepeatDays ?? DEFAULT_OPPORTUNITY_REPEAT_DAYS,
@@ -178,9 +178,6 @@ export async function POST(req: NextRequest) {
         }
         if (typeof body.autoImport === 'boolean') patch.autoImport = body.autoImport;
         if (typeof body.autoPublish === 'boolean') patch.autoPublish = body.autoPublish;
-        if (typeof body.opportunityOnlyAutomation === 'boolean') {
-          patch.opportunityOnlyAutomation = body.opportunityOnlyAutomation;
-        }
         if (body.opportunityDailyTarget !== undefined) {
           patch.opportunityDailyTarget = Math.min(50, Math.max(1, Number(body.opportunityDailyTarget) || DEFAULT_OPPORTUNITY_DAILY_TARGET));
         }

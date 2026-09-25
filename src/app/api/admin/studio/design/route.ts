@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentAdmin } from '@/lib/admin-auth';
 import { db } from '@/lib/db';
+import { hasUnsafeStudioMedia } from '@/lib/social/studio/media-url';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,6 +70,9 @@ export async function POST(req: NextRequest) {
   const action = String(body.action || '');
   const design = parseDesign(body.design);
   if (!design) return NextResponse.json({ error: 'invalid_design' }, { status: 400 });
+  if (hasUnsafeStudioMedia(design.overrides) || hasUnsafeStudioMedia(body.contentJson)) {
+    return NextResponse.json({ error: 'Use site assets or durable public Blob URLs for Studio media' }, { status: 400 });
+  }
 
   try {
     if (action === 'save' || action === 'ensure-row') {
@@ -110,6 +114,7 @@ export async function POST(req: NextRequest) {
             templateType: design.templateType,
             contentJson,
             captionJson,
+            requiresManualPublish: true,
             scheduledFor: existing.scheduledFor < new Date() ? existing.scheduledFor : new Date(),
           },
         });
@@ -123,6 +128,7 @@ export async function POST(req: NextRequest) {
           contentRef: design.contentRef,
           contentJson,
           captionJson,
+          requiresManualPublish: true,
           status: 'pending',
         },
       });

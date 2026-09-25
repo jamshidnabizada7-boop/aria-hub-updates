@@ -1,5 +1,20 @@
 # Database migrations runbook
 
+## Stage 1 integration order
+
+The cumulative integration branch contains these migrations after the baseline:
+
+1. `20260924184500_facebook_group_distribution` — additive group destination and job tables.
+2. `20260925095000_social_delivery_tracking` — additive per-channel delivery table.
+3. `20260925160000_manual_social_queue_rows` — additive flag that keeps Brand Studio Publish Now rows out of the automatic worker.
+4. `20260925170000_schema_reconciliation` — adds the missing StudioVisual table and aligns Group timestamp defaults with Prisma.
+
+Review the target database's migration history and the existing `StudioVisual`
+table before deployment. The table may already exist on databases previously
+updated with `db push`; reconcile that state before deploying the migration.
+Stage 1 does not run production migrations; use `prisma migrate deploy` only at
+the release gate.
+
 The schema is now under version control (`prisma/migrations/`). The
 `db push --accept-data-loss` workflow is retired — `db:push` remains for
 throwaway sandboxes only and will refuse destructive changes.

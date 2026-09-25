@@ -14,6 +14,10 @@ Every cycle:
 4. publishes due deliveries;
 5. records per-platform delivery state.
 
+Idle polls update the worker heartbeat without adding a PipelineRun history row.
+Brand Studio Publish Now rows are reserved for the administrator and are not
+claimed by the automatic worker.
+
 It does **not** scrape sources or run AI translation.
 
 The existing all-in-one automation tick remains a backstop and admin action, but scheduled publishing no longer has to wait for scraping.
@@ -24,8 +28,8 @@ The existing all-in-one automation tick remains a backstop and admin action, but
 - Render rows are claimed with compare-and-swap before Chromium starts.
 - Publish rows and per-platform SocialDelivery records are idempotent.
 - Opportunity posts require a real image and will not silently downgrade to text-only.
-- When the worker runs outside Vercel, set `SOCIAL_REQUIRE_DURABLE_MEDIA=1`.
-- `BLOB_READ_WRITE_TOKEN` is required for the recommended Oracle deployment so Meta/LinkedIn receive a genuinely public image URL.
+- Opportunity posts require durable Blob media on every host. Set `BLOB_READ_WRITE_TOKEN` so Meta/LinkedIn receive a genuinely public image URL.
+- When the worker runs outside Vercel, set `SOCIAL_REQUIRE_DURABLE_MEDIA=1` to enforce the same rule for manual posts.
 
 ## Required environment
 
@@ -124,4 +128,5 @@ The stacked automation PRs must be applied in order before this worker:
 6. WhatsApp capability modes;
 7. this worker/runtime PR.
 
-The SocialDelivery migration must be deployed before enabling the worker.
+The SocialDelivery and manual queue row migrations must be deployed before
+enabling the worker.

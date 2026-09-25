@@ -1,6 +1,7 @@
 'use client';
 
 import type { CSSProperties } from 'react';
+import { isAllowedStudioMediaUrl } from '@/lib/social/studio/media-url';
 import {
   DEFAULT_MEDIA_LAYER,
   type StudioMediaLayer,
@@ -42,7 +43,7 @@ export function MediaLayer({
   style?: CSSProperties;
   ariaHidden?: boolean;
 }) {
-  if (!layer?.url || layer.visible === false) return null;
+  if (!layer?.url || layer.visible === false || !isAllowedStudioMediaUrl(layer.url)) return null;
   const l = normalizeMediaLayer(layer);
   const isBackground = role === 'background';
   const shadow = l.shadow ?? DEFAULT_MEDIA_LAYER.shadow;

@@ -104,7 +104,6 @@ const PLATFORM_META: Record<string, {
   },
 };
 
-const ALL_TIMES = ['07:00', '08:00', '09:00', '12:00', '12:30', '13:00', '17:00', '19:00', '20:00', '21:00'];
 const OPPORTUNITY_TIMES = ['07:00', '08:00', '09:00', '10:30', '12:00', '13:00', '15:30', '17:00', '18:00', '19:00', '20:30', '21:00'];
 
 const statusTone = (s: string) =>
@@ -158,13 +157,6 @@ export function AutomationPanel() {
       if (data.ok) toast({ title: t('admin.automation.tickDone') });
       await fetchStatus();
     } catch { toast({ title: 'Tick failed', variant: 'destructive' }); } finally { setBusy(null); }
-  };
-
-  const toggleTime = (slot: string) => {
-    if (!status) return;
-    const cur = status.state.publishTimes || [];
-    const next = cur.includes(slot) ? cur.filter((x) => x !== slot) : [...cur, slot].sort();
-    if (next.length) void act({ action: 'save-state', publishTimes: next }, 'times');
   };
 
   const toggleOpportunityTime = (slot: string) => {
@@ -258,10 +250,9 @@ export function AutomationPanel() {
                   Automatic social publishing uses opportunities only. Quotes, tips, stats, stories and news remain available in Brand Studio for manual use.
                 </p>
               </div>
-              <Switch
-                checked={state.opportunityOnlyAutomation !== false}
-                onCheckedChange={(v) => act({ action: 'save-state', opportunityOnlyAutomation: v }, 'opp-only')}
-              />
+              <span className="rounded-full border border-primary/30 px-2 py-1 text-[10px] font-semibold text-primary">
+                Opportunity only
+              </span>
             </div>
 
             <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border bg-background/50 px-3 py-2 text-[11px]">
@@ -364,27 +355,7 @@ export function AutomationPanel() {
           </section>
 
           <section className="rounded-2xl border bg-card p-4">
-            <h3 className="flex items-center gap-2 text-sm font-bold"><CalendarClock className="h-4 w-4 text-primary" /> {t('admin.automation.schedule')}</h3>
-            <p className="mt-1 text-xs text-muted-foreground" dir="auto">{t('admin.automation.scheduleHint')}</p>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {ALL_TIMES.map((slot) => {
-                const active = state.publishTimes.includes(slot);
-                return (
-                  <button
-                    key={slot}
-                    type="button"
-                    onClick={() => toggleTime(slot)}
-                    className={cn(
-                      'rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
-                      active ? 'border-primary bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-muted',
-                    )}
-                  >
-                    <Clock className="me-1 inline h-3 w-3" />
-                    {slot}
-                  </button>
-                );
-              })}
-            </div>
+            <h3 className="flex items-center gap-2 text-sm font-bold"><Settings2 className="h-4 w-4 text-primary" /> Automation settings</h3>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <div>
                 <Label className="text-xs">{t('admin.automation.captionLangs')}</Label>

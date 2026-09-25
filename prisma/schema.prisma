@@ -1276,6 +1276,7 @@ model SocialPostQueue {
   publishedAt   DateTime?
   claimedAt     DateTime? // set when a worker claims the row (publishing/rendering)
   notifiedAt    DateTime? // admin failure alert sent
+  requiresManualPublish Boolean @default(false) // Brand Studio publish-now rows are never worker-owned
   facebookGroupDistribution Boolean @default(false)
   facebookGroupMode         String  @default("auto") // auto | manual
   facebookGroupCampaigns    FacebookGroupCampaign[]

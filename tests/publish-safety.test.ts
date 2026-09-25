@@ -1,19 +1,26 @@
 /**
  * Publishing-pipeline safety tests — the Phase 3 duplicate-prevention
- * machinery, exercised against the LOCAL database with an invalid Telegram
- * channel (nothing ever reaches a real platform). Skips when the DB is down.
+ * machinery, exercised against an isolated LOCAL test database. The X adapter
+ * rejects required images before any network request. Skips without a test DB.
  *
  * Run: bun test tests/publish-safety.test.ts
  */
-import { describe, expect, test, afterAll } from 'bun:test';
+import { describe, expect, test, afterAll, mock } from 'bun:test';
 
-process.env.DATABASE_URL ||= 'postgresql://postgres@127.0.0.1:5433/ariahub?sslmode=disable';
+mock.module('server-only', () => ({}));
+
+process.env.DATABASE_URL ||= 'postgresql://postgres@127.0.0.1:5433/ariahub_test?sslmode=disable';
+const testUrl = new URL(process.env.DATABASE_URL);
+const isolatedTestDatabase = ['127.0.0.1', 'localhost'].includes(testUrl.hostname) &&
+  (testUrl.pathname.endsWith('_test') || testUrl.pathname.endsWith('_fresh'));
 
 const { db } = await import('../src/lib/db').catch(() => ({ db: null as never }));
 let dbUp = false;
 try {
-  await db.$queryRaw`SELECT 1`;
-  dbUp = true;
+  if (isolatedTestDatabase) {
+    await db.$queryRaw`SELECT 1`;
+    dbUp = true;
+  }
 } catch {
   dbUp = false;
 }
@@ -38,20 +45,21 @@ const CAPTIONS = {
 };
 
 async function seedFixture() {
-  await db.publishChannel.deleteMany({ where: { platform: 'telegram' } });
   await db.socialPostQueue.deleteMany({ where: { contentRef: 'test-publish-safety' } });
+  await db.publishChannel.deleteMany({ where: { platform: 'x' } });
   await db.publishChannel.create({
-    data: { platform: 'telegram', label: 'telegram', enabled: true, credentials: { botToken: '123456:INVALID', chatId: '@test' } },
+    data: { platform: 'x', label: 'x', enabled: true, credentials: {} },
   });
   return db.socialPostQueue.create({
     data: {
       scheduledFor: new Date(Date.now() - 60000),
-      templateType: 'promo',
+      templateType: 'spotlight',
       contentRef: 'test-publish-safety',
-      contentJson: { template: 'promo', lang: 'fa', title: 'Publish safety test' },
+      contentJson: { template: 'spotlight', lang: 'fa', title: 'Publish safety test' },
       captionJson: CAPTIONS,
       status: 'ready',
-      imageStatus: 'failed',
+      imageStatus: 'ready',
+      imagePaths: { square: 'https://store.public.blob.vercel-storage.com/test.png' },
     },
   });
 }
@@ -72,7 +80,7 @@ describe.skipIf(!dbUp)('publishDueQueue safety machinery', () => {
   afterAll(async () => {
     if (!dbUp) return;
     await db.socialPostQueue.deleteMany({ where: { contentRef: 'test-publish-safety' } });
-    await db.publishChannel.deleteMany({ where: { platform: 'telegram' } });
+    await db.publishChannel.deleteMany({ where: { platform: 'x' } });
     await db.$executeRaw`UPDATE "AutomationState" SET state = state || '{"tickRunning":false}'::jsonb WHERE id = 'singleton'`;
   });
 
@@ -98,9 +106,41 @@ describe.skipIf(!dbUp)('publishDueQueue safety machinery', () => {
     expect(after.status).toBe('failed');
     expect(after.attempts).toBe(1);
     expect(after.claimedAt).toBeNull();
-    expect(after.error).toContain('telegram');
-    const ch = await db.publishChannel.findUniqueOrThrow({ where: { platform: 'telegram' } });
-    expect(ch.lastError).toContain('telegram');
+    expect(after.error).toContain('x');
+    const ch = await db.publishChannel.findUniqueOrThrow({ where: { platform: 'x' } });
+    expect(ch.lastError).toContain('x');
+  });
+
+  test('a delivery waiting for retry does not consume another queue attempt', async () => {
+    const row = await seedFixture();
+    const channel = await db.publishChannel.findUniqueOrThrow({ where: { platform: 'x' } });
+    await db.socialDelivery.create({
+      data: {
+        queueId: row.id,
+        channelId: channel.id,
+        platform: 'x',
+        status: 'retry_wait',
+        attempts: 1,
+        nextAttemptAt: new Date(Date.now() + 10 * 60000),
+      },
+    });
+    await publishDueQueue(10);
+    const after = await db.socialPostQueue.findUniqueOrThrow({ where: { id: row.id } });
+    expect(after.status).toBe('ready');
+    expect(after.attempts).toBe(0);
+  });
+
+  test('Brand Studio and generic rows remain outside automatic publishing', async () => {
+    const row = await seedFixture();
+    await db.socialPostQueue.update({ where: { id: row.id }, data: { requiresManualPublish: true } });
+    await publishDueQueue(10);
+    expect((await db.socialPostQueue.findUniqueOrThrow({ where: { id: row.id } })).attempts).toBe(0);
+    await db.socialPostQueue.update({
+      where: { id: row.id },
+      data: { requiresManualPublish: false, templateType: 'quote' },
+    });
+    await publishDueQueue(10);
+    expect((await db.socialPostQueue.findUniqueOrThrow({ where: { id: row.id } })).attempts).toBe(0);
   });
 
   test('stale publishing claims are swept to failed with an attempts increment', async () => {
