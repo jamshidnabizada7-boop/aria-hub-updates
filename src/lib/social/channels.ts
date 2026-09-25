@@ -453,30 +453,73 @@ async function publishLinkedIn(creds: Record<string, unknown>, input: PublishInp
 }
 
 
-// ── WhatsApp Channel (Meta Cloud API — official Channels support) ────────────
-// Credentials: { accessToken, channelId } — channelId is the WhatsApp Channel
-// ID from a WhatsApp Business Account (Channels are one-way broadcasts).
-// NOTE: posting to WhatsApp GROUPS is not possible via any official API —
-// groups would require unofficial automation that violates WhatsApp ToS and
-// risks number bans. Use a Channel instead; share the channel link anywhere.
+// ── WhatsApp Business Platform ───────────────────────────────────────────────
+export type WhatsAppMode = 'individual' | 'group' | 'channel';
+
+export function resolveWhatsAppMode(creds: Record<string, unknown>): WhatsAppMode {
+  const explicit = String(creds.mode || '').trim().toLowerCase();
+  if (explicit === 'individual' || explicit === 'group' || explicit === 'channel') return explicit;
+  // Preserve old configurations honestly: the old UI stored channelId and
+  // incorrectly sent it through the 1:1 /messages endpoint.
+  if (creds.channelId) return 'channel';
+  if (creds.groupId) return 'group';
+  return 'individual';
+}
+
+function whatsappMessagePayload(
+  target: string,
+  input: PublishInput,
+  recipientType: 'individual' | 'group',
+): Record<string, unknown> {
+  const text = input.link ? `${input.caption}\n\n🔗 ${input.link}` : input.caption;
+  return {
+    messaging_product: 'whatsapp',
+    recipient_type: recipientType,
+    to: target,
+    type: input.imageUrl ? 'image' : 'text',
+    ...(input.imageUrl
+      ? { image: { link: input.imageUrl, caption: text.slice(0, 1000) } }
+      : { text: { preview_url: true, body: text.slice(0, 4000) } }),
+  };
+}
+
 async function publishWhatsApp(creds: Record<string, unknown>, input: PublishInput): Promise<PublishResult> {
   const accessToken = String(creds.accessToken || '');
   const phoneNumberId = String(creds.phoneNumberId || '');
-  const channelId = String(creds.channelId || '');
-  if (!accessToken || !phoneNumberId || !channelId) return { ok: false, error: 'whatsapp: missing accessToken/phoneNumberId/channelId' };
-  try {
-    const text = input.link ? `${input.caption}
+  const mode = resolveWhatsAppMode(creds);
 
-🔗 ${input.link}` : input.caption;
-    const body: Record<string, unknown> = {
-      messaging_product: 'whatsapp',
-      to: channelId,
-      type: input.imageUrl ? 'image' : 'text',
-      ...(input.imageUrl
-        ? { image: { link: input.imageUrl, caption: text.slice(0, 1000) } }
-        : { text: { preview_url: true, body: text.slice(0, 4000) } }),
+  if (!accessToken || !phoneNumberId) {
+    return { ok: false, error: 'whatsapp: missing accessToken/phoneNumberId' };
+  }
+  if (input.requireImage && !input.imageUrl) {
+    return { ok: false, error: 'whatsapp: image required but no durable image URL was provided' };
+  }
+
+  if (mode === 'channel') {
+    return {
+      ok: false,
+      error: 'whatsapp: Channel publishing is not supported by the configured official Business API connection; a WhatsApp Channel link/ID cannot be sent through /messages',
     };
-    const r = await safeFetch(graphUrl(`${encodeURIComponent(phoneNumberId)}/messages`), {
+  }
+
+  const target = mode === 'group'
+    ? String(creds.groupId || '')
+    : String(creds.recipient || creds.recipientPhone || '');
+  if (!target) {
+    return {
+      ok: false,
+      error: mode === 'group'
+        ? 'whatsapp: group mode requires groupId'
+        : 'whatsapp: individual mode requires recipient phone/WA ID',
+    };
+  }
+
+  try {
+    const endpoint = mode === 'group'
+      ? graphUrl(`${encodeURIComponent(phoneNumberId)}/group_messages`)
+      : graphUrl(`${encodeURIComponent(phoneNumberId)}/messages`);
+    const body = whatsappMessagePayload(target, input, mode === 'group' ? 'group' : 'individual');
+    const r = await safeFetch(endpoint, {
       method: 'POST',
       headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -487,14 +530,20 @@ async function publishWhatsApp(creds: Record<string, unknown>, input: PublishInp
       return { ok: true, id };
     }
     const cls = classifyGraph(r.json, r.status);
-    const hint = r.text.includes('does not exist')
-      ? ' (hint: phoneNumberId = your WhatsApp phone number ID from Meta Business; channelId = the API channel ID — the whatsapp.com/channel/ link id will NOT work)'
+    const raw = r.text.slice(0, 180);
+    const eligibilityHint = mode === 'group' && (r.status === 400 || r.status === 403)
+      ? ' (Groups API must be enabled for this WABA/phone number and the group must be an API-managed WhatsApp group)'
       : '';
-    return { ok: false, error: `whatsapp: ${r.status} ${r.text.slice(0, 140)}${hint}`, ...cls };
+    return {
+      ok: false,
+      error: `whatsapp: ${mode} ${r.status} ${raw}${eligibilityHint}`,
+      ...cls,
+    };
   } catch (e) {
     return { ok: false, error: `whatsapp: ${errOf(e)}` };
   }
 }
+
 
 export interface ConnectionCheckResult {
   ok: boolean;
@@ -557,12 +606,73 @@ async function checkInstagramConnection(creds: Record<string, unknown>): Promise
   };
 }
 
+async function checkWhatsAppConnection(creds: Record<string, unknown>): Promise<ConnectionCheckResult> {
+  const accessToken = String(creds.accessToken || '');
+  const phoneNumberId = String(creds.phoneNumberId || '');
+  const mode = resolveWhatsAppMode(creds);
+  if (!accessToken || !phoneNumberId) {
+    return { ok: false, error: 'whatsapp: missing accessToken/phoneNumberId' };
+  }
+
+  if (mode === 'channel') {
+    return {
+      ok: false,
+      error: 'whatsapp: this is configured as a Channel, but the official Business API connection used here does not expose Channel posting through /messages',
+      details: { mode, graphVersion: META_GRAPH_VERSION },
+    };
+  }
+
+  if (mode === 'individual') {
+    const recipient = String(creds.recipient || creds.recipientPhone || '');
+    if (!recipient) return { ok: false, error: 'whatsapp: individual mode requires recipient phone/WA ID' };
+    const r = await safeFetch(
+      graphUrl(`${encodeURIComponent(phoneNumberId)}?fields=id,display_phone_number,verified_name&access_token=${encodeURIComponent(accessToken)}`),
+    );
+    if (!r.ok) {
+      const cls = classifyGraph(r.json, r.status);
+      return {
+        ok: false,
+        error: cls.tokenExpired
+          ? 'whatsapp: access token rejected'
+          : `whatsapp: phone-number check ${r.status} ${r.text.slice(0, 140)}`,
+      };
+    }
+    const data = r.json as { display_phone_number?: string; verified_name?: string } | null;
+    return {
+      ok: true,
+      identity: data?.verified_name || data?.display_phone_number || phoneNumberId,
+      details: { mode, recipient, graphVersion: META_GRAPH_VERSION },
+    };
+  }
+
+  const groupId = String(creds.groupId || '');
+  if (!groupId) return { ok: false, error: 'whatsapp: group mode requires groupId' };
+  const r = await safeFetch(
+    graphUrl(`${encodeURIComponent(groupId)}?access_token=${encodeURIComponent(accessToken)}`),
+  );
+  if (!r.ok) {
+    const cls = classifyGraph(r.json, r.status);
+    return {
+      ok: false,
+      error: cls.tokenExpired
+        ? 'whatsapp: access token rejected'
+        : `whatsapp: group check ${r.status} ${r.text.slice(0, 140)} — Groups API must be enabled and this must be an API-managed group`,
+    };
+  }
+  return {
+    ok: true,
+    identity: groupId,
+    details: { mode, groupId, graphVersion: META_GRAPH_VERSION, groupsApi: true },
+  };
+}
+
 export async function checkPlatformConnection(
   platform: string,
   creds: Record<string, unknown>,
 ): Promise<ConnectionCheckResult> {
   if (platform === 'facebook') return checkFacebookConnection(creds);
   if (platform === 'instagram') return checkInstagramConnection(creds);
+  if (platform === 'whatsapp') return checkWhatsAppConnection(creds);
   if (platform === 'linkedin') {
     const accessToken = String(creds.accessToken || '');
     const authorUrn = normalizeLinkedInAuthorUrn(String(creds.authorUrn || creds.organizationId || ''));
