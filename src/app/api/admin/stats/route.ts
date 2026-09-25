@@ -31,6 +31,28 @@ export async function GET() {
   ]);
   const v = (i: number, fallback = 0) => counts[i].status === 'fulfilled' ? (counts[i] as PromiseFulfilledResult<number>).value : fallback;
 
+  const todayUtc = new Date();
+  todayUtc.setUTCHours(0, 0, 0, 0);
+
+  const [
+    opportunityActive,
+    opportunityPublished,
+    opportunityDraft,
+    opportunityExpired,
+    opportunityArchived,
+  ] = await Promise.all([
+    db.opportunity.count({
+      where: {
+        status: 'published',
+        OR: [{ deadline: null }, { deadline: { gte: todayUtc } }],
+      },
+    }).catch(() => 0),
+    db.opportunity.count({ where: { status: 'published' } }).catch(() => 0),
+    db.opportunity.count({ where: { status: 'draft' } }).catch(() => 0),
+    db.opportunity.count({ where: { status: 'expired' } }).catch(() => 0),
+    db.opportunity.count({ where: { status: 'archived' } }).catch(() => 0),
+  ]);
+
   const [newMessages, recentMessages, recentSubscribers] = await Promise.all([
     db.contactMessage.count({ where: { status: 'new' } }).catch(() => 0),
     db.contactMessage.findMany({ orderBy: { createdAt: 'desc' }, take: 5 }).catch(() => []),
@@ -73,7 +95,21 @@ export async function GET() {
     db.alertSubscriber.count({ where: { status: 'active' } }).catch(() => 0),
   ]);
 
+  const opportunityTotal = v(2);
+  const opportunityHidden = Math.max(0, opportunityTotal - opportunityActive);
+  const opportunityPublishedPastDeadline = Math.max(0, opportunityPublished - opportunityActive);
+
   return NextResponse.json({
+    opportunityLifecycle: {
+      total: opportunityTotal,
+      activePublished: opportunityActive,
+      published: opportunityPublished,
+      publishedPastDeadline: opportunityPublishedPastDeadline,
+      draft: opportunityDraft,
+      expired: opportunityExpired,
+      archived: opportunityArchived,
+      hiddenFromPublic: opportunityHidden,
+    },
     counts: {
       services: v(0), visas: v(1), opportunities: v(2), news: v(3), testimonials: v(4),
       partners: v(5), galleryItems: v(6), paymentMethods: v(7), faqs: v(8), contactMessages: v(9),
