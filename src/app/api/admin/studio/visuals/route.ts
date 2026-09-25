@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentAdmin } from '@/lib/admin-auth';
 import { db } from '@/lib/db';
+import { BUILT_IN_STUDIO_VISUALS } from '@/lib/social/studio/assets';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,7 +10,12 @@ export async function GET() {
   const admin = await getCurrentAdmin();
   if (!admin) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   const visuals = await db.studioVisual.findMany({ orderBy: [{ order: 'asc' }, { createdAt: 'asc' }] });
-  return NextResponse.json({ visuals });
+  return NextResponse.json({
+    visuals: [
+      ...BUILT_IN_STUDIO_VISUALS,
+      ...visuals.map((visual) => ({ ...visual, builtIn: false })),
+    ],
+  });
 }
 
 /** POST — add / toggle / delete a visual. */
