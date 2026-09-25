@@ -48,6 +48,11 @@ const TIMEOUT_MS = 20000;
 /** IG containers can take ~15-30s to finish processing before media_publish. */
 const IG_STATUS_TIMEOUT_MS = 30000;
 
+const rawMetaVersion = (process.env.META_GRAPH_VERSION || 'v26.0').trim();
+export const META_GRAPH_VERSION = rawMetaVersion.startsWith('v') ? rawMetaVersion : `v${rawMetaVersion}`;
+const graphUrl = (path: string) =>
+  `https://graph.facebook.com/${META_GRAPH_VERSION}/${path.replace(/^\/+/, '')}`;
+
 async function safeFetch(url: string, init: RequestInit & { body?: BodyInit | undefined } = {}): Promise<{ ok: boolean; status: number; json: Record<string, unknown> | null; text: string }> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
@@ -67,7 +72,7 @@ const errOf = (e: unknown) => (e instanceof Error ? e.message : String(e)).slice
 /** Best-effort permalink lookup for a Graph-API post id. */
 async function graphPermalink(id: string, accessToken: string): Promise<string | null> {
   try {
-    const r = await safeFetch(`https://graph.facebook.com/v21.0/${encodeURIComponent(id)}?fields=permalink&access_token=${encodeURIComponent(accessToken)}`);
+    const r = await safeFetch(graphUrl(`${encodeURIComponent(id)}?fields=permalink&access_token=${encodeURIComponent(accessToken)}`));
     return (r.json as { permalink?: string } | null)?.permalink ?? null;
   } catch {
     return null;
@@ -149,7 +154,7 @@ async function publishFacebook(creds: Record<string, unknown>, input: PublishInp
   try {
     let photoError: string | null = null;
     if (input.imageUrl) {
-      const r = await safeFetch(`https://graph.facebook.com/v21.0/${pageId}/photos`, {
+      const r = await safeFetch(graphUrl(`${pageId}/photos`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: input.imageUrl, caption: input.caption.slice(0, 5000), access_token: accessToken }),
@@ -172,7 +177,7 @@ async function publishFacebook(creds: Record<string, unknown>, input: PublishInp
     } else if (input.requireImage) {
       return { ok: false, error: 'facebook: image required but no rendered media was provided' };
     }
-    const r2 = await safeFetch(`https://graph.facebook.com/v21.0/${pageId}/feed`, {
+    const r2 = await safeFetch(graphUrl(`${pageId}/feed`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: input.caption.slice(0, 5000), link: input.link || undefined, access_token: accessToken }),
@@ -232,7 +237,7 @@ async function waitInstagramReady(creationId: string, accessToken: string): Prom
   const deadline = Date.now() + IG_STATUS_TIMEOUT_MS;
   while (Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, 3000));
-    const r = await safeFetch(`https://graph.facebook.com/v21.0/${encodeURIComponent(creationId)}?fields=status_code&access_token=${encodeURIComponent(accessToken)}`);
+    const r = await safeFetch(graphUrl(`${encodeURIComponent(creationId)}?fields=status_code&access_token=${encodeURIComponent(accessToken)}`));
     const code = (r.json as { status_code?: string } | null)?.status_code;
     if (code === 'FINISHED') return { ready: true };
     if (code === 'ERROR' || code === 'EXPIRED') return { ready: false, error: `instagram: container ${code}` };
@@ -247,7 +252,7 @@ async function publishInstagram(creds: Record<string, unknown>, input: PublishIn
   if (!igUserId || !accessToken) return { ok: false, error: 'instagram: missing igUserId/accessToken' };
   if (!input.imageUrl) return { ok: false, error: 'instagram: image required (render failed?)' };
   try {
-    const c = await safeFetch(`https://graph.facebook.com/v21.0/${igUserId}/media`, {
+    const c = await safeFetch(graphUrl(`${igUserId}/media`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ image_url: input.imageUrl, caption: input.caption.slice(0, 2200), access_token: accessToken }),
@@ -259,7 +264,7 @@ async function publishInstagram(creds: Record<string, unknown>, input: PublishIn
     }
     const wait = await waitInstagramReady(creationId, accessToken);
     if (!wait.ready) return { ok: false, error: wait.error };
-    const p = await safeFetch(`https://graph.facebook.com/v21.0/${igUserId}/media_publish`, {
+    const p = await safeFetch(graphUrl(`${igUserId}/media_publish`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ creation_id: creationId, access_token: accessToken }),
@@ -391,7 +396,7 @@ async function publishWhatsApp(creds: Record<string, unknown>, input: PublishInp
         ? { image: { link: input.imageUrl, caption: text.slice(0, 1000) } }
         : { text: { preview_url: true, body: text.slice(0, 4000) } }),
     };
-    const r = await safeFetch(`https://graph.facebook.com/v21.0/${encodeURIComponent(phoneNumberId)}/messages`, {
+    const r = await safeFetch(graphUrl(`${encodeURIComponent(phoneNumberId)}/messages`), {
       method: 'POST',
       headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -409,6 +414,76 @@ async function publishWhatsApp(creds: Record<string, unknown>, input: PublishInp
   } catch (e) {
     return { ok: false, error: `whatsapp: ${errOf(e)}` };
   }
+}
+
+export interface ConnectionCheckResult {
+  ok: boolean;
+  error?: string;
+  identity?: string;
+  details?: Record<string, string | number | boolean | null>;
+}
+
+async function checkFacebookConnection(creds: Record<string, unknown>): Promise<ConnectionCheckResult> {
+  const pageId = String(creds.pageId || '');
+  const accessToken = String(creds.accessToken || '');
+  if (!pageId || !accessToken) return { ok: false, error: 'facebook: missing pageId/accessToken' };
+
+  const r = await safeFetch(
+    graphUrl(`${encodeURIComponent(pageId)}?fields=id,name&access_token=${encodeURIComponent(accessToken)}`),
+  );
+  if (!r.ok) {
+    const cls = classifyGraph(r.json, r.status);
+    const msg = (r.json as { error?: { message?: string } } | null)?.error?.message || r.text.slice(0, 160);
+    return {
+      ok: false,
+      error: cls.tokenExpired ? `facebook: token rejected — ${msg}` : `facebook: ${r.status} ${msg}`,
+    };
+  }
+  const data = r.json as { id?: string; name?: string } | null;
+  return {
+    ok: true,
+    identity: data?.name || data?.id || pageId,
+    details: {
+      pageId: data?.id || pageId,
+      graphVersion: META_GRAPH_VERSION,
+    },
+  };
+}
+
+async function checkInstagramConnection(creds: Record<string, unknown>): Promise<ConnectionCheckResult> {
+  const igUserId = String(creds.igUserId || '');
+  const accessToken = String(creds.accessToken || '');
+  if (!igUserId || !accessToken) return { ok: false, error: 'instagram: missing igUserId/accessToken' };
+
+  const r = await safeFetch(
+    graphUrl(`${encodeURIComponent(igUserId)}?fields=id,username&access_token=${encodeURIComponent(accessToken)}`),
+  );
+  if (!r.ok) {
+    const cls = classifyGraph(r.json, r.status);
+    const msg = (r.json as { error?: { message?: string } } | null)?.error?.message || r.text.slice(0, 160);
+    return {
+      ok: false,
+      error: cls.tokenExpired ? `instagram: token rejected — ${msg}` : `instagram: ${r.status} ${msg}`,
+    };
+  }
+  const data = r.json as { id?: string; username?: string } | null;
+  return {
+    ok: true,
+    identity: data?.username ? `@${data.username}` : data?.id || igUserId,
+    details: {
+      igUserId: data?.id || igUserId,
+      graphVersion: META_GRAPH_VERSION,
+    },
+  };
+}
+
+export async function checkPlatformConnection(
+  platform: string,
+  creds: Record<string, unknown>,
+): Promise<ConnectionCheckResult> {
+  if (platform === 'facebook') return checkFacebookConnection(creds);
+  if (platform === 'instagram') return checkInstagramConnection(creds);
+  return { ok: false, error: `${platform}: non-posting connection check is not implemented yet` };
 }
 
 const ADAPTERS: Record<string, (creds: Record<string, unknown>, input: PublishInput) => Promise<PublishResult>> = {

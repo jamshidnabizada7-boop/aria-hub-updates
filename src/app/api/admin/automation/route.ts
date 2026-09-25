@@ -8,7 +8,7 @@ import {
   DEFAULT_OPPORTUNITY_DAILY_TARGET,
   DEFAULT_OPPORTUNITY_REPEAT_DAYS,
 } from '@/lib/social/opportunity-distribution';
-import { publishToPlatform } from '@/lib/social/channels';
+import { checkPlatformConnection, publishToPlatform } from '@/lib/social/channels';
 import { decryptCredentials, encryptCredentials, maskCredentials } from '@/lib/social/credentials';
 import { ensureSocialDelivery, markDeliveryPublishing, markDeliveryResult } from '@/lib/social/delivery';
 import { getProviderHealth } from '@/lib/ai/failover';
@@ -206,18 +206,17 @@ export async function POST(req: NextRequest) {
         const ch = await db.publishChannel.findUnique({ where: { platform } });
         if (!ch) return NextResponse.json({ error: 'not_found' }, { status: 404 });
         const creds = decryptCredentials(ch.credentials);
-        // Honest test per platform: Instagram physically cannot post without
-        // an image, so a caption-only test there used to always "fail".
-        if (platform === 'instagram') {
-          const missing = ['igUserId', 'accessToken'].filter((k) => !String(creds[k] || ''));
-          return NextResponse.json({
-            ok: false,
-            error: missing.length
-              ? `instagram: missing ${missing.join('/')}`
-              : 'instagram: config present — Instagram needs a rendered image; use "Publish now" on a ready queue row to test end-to-end',
-            configOk: missing.length === 0,
+        // Facebook/Instagram "Test" is non-destructive: verify the configured
+        // identity/token without creating a real social post.
+        if (platform === 'facebook' || platform === 'instagram') {
+          const check = await checkPlatformConnection(platform, creds);
+          await db.publishChannel.update({
+            where: { id: ch.id },
+            data: { lastStatus: check.ok ? 'ok' : 'error', lastError: check.ok ? null : check.error ?? 'failed' },
           });
+          return NextResponse.json(check);
         }
+
         const r = await publishToPlatform(platform, creds, {
           caption: 'ARIA HUB — test message from Brand Studio automation. ✅',
         });
