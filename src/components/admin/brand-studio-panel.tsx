@@ -481,21 +481,24 @@ export function BrandStudioPanel() {
 
   const designPayload = useCallback(() => {
     if (!activePost) return null;
+    const previousCaptions = savedDesigns[activePost.key]?.captionOverride ?? {};
+    const design = {
+      contentRef: activePost.key,
+      forDate: todayIso(),
+      templateType: activePost.template,
+      themeId,
+      layout,
+      size,
+      overrides: activeOverrides,
+      captionOverride: { ...previousCaptions, [lang]: activeCaption },
+    };
     return {
       action: 'save',
-      design: {
-        contentRef: activePost.key,
-        forDate: todayIso(),
-        templateType: activePost.template,
-        themeId,
-        layout,
-        size,
-        overrides: activeOverrides,
-      },
-      contentJson: socialPropsFor(activePost, lang, size, qrDataUrl, loc, tr, { themeId, layout, overrides: activeOverrides, visualUrl }),
-      captionJson: { [lang]: activeCaption },
+      design,
+      contentJson: buildStudioCanvasProps(activePost, lang, size, design),
+      captionJson: { ...previousCaptions, [lang]: activeCaption },
     };
-  }, [activePost, themeId, layout, size, activeOverrides, lang, qrDataUrl, loc, tr, activeCaption]);
+  }, [activePost, themeId, layout, size, activeOverrides, lang, activeCaption, savedDesigns]);
 
   const saveDesign = useCallback(async (): Promise<boolean> => {
     const payload = designPayload();
@@ -509,6 +512,9 @@ export function BrandStudioPanel() {
       });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error || 'save failed');
+      if (data.design?.contentRef) {
+        setSavedDesigns((prev) => ({ ...prev, [data.design.contentRef]: data.design as SavedStudioDesign }));
+      }
       toast({ title: t('admin.studio.saved') });
       return true;
     } catch (e) {
@@ -527,7 +533,7 @@ export function BrandStudioPanel() {
       const saveRes = await fetch('/api/admin/studio/design', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, action: 'ensure-row' }),
       });
       const saved = await saveRes.json();
       if (!saveRes.ok || !saved.ok || !saved.row?.id) throw new Error(saved.error || 'save failed');
@@ -636,30 +642,18 @@ export function BrandStudioPanel() {
   // ── preview node ──────────────────────────────────────────────────────────
   const previewNode = useMemo(() => {
     if (!activePost) return null;
-    if (activePost.template === 'spotlight' && activePost.opp) {
-      const data = buildPosterData(
-        {
-          slug: activePost.opp.slug,
-          title: loc(activePost.opp.title, activePost.opp.titleI18n),
-          titleI18n: activePost.opp.titleI18n,
-          organization: activePost.opp.organization,
-          country: activePost.opp.country,
-          deadline: activePost.opp.deadline,
-          featured: activePost.opp.featured,
-          salary: activePost.opp.salary,
-          salaryI18n: activePost.opp.salaryI18n,
-          category: activePost.opp.category
-            ? { name: activePost.opp.category.name, nameI18n: i18n(activePost.opp.category.nameI18n) }
-            : null,
-        },
-        lang,
-      );
-      if (activeOverrides.title) data.title = activeOverrides.title as string;
-      if (activeOverrides.deadlineDate) data.deadline = activeOverrides.deadlineDate as string;
+    const props = buildStudioCanvasProps(activePost, lang, size, {
+      themeId,
+      layout,
+      size,
+      overrides: activeOverrides,
+    });
+    if (activePost.template === 'spotlight' && props.posterData && !activeFamily.premium) {
+      const data: StudioPosterData = props.posterData;
       return <OpportunityPoster data={data} lang={lang} size={size} themeId={themeId} qrDataUrl={qrDataUrl} />;
     }
-    return <SocialCanvas {...socialPropsFor(activePost, lang, size, qrDataUrl, loc, tr, { themeId, layout, overrides: activeOverrides, visualUrl })} />;
-  }, [activePost, lang, size, qrDataUrl, loc, tr, themeId, layout, activeOverrides]);
+    return <SocialCanvas {...props} qrDataUrl={qrDataUrl} />;
+  }, [activePost, lang, size, qrDataUrl, themeId, layout, activeOverrides, activeFamily.premium]);
 
   return (
     <div className="space-y-4">
