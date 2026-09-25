@@ -30,6 +30,8 @@ import {
   DEFAULT_OPPORTUNITY_BATCH_TIMES_AFT,
   DEFAULT_OPPORTUNITY_DAILY_TARGET,
   DEFAULT_OPPORTUNITY_REPEAT_DAYS,
+  opportunityDistributionCapacity,
+  opportunityScheduleForIndex,
 } from '@/lib/social/opportunity-distribution';
 import { buildCaption, type CaptionInput } from '@/lib/social/captions';
 import { publishToPlatform } from '@/lib/social/channels';
@@ -223,7 +225,7 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
       : DEFAULT_OPPORTUNITY_BATCH_TIMES_AFT;
     batchSize = Math.min(10, Math.max(1, state.opportunityBatchSize ?? DEFAULT_OPPORTUNITY_BATCH_SIZE));
     const configuredTarget = Math.min(50, Math.max(1, state.opportunityDailyTarget ?? DEFAULT_OPPORTUNITY_DAILY_TARGET));
-    const capacity = slots.length * batchSize;
+    const capacity = opportunityDistributionCapacity(slots, batchSize);
     const target = Math.min(configuredTarget, capacity);
     const repeatDays = Math.min(90, Math.max(1, state.opportunityRepeatDays ?? DEFAULT_OPPORTUNITY_REPEAT_DAYS));
 
@@ -258,10 +260,13 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
   }[] = [];
 
   base.posts.forEach((post, idx) => {
-    const batchIndex = opportunityOnly ? Math.floor(idx / batchSize) : idx;
-    const withinBatch = opportunityOnly ? idx % batchSize : 0;
-    const slot = slots[batchIndex % slots.length];
-    const scheduledFor = new Date(aftSlotToUtc(slot).getTime() + withinBatch * 2 * 60000);
+    const opportunitySchedule = opportunityOnly
+      ? opportunityScheduleForIndex(idx, slots, batchSize)
+      : { slot: slots[idx % slots.length], offsetMinutes: 0 };
+    if (!opportunitySchedule) return;
+    const scheduledFor = new Date(
+      aftSlotToUtc(opportunitySchedule.slot).getTime() + opportunitySchedule.offsetMinutes * 60000,
+    );
 
     const captions: Record<string, string> = {};
     langs.forEach((lang, li) => {
