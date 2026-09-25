@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
-import { BUILTIN_PREMIUM_VISUALS, designFamiliesForTemplate, getDesignFamily } from '@/lib/social/studio/registry';
+import { BUILTIN_PREMIUM_VISUALS, defaultMediaForDesignFamily, designFamiliesForTemplate, getDesignFamily } from '@/lib/social/studio/registry';
 import type { PostTemplate } from '@/lib/social/brand';
 import type { DesignFamilyId, StudioMediaConfig, StudioMediaLayer, StudioMediaRole } from '@/lib/social/studio/types';
 
@@ -41,6 +41,15 @@ export function PremiumStudioControls({
     ...visuals.filter((visual) => !BUILTIN_PREMIUM_VISUALS.some((builtin) => builtin.url === visual.url)),
   ];
   const media = (overrides.media && typeof overrides.media === 'object' ? overrides.media : {}) as StudioMediaConfig;
+  const familyDefaults = defaultMediaForDesignFamily(family) as StudioMediaConfig;
+  const effectiveMedia: StudioMediaConfig = {
+    ...familyDefaults,
+    ...media,
+    background: { ...(familyDefaults.background ?? {}), ...(media.background ?? {}) },
+    hero: { ...(familyDefaults.hero ?? {}), ...(media.hero ?? {}) },
+    foreground: { ...(familyDefaults.foreground ?? {}), ...(media.foreground ?? {}) },
+    overlay: { ...(familyDefaults.overlay ?? {}), ...(media.overlay ?? {}) },
+  };
 
   const setLayer = (role: StudioMediaRole, patch: Partial<StudioMediaLayer>) => {
     onOverride('media', {
@@ -115,7 +124,7 @@ export function PremiumStudioControls({
           </div>
 
           {(['background', 'hero'] as StudioMediaRole[]).map((role) => {
-            const layer = media[role] ?? {};
+            const layer = effectiveMedia[role] ?? {};
             return (
               <div key={role} className="mb-3 rounded-lg border p-2.5 last:mb-0">
                 <div className="mb-2 flex items-center justify-between">
@@ -124,7 +133,11 @@ export function PremiumStudioControls({
                     size="sm"
                     variant="ghost"
                     className="h-6 px-2 text-[10px]"
-                    onClick={() => setLayer(role, { url: null, visualId: null, x: 50, y: 50, scale: 1, rotation: 0, opacity: 1 })}
+                    onClick={() => {
+                      const next = { ...media };
+                      delete next[role];
+                      onOverride('media', next);
+                    }}
                   >
                     <RotateCcw className="me-1 h-3 w-3" />Reset
                   </Button>
