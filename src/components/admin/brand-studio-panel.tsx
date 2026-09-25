@@ -495,7 +495,7 @@ export function BrandStudioPanel() {
       const saveRes = await fetch('/api/admin/studio/design', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, action: 'ensure-row' }),
       });
       const saved = await saveRes.json();
       if (!saveRes.ok || !saved.ok || !saved.row?.id) throw new Error(saved.error || 'save failed');
