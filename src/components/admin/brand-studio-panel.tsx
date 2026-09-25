@@ -857,10 +857,10 @@ export function BrandStudioPanel() {
                 ref={canvasWrapRef}
                 style={{
                   direction: 'ltr',
-                  transform: 'scale(0.44)',
+                  transform: `scale(${size === 'story' ? 0.30 : size === 'portrait' ? 0.38 : 0.44})`,
                   transformOrigin: 'top left',
-                  width: 1080 * 0.44,
-                  height: (size === 'portrait' ? 1350 : 1080) * 0.44,
+                  width: 1080 * (size === 'story' ? 0.30 : size === 'portrait' ? 0.38 : 0.44),
+                  height: canvasHeight(size) * (size === 'story' ? 0.30 : size === 'portrait' ? 0.38 : 0.44),
                 }}
               >
                 {previewNode}
@@ -874,9 +874,9 @@ export function BrandStudioPanel() {
           </div>
 
           {activePost ? (
-            <div className="rounded-2xl border bg-card">
-              <div className="flex items-center justify-between gap-2 border-b px-4 py-2.5">
-                <div className="flex items-center gap-2 min-w-0">
+            <div className="overflow-hidden rounded-2xl border bg-card">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2.5">
+                <div className="flex min-w-0 items-center gap-2">
                   <Badge variant="secondary" className="shrink-0 gap-1">
                     {(() => {
                       const Icon = TYPE_ICON[activePost.template];
@@ -884,248 +884,164 @@ export function BrandStudioPanel() {
                     })()}
                     {t(`admin.studio.type.${activePost.template}`)}
                   </Badge>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      'shrink-0',
+                      activeFamily.premium ? 'border-amber-400/60 text-amber-700 dark:text-amber-300' : '',
+                    )}
+                  >
+                    {activeFamily.premium ? 'Premium' : 'Classic'}
+                  </Badge>
                   <Badge variant="outline" className={cn('shrink-0', captionSource === 'ai' ? 'border-violet-400/60 text-violet-600 dark:text-violet-400' : '')}>
-                    {captionSource === 'ai' ? 'AI' : 'Brand'}
+                    {captionSource === 'ai' ? 'AI caption' : 'Brand caption'}
                   </Badge>
                 </div>
-                {/* design controls + content editing */}
-              <div className="border-t border-border/60 px-4 py-4 space-y-3">
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-1.5" role="group" aria-label="Theme">
-                    {STUDIO_THEME_LIST.map((th) => (
+                {savedDesigns[activePost.key] ? (
+                  <span className="text-[10px] font-medium text-emerald-600">Saved design restored</span>
+                ) : null}
+              </div>
+
+              <div className="space-y-4 px-4 py-4">
+                <section className="space-y-2">
+                  <div>
+                    <p className="text-xs font-bold">Design family</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      Different families are real compositions, not palette variations.
+                    </p>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {compatibleFamilies.map((family) => (
                       <button
-                        key={th.id}
+                        key={family.id}
                         type="button"
-                        onClick={() => setThemeId(th.id)}
-                        aria-pressed={themeId === th.id}
-                        title={th.label}
+                        onClick={() => {
+                          setOverride('designFamily', family.id);
+                          setThemeId(family.defaultTheme);
+                          if (family.recommendedLayouts[0]) setLayout(family.recommendedLayouts[0]);
+                          if (family.visualSlots[0]) setMediaRole(family.visualSlots[0].role);
+                        }}
                         className={cn(
-                          'h-8 w-8 rounded-full border-2 transition-transform',
-                          themeId === th.id ? 'border-primary scale-110' : 'border-border hover:scale-105',
+                          'rounded-xl border p-2.5 text-start transition-colors',
+                          activeFamily.id === family.id
+                            ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                            : 'bg-muted/20 hover:bg-muted/50',
                         )}
-                        style={{ background: `linear-gradient(135deg, ${th.bgMid} 0%, ${th.bgBottom} 60%, ${th.accent} 130%)` }}
-                      />
+                      >
+                        <span className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-bold">{family.label}</span>
+                          {family.premium ? <span className="rounded-full bg-amber-400/15 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-300">Premium</span> : null}
+                        </span>
+                        <span className="mt-1 block text-[9px] leading-relaxed text-muted-foreground">{family.description}</span>
+                      </button>
                     ))}
                   </div>
-                  {activePost.template !== 'spotlight' && (
-                    <div className="flex items-center gap-1" role="group" aria-label="Layout">
-                      {LAYOUTS.map((l) => (
-                        <button
-                          key={l.id}
-                          type="button"
-                          onClick={() => setLayout(l.id)}
-                          aria-pressed={layout === l.id}
-                          className={cn(
-                            'rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-colors',
-                            layout === l.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground',
-                          )}
-                        >
-                          {l.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  <Button
-                    size="sm" variant="outline" className="h-8 gap-1 text-[11px]"
-                    disabled={savingDesign}
-                    onClick={setAutomationDefault}
-                    title="Automated posts will use this theme + layout"
-                  >
-                    Set as default
-                  </Button>
-                </div>
+                </section>
 
-                {/* studio visuals — statues, scientists, landmarks… layered behind the poster */}
-                {visuals.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[10px] font-semibold text-muted-foreground">Visual</span>
-                    <button
-                      type="button"
-                      onClick={() => setVisualUrl(null)}
-                      aria-pressed={visualUrl === null}
-                      className={cn(
-                        'rounded-lg px-2 py-1 text-[11px] font-semibold transition-colors',
-                        visualUrl === null ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground',
-                      )}
-                    >
-                      None
-                    </button>
-                    {visuals.map((v) => (
-                      <button
-                        key={v.id}
-                        type="button"
-                        onClick={() => setVisualUrl(visualUrl === v.url ? null : v.url)}
-                        aria-pressed={visualUrl === v.url}
-                        title={`${v.label} (${v.category})`}
-                        className={cn(
-                          'h-9 w-9 overflow-hidden rounded-lg border-2 bg-cover bg-center transition-transform',
-                          visualUrl === v.url ? 'border-primary scale-110' : 'border-border hover:scale-105',
-                        )}
-                        style={{ backgroundImage: `url(${v.url})` }}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {/* content editing */}
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <div className="sm:col-span-2">
-                    <Label className="text-[10px] text-muted-foreground">Title</Label>
-                    <Input
-                      className="h-8 text-xs" dir="auto"
-                      value={String(activeOverrides.title ?? activePost.title ?? '')}
-                      onChange={(e) => setOverride('title', e.target.value)}
-                    />
-                  </div>
-                  {activePost.template === 'deadline' && (
+                <section className="space-y-2 border-t pt-3">
+                  <div className="flex flex-wrap items-center gap-3">
                     <div>
-                      <Label className="text-[10px] text-muted-foreground">Deadline date</Label>
-                      <Input
-                        type="date" className="h-8 text-xs"
-                        value={String(activeOverrides.deadlineDate ?? activePost.opp?.deadline ?? '')}
-                        onChange={(e) => setOverride('deadlineDate', e.target.value)}
-                      />
-                    </div>
-                  )}
-                  {(activePost.template === 'tip' || activePost.template === 'news' || activePost.template === 'promo'
-                    || activePost.template === 'teaser' || activePost.template === 'greeting'
-                    || activePost.template === 'hiring' || activePost.template === 'packages'
-                    || activePost.template === 'follow' || activePost.template === 'pick'
-                    || activePost.template === 'day') && (
-                    <div className="sm:col-span-2">
-                      <Label className="text-[10px] text-muted-foreground">Note</Label>
-                      <Input
-                        className="h-8 text-xs" dir="auto"
-                        value={String(activeOverrides.note ?? activePost.meta ?? '')}
-                        onChange={(e) => setOverride('note', e.target.value)}
-                      />
-                    </div>
-                  )}
-                  {(activePost.template === 'hiring' || activePost.template === 'pick') && (
-                    <div className="sm:col-span-2">
-                      <Label className="text-[10px] text-muted-foreground">
-                        {activePost.template === 'pick' ? 'Side tiles (comma-separated, max 2)' : 'Callouts (comma-separated)'}
-                      </Label>
-                      <Input
-                        className="h-8 text-xs" dir="auto"
-                        placeholder={activePost.template === 'pick' ? 'وظایف, بورسیه‌ها' : 'Graphic Designer, Kabul office'}
-                        value={Array.isArray(activeOverrides.callouts) ? (activeOverrides.callouts as unknown[]).map(String).join(', ') : ''}
-                        onChange={(e) => setOverride('callouts', e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
-                      />
-                    </div>
-                  )}
-                  {activePost.template === 'day' && (
-                    <div className="sm:col-span-2 grid grid-cols-2 gap-2">
-                      <Input
-                        className="h-8 text-xs" dir="auto"
-                        placeholder="Badge (e.g. ۱۴ ژوئن)"
-                        value={String(activeOverrides.badgeBig ?? '')}
-                        onChange={(e) => setOverride('badgeBig', e.target.value)}
-                      />
-                      <Input
-                        className="h-8 text-xs" dir="auto"
-                        placeholder="Badge small (e.g. Mother's Day)"
-                        value={String(activeOverrides.badgeSmall ?? '')}
-                        onChange={(e) => setOverride('badgeSmall', e.target.value)}
-                      />
-                    </div>
-                  )}
-                  {activePost.template === 'packages' && (
-                    <>
-                      {(['p1', 'p2'] as const).map((slot) => (
-                        <div key={slot} className="sm:col-span-2 grid grid-cols-2 gap-2">
-                          <Input
-                            className="h-8 text-xs" dir="ltr"
-                            placeholder={`Card ${slot === 'p1' ? '1' : '2'} value (e.g. ۲۰۰۰+)`}
-                            value={String(activeOverrides[`${slot}Value`] ?? '')}
-                            onChange={(e) => setOverride(`${slot}Value`, e.target.value)}
+                      <p className="mb-1 text-[10px] font-semibold text-muted-foreground">Theme</p>
+                      <div className="flex items-center gap-1.5" role="group" aria-label="Theme">
+                        {STUDIO_THEME_LIST.map((th) => (
+                          <button
+                            key={th.id}
+                            type="button"
+                            onClick={() => setThemeId(th.id)}
+                            aria-pressed={themeId === th.id}
+                            title={th.label}
+                            className={cn(
+                              'h-8 w-8 rounded-full border-2 transition-transform',
+                              themeId === th.id ? 'scale-110 border-primary' : 'border-border hover:scale-105',
+                            )}
+                            style={{ background: `linear-gradient(135deg, ${th.bgMid} 0%, ${th.bgBottom} 60%, ${th.accent} 130%)` }}
                           />
-                          <Input
-                            className="h-8 text-xs" dir="auto"
-                            placeholder={`Card ${slot === 'p1' ? '1' : '2'} label`}
-                            value={String(activeOverrides[`${slot}Label`] ?? '')}
-                            onChange={(e) => setOverride(`${slot}Label`, e.target.value)}
-                          />
-                        </div>
-                      ))}
-                    </>
-                  )}
-                  {activePost.template === 'promo' && (
-                    <div className="sm:col-span-2 grid gap-2">
-                      {[0, 1, 2].map((i) => {
-                        const items = Array.isArray(activeOverrides.items) ? (activeOverrides.items as unknown[]).map(String) : [];
-                        return (
-                          <Input
-                            key={i}
-                            className="h-8 text-xs" dir="auto"
-                            placeholder={`Checklist item ${i + 1}`}
-                            value={items[i] ?? ''}
-                            onChange={(e) => {
-                              const next = [...items];
-                              while (next.length < 3) next.push('');
-                              next[i] = e.target.value;
-                              setOverride('items', next);
-                            }}
-                          />
-                        );
-                      })}
+                        ))}
+                      </div>
                     </div>
-                  )}
-                  {activePost.template === 'stat' && (
-                    <>
-                      <div>
-                        <Label className="text-[10px] text-muted-foreground">Stat value</Label>
-                        <Input
-                          className="h-8 text-xs" dir="ltr"
-                          value={String(activeOverrides.statValue ?? '')}
-                          onChange={(e) => setOverride('statValue', e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-[10px] text-muted-foreground">Stat label</Label>
-                        <Input
-                          className="h-8 text-xs" dir="auto"
-                          value={String(activeOverrides.statLabel ?? '')}
-                          onChange={(e) => setOverride('statLabel', e.target.value)}
-                        />
-                      </div>
-                    </>
-                  )}
-                  {activePost.template === 'story' && (
-                    <>
-                      <div>
-                        <Label className="text-[10px] text-muted-foreground">Person name</Label>
-                        <Input
-                          className="h-8 text-xs" dir="auto"
-                          value={String(activeOverrides.personName ?? activePost.meta ?? '')}
-                          onChange={(e) => setOverride('personName', e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-[10px] text-muted-foreground">Person detail</Label>
-                        <Input
-                          className="h-8 text-xs" dir="auto"
-                          value={String(activeOverrides.personMeta ?? '')}
-                          onChange={(e) => setOverride('personMeta', e.target.value)}
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
 
-                <div className="flex flex-wrap items-center gap-1.5">
+                    {!activeFamily.premium ? (
+                      <div className="min-w-0 flex-1">
+                        <p className="mb-1 text-[10px] font-semibold text-muted-foreground">Classic layout</p>
+                        <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Layout">
+                          {LAYOUTS.map((l) => (
+                            <button
+                              key={l.id}
+                              type="button"
+                              onClick={() => setLayout(l.id)}
+                              aria-pressed={layout === l.id}
+                              className={cn(
+                                'rounded-lg px-2.5 py-1.5 text-[10px] font-semibold transition-colors',
+                                layout === l.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground',
+                              )}
+                            >
+                              {l.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="min-w-[180px] flex-1 rounded-lg border bg-muted/20 px-3 py-2">
+                        <p className="text-[10px] font-bold">Art-directed composition</p>
+                        <p className="mt-0.5 text-[9px] text-muted-foreground">
+                          This premium family controls its own composition instead of creating meaningless layout combinations.
+                        </p>
+                      </div>
+                    )}
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 gap-1 text-[10px]"
+                      disabled={savingDesign}
+                      onClick={setAutomationDefault}
+                      title="Automated classic posts will use this theme + layout"
+                    >
+                      Set classic default
+                    </Button>
+                  </div>
+                </section>
+
+                <section className="space-y-2 border-t pt-3">
+                  <div>
+                    <p className="text-xs font-bold">Content</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      Source content remains unchanged; these are design-only overrides.
+                    </p>
+                  </div>
+                  {templateDefinition ? (
+                    <StudioFieldsEditor
+                      fields={templateDefinition.fields.filter((field) => {
+                        if (activeFamily.premium) return true;
+                        return !['eyebrow', 'subheadline', 'badge', 'ctaLabel', 'accentText', 'showFooter', 'showQr', 'fundingStatus', 'degreeLevel'].includes(field.id);
+                      })}
+                      values={activeOverrides}
+                      defaults={editorDefaults}
+                      onChange={setOverride}
+                    />
+                  ) : null}
+                </section>
+
+                <section className="border-t pt-3">
+                  <StudioMediaEditor
+                    family={activeFamily}
+                    visuals={visuals}
+                    media={activeMedia}
+                    activeRole={mediaRole}
+                    onRoleChange={setMediaRole}
+                    onChange={(next) => setOverride('media', next)}
+                  />
+                </section>
+
+                <div className="flex flex-wrap items-center gap-1.5 border-t pt-3">
                   <Button size="sm" variant="outline" className="h-8 gap-1.5 px-2.5" disabled={savingDesign} onClick={saveDesign}>
                     {savingDesign ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Check className="h-3.5 w-3.5" aria-hidden="true" />}
-                    <span className="hidden sm:inline">Save design</span>
+                    Save design
                   </Button>
                   <Button size="sm" className="h-8 gap-1.5 px-2.5" disabled={publishingDesign} onClick={publishDesign}>
                     {publishingDesign ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Play className="h-3.5 w-3.5" aria-hidden="true" />}
-                    <span className="hidden sm:inline">Design → publish now</span>
+                    Design → publish now
                   </Button>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5">
                   <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-2.5" onClick={copyCaption}>
                     {copiedKey === activePost.key ? <Check className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}
                     <span className="hidden sm:inline">{t('admin.studio.copy')}</span>
@@ -1140,19 +1056,23 @@ export function BrandStudioPanel() {
                   </Button>
                 </div>
               </div>
-              <textarea
-                dir="auto"
-                value={activeCaption}
-                onChange={(e) =>
-                  activePost &&
-                  setCaptionOverrides((prev) => ({
-                    ...prev,
-                    [activePost.key]: { caption: e.target.value, source: 'manual' },
-                  }))
-                }
-                rows={6}
-                className="max-h-52 min-h-[120px] w-full resize-y overflow-y-auto whitespace-pre-wrap bg-transparent px-4 py-3 font-sans text-[13px] leading-relaxed outline-none"
-              />
+
+              <div className="border-t">
+                <div className="px-4 pt-3 text-[10px] font-semibold text-muted-foreground">Caption</div>
+                <textarea
+                  dir="auto"
+                  value={activeCaption}
+                  onChange={(e) =>
+                    activePost &&
+                    setCaptionOverrides((prev) => ({
+                      ...prev,
+                      [activePost.key]: { caption: e.target.value, source: 'manual' },
+                    }))
+                  }
+                  rows={6}
+                  className="max-h-52 min-h-[120px] w-full resize-y overflow-y-auto whitespace-pre-wrap bg-transparent px-4 py-3 font-sans text-[13px] leading-relaxed outline-none"
+                />
+              </div>
             </div>
           ) : null}
         </div>
