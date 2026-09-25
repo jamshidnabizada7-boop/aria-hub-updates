@@ -39,6 +39,24 @@ async function releaseSocialLock(): Promise<void> {
     WHERE id = 'singleton'`;
 }
 
+async function recordSocialHeartbeat(
+  status: 'ok' | 'partial' | 'error',
+  result: Pick<SocialTickResult, 'rendered' | 'published' | 'failed' | 'errors'>,
+): Promise<void> {
+  const patch = JSON.stringify({
+    lastSocialTickAt: new Date().toISOString(),
+    lastSocialTickStatus: status,
+    lastSocialTickRendered: result.rendered,
+    lastSocialTickPublished: result.published,
+    lastSocialTickFailed: result.failed,
+    lastSocialTickError: result.errors[0] ?? null,
+  });
+  await db.$executeRaw`
+    UPDATE "AutomationState"
+    SET state = state || ${patch}::jsonb, "updatedAt" = now()
+    WHERE id = 'singleton'`;
+}
+
 /**
  * Fast, independent social-distribution loop.
  *
@@ -92,14 +110,16 @@ export async function runSocialTick(
       result.errors.push(`publish: ${message}`);
     }
 
+    const runStatus = result.errors.length || result.failed ? 'partial' : 'ok';
     await db.pipelineRun.update({
       where: { id: run.id },
       data: {
-        status: result.errors.length || result.failed ? 'partial' : 'ok',
+        status: runStatus,
         stats: result as unknown as object,
         finishedAt: new Date(),
       },
     });
+    await recordSocialHeartbeat(runStatus, result).catch(() => undefined);
   } catch (error) {
     const message = (error instanceof Error ? error.message : String(error)).slice(0, 180);
     result.errors.push(message);
@@ -112,6 +132,7 @@ export async function runSocialTick(
         finishedAt: new Date(),
       },
     }).catch(() => undefined);
+    await recordSocialHeartbeat('error', result).catch(() => undefined);
   } finally {
     await releaseSocialLock().catch(() => undefined);
   }
