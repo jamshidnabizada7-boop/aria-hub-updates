@@ -21,6 +21,7 @@ export function PremiumStudioControls({
   template,
   family,
   overrides,
+  defaults,
   visuals,
   onFamily,
   onOverride,
@@ -28,6 +29,7 @@ export function PremiumStudioControls({
   template: PostTemplate;
   family: DesignFamilyId;
   overrides: Record<string, unknown>;
+  defaults?: Record<string, unknown>;
   visuals: Visual[];
   onFamily: (family: DesignFamilyId) => void;
   onOverride: (key: string, value: unknown) => void;
@@ -43,7 +45,7 @@ export function PremiumStudioControls({
     });
   };
 
-  const fieldValue = (id: string) => String(overrides[id] ?? '');
+  const fieldValue = (id: string) => String(overrides[id] ?? defaults?.[id] ?? '');
 
   return (
     <div className="space-y-4">
