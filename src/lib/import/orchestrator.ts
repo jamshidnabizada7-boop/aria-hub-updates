@@ -17,7 +17,7 @@
  *   - Sanitized errors recorded in ImportRun.errors for the admin log viewer.
  */
 
-import type { PrismaClient, Prisma, OpportunityStatus } from '@prisma/client';
+import type { PrismaClient, Prisma } from '@prisma/client';
 import { resolveImportedOpportunityStatus } from './publication-policy';
 import { db } from '@/lib/db';
 import { getScraper } from './registry';
