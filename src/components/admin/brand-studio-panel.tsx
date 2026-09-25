@@ -204,6 +204,32 @@ export function BrandStudioPanel() {
     fetchPlan();
   }, [fetchPlan]);
 
+  // Saved StudioDesign records are real editor state, not just automation hints.
+  // Load them once per day so switching away from a post and back restores the
+  // same family, media layers, copy overrides, theme, layout and output size.
+  const fetchSavedDesigns = useCallback(async () => {
+    const date = new Date().toISOString().slice(0, 10);
+    try {
+      const res = await fetch(`/api/admin/studio/design?date=${date}`, { cache: 'no-store' });
+      const data = await res.json();
+      if (!res.ok || !data.ok || !Array.isArray(data.designs)) return;
+      const map: Record<string, SavedStudioDesign> = {};
+      const loadedOverrides: Record<string, Record<string, unknown>> = {};
+      for (const row of data.designs as SavedStudioDesign[]) {
+        map[row.contentRef] = row;
+        loadedOverrides[row.contentRef] = row.overrides && typeof row.overrides === 'object' ? row.overrides : {};
+      }
+      setSavedDesigns(map);
+      setOverrides((prev) => ({ ...loadedOverrides, ...prev }));
+    } catch {
+      // Existing Studio remains usable even if persistence is temporarily down.
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchSavedDesigns();
+  }, [fetchSavedDesigns]);
+
   // debounce the picker query
   useEffect(() => {
     const id = setTimeout(() => setDebouncedQuery(pickerQuery), 300);
@@ -312,7 +338,7 @@ export function BrandStudioPanel() {
     return plan.posts.find((p) => p.key === selectedKey) ?? plan.posts[0] ?? null;
   }, [tab, labPost, plan, selectedKey]);
 
-  // ── per-post content overrides (reset when switching posts) ───────────────
+  // ── per-post design state ─────────────────────────────────────────────────
   const activeOverrides = (activePost && overrides[activePost.key]) || {};
   const setOverride = (key: string, value: unknown) => {
     if (!activePost) return;
@@ -321,6 +347,65 @@ export function BrandStudioPanel() {
       [activePost.key]: { ...prev[activePost.key], [key]: value },
     }));
   };
+
+  const activeFamily = getStudioDesignFamily(
+    typeof activeOverrides.designFamily === 'string' ? activeOverrides.designFamily : 'legacy',
+  );
+  const compatibleFamilies = activePost ? getCompatibleDesignFamilies(activePost.template) : [];
+  const activeMedia = normalizeStudioMedia(
+    activeOverrides.media,
+    typeof activeOverrides.visualUrl === 'string' ? activeOverrides.visualUrl : null,
+  );
+  const templateDefinition = activePost ? getStudioTemplateDefinition(activePost.template) : null;
+
+  const editorDefaults = useMemo<Record<string, unknown>>(() => {
+    if (!activePost) return {};
+    const out: Record<string, unknown> = {
+      title: activePost.title,
+      note: activePost.meta ?? '',
+      deadlineDate: activePost.opp?.deadline ?? '',
+      showFooter: true,
+      showQr: true,
+    };
+    if (activePost.opp) {
+      out.category = activePost.opp.category ? loc(activePost.opp.category.name, activePost.opp.category.nameI18n) : '';
+      out.organization = activePost.opp.organization ?? '';
+      out.country = activePost.opp.country ?? '';
+      out.salary = loc(activePost.opp.salary, activePost.opp.salaryI18n);
+    }
+    if (activePost.stat) {
+      out.statValue = activePost.stat.value;
+      out.statLabel = tr(activePost.stat.labelKey);
+      out.p1Value = activePost.stat.value;
+      out.p1Label = tr(activePost.stat.labelKey);
+    }
+    if (activePost.story) {
+      out.personName = activePost.meta ?? '';
+      out.personMeta = [activePost.story.program, activePost.story.country].filter(Boolean).join(' • ');
+    }
+    return out;
+  }, [activePost, loc, tr]);
+
+  useEffect(() => {
+    if (!activePost) return;
+    const saved = savedDesigns[activePost.key];
+    if (!saved) return;
+    setThemeId(resolveTheme(saved.themeId).id);
+    setLayout(resolveLayout(saved.layout));
+    setSize(resolveSize(saved.size));
+    const caption = saved.captionOverride?.[lang];
+    if (caption) {
+      setCaptionOverrides((prev) => ({
+        ...prev,
+        [activePost.key]: { caption, source: 'manual' },
+      }));
+    }
+  }, [activePost, savedDesigns, lang]);
+
+  useEffect(() => {
+    const roles = activeFamily.visualSlots.map((slot) => slot.role);
+    if (roles.length && !roles.includes(mediaRole)) setMediaRole(roles[0]);
+  }, [activeFamily, mediaRole]);
 
   // ── caption for the active post (override > deterministic) ────────────────
   const activeCaption = useMemo(() => {
