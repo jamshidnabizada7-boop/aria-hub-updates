@@ -24,6 +24,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useT } from '@/hooks/use-t';
 import { cn } from '@/lib/utils';
+import { FacebookGroupDistributionPanel } from '@/components/admin/facebook-group-distribution-panel';
 
 interface Channel {
   id: string; platform: string; label: string; enabled: boolean;
@@ -188,6 +189,8 @@ export function AutomationPanel() {
           )}
         </div>
       </div>
+
+      <FacebookGroupDistributionPanel />
 
       <div className="grid gap-4 xl:grid-cols-2">
         {/* ── schedule & settings ── */}

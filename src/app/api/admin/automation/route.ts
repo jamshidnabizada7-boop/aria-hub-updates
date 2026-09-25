@@ -34,10 +34,35 @@ export async function GET() {
   const [state, channels, queue, runs] = await Promise.all([
     getState(),
     db.publishChannel.findMany({ orderBy: { platform: 'asc' } }),
+    // Keep the existing Automation dashboard compatible with environments
+    // where the optional Facebook Group migration has not been applied yet.
+    // An unqualified Prisma findMany() selects every model column, including
+    // the new group-distribution columns, which would make PostgreSQL reject
+    // the whole request on an older schema.
     db.socialPostQueue.findMany({
       where: { scheduledFor: { gte: new Date(Date.now() - 7 * 86400000) } },
       orderBy: { scheduledFor: 'asc' },
       take: 30,
+      select: {
+        id: true,
+        scheduledFor: true,
+        templateType: true,
+        contentRef: true,
+        contentJson: true,
+        captionJson: true,
+        imagePaths: true,
+        imageStatus: true,
+        status: true,
+        results: true,
+        externalIds: true,
+        attempts: true,
+        claimedAt: true,
+        publishedAt: true,
+        error: true,
+        notifiedAt: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     }),
     db.pipelineRun.findMany({ orderBy: { startedAt: 'desc' }, take: 8 }),
   ]);

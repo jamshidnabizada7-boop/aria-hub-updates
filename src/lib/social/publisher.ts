@@ -67,6 +67,8 @@ type AutomationStateShape = {
   translateBackoffUntil?: string | null;
   lastQueueBuildDate?: string | null;
   tickRunning?: boolean;
+  facebookGroupsEnabled?: boolean;
+  facebookGroupPaused?: boolean;
 };
 
 export async function getState(): Promise<AutomationStateShape> {
