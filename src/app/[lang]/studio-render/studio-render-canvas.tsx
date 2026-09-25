@@ -7,19 +7,15 @@
  */
 import { useMemo, useEffect, useState } from 'react';
 import QRCode from 'qrcode';
-import { OpportunityPoster, buildPosterData } from '@/components/site/opportunity-poster';
+import { OpportunityPoster } from '@/components/site/opportunity-poster';
 import { SocialCanvas, type SocialCanvasProps } from '@/lib/social/templates';
 import { resolveTheme } from '@/lib/social/themes';
 import type { Lang } from '@/lib/i18n-config';
 import { getStudioDesignFamily } from '@/lib/social/studio/registry';
+import type { StudioPosterData } from '@/lib/social/studio/canvas-props';
 
 type RenderProps = SocialCanvasProps & {
-  posterData?: {
-    slug: string; title: string; titleI18n: Record<string, string> | null;
-    organization: string | null; country: string | null; deadline: string | null;
-    featured: boolean; salary: string | null; salaryI18n: Record<string, string> | null;
-    category: { name: string; nameI18n: Record<string, string> | null } | null;
-  } | null;
+  posterData?: StudioPosterData | null;
 };
 
 export default function StudioRenderCanvas({ p }: { p?: string }) {
@@ -57,7 +53,7 @@ export default function StudioRenderCanvas({ p }: { p?: string }) {
       <div data-studio-canvas="1">
         {props.template === 'spotlight' && props.posterData && !getStudioDesignFamily(props.designFamily).premium ? (
           <OpportunityPoster
-            data={buildPosterData(props.posterData, props.lang)}
+            data={props.posterData}
             lang={props.lang}
             size={props.size || 'square'}
             themeId={props.themeId}
