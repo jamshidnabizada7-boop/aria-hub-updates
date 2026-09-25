@@ -92,10 +92,13 @@ export async function GET() {
 
   // Credentials NEVER leave the server — the panel gets "which fields are
   // configured" flags + public identifiers only.
-  const safeChannels = channels.map((ch) => ({
-    ...ch,
-    credentials: maskCredentials(ch.credentials),
-  }));
+  const safeChannels = channels.map((ch) => {
+    const credentials = maskCredentials(ch.credentials);
+    if (ch.platform === 'whatsapp' && !credentials.mode && typeof credentials.channelId === 'string') {
+      credentials.mode = 'channel';
+    }
+    return { ...ch, credentials };
+  });
 
   return NextResponse.json({
     ok: true,
@@ -208,7 +211,7 @@ export async function POST(req: NextRequest) {
         const creds = decryptCredentials(ch.credentials);
         // Facebook/Instagram "Test" is non-destructive: verify the configured
         // identity/token without creating a real social post.
-        if (platform === 'facebook' || platform === 'instagram' || platform === 'linkedin') {
+        if (platform === 'facebook' || platform === 'instagram' || platform === 'linkedin' || platform === 'whatsapp') {
           const check = await checkPlatformConnection(platform, creds);
           await db.publishChannel.update({
             where: { id: ch.id },
