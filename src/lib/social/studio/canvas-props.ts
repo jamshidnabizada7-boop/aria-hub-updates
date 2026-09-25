@@ -15,14 +15,12 @@ export interface StudioDesignSnapshot {
 export interface StudioPosterData {
   slug: string;
   title: string;
-  titleI18n: Record<string, string> | null;
-  organization: string | null;
-  country: string | null;
+  organization: string;
+  country: string;
   deadline: string | null;
   featured: boolean;
-  salary: string | null;
-  salaryI18n: Record<string, string> | null;
-  category: { name: string; nameI18n: Record<string, string> | null } | null;
+  salary: string;
+  category: string;
 }
 
 export type StudioCanvasProps = SocialCanvasProps & {
@@ -111,14 +109,12 @@ export function buildStudioCanvasProps(
           ? {
               slug: opp.slug,
               title,
-              titleI18n: null,
               organization,
               country,
               deadline: deadlineDate,
               featured: Boolean(opp.featured),
               salary,
-              salaryI18n: null,
-              category: category ? { name: category, nameI18n: null } : null,
+              category,
             }
           : null,
       };
