@@ -34,6 +34,17 @@ interface QueueRow {
   id: string; scheduledFor: string; templateType: string; contentRef: string | null;
   status: string; imageStatus: string; attempts: number; error: string | null;
   captionJson: Record<string, string>;
+  deliveries?: Array<{
+    id: string;
+    platform: string;
+    status: string;
+    attempts: number;
+    errorCode: string | null;
+    error: string | null;
+    permalink: string | null;
+    publishedAt: string | null;
+    nextAttemptAt: string | null;
+  }>;
 }
 interface RunRow {
   id: string; kind: string; status: string; startedAt: string; finishedAt: string | null; message: string | null;
@@ -475,6 +486,23 @@ export function AutomationPanel() {
                       ) : null}
                     </div>
                   </div>
+                  {q.deliveries?.length ? (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {q.deliveries.map((delivery) => (
+                        <span
+                          key={delivery.id}
+                          title={delivery.error || delivery.errorCode || undefined}
+                          className={cn(
+                            'rounded-full border px-2 py-0.5 text-[9px] font-semibold',
+                            statusTone(delivery.status),
+                          )}
+                        >
+                          {delivery.platform}: {delivery.status}
+                          {delivery.attempts ? ` · ${delivery.attempts}×` : ''}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                   {q.error ? <p className="mt-1 line-clamp-2 text-[10px] text-destructive">{q.error}</p> : null}
                 </div>
               ))}
