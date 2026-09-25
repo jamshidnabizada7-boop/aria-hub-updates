@@ -935,7 +935,7 @@ export function BrandStudioPanel() {
                 </div>
 
                 {/* studio visuals — statues, scientists, landmarks… layered behind the poster */}
-                {visuals.length > 0 && (
+                {activeFamily === 'legacy' && visuals.length > 0 && (
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-[10px] font-semibold text-muted-foreground">Visual</span>
                     <button
@@ -970,6 +970,16 @@ export function BrandStudioPanel() {
                   template={activePost.template}
                   family={activeFamily}
                   overrides={activeOverrides}
+                  defaults={{
+                    title: activePost.title ?? '',
+                    note: activePost.meta ?? '',
+                    category: activePost.opp?.category?.name ?? '',
+                    organization: activePost.opp?.organization ?? '',
+                    country: activePost.opp?.country ?? '',
+                    location: activePost.opp?.country ?? '',
+                    salary: activePost.opp?.salary ?? '',
+                    deadlineDate: activePost.opp?.deadline ?? '',
+                  }}
                   visuals={visuals}
                   onFamily={(family) => setOverride('designFamily', family)}
                   onOverride={setOverride}
