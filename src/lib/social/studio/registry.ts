@@ -1,5 +1,5 @@
 import type { PostTemplate } from '@/lib/social/brand';
-import type { DesignFamilyDefinition, DesignFamilyId, StudioEditorField } from '@/lib/social/studio/types';
+import type { DesignFamilyDefinition, DesignFamilyId, StudioEditorField, StudioMediaConfig } from '@/lib/social/studio/types';
 
 const opportunityFields: StudioEditorField[] = [
   { id: 'title', label: 'Headline', type: 'textarea', maxLength: 140, required: true, rtl: true },
@@ -222,7 +222,7 @@ export const BUILTIN_PREMIUM_VISUALS = [
   { id: 'builtin:document-desk', label: 'ARIA HUB · Scholarship Documents', category: 'Documents', url: '/images/studio/premium/scholarship-document-desk.png' },
 ] as const;
 
-export function defaultMediaForDesignFamily(id: DesignFamilyId) {
+export function defaultMediaForDesignFamily(id: DesignFamilyId): StudioMediaConfig {
   switch (id) {
     case 'global-portal':
     case 'surreal-opportunity':
