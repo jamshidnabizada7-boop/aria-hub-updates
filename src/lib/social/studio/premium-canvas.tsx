@@ -335,36 +335,81 @@ function FullBleedEditorial({ props, bigType=false }: { props:PremiumCanvasProps
 }
 function DocumentAlert({ props }: { props:PremiumCanvasProps }) {
   const theme=resolveTheme(props.themeId); const accent=theme.accent; const rtl=props.lang!=='en';
+  const desk = props.designFamily === 'document-desk';
   return (
     <CanvasRoot props={props}>
       <Ambient accent={accent}/><HeroLayers media={props.media}/>
-      {!props.media?.hero?.url ? <SphereFallback accent={accent} kind="document"/> : null}
-      <PremiumHeader accent={accent} eyebrow={props.eyebrow || props.badge}/>
-      <div style={{position:'absolute',left:64,right:500,top:235,bottom:190,zIndex:12,display:'flex',flexDirection:'column',justifyContent:'center',alignItems:rtl?'flex-end':'flex-start'}}>
-        <div style={{display:'flex',alignItems:'center',gap:12,color:accent,fontSize:21,fontWeight:900}}><FileText style={{width:26,height:26}}/>{props.badge || 'IMPORTANT UPDATE'}</div>
-        <div style={{fontSize:clampTextSize(props.title,74,60,47),fontWeight:950,lineHeight:1.12,marginTop:20,textAlign:rtl?'right':'left'}}>{props.title}</div>
-        {props.note?<div style={{fontSize:25,lineHeight:1.5,color:'rgba(255,255,255,.7)',fontWeight:600,marginTop:18,textAlign:rtl?'right':'left'}}>{props.note}</div>:null}
+      {desk ? (
+        <>
+          <div style={{position:'absolute',left:0,right:0,bottom:0,height:'46%',zIndex:3,background:'linear-gradient(180deg,rgba(8,13,28,.05),rgba(5,9,20,.72))',clipPath:'polygon(0 20%,100% 0,100% 100%,0 100%)'}}/>
+          {!props.media?.hero?.url ? (
+            <>
+              <div style={{position:'absolute',right:95,top:235,width:345,height:455,zIndex:8,transform:'rotate(-5deg)',borderRadius:24,background:'linear-gradient(145deg,#FAF8F1,#C9D2E0)',boxShadow:'0 38px 82px rgba(0,0,0,.46)'}}>
+                <div style={{position:'absolute',left:34,right:34,top:42,height:11,borderRadius:999,background:accent}}/>
+                {[0,1,2].map(i=><div key={i} style={{position:'absolute',left:34,right:75+i*25,top:90+i*38,height:14,borderRadius:999,background:'rgba(27,36,64,.16)'}}/>)}
+                <div style={{position:'absolute',left:34,bottom:42,width:100,height:96,borderRadius:14,border:'2px solid rgba(165,130,47,.42)'}}/>
+              </div>
+              <div style={{position:'absolute',right:360,top:515,width:210,height:132,zIndex:7,transform:'rotate(10deg)',borderRadius:18,background:'linear-gradient(135deg,#17274A,#0D1731)',border:'1px solid rgba(248,216,152,.34)',boxShadow:'0 22px 52px rgba(0,0,0,.4)'}}/>
+            </>
+          ) : null}
+        </>
+      ) : !props.media?.hero?.url ? <SphereFallback accent={accent} kind="document"/> : null}
+      <PremiumHeader accent={accent} eyebrow={props.eyebrow || props.badge || props.category}/>
+      <div style={{
+        position:'absolute',
+        left:desk?72:64,
+        right:desk?535:500,
+        top:235,bottom:190,zIndex:12,
+        display:'flex',flexDirection:'column',justifyContent:'center',
+        alignItems:rtl?'flex-end':'flex-start'
+      }}>
+        <div style={{display:'flex',alignItems:'center',gap:12,color:accent,fontSize:20,fontWeight:900}}>
+          <FileText style={{width:26,height:26}}/>
+          {props.badge || (desk ? (props.lang==='en'?'APPLICATION DESK':'مدارک درخواست') : 'IMPORTANT UPDATE')}
+        </div>
+        <div style={{fontSize:clampTextSize(props.title,desk?72:74,desk?58:60,47),fontWeight:950,lineHeight:1.11,marginTop:20,textAlign:rtl?'right':'left'}}>{props.title}</div>
+        {props.note?<div style={{fontSize:24,lineHeight:1.52,color:'rgba(255,255,255,.70)',fontWeight:600,marginTop:18,textAlign:rtl?'right':'left'}}>{props.note}</div>:null}
         <MetaRow props={props} accent={accent}/>
       </div>
       <Footer props={props}/>
     </CanvasRoot>
   );
 }
-
 function Surreal({ props }: { props:PremiumCanvasProps }) {
   const theme=resolveTheme(props.themeId); const accent=theme.accent; const rtl=props.lang!=='en';
+  const ascent = props.designFamily === 'career-ascent';
   return (
     <CanvasRoot props={props}>
       <Ambient accent={accent}/><HeroLayers media={props.media}/>
-      {!props.media?.hero?.url?<>
-        <div style={{position:'absolute',right:75,top:210,width:500,height:500,borderRadius:'50%',border:`2px solid ${accent}80`,boxShadow:`0 0 100px ${accent}28`,zIndex:5}}/>
-        <PortalFallback accent={accent}/>
-        <div style={{position:'absolute',right:30,top:610,width:540,height:2,background:`linear-gradient(90deg,transparent,${accent},transparent)`,transform:'rotate(-10deg)',zIndex:9}}/>
-      </>:null}
-      <PremiumHeader accent={accent} eyebrow={props.eyebrow || props.category}/>
-      <div style={{position:'absolute',left:70,right:535,top:235,bottom:190,zIndex:12,display:'flex',flexDirection:'column',justifyContent:'center',alignItems:rtl?'flex-end':'flex-start'}}>
-        <div style={{fontSize:18,fontWeight:900,letterSpacing:2.2,color:accent}}>BEYOND THE OBVIOUS</div>
-        <div style={{fontSize:clampTextSize(props.title,78,62,48),fontWeight:950,lineHeight:1.1,marginTop:18,textAlign:rtl?'right':'left'}}>{props.title}</div>
+      {ascent ? (
+        <>
+          {!props.media?.hero?.url ? (
+            <div style={{position:'absolute',right:-55,top:165,width:610,height:730,zIndex:6,transform:'rotate(-8deg)'}}>
+              {[0,1,2,3,4,5].map(i=>(
+                <div key={i} style={{
+                  position:'absolute',right:i*57,bottom:i*78,width:300,height:72,
+                  borderRadius:18,
+                  background:i===5?accent:'linear-gradient(145deg,#142341,#2B3F68)',
+                  border:i===5?'1px solid rgba(255,255,255,.4)':'1px solid rgba(248,216,152,.18)',
+                  boxShadow:'0 20px 42px rgba(0,0,0,.30)'
+                }}/>
+              ))}
+            </div>
+          ) : null}
+        </>
+      ) : (
+        !props.media?.hero?.url ? <>
+          <div style={{position:'absolute',right:75,top:210,width:500,height:500,borderRadius:'50%',border:'2px solid rgba(248,216,152,.5)',boxShadow:'0 0 100px rgba(248,216,152,.16)',zIndex:5}}/>
+          <PortalFallback accent={accent}/>
+          <div style={{position:'absolute',right:30,top:610,width:540,height:2,background:'linear-gradient(90deg,transparent,#F8D898,transparent)',transform:'rotate(-10deg)',zIndex:9}}/>
+        </> : null
+      )}
+      <PremiumHeader accent={accent} eyebrow={props.eyebrow || props.category || props.badge}/>
+      <div style={{position:'absolute',left:70,right:ascent?500:535,top:235,bottom:190,zIndex:12,display:'flex',flexDirection:'column',justifyContent:'center',alignItems:rtl?'flex-end':'flex-start'}}>
+        <div style={{fontSize:18,fontWeight:900,letterSpacing:2.1,color:accent}}>
+          {ascent ? 'LEVEL UP' : 'BEYOND THE OBVIOUS'}
+        </div>
+        <div style={{fontSize:clampTextSize(props.title,78,62,48),fontWeight:950,lineHeight:1.09,marginTop:18,textAlign:rtl?'right':'left'}}>{props.title}</div>
         {props.note?<div style={{marginTop:18,fontSize:24,color:'rgba(255,255,255,.72)',fontWeight:600,lineHeight:1.5,textAlign:rtl?'right':'left'}}>{props.note}</div>:null}
         <MetaRow props={props} accent={accent}/>
       </div>
@@ -372,7 +417,6 @@ function Surreal({ props }: { props:PremiumCanvasProps }) {
     </CanvasRoot>
   );
 }
-
 export function PremiumSocialCanvas(raw: PremiumCanvasProps) {
   const props={...raw,designFamily:resolveDesignFamily(raw.designFamily)};
   switch(props.designFamily){
