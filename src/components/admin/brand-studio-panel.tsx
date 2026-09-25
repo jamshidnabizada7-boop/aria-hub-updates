@@ -23,7 +23,6 @@ import {
 import { toPng } from 'html-to-image';
 import QRCode from 'qrcode';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -1288,115 +1287,5 @@ function captionInputFor(post: PlanPost, lang: Lang, loc: Loc, tr: Tr): CaptionI
     case 'pick':
     case 'day':
       return { template: post.template, lang, title: post.title, note: post.meta };
-  }
-}
-
-/** SocialCanvas props for a non-spotlight post. */
-function socialPropsFor(
-  post: PlanPost,
-  lang: Lang,
-  size: PosterSize,
-  qrDataUrl: string | null,
-  loc: Loc,
-  tr: Tr,
-  design?: {
-    themeId: StudioThemeId;
-    layout: StudioLayout;
-    overrides: Record<string, unknown>;
-    visualUrl?: string | null;
-  },
-): Parameters<typeof SocialCanvas>[0] {
-  const o = design?.overrides ?? {};
-  const title = typeof o.title === 'string' && o.title.trim() ? o.title : post.title;
-  const noteOverride = typeof o.note === 'string' && o.note.trim() ? o.note : null;
-  const deadlineOverride = typeof o.deadlineDate === 'string' && o.deadlineDate ? o.deadlineDate : null;
-  const base = {
-    template: post.template, lang, size, qrDataUrl,
-    themeId: design?.themeId, layout: design?.layout, title,
-    visualUrl: design?.visualUrl ?? null,
-  };
-  switch (post.template) {
-    case 'deadline':
-      return {
-        ...base,
-        deadlineDate: deadlineOverride ?? post.opp?.deadline ?? null,
-        note: noteOverride ?? ([post.opp?.organization, post.opp?.country].filter(Boolean).join(' • ') || undefined),
-      };
-    case 'tip':
-      return { ...base, seriesNo: post.seriesNo ?? 1, note: noteOverride ?? undefined };
-    case 'quote':
-      return base;
-    case 'promo':
-      return {
-        ...base,
-        checklist: [tr('social.post.promoCheck1'), tr('social.post.promoCheck2'), tr('social.post.promoCheck3')],
-      };
-    case 'news':
-      return { ...base, note: noteOverride ?? post.meta, newsDate: post.news?.publishedAt ?? null };
-    case 'stat':
-      return {
-        ...base,
-        stat: { value: post.stat?.value ?? '', label: tr(post.stat?.labelKey ?? ''), sub: tr(post.stat?.subKey ?? '') },
-      };
-    case 'packages': {
-      // Card 1 comes from the stat pool; card 2 is admin-entered (overrides).
-      const card1 = {
-        value: typeof o.p1Value === 'string' && o.p1Value.trim() ? o.p1Value : post.stat?.value ?? '',
-        label: typeof o.p1Label === 'string' && o.p1Label.trim() ? o.p1Label : post.stat ? tr(post.stat.labelKey) : '',
-        sub: typeof o.p1Sub === 'string' && o.p1Sub.trim() ? o.p1Sub : post.stat ? tr(post.stat.subKey) : undefined,
-      };
-      const card2 = {
-        value: typeof o.p2Value === 'string' ? o.p2Value : '',
-        label: typeof o.p2Label === 'string' ? o.p2Label : '',
-        sub: typeof o.p2Sub === 'string' && o.p2Sub.trim() ? o.p2Sub : undefined,
-      };
-      return {
-        ...base,
-        note: noteOverride ?? undefined,
-        packages: [card1, ...(card2.value || card2.label ? [card2] : [])],
-      };
-    }
-    case 'teaser':
-    case 'greeting':
-    case 'follow':
-      return { ...base, note: noteOverride ?? post.meta ?? undefined };
-    case 'pick': {
-      const callouts = Array.isArray(o.callouts)
-        ? (o.callouts as unknown[]).map(String).filter((s) => s.trim())
-        : [];
-      return { ...base, note: noteOverride ?? post.meta ?? undefined, checklist: callouts };
-    }
-    case 'day': {
-      const badgeBig = typeof o.badgeBig === 'string' && o.badgeBig.trim() ? o.badgeBig : '';
-      const badgeSmall = typeof o.badgeSmall === 'string' && o.badgeSmall.trim() ? o.badgeSmall : undefined;
-      return {
-        ...base,
-        note: noteOverride ?? post.meta ?? undefined,
-        dateBadge: badgeBig ? { big: badgeBig, small: badgeSmall } : undefined,
-      };
-    }
-    case 'hiring': {
-      const callouts = Array.isArray(o.callouts)
-        ? (o.callouts as unknown[]).map(String).filter((s) => s.trim())
-        : post.meta ? [post.meta] : [];
-      return { ...base, note: noteOverride ?? undefined, checklist: callouts };
-    }
-    case 'story': {
-      const personName = typeof o.personName === 'string' && o.personName.trim() ? o.personName : post.meta;
-      return {
-        ...base,
-        note: undefined,
-        person: personName
-          ? {
-              name: personName,
-              meta: typeof o.personMeta === 'string' && o.personMeta.trim()
-                ? o.personMeta
-                : [post.story?.program, post.story?.country].filter(Boolean).join(' • '),
-            }
-          : undefined,
-      };
-    }
-    default:
-      return base;
   }
 }
