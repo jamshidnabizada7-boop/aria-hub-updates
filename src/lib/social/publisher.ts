@@ -30,9 +30,11 @@ import {
   DEFAULT_OPPORTUNITY_BATCH_TIMES_AFT,
   DEFAULT_OPPORTUNITY_DAILY_TARGET,
   DEFAULT_OPPORTUNITY_REPEAT_DAYS,
+} from '@/lib/social/opportunity-distribution';
+import {
   opportunityDistributionCapacity,
   opportunityScheduleForIndex,
-} from '@/lib/social/opportunity-distribution';
+} from '@/lib/social/opportunity-distribution-schedule';
 import { buildCaption, type CaptionInput } from '@/lib/social/captions';
 import { publishToPlatform } from '@/lib/social/channels';
 import { notifyAdmin } from '@/lib/social/notify';
