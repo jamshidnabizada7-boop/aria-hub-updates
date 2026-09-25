@@ -85,8 +85,41 @@ export async function POST(req: NextRequest) {
         },
       });
 
+      const contentJson = (body.contentJson ?? {}) as object;
+      const captionJson = (body.captionJson ?? {}) as object;
+
       if (action === 'save') {
-        return NextResponse.json({ ok: true, design: saved });
+        // If today's automatic queue already exists, refresh only a row that
+        // has not started rendering/publishing. Saving a Studio design should
+        // affect the upcoming automated post, but must never rewrite something
+        // already claimed or published.
+        const dayStart = new Date(`${design.forDate}T00:00:00.000Z`);
+        const dayEnd = new Date(dayStart.getTime() + 86400000);
+        const queued = await db.socialPostQueue.findFirst({
+          where: {
+            contentRef: design.contentRef,
+            scheduledFor: { gte: dayStart, lt: dayEnd },
+            status: { in: ['pending', 'ready', 'failed'] },
+            claimedAt: null,
+          },
+          orderBy: { scheduledFor: 'asc' },
+        });
+        if (queued) {
+          await db.socialPostQueue.update({
+            where: { id: queued.id },
+            data: {
+              templateType: design.templateType,
+              contentJson,
+              captionJson,
+              status: 'pending',
+              imageStatus: 'none',
+              imagePaths: null,
+              error: null,
+              attempts: 0,
+            },
+          });
+        }
+        return NextResponse.json({ ok: true, design: saved, queueUpdated: Boolean(queued) });
       }
 
       // ensure-row: the queue row must exist for today with this design's
@@ -97,9 +130,6 @@ export async function POST(req: NextRequest) {
         where: { contentRef: design.contentRef, scheduledFor: { gte: dayStart, lt: dayEnd } },
         orderBy: { scheduledFor: 'asc' },
       });
-
-      const contentJson = (body.contentJson ?? {}) as object;
-      const captionJson = (body.captionJson ?? {}) as object;
 
       if (existing) {
         // Replacing the plan row's content — also pull it back into the due

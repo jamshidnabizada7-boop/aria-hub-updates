@@ -23,7 +23,6 @@ import {
 import { toPng } from 'html-to-image';
 import QRCode from 'qrcode';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -38,15 +37,27 @@ import { translate } from '@/lib/i18n';
 import { getLocalizedContent } from '@/lib/i18n-content';
 import { toEasternDigits, formatDateLong } from '@/lib/date-format';
 import type { Lang } from '@/lib/lang-route';
-import { OpportunityPoster, buildPosterData } from '@/components/site/opportunity-poster';
+import { OpportunityPoster } from '@/components/site/opportunity-poster';
 import { SocialCanvas, type PosterSize } from '@/lib/social/templates';
+import { StudioFieldsEditor } from '@/components/admin/studio-fields-editor';
+import { StudioMediaEditor, type StudioVisualItem } from '@/components/admin/studio-media-editor';
+import { StudioAssetLibraryManager } from '@/components/admin/studio-asset-library-manager';
 import {
-  STUDIO_THEME_LIST, LAYOUTS, resolveTheme, canvasHeight,
+  STUDIO_THEME_LIST, LAYOUTS, resolveTheme, resolveLayout, resolveSize, canvasHeight,
   type StudioThemeId, type StudioLayout,
 } from '@/lib/social/themes';
 import { TEMPLATE_DEFS, type PostTemplate } from '@/lib/social/brand';
 import { buildCaption, type CaptionInput } from '@/lib/social/captions';
 import type { DailyPlan, PlanIdea, PlanNews, PlanOpp, PlanPost, PlanStat, PlanStory } from '@/lib/social/plan';
+import {
+  getCompatibleDesignFamilies,
+  getStudioDesignFamily,
+  getStudioTemplateDefinition,
+  type StudioVisualRole,
+} from '@/lib/social/studio/registry';
+import { normalizeStudioMedia, studioMediaHasAny } from '@/lib/social/studio/media';
+import { defaultMediaForFamily } from '@/lib/social/studio/assets';
+import { buildStudioCanvasProps, type StudioPosterData } from '@/lib/social/studio/canvas-props';
 
 const TEMPLATES: PostTemplate[] = TEMPLATE_DEFS.map((d) => d.key);
 
@@ -84,6 +95,18 @@ interface SearchedOpp {
   salaryI18n: Record<string, string> | null;
   country: string | null;
   category: { name: string; nameI18n: Record<string, string> | null; slug: string } | null;
+}
+
+interface SavedStudioDesign {
+  id: string;
+  contentRef: string;
+  forDate: string;
+  templateType: string;
+  themeId: string;
+  layout: string;
+  size: string;
+  overrides: Record<string, unknown> | null;
+  captionOverride: Record<string, string> | null;
 }
 
 const TYPE_FILTERS: { value: string; labelKey: string }[] = [
@@ -146,11 +169,21 @@ export function BrandStudioPanel() {
   const fetchSeq = useRef(0);
   const [themeId, setThemeId] = useState<StudioThemeId>('midnight');
   const [layout, setLayout] = useState<StudioLayout>('classic');
-  const [visualUrl, setVisualUrl] = useState<string | null>(null);
-  const [visuals, setVisuals] = useState<{ id: string; label: string; category: string; url: string }[]>([]);
-  useEffect(() => {
-    fetch('/api/admin/studio/visuals').then((r) => (r.ok ? r.json() : null)).then((d) => setVisuals(d?.visuals ?? [])).catch(() => {});
+  const [visuals, setVisuals] = useState<StudioVisualItem[]>([]);
+  const [mediaRole, setMediaRole] = useState<StudioVisualRole>('background');
+  const [savedDesigns, setSavedDesigns] = useState<Record<string, SavedStudioDesign>>({});
+  const loadVisuals = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/studio/visuals', { cache: 'no-store' });
+      const data = res.ok ? await res.json() : null;
+      setVisuals(Array.isArray(data?.visuals) ? data.visuals : []);
+    } catch {
+      // Deterministic built-in fallback art keeps the Studio usable.
+    }
   }, []);
+  useEffect(() => {
+    void loadVisuals();
+  }, [loadVisuals]);
   const [overrides, setOverrides] = useState<Record<string, Record<string, unknown>>>({});
   const [savingDesign, setSavingDesign] = useState(false);
   const [publishingDesign, setPublishingDesign] = useState(false);
@@ -177,6 +210,32 @@ export function BrandStudioPanel() {
   useEffect(() => {
     fetchPlan();
   }, [fetchPlan]);
+
+  // Saved StudioDesign records are real editor state, not just automation hints.
+  // Load them once per day so switching away from a post and back restores the
+  // same family, media layers, copy overrides, theme, layout and output size.
+  const fetchSavedDesigns = useCallback(async () => {
+    const date = new Date().toISOString().slice(0, 10);
+    try {
+      const res = await fetch(`/api/admin/studio/design?date=${date}`, { cache: 'no-store' });
+      const data = await res.json();
+      if (!res.ok || !data.ok || !Array.isArray(data.designs)) return;
+      const map: Record<string, SavedStudioDesign> = {};
+      const loadedOverrides: Record<string, Record<string, unknown>> = {};
+      for (const row of data.designs as SavedStudioDesign[]) {
+        map[row.contentRef] = row;
+        loadedOverrides[row.contentRef] = row.overrides && typeof row.overrides === 'object' ? row.overrides : {};
+      }
+      setSavedDesigns(map);
+      setOverrides((prev) => ({ ...loadedOverrides, ...prev }));
+    } catch {
+      // Existing Studio remains usable even if persistence is temporarily down.
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchSavedDesigns();
+  }, [fetchSavedDesigns]);
 
   // debounce the picker query
   useEffect(() => {
@@ -286,7 +345,7 @@ export function BrandStudioPanel() {
     return plan.posts.find((p) => p.key === selectedKey) ?? plan.posts[0] ?? null;
   }, [tab, labPost, plan, selectedKey]);
 
-  // ── per-post content overrides (reset when switching posts) ───────────────
+  // ── per-post design state ─────────────────────────────────────────────────
   const activeOverrides = (activePost && overrides[activePost.key]) || {};
   const setOverride = (key: string, value: unknown) => {
     if (!activePost) return;
@@ -295,6 +354,65 @@ export function BrandStudioPanel() {
       [activePost.key]: { ...prev[activePost.key], [key]: value },
     }));
   };
+
+  const activeFamily = getStudioDesignFamily(
+    typeof activeOverrides.designFamily === 'string' ? activeOverrides.designFamily : 'legacy',
+  );
+  const compatibleFamilies = activePost ? getCompatibleDesignFamilies(activePost.template) : [];
+  const activeMedia = normalizeStudioMedia(
+    activeOverrides.media,
+    typeof activeOverrides.visualUrl === 'string' ? activeOverrides.visualUrl : null,
+  );
+  const templateDefinition = activePost ? getStudioTemplateDefinition(activePost.template) : null;
+
+  const editorDefaults = useMemo<Record<string, unknown>>(() => {
+    if (!activePost) return {};
+    const out: Record<string, unknown> = {
+      title: activePost.title,
+      note: activePost.meta ?? '',
+      deadlineDate: activePost.opp?.deadline ?? '',
+      showFooter: true,
+      showQr: true,
+    };
+    if (activePost.opp) {
+      out.category = activePost.opp.category ? loc(activePost.opp.category.name, activePost.opp.category.nameI18n) : '';
+      out.organization = activePost.opp.organization ?? '';
+      out.country = activePost.opp.country ?? '';
+      out.salary = loc(activePost.opp.salary, activePost.opp.salaryI18n);
+    }
+    if (activePost.stat) {
+      out.statValue = activePost.stat.value;
+      out.statLabel = tr(activePost.stat.labelKey);
+      out.p1Value = activePost.stat.value;
+      out.p1Label = tr(activePost.stat.labelKey);
+    }
+    if (activePost.story) {
+      out.personName = activePost.meta ?? '';
+      out.personMeta = [activePost.story.program, activePost.story.country].filter(Boolean).join(' • ');
+    }
+    return out;
+  }, [activePost, loc, tr]);
+
+  useEffect(() => {
+    if (!activePost) return;
+    const saved = savedDesigns[activePost.key];
+    if (!saved) return;
+    setThemeId(resolveTheme(saved.themeId).id);
+    setLayout(resolveLayout(saved.layout));
+    setSize(resolveSize(saved.size));
+    const caption = saved.captionOverride?.[lang];
+    if (caption) {
+      setCaptionOverrides((prev) => ({
+        ...prev,
+        [activePost.key]: { caption, source: 'manual' },
+      }));
+    }
+  }, [activePost, savedDesigns, lang]);
+
+  useEffect(() => {
+    const roles = activeFamily.visualSlots.map((slot) => slot.role);
+    if (roles.length && !roles.includes(mediaRole)) setMediaRole(roles[0]);
+  }, [activeFamily, mediaRole]);
 
   // ── caption for the active post (override > deterministic) ────────────────
   const activeCaption = useMemo(() => {
@@ -370,21 +488,24 @@ export function BrandStudioPanel() {
 
   const designPayload = useCallback(() => {
     if (!activePost) return null;
+    const previousCaptions = savedDesigns[activePost.key]?.captionOverride ?? {};
+    const design = {
+      contentRef: activePost.key,
+      forDate: todayIso(),
+      templateType: activePost.template,
+      themeId,
+      layout,
+      size,
+      overrides: activeOverrides,
+      captionOverride: { ...previousCaptions, [lang]: activeCaption },
+    };
     return {
       action: 'save',
-      design: {
-        contentRef: activePost.key,
-        forDate: todayIso(),
-        templateType: activePost.template,
-        themeId,
-        layout,
-        size,
-        overrides: activeOverrides,
-      },
-      contentJson: socialPropsFor(activePost, lang, size, qrDataUrl, loc, tr, { themeId, layout, overrides: activeOverrides, visualUrl }),
-      captionJson: { [lang]: activeCaption },
+      design,
+      contentJson: buildStudioCanvasProps(activePost, lang, size, design),
+      captionJson: { ...previousCaptions, [lang]: activeCaption },
     };
-  }, [activePost, themeId, layout, size, activeOverrides, lang, qrDataUrl, loc, tr, activeCaption]);
+  }, [activePost, themeId, layout, size, activeOverrides, lang, activeCaption, savedDesigns]);
 
   const saveDesign = useCallback(async (): Promise<boolean> => {
     const payload = designPayload();
@@ -398,6 +519,9 @@ export function BrandStudioPanel() {
       });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error || 'save failed');
+      if (data.design?.contentRef) {
+        setSavedDesigns((prev) => ({ ...prev, [data.design.contentRef]: data.design as SavedStudioDesign }));
+      }
       toast({ title: t('admin.studio.saved') });
       return true;
     } catch (e) {
@@ -416,7 +540,7 @@ export function BrandStudioPanel() {
       const saveRes = await fetch('/api/admin/studio/design', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, action: 'ensure-row' }),
       });
       const saved = await saveRes.json();
       if (!saveRes.ok || !saved.ok || !saved.row?.id) throw new Error(saved.error || 'save failed');
@@ -525,30 +649,18 @@ export function BrandStudioPanel() {
   // ── preview node ──────────────────────────────────────────────────────────
   const previewNode = useMemo(() => {
     if (!activePost) return null;
-    if (activePost.template === 'spotlight' && activePost.opp) {
-      const data = buildPosterData(
-        {
-          slug: activePost.opp.slug,
-          title: loc(activePost.opp.title, activePost.opp.titleI18n),
-          titleI18n: activePost.opp.titleI18n,
-          organization: activePost.opp.organization,
-          country: activePost.opp.country,
-          deadline: activePost.opp.deadline,
-          featured: activePost.opp.featured,
-          salary: activePost.opp.salary,
-          salaryI18n: activePost.opp.salaryI18n,
-          category: activePost.opp.category
-            ? { name: activePost.opp.category.name, nameI18n: i18n(activePost.opp.category.nameI18n) }
-            : null,
-        },
-        lang,
-      );
-      if (activeOverrides.title) data.title = activeOverrides.title as string;
-      if (activeOverrides.deadlineDate) data.deadline = activeOverrides.deadlineDate as string;
+    const props = buildStudioCanvasProps(activePost, lang, size, {
+      themeId,
+      layout,
+      size,
+      overrides: activeOverrides,
+    });
+    if (activePost.template === 'spotlight' && props.posterData && !activeFamily.premium) {
+      const data: StudioPosterData = props.posterData;
       return <OpportunityPoster data={data} lang={lang} size={size} themeId={themeId} qrDataUrl={qrDataUrl} />;
     }
-    return <SocialCanvas {...socialPropsFor(activePost, lang, size, qrDataUrl, loc, tr, { themeId, layout, overrides: activeOverrides, visualUrl })} />;
-  }, [activePost, lang, size, qrDataUrl, loc, tr, themeId, layout, activeOverrides]);
+    return <SocialCanvas {...props} qrDataUrl={qrDataUrl} />;
+  }, [activePost, lang, size, qrDataUrl, themeId, layout, activeOverrides, activeFamily.premium]);
 
   return (
     <div className="space-y-4">
@@ -752,10 +864,10 @@ export function BrandStudioPanel() {
                 ref={canvasWrapRef}
                 style={{
                   direction: 'ltr',
-                  transform: 'scale(0.44)',
+                  transform: `scale(${size === 'story' ? 0.30 : size === 'portrait' ? 0.38 : 0.44})`,
                   transformOrigin: 'top left',
-                  width: 1080 * 0.44,
-                  height: (size === 'portrait' ? 1350 : 1080) * 0.44,
+                  width: 1080 * (size === 'story' ? 0.30 : size === 'portrait' ? 0.38 : 0.44),
+                  height: canvasHeight(size) * (size === 'story' ? 0.30 : size === 'portrait' ? 0.38 : 0.44),
                 }}
               >
                 {previewNode}
@@ -769,9 +881,9 @@ export function BrandStudioPanel() {
           </div>
 
           {activePost ? (
-            <div className="rounded-2xl border bg-card">
-              <div className="flex items-center justify-between gap-2 border-b px-4 py-2.5">
-                <div className="flex items-center gap-2 min-w-0">
+            <div className="overflow-hidden rounded-2xl border bg-card">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2.5">
+                <div className="flex min-w-0 items-center gap-2">
                   <Badge variant="secondary" className="shrink-0 gap-1">
                     {(() => {
                       const Icon = TYPE_ICON[activePost.template];
@@ -779,248 +891,170 @@ export function BrandStudioPanel() {
                     })()}
                     {t(`admin.studio.type.${activePost.template}`)}
                   </Badge>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      'shrink-0',
+                      activeFamily.premium ? 'border-amber-400/60 text-amber-700 dark:text-amber-300' : '',
+                    )}
+                  >
+                    {activeFamily.premium ? 'Premium' : 'Classic'}
+                  </Badge>
                   <Badge variant="outline" className={cn('shrink-0', captionSource === 'ai' ? 'border-violet-400/60 text-violet-600 dark:text-violet-400' : '')}>
-                    {captionSource === 'ai' ? 'AI' : 'Brand'}
+                    {captionSource === 'ai' ? 'AI caption' : 'Brand caption'}
                   </Badge>
                 </div>
-                {/* design controls + content editing */}
-              <div className="border-t border-border/60 px-4 py-4 space-y-3">
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-1.5" role="group" aria-label="Theme">
-                    {STUDIO_THEME_LIST.map((th) => (
+                {savedDesigns[activePost.key] ? (
+                  <span className="text-[10px] font-medium text-emerald-600">Saved design restored</span>
+                ) : null}
+              </div>
+
+              <div className="space-y-4 px-4 py-4">
+                <section className="space-y-2">
+                  <div>
+                    <p className="text-xs font-bold">Design family</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      Different families are real compositions, not palette variations.
+                    </p>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {compatibleFamilies.map((family) => (
                       <button
-                        key={th.id}
+                        key={family.id}
                         type="button"
-                        onClick={() => setThemeId(th.id)}
-                        aria-pressed={themeId === th.id}
-                        title={th.label}
+                        onClick={() => {
+                          setOverride('designFamily', family.id);
+                          if (family.premium && !studioMediaHasAny(activeMedia)) {
+                            setOverride('media', defaultMediaForFamily(family.id));
+                          }
+                          setThemeId(family.defaultTheme);
+                          if (family.recommendedLayouts[0]) setLayout(family.recommendedLayouts[0]);
+                          if (family.visualSlots[0]) setMediaRole(family.visualSlots[0].role);
+                        }}
                         className={cn(
-                          'h-8 w-8 rounded-full border-2 transition-transform',
-                          themeId === th.id ? 'border-primary scale-110' : 'border-border hover:scale-105',
+                          'rounded-xl border p-2.5 text-start transition-colors',
+                          activeFamily.id === family.id
+                            ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                            : 'bg-muted/20 hover:bg-muted/50',
                         )}
-                        style={{ background: `linear-gradient(135deg, ${th.bgMid} 0%, ${th.bgBottom} 60%, ${th.accent} 130%)` }}
-                      />
+                      >
+                        <span className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-bold">{family.label}</span>
+                          {family.premium ? <span className="rounded-full bg-amber-400/15 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-300">Premium</span> : null}
+                        </span>
+                        <span className="mt-1 block text-[9px] leading-relaxed text-muted-foreground">{family.description}</span>
+                      </button>
                     ))}
                   </div>
-                  {activePost.template !== 'spotlight' && (
-                    <div className="flex items-center gap-1" role="group" aria-label="Layout">
-                      {LAYOUTS.map((l) => (
-                        <button
-                          key={l.id}
-                          type="button"
-                          onClick={() => setLayout(l.id)}
-                          aria-pressed={layout === l.id}
-                          className={cn(
-                            'rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-colors',
-                            layout === l.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground',
-                          )}
-                        >
-                          {l.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  <Button
-                    size="sm" variant="outline" className="h-8 gap-1 text-[11px]"
-                    disabled={savingDesign}
-                    onClick={setAutomationDefault}
-                    title="Automated posts will use this theme + layout"
-                  >
-                    Set as default
-                  </Button>
-                </div>
+                </section>
 
-                {/* studio visuals — statues, scientists, landmarks… layered behind the poster */}
-                {visuals.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[10px] font-semibold text-muted-foreground">Visual</span>
-                    <button
-                      type="button"
-                      onClick={() => setVisualUrl(null)}
-                      aria-pressed={visualUrl === null}
-                      className={cn(
-                        'rounded-lg px-2 py-1 text-[11px] font-semibold transition-colors',
-                        visualUrl === null ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground',
-                      )}
-                    >
-                      None
-                    </button>
-                    {visuals.map((v) => (
-                      <button
-                        key={v.id}
-                        type="button"
-                        onClick={() => setVisualUrl(visualUrl === v.url ? null : v.url)}
-                        aria-pressed={visualUrl === v.url}
-                        title={`${v.label} (${v.category})`}
-                        className={cn(
-                          'h-9 w-9 overflow-hidden rounded-lg border-2 bg-cover bg-center transition-transform',
-                          visualUrl === v.url ? 'border-primary scale-110' : 'border-border hover:scale-105',
-                        )}
-                        style={{ backgroundImage: `url(${v.url})` }}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {/* content editing */}
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <div className="sm:col-span-2">
-                    <Label className="text-[10px] text-muted-foreground">Title</Label>
-                    <Input
-                      className="h-8 text-xs" dir="auto"
-                      value={String(activeOverrides.title ?? activePost.title ?? '')}
-                      onChange={(e) => setOverride('title', e.target.value)}
-                    />
-                  </div>
-                  {activePost.template === 'deadline' && (
+                <section className="space-y-2 border-t pt-3">
+                  <div className="flex flex-wrap items-center gap-3">
                     <div>
-                      <Label className="text-[10px] text-muted-foreground">Deadline date</Label>
-                      <Input
-                        type="date" className="h-8 text-xs"
-                        value={String(activeOverrides.deadlineDate ?? activePost.opp?.deadline ?? '')}
-                        onChange={(e) => setOverride('deadlineDate', e.target.value)}
-                      />
-                    </div>
-                  )}
-                  {(activePost.template === 'tip' || activePost.template === 'news' || activePost.template === 'promo'
-                    || activePost.template === 'teaser' || activePost.template === 'greeting'
-                    || activePost.template === 'hiring' || activePost.template === 'packages'
-                    || activePost.template === 'follow' || activePost.template === 'pick'
-                    || activePost.template === 'day') && (
-                    <div className="sm:col-span-2">
-                      <Label className="text-[10px] text-muted-foreground">Note</Label>
-                      <Input
-                        className="h-8 text-xs" dir="auto"
-                        value={String(activeOverrides.note ?? activePost.meta ?? '')}
-                        onChange={(e) => setOverride('note', e.target.value)}
-                      />
-                    </div>
-                  )}
-                  {(activePost.template === 'hiring' || activePost.template === 'pick') && (
-                    <div className="sm:col-span-2">
-                      <Label className="text-[10px] text-muted-foreground">
-                        {activePost.template === 'pick' ? 'Side tiles (comma-separated, max 2)' : 'Callouts (comma-separated)'}
-                      </Label>
-                      <Input
-                        className="h-8 text-xs" dir="auto"
-                        placeholder={activePost.template === 'pick' ? 'وظایف, بورسیه‌ها' : 'Graphic Designer, Kabul office'}
-                        value={Array.isArray(activeOverrides.callouts) ? (activeOverrides.callouts as unknown[]).map(String).join(', ') : ''}
-                        onChange={(e) => setOverride('callouts', e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
-                      />
-                    </div>
-                  )}
-                  {activePost.template === 'day' && (
-                    <div className="sm:col-span-2 grid grid-cols-2 gap-2">
-                      <Input
-                        className="h-8 text-xs" dir="auto"
-                        placeholder="Badge (e.g. ۱۴ ژوئن)"
-                        value={String(activeOverrides.badgeBig ?? '')}
-                        onChange={(e) => setOverride('badgeBig', e.target.value)}
-                      />
-                      <Input
-                        className="h-8 text-xs" dir="auto"
-                        placeholder="Badge small (e.g. Mother's Day)"
-                        value={String(activeOverrides.badgeSmall ?? '')}
-                        onChange={(e) => setOverride('badgeSmall', e.target.value)}
-                      />
-                    </div>
-                  )}
-                  {activePost.template === 'packages' && (
-                    <>
-                      {(['p1', 'p2'] as const).map((slot) => (
-                        <div key={slot} className="sm:col-span-2 grid grid-cols-2 gap-2">
-                          <Input
-                            className="h-8 text-xs" dir="ltr"
-                            placeholder={`Card ${slot === 'p1' ? '1' : '2'} value (e.g. ۲۰۰۰+)`}
-                            value={String(activeOverrides[`${slot}Value`] ?? '')}
-                            onChange={(e) => setOverride(`${slot}Value`, e.target.value)}
+                      <p className="mb-1 text-[10px] font-semibold text-muted-foreground">Theme</p>
+                      <div className="flex items-center gap-1.5" role="group" aria-label="Theme">
+                        {STUDIO_THEME_LIST.map((th) => (
+                          <button
+                            key={th.id}
+                            type="button"
+                            onClick={() => setThemeId(th.id)}
+                            aria-pressed={themeId === th.id}
+                            title={th.label}
+                            className={cn(
+                              'h-8 w-8 rounded-full border-2 transition-transform',
+                              themeId === th.id ? 'scale-110 border-primary' : 'border-border hover:scale-105',
+                            )}
+                            style={{ background: `linear-gradient(135deg, ${th.bgMid} 0%, ${th.bgBottom} 60%, ${th.accent} 130%)` }}
                           />
-                          <Input
-                            className="h-8 text-xs" dir="auto"
-                            placeholder={`Card ${slot === 'p1' ? '1' : '2'} label`}
-                            value={String(activeOverrides[`${slot}Label`] ?? '')}
-                            onChange={(e) => setOverride(`${slot}Label`, e.target.value)}
-                          />
-                        </div>
-                      ))}
-                    </>
-                  )}
-                  {activePost.template === 'promo' && (
-                    <div className="sm:col-span-2 grid gap-2">
-                      {[0, 1, 2].map((i) => {
-                        const items = Array.isArray(activeOverrides.items) ? (activeOverrides.items as unknown[]).map(String) : [];
-                        return (
-                          <Input
-                            key={i}
-                            className="h-8 text-xs" dir="auto"
-                            placeholder={`Checklist item ${i + 1}`}
-                            value={items[i] ?? ''}
-                            onChange={(e) => {
-                              const next = [...items];
-                              while (next.length < 3) next.push('');
-                              next[i] = e.target.value;
-                              setOverride('items', next);
-                            }}
-                          />
-                        );
-                      })}
+                        ))}
+                      </div>
                     </div>
-                  )}
-                  {activePost.template === 'stat' && (
-                    <>
-                      <div>
-                        <Label className="text-[10px] text-muted-foreground">Stat value</Label>
-                        <Input
-                          className="h-8 text-xs" dir="ltr"
-                          value={String(activeOverrides.statValue ?? '')}
-                          onChange={(e) => setOverride('statValue', e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-[10px] text-muted-foreground">Stat label</Label>
-                        <Input
-                          className="h-8 text-xs" dir="auto"
-                          value={String(activeOverrides.statLabel ?? '')}
-                          onChange={(e) => setOverride('statLabel', e.target.value)}
-                        />
-                      </div>
-                    </>
-                  )}
-                  {activePost.template === 'story' && (
-                    <>
-                      <div>
-                        <Label className="text-[10px] text-muted-foreground">Person name</Label>
-                        <Input
-                          className="h-8 text-xs" dir="auto"
-                          value={String(activeOverrides.personName ?? activePost.meta ?? '')}
-                          onChange={(e) => setOverride('personName', e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-[10px] text-muted-foreground">Person detail</Label>
-                        <Input
-                          className="h-8 text-xs" dir="auto"
-                          value={String(activeOverrides.personMeta ?? '')}
-                          onChange={(e) => setOverride('personMeta', e.target.value)}
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
 
-                <div className="flex flex-wrap items-center gap-1.5">
+                    {!activeFamily.premium ? (
+                      <div className="min-w-0 flex-1">
+                        <p className="mb-1 text-[10px] font-semibold text-muted-foreground">Classic layout</p>
+                        <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Layout">
+                          {LAYOUTS.map((l) => (
+                            <button
+                              key={l.id}
+                              type="button"
+                              onClick={() => setLayout(l.id)}
+                              aria-pressed={layout === l.id}
+                              className={cn(
+                                'rounded-lg px-2.5 py-1.5 text-[10px] font-semibold transition-colors',
+                                layout === l.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground',
+                              )}
+                            >
+                              {l.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="min-w-[180px] flex-1 rounded-lg border bg-muted/20 px-3 py-2">
+                        <p className="text-[10px] font-bold">Art-directed composition</p>
+                        <p className="mt-0.5 text-[9px] text-muted-foreground">
+                          This premium family controls its own composition instead of creating meaningless layout combinations.
+                        </p>
+                      </div>
+                    )}
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 gap-1 text-[10px]"
+                      disabled={savingDesign}
+                      onClick={setAutomationDefault}
+                      title="Automated classic posts will use this theme + layout"
+                    >
+                      Set classic default
+                    </Button>
+                  </div>
+                </section>
+
+                <section className="space-y-2 border-t pt-3">
+                  <div>
+                    <p className="text-xs font-bold">Content</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      Source content remains unchanged; these are design-only overrides.
+                    </p>
+                  </div>
+                  {templateDefinition ? (
+                    <StudioFieldsEditor
+                      fields={templateDefinition.fields.filter((field) => {
+                        if (activeFamily.premium) return true;
+                        return !['eyebrow', 'subheadline', 'badge', 'ctaLabel', 'accentText', 'showFooter', 'showQr', 'fundingStatus', 'degreeLevel'].includes(field.id);
+                      })}
+                      values={activeOverrides}
+                      defaults={editorDefaults}
+                      onChange={setOverride}
+                    />
+                  ) : null}
+                </section>
+
+                <section className="border-t pt-3">
+                  <StudioMediaEditor
+                    family={activeFamily}
+                    visuals={visuals}
+                    media={activeMedia}
+                    activeRole={mediaRole}
+                    onRoleChange={setMediaRole}
+                    onChange={(next) => setOverride('media', next)}
+                  />
+                  <div className="mt-3">
+                    <StudioAssetLibraryManager visuals={visuals} onChanged={loadVisuals} />
+                  </div>
+                </section>
+
+                <div className="flex flex-wrap items-center gap-1.5 border-t pt-3">
                   <Button size="sm" variant="outline" className="h-8 gap-1.5 px-2.5" disabled={savingDesign} onClick={saveDesign}>
                     {savingDesign ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Check className="h-3.5 w-3.5" aria-hidden="true" />}
-                    <span className="hidden sm:inline">Save design</span>
+                    Save design
                   </Button>
                   <Button size="sm" className="h-8 gap-1.5 px-2.5" disabled={publishingDesign} onClick={publishDesign}>
                     {publishingDesign ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Play className="h-3.5 w-3.5" aria-hidden="true" />}
-                    <span className="hidden sm:inline">Design → publish now</span>
+                    Design → publish now
                   </Button>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5">
                   <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-2.5" onClick={copyCaption}>
                     {copiedKey === activePost.key ? <Check className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}
                     <span className="hidden sm:inline">{t('admin.studio.copy')}</span>
@@ -1035,19 +1069,23 @@ export function BrandStudioPanel() {
                   </Button>
                 </div>
               </div>
-              <textarea
-                dir="auto"
-                value={activeCaption}
-                onChange={(e) =>
-                  activePost &&
-                  setCaptionOverrides((prev) => ({
-                    ...prev,
-                    [activePost.key]: { caption: e.target.value, source: 'manual' },
-                  }))
-                }
-                rows={6}
-                className="max-h-52 min-h-[120px] w-full resize-y overflow-y-auto whitespace-pre-wrap bg-transparent px-4 py-3 font-sans text-[13px] leading-relaxed outline-none"
-              />
+
+              <div className="border-t">
+                <div className="px-4 pt-3 text-[10px] font-semibold text-muted-foreground">Caption</div>
+                <textarea
+                  dir="auto"
+                  value={activeCaption}
+                  onChange={(e) =>
+                    activePost &&
+                    setCaptionOverrides((prev) => ({
+                      ...prev,
+                      [activePost.key]: { caption: e.target.value, source: 'manual' },
+                    }))
+                  }
+                  rows={6}
+                  className="max-h-52 min-h-[120px] w-full resize-y overflow-y-auto whitespace-pre-wrap bg-transparent px-4 py-3 font-sans text-[13px] leading-relaxed outline-none"
+                />
+              </div>
             </div>
           ) : null}
         </div>
@@ -1263,115 +1301,5 @@ function captionInputFor(post: PlanPost, lang: Lang, loc: Loc, tr: Tr): CaptionI
     case 'pick':
     case 'day':
       return { template: post.template, lang, title: post.title, note: post.meta };
-  }
-}
-
-/** SocialCanvas props for a non-spotlight post. */
-function socialPropsFor(
-  post: PlanPost,
-  lang: Lang,
-  size: PosterSize,
-  qrDataUrl: string | null,
-  loc: Loc,
-  tr: Tr,
-  design?: {
-    themeId: StudioThemeId;
-    layout: StudioLayout;
-    overrides: Record<string, unknown>;
-    visualUrl?: string | null;
-  },
-): Parameters<typeof SocialCanvas>[0] {
-  const o = design?.overrides ?? {};
-  const title = typeof o.title === 'string' && o.title.trim() ? o.title : post.title;
-  const noteOverride = typeof o.note === 'string' && o.note.trim() ? o.note : null;
-  const deadlineOverride = typeof o.deadlineDate === 'string' && o.deadlineDate ? o.deadlineDate : null;
-  const base = {
-    template: post.template, lang, size, qrDataUrl,
-    themeId: design?.themeId, layout: design?.layout, title,
-    visualUrl: design?.visualUrl ?? null,
-  };
-  switch (post.template) {
-    case 'deadline':
-      return {
-        ...base,
-        deadlineDate: deadlineOverride ?? post.opp?.deadline ?? null,
-        note: noteOverride ?? ([post.opp?.organization, post.opp?.country].filter(Boolean).join(' • ') || undefined),
-      };
-    case 'tip':
-      return { ...base, seriesNo: post.seriesNo ?? 1, note: noteOverride ?? undefined };
-    case 'quote':
-      return base;
-    case 'promo':
-      return {
-        ...base,
-        checklist: [tr('social.post.promoCheck1'), tr('social.post.promoCheck2'), tr('social.post.promoCheck3')],
-      };
-    case 'news':
-      return { ...base, note: noteOverride ?? post.meta, newsDate: post.news?.publishedAt ?? null };
-    case 'stat':
-      return {
-        ...base,
-        stat: { value: post.stat?.value ?? '', label: tr(post.stat?.labelKey ?? ''), sub: tr(post.stat?.subKey ?? '') },
-      };
-    case 'packages': {
-      // Card 1 comes from the stat pool; card 2 is admin-entered (overrides).
-      const card1 = {
-        value: typeof o.p1Value === 'string' && o.p1Value.trim() ? o.p1Value : post.stat?.value ?? '',
-        label: typeof o.p1Label === 'string' && o.p1Label.trim() ? o.p1Label : post.stat ? tr(post.stat.labelKey) : '',
-        sub: typeof o.p1Sub === 'string' && o.p1Sub.trim() ? o.p1Sub : post.stat ? tr(post.stat.subKey) : undefined,
-      };
-      const card2 = {
-        value: typeof o.p2Value === 'string' ? o.p2Value : '',
-        label: typeof o.p2Label === 'string' ? o.p2Label : '',
-        sub: typeof o.p2Sub === 'string' && o.p2Sub.trim() ? o.p2Sub : undefined,
-      };
-      return {
-        ...base,
-        note: noteOverride ?? undefined,
-        packages: [card1, ...(card2.value || card2.label ? [card2] : [])],
-      };
-    }
-    case 'teaser':
-    case 'greeting':
-    case 'follow':
-      return { ...base, note: noteOverride ?? post.meta ?? undefined };
-    case 'pick': {
-      const callouts = Array.isArray(o.callouts)
-        ? (o.callouts as unknown[]).map(String).filter((s) => s.trim())
-        : [];
-      return { ...base, note: noteOverride ?? post.meta ?? undefined, checklist: callouts };
-    }
-    case 'day': {
-      const badgeBig = typeof o.badgeBig === 'string' && o.badgeBig.trim() ? o.badgeBig : '';
-      const badgeSmall = typeof o.badgeSmall === 'string' && o.badgeSmall.trim() ? o.badgeSmall : undefined;
-      return {
-        ...base,
-        note: noteOverride ?? post.meta ?? undefined,
-        dateBadge: badgeBig ? { big: badgeBig, small: badgeSmall } : undefined,
-      };
-    }
-    case 'hiring': {
-      const callouts = Array.isArray(o.callouts)
-        ? (o.callouts as unknown[]).map(String).filter((s) => s.trim())
-        : post.meta ? [post.meta] : [];
-      return { ...base, note: noteOverride ?? undefined, checklist: callouts };
-    }
-    case 'story': {
-      const personName = typeof o.personName === 'string' && o.personName.trim() ? o.personName : post.meta;
-      return {
-        ...base,
-        note: undefined,
-        person: personName
-          ? {
-              name: personName,
-              meta: typeof o.personMeta === 'string' && o.personMeta.trim()
-                ? o.personMeta
-                : [post.story?.program, post.story?.country].filter(Boolean).join(' • '),
-            }
-          : undefined,
-      };
-    }
-    default:
-      return base;
   }
 }
