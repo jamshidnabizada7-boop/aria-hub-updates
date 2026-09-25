@@ -22,6 +22,25 @@ export interface OpportunityDistributionOptions {
   repeatDays?: number;
 }
 
+export function opportunityDistributionCapacity(slots: string[], batchSize: number): number {
+  return Math.max(0, slots.length) * Math.max(1, Math.floor(batchSize || 1));
+}
+
+export function opportunityScheduleForIndex(
+  index: number,
+  slots: string[],
+  batchSize: number,
+): { slot: string; offsetMinutes: number } | null {
+  if (!slots.length || index < 0) return null;
+  const safeBatchSize = Math.max(1, Math.floor(batchSize || 1));
+  const batchIndex = Math.floor(index / safeBatchSize);
+  if (batchIndex >= slots.length) return null;
+  return {
+    slot: slots[batchIndex],
+    offsetMinutes: (index % safeBatchSize) * 2,
+  };
+}
+
 type Candidate = {
   slug: string;
   title: string;
