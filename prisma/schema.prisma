@@ -1256,6 +1256,7 @@ model PublishChannel {
   lastPublishedAt DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+  deliveries      SocialDelivery[]
 }
 
 model SocialPostQueue {
@@ -1280,10 +1281,38 @@ model SocialPostQueue {
   facebookGroupCampaigns    FacebookGroupCampaign[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  deliveries    SocialDelivery[]
 
   @@unique([contentRef, scheduledFor]) // a post can never be double-queued for a slot
   @@index([scheduledFor, status])
   @@index([status])
+}
+
+model SocialDelivery {
+  id            String         @id @default(cuid())
+  queueId       String
+  channelId     String
+  platform      String
+  status        String         @default("pending") // pending | publishing | published | retry_wait | failed | blocked | cancelled
+  attempts      Int            @default(0)
+  nextAttemptAt DateTime?
+  lastAttemptAt DateTime?
+  errorCode     String?
+  error         String?
+  externalId    String?
+  permalink     String?
+  publishedAt   DateTime?
+  metadata      Json?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  queue         SocialPostQueue @relation(fields: [queueId], references: [id], onDelete: Cascade)
+  channel       PublishChannel  @relation(fields: [channelId], references: [id], onDelete: Restrict)
+
+  @@unique([queueId, channelId])
+  @@index([queueId])
+  @@index([platform, status])
+  @@index([status, nextAttemptAt])
 }
 
 model StudioDesign {

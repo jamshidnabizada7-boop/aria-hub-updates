@@ -227,7 +227,15 @@ function Dashboard({ onNavigate }: { onNavigate: (key: string) => void }) {
   const cards = [
     { labelKey: 'admin.stat.services', value: stats.counts.services, icon: Briefcase, color: 'from-blue-500 to-blue-600' },
     { labelKey: 'admin.stat.visas', value: stats.counts.visas, icon: Plane, color: 'from-cyan-500 to-cyan-600' },
-    { labelKey: 'admin.stat.opportunities', value: stats.counts.opportunities, icon: GraduationCap, color: 'from-teal-500 to-teal-600' },
+    {
+      labelKey: 'admin.stat.opportunities',
+      value: stats.opportunityLifecycle?.activePublic ?? stats.counts.opportunities,
+      icon: GraduationCap,
+      color: 'from-teal-500 to-teal-600',
+      detail: stats.opportunityLifecycle
+        ? `${stats.opportunityLifecycle.total} total · ${stats.opportunityLifecycle.hiddenFromPublic} hidden`
+        : undefined,
+    },
     { labelKey: 'admin.stat.news', value: stats.counts.news, icon: Newspaper, color: 'from-amber-500 to-amber-600' },
     { labelKey: 'admin.stat.messages', value: stats.counts.contactMessages, icon: Mail, color: 'from-violet-500 to-violet-600', badge: stats.counts.newMessages > 0 ? t('admin.badge.new', { count: stats.counts.newMessages }) : undefined },
     { labelKey: 'admin.stat.subscribers', value: stats.counts.subscribers, icon: UserPlus, color: 'from-pink-500 to-pink-600' },
@@ -249,6 +257,9 @@ function Dashboard({ onNavigate }: { onNavigate: (key: string) => void }) {
             </div>
             <p className="mt-3 text-3xl font-black">{c.value}</p>
             <p className="text-xs text-muted-foreground">{t(c.labelKey)}</p>
+            {'detail' in c && c.detail ? (
+              <p className="mt-1 text-[10px] font-medium text-muted-foreground">{c.detail}</p>
+            ) : null}
           </div>
         ))}
       </div>

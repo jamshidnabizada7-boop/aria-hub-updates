@@ -24,9 +24,21 @@ import { join } from 'node:path';
 import os from 'node:os';
 import { db } from '@/lib/db';
 import { buildDailyPlan, type PlanPost } from '@/lib/social/plan';
+import {
+  buildOpportunityDistributionPlan,
+  DEFAULT_OPPORTUNITY_BATCH_SIZE,
+  DEFAULT_OPPORTUNITY_BATCH_TIMES_AFT,
+  DEFAULT_OPPORTUNITY_DAILY_TARGET,
+  DEFAULT_OPPORTUNITY_REPEAT_DAYS,
+} from '@/lib/social/opportunity-distribution';
+import {
+  opportunityDistributionCapacity,
+  opportunityScheduleForIndex,
+} from '@/lib/social/opportunity-distribution-schedule';
 import { buildCaption, type CaptionInput } from '@/lib/social/captions';
 import { publishToPlatform } from '@/lib/social/channels';
 import { notifyAdmin } from '@/lib/social/notify';
+import { ensureSocialDelivery, markDeliveryPublishing, markDeliveryResult } from '@/lib/social/delivery';
 import { decryptCredentials } from '@/lib/social/credentials';
 import { resolveExecutable } from '@/lib/import/scrapers/browser-fetch';
 import type { Lang } from '@/lib/i18n-config';
@@ -69,6 +81,11 @@ type AutomationStateShape = {
   tickRunning?: boolean;
   facebookGroupsEnabled?: boolean;
   facebookGroupPaused?: boolean;
+  opportunityOnlyAutomation?: boolean;
+  opportunityDailyTarget?: number;
+  opportunityBatchSize?: number;
+  opportunityRepeatDays?: number;
+  opportunityBatchTimes?: string[];
 };
 
 export async function getState(): Promise<AutomationStateShape> {
@@ -188,10 +205,11 @@ function captionInputOf(post: PlanPost, lang: Lang): CaptionInput {
 // ── 1. queue builder ─────────────────────────────────────────────────────────
 export async function buildTodaysQueue(): Promise<{ created: number }> {
   const state = await getState();
-  const todayUtc = new Date().toISOString().slice(0, 10);
-  if (state.lastQueueBuildDate === todayUtc) return { created: 0 };
+  const aftNow = new Date(Date.now() + AFT_OFFSET_MIN * 60000);
+  const todayAft = aftNow.toISOString().slice(0, 10);
+  if (state.lastQueueBuildDate === todayAft) return { created: 0 };
 
-  const slots = state.publishTimes?.length ? state.publishTimes : DEFAULT_SLOTS_AFT;
+  const opportunityOnly = state.opportunityOnlyAutomation !== false;
   const captionLangs: Lang[] = state.captionLangs?.length ? state.captionLangs : ['fa', 'ps', 'en'];
 
   // Studio defaults (theme/layout chosen in the Brand Studio apply to every
@@ -201,10 +219,35 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
     layout: state.studioLayout,
   };
 
-  // Deterministic plan — same order in every language (zip by index).
-  const plans = await Promise.all((['fa', 'ps', 'en'] as Lang[]).map((l) => buildDailyPlan(l)));
+  const langs = ['fa', 'ps', 'en'] as Lang[];
+  let slots: string[];
+  let batchSize = 1;
+  let plans: { posts: PlanPost[] }[];
+
+  if (opportunityOnly) {
+    slots = state.opportunityBatchTimes?.length
+      ? state.opportunityBatchTimes
+      : DEFAULT_OPPORTUNITY_BATCH_TIMES_AFT;
+    batchSize = Math.min(10, Math.max(1, state.opportunityBatchSize ?? DEFAULT_OPPORTUNITY_BATCH_SIZE));
+    const configuredTarget = Math.min(50, Math.max(1, state.opportunityDailyTarget ?? DEFAULT_OPPORTUNITY_DAILY_TARGET));
+    const capacity = opportunityDistributionCapacity(slots, batchSize);
+    const target = Math.min(configuredTarget, capacity);
+    const repeatDays = Math.min(90, Math.max(1, state.opportunityRepeatDays ?? DEFAULT_OPPORTUNITY_REPEAT_DAYS));
+
+    const opportunityPlans = await Promise.all(
+      langs.map((lang) => buildOpportunityDistributionPlan(lang, { target, repeatDays })),
+    );
+    plans = opportunityPlans.map((posts) => ({ posts }));
+  } else {
+    slots = state.publishTimes?.length ? state.publishTimes : DEFAULT_SLOTS_AFT;
+    plans = await Promise.all(langs.map((lang) => buildDailyPlan(lang)));
+  }
+
   const base = plans[0];
-  if (!base || base.posts.length === 0) return { created: 0 };
+  if (!base || base.posts.length === 0) {
+    await patchState({ lastQueueBuildDate: todayAft });
+    return { created: 0 };
+  }
 
   // Per-post designs saved from the Brand Studio override the defaults.
   type StudioDesignRow = {
@@ -212,7 +255,7 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
     size: string; overrides: unknown; captionOverride: unknown;
   };
   const designs = (await db.studioDesign
-    .findMany({ where: { forDate: todayUtc } })
+    .findMany({ where: { forDate: todayAft } })
     .catch(() => [] as StudioDesignRow[])) as StudioDesignRow[];
   const designByRef = new Map<string, StudioDesignRow>(designs.map((d) => [d.contentRef, d]));
 
@@ -222,25 +265,27 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
   }[] = [];
 
   base.posts.forEach((post, idx) => {
-    const slot = slots[idx % slots.length];
-    // Today's slots that already passed stay today (publish tick picks them up
-    // immediately); future ones wait. Rows for the whole day are created at once.
-    const scheduledFor = aftSlotToUtc(slot);
+    const opportunitySchedule = opportunityOnly
+      ? opportunityScheduleForIndex(idx, slots, batchSize)
+      : { slot: slots[idx % slots.length], offsetMinutes: 0 };
+    if (!opportunitySchedule) return;
+    const scheduledFor = new Date(
+      aftSlotToUtc(opportunitySchedule.slot).getTime() + opportunitySchedule.offsetMinutes * 60000,
+    );
+
     const captions: Record<string, string> = {};
-    (['fa', 'ps', 'en'] as Lang[]).forEach((l, li) => {
+    langs.forEach((lang, li) => {
       const p = plans[li]?.posts[idx];
-      if (p) captions[l] = p.caption;
+      if (p) captions[lang] = p.caption;
     });
-    // primary canvas language: first captionLang (fa default)
+
     const primary: Lang = captionLangs[0] ?? 'fa';
-    const primaryIdx = (['fa', 'ps', 'en'] as Lang[]).indexOf(primary);
+    const primaryIdx = langs.indexOf(primary);
     const primaryPost = plans[primaryIdx]?.posts[idx] ?? post;
     const ref = post.opp?.slug ?? post.news?.slug ?? post.idea?.id ?? post.story?.id ?? post.stat?.labelKey ?? null;
-    if (ref && designByRef.has(ref)) {
-      // A saved StudioDesign owns this post's queue row for today (created via
-      // the studio save flow) — building the plan row as well would double-post.
-      return;
-    }
+
+    if (ref && designByRef.has(ref)) return;
+
     rows.push({
       scheduledFor,
       templateType: post.template,
@@ -250,15 +295,30 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
     });
   });
 
-  // skipDuplicates + the (contentRef, scheduledFor) unique index make the
-  // build idempotent even if two ticks race past the daily cursor check.
   const res = await db.socialPostQueue.createMany({ data: rows, skipDuplicates: true });
-  await patchState({ lastQueueBuildDate: todayUtc });
-  void res;
-  return { created: rows.length };
+  await patchState({ lastQueueBuildDate: todayAft });
+  return { created: res.count };
 }
 
 // ── 2. renderer (playwright screenshots the CODE template) ──────────────────
+async function verifyPublicImageUrl(url: string): Promise<boolean> {
+  try {
+    const head = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+    const type = head.headers.get('content-type') || '';
+    if (head.ok && type.startsWith('image/')) return true;
+
+    const get = await fetch(url, {
+      method: 'GET',
+      cache: 'no-store',
+      headers: { Range: 'bytes=0-32' },
+    });
+    const getType = get.headers.get('content-type') || '';
+    return get.ok && getType.startsWith('image/');
+  } catch {
+    return false;
+  }
+}
+
 async function renderQueueImage(baseUrl: string, props: CanvasProps): Promise<{ file: string; publicUrl: string; localPath: string | null } | null> {
   // Chrome resolution order: env override → known local installs (self-host /
   // workstation) → @sparticuz/chromium (serverless bundle for Vercel). Without
@@ -298,15 +358,32 @@ async function renderQueueImage(baseUrl: string, props: CanvasProps): Promise<{ 
     const buf = await readFile(shotPath).catch(() => null);
     if (!buf) return null;
 
-    // Public URL: Vercel Blob when configured (serverless FS is ephemeral —
-    // files under public/ are not served). Self-host keeps the local flow.
+    // Prefer durable object storage on EVERY host when configured. A separate
+    // worker (for example Oracle VM) must not fabricate a myariahub.com URL for
+    // a file that only exists on its local filesystem.
     if (process.env.BLOB_READ_WRITE_TOKEN) {
       try {
         const { put } = await import('@vercel/blob');
         const blob = await put(`generated-posts/${file}`, buf, { access: 'public', addRandomSuffix: false });
+        if (!(await verifyPublicImageUrl(blob.url))) {
+          console.error('[render] blob uploaded but public verification failed:', blob.url);
+          return null;
+        }
         return { file, publicUrl: blob.url, localPath: null };
-      } catch { /* blob failed → try local persistence below */ }
+      } catch (e) {
+        console.error('[render] blob upload failed:', e instanceof Error ? e.message : String(e));
+        return null;
+      }
     }
+
+    // Vercel is always ephemeral. External workers can opt into the same hard
+    // requirement with SOCIAL_REQUIRE_DURABLE_MEDIA=1.
+    if (process.env.VERCEL || process.env.SOCIAL_REQUIRE_DURABLE_MEDIA === '1') {
+      console.error('[render] durable media unavailable: BLOB_READ_WRITE_TOKEN is required');
+      return null;
+    }
+
+    // Persistent/self-hosted deployments may serve files written under public/.
     await writeFile(join(PUBLIC_DIR, file), buf);
     return { file, publicUrl: `${PUBLIC_BASE}/${file}`, localPath: join(PUBLIC_DIR, file) };
   } catch (e) {
@@ -364,20 +441,37 @@ export async function renderDueQueue(baseUrl: string, limit = 2): Promise<{ rend
   return { rendered };
 }
 
-/** Render (or re-render) ONE queue row's image and mark it ready. */
+/** Render (or re-render) ONE queue row's image and mark it ready.
+ *
+ * The claim is compare-and-swap just like publishing. This matters now that a
+ * persistent social worker can run beside the legacy tick/backstop: only one
+ * process may launch Chromium for a given queue row.
+ */
 export async function renderOneQueueRow(id: string, baseUrl = 'http://127.0.0.1:3000'): Promise<boolean> {
   const row = await db.socialPostQueue.findUnique({ where: { id } });
   if (!row) return false;
   // Re-check memory right before launching chrome — a compile wave may have
   // started between the tick's gate and this call.
   if (!process.env.VERCEL && Math.floor(os.freemem() / 1024 / 1024) < 900) return false;
-  await db.socialPostQueue.update({ where: { id }, data: { status: 'rendering', claimedAt: new Date() } });
+
+  const claim = await db.socialPostQueue.updateMany({
+    where: {
+      id,
+      status: { in: ['pending', 'failed'] },
+      imageStatus: { not: 'ready' },
+    },
+    data: { status: 'rendering', claimedAt: new Date() },
+  });
+  if (claim.count === 0) return false;
+
   const img = await renderQueueImage(baseUrl, row.contentJson as CanvasProps);
   await db.socialPostQueue.update({
     where: { id },
     data: {
-      status: 'ready',
+      status: img ? 'ready' : 'failed',
       imageStatus: img ? 'ready' : 'failed',
+      claimedAt: null,
+      error: img ? null : 'media render/upload failed — opportunity posts will not publish without a durable image',
       ...(img ? { imagePaths: { square: img.publicUrl, ...(img.localPath ? { local: img.localPath } : {}) } } : {}),
     },
   });
@@ -436,7 +530,15 @@ export async function publishDueQueue(limit = 2): Promise<{ published: number; f
   const due = await db.socialPostQueue.findMany({
     // 'partial' rows are retried per-channel (channels already ok are skipped
     // below), so they are due again — they used to be frozen forever.
-    where: { status: { in: ['ready', 'failed', 'partial'] }, scheduledFor: { lte: new Date() }, attempts: { lt: 3 } },
+    where: {
+      status: { in: ['ready', 'failed', 'partial'] },
+      scheduledFor: { lte: new Date() },
+      attempts: { lt: 3 },
+      OR: [
+        { imageStatus: 'ready' },
+        { templateType: { notIn: ['spotlight', 'deadline'] } },
+      ],
+    },
     orderBy: { scheduledFor: 'asc' },
     take: limit,
   });
@@ -457,19 +559,40 @@ export async function publishDueQueue(limit = 2): Promise<{ published: number; f
     if (claim.count === 0) continue; // another worker claimed it first
 
     const prevResults = (row.results ?? {}) as Record<string, { ok?: boolean; error?: string }>;
+    const prevExternal = (row.externalIds ?? {}) as Record<string, { id?: string | null; permalink?: string | null }>;
     const results: Record<string, { ok: boolean; error?: string; downgraded?: string }> = {};
     const external: Record<string, { id: string | null; permalink: string | null }> = {};
     let anyOk = false;
     let tokenExpiredChannel: string | null = null;
 
     for (const ch of channels) {
-      // Per-channel retry: channels that already succeeded in an earlier run
-      // must NOT be posted to again (that's how partial rows froze/duplicated).
-      if (prevResults[ch.platform]?.ok) {
+      const legacyOk = Boolean(prevResults[ch.platform]?.ok);
+      const delivery = await ensureSocialDelivery(
+        row.id,
+        ch,
+        legacyOk,
+        prevExternal[ch.platform],
+      );
+
+      // Per-channel idempotency: a successful delivery is never sent again.
+      if (legacyOk || delivery.status === 'published') {
         results[ch.platform] = { ok: true };
         anyOk = true;
         continue;
       }
+
+      // Respect delivery-specific backoff/terminal states.
+      if (delivery.status === 'blocked' || delivery.status === 'cancelled' || delivery.status === 'failed') {
+        results[ch.platform] = { ok: false, error: delivery.error ?? `${ch.platform}: delivery ${delivery.status}` };
+        continue;
+      }
+      if (delivery.status === 'retry_wait' && delivery.nextAttemptAt && delivery.nextAttemptAt > new Date()) {
+        results[ch.platform] = { ok: false, error: delivery.error ?? `${ch.platform}: retry scheduled` };
+        continue;
+      }
+
+      await markDeliveryPublishing(delivery.id);
+
       const caption = composeCaptionWithLimit(row.captionJson, langs, CAPTION_LIMITS[ch.platform] ?? 2200);
       const creds = decryptCredentials(ch.credentials);
       const r = await publishToPlatform(ch.platform, creds, {
@@ -477,7 +600,10 @@ export async function publishDueQueue(limit = 2): Promise<{ published: number; f
         imageUrl: images.square ?? null,
         imagePath: images.local ?? null,
         link: deepLinkOf(caption) || (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.myariahub.com'),
+        requireImage: ['spotlight', 'deadline'].includes(row.templateType),
       });
+      await markDeliveryResult(delivery.id, r, delivery.attempts);
+
       results[ch.platform] = { ok: r.ok, ...(r.error ? { error: r.error } : {}), ...(r.downgraded ? { downgraded: r.downgraded } : {}) };
       if (r.ok) {
         anyOk = true;
@@ -487,7 +613,6 @@ export async function publishDueQueue(limit = 2): Promise<{ published: number; f
           data: { lastStatus: 'ok', lastError: null, lastPublishedAt: new Date() },
         });
       } else if (r.tokenExpired) {
-        // Dead token: disable the channel and alert — retrying for days is noise.
         tokenExpiredChannel = ch.platform;
         await db.publishChannel.update({
           where: { id: ch.id },
@@ -498,7 +623,9 @@ export async function publishDueQueue(limit = 2): Promise<{ published: number; f
           where: { id: ch.id },
           data: { lastStatus: 'error', lastError: r.error ?? 'unknown' },
         });
-        if (r.rateLimited) break; // platform-wide throttle — skip its remaining posts this run
+        // A rate limit belongs to this platform/delivery. Do not prevent
+        // Facebook/LinkedIn/etc. later in the loop from attempting their post.
+        if (r.rateLimited) continue;
       }
     }
 

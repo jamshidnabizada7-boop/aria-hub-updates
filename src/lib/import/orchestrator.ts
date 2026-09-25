@@ -17,7 +17,7 @@
  *   - Sanitized errors recorded in ImportRun.errors for the admin log viewer.
  */
 
-import type { PrismaClient, Prisma, OpportunityStatus } from '@prisma/client';
+import type { PrismaClient, Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { getScraper } from './registry';
 import { computeHash, findExisting } from './dedupe';
@@ -26,6 +26,7 @@ import { runAIPipeline, ensureUniqueSlug, makeSlug } from '@/lib/ai/pipeline';
 import { ReliefWebPendingError } from './scrapers/reliefweb';
 import { sanitizeError, slugify } from './utils';
 import type { RawListing, SourceHandle } from './types';
+import { resolveImportedOpportunityStatus } from './publication-policy';
 
 /** Safely convert a date string (ISO or parseable) to a Date object, or null. */
 function safeDate(input: string | null | undefined): Date | null {
@@ -443,13 +444,17 @@ async function processListing(
     logoUrl: logo.path || null,
     publishedDate: listing.publishedDate || null,  // String field in schema, no conversion needed
     canonicalUrl: listing.sourceUrl,
-    status: (source.autoPublish ? 'published' : 'draft') as OpportunityStatus,
     extractedData: listing.extractedData || {},
   };
 
   if (dedupe.action === 'update') {
-    // Update existing (preserve id, slug unless title changed)
-    const existing = await db.opportunity.findUnique({ where: { id: dedupe.existing.id }, select: { slug: true, title: true } });
+    // Update existing while preserving its moderation/publication lifecycle.
+    // A source with autoPublish=false must never demote a record that an admin
+    // or trusted source already published.
+    const existing = await db.opportunity.findUnique({
+      where: { id: dedupe.existing.id },
+      select: { slug: true, title: true, status: true },
+    });
     let newSlug = existing?.slug || slugBase;
     if (existing && slugify(listing.title) !== slugify(existing.title)) {
       newSlug = await ensureUniqueSlug(db, slugBase, dedupe.existing.id);
@@ -461,6 +466,11 @@ async function processListing(
         ...importFields,
         ...(categoryId ? { categoryId } : {}),
         slug: newSlug,
+        status: resolveImportedOpportunityStatus({
+          existingStatus: existing?.status ?? 'draft',
+          autoPublish: source.autoPublish,
+          deadline: importFields.deadline,
+        }),
         importStatus: 'updated',
       },
     });
@@ -472,6 +482,10 @@ async function processListing(
       data: {
         ...pipeline.data,
         ...importFields,
+        status: resolveImportedOpportunityStatus({
+          autoPublish: source.autoPublish,
+          deadline: importFields.deadline,
+        }),
         slug,
         sort: 0,
         categoryId,

@@ -7,6 +7,7 @@
     "postinstall": "prisma generate",
     "build": "next build && node -e \"const fs=require('fs'); if (fs.existsSync('.next/standalone')) { fs.cpSync('.next/static','.next/standalone/.next/static',{recursive:true}); fs.cpSync('public','.next/standalone/public',{recursive:true}); }\"",
     "start": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
+    "worker:social": "bun scripts/social-publish-worker.ts",
     "lint": "eslint .",
     "test": "bun test ./tests/",
     "db:push": "prisma db push",

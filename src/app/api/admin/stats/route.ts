@@ -31,6 +31,35 @@ export async function GET() {
   ]);
   const v = (i: number, fallback = 0) => counts[i].status === 'fulfilled' ? (counts[i] as PromiseFulfilledResult<number>).value : fallback;
 
+  const todayUtc = new Date();
+  todayUtc.setUTCHours(0, 0, 0, 0);
+
+  const [opportunityStatusGroups, activePublicOpportunities] = await Promise.all([
+    db.opportunity.groupBy({
+      by: ['status'],
+      _count: { _all: true },
+    }).catch(() => []),
+    db.opportunity.count({
+      where: {
+        status: 'published',
+        OR: [{ deadline: null }, { deadline: { gte: todayUtc } }],
+      },
+    }).catch(() => 0),
+  ]);
+  const opportunityByStatus = new Map(
+    opportunityStatusGroups.map((row) => [row.status, row._count._all] as const),
+  );
+  const totalOpportunities = v(2);
+  const opportunityLifecycle = {
+    total: totalOpportunities,
+    activePublic: activePublicOpportunities,
+    published: opportunityByStatus.get('published') ?? 0,
+    draft: opportunityByStatus.get('draft') ?? 0,
+    expired: opportunityByStatus.get('expired') ?? 0,
+    archived: opportunityByStatus.get('archived') ?? 0,
+    hiddenFromPublic: Math.max(0, totalOpportunities - activePublicOpportunities),
+  };
+
   const [newMessages, recentMessages, recentSubscribers] = await Promise.all([
     db.contactMessage.count({ where: { status: 'new' } }).catch(() => 0),
     db.contactMessage.findMany({ orderBy: { createdAt: 'desc' }, take: 5 }).catch(() => []),
@@ -74,6 +103,7 @@ export async function GET() {
   ]);
 
   return NextResponse.json({
+    opportunityLifecycle,
     counts: {
       services: v(0), visas: v(1), opportunities: v(2), news: v(3), testimonials: v(4),
       partners: v(5), galleryItems: v(6), paymentMethods: v(7), faqs: v(8), contactMessages: v(9),

@@ -2,8 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentAdmin } from '@/lib/admin-auth';
 import { db } from '@/lib/db';
 import { getState, patchState, DEFAULT_SLOTS_AFT, composeCaptionWithLimit, deepLinkOf } from '@/lib/social/publisher';
-import { publishToPlatform } from '@/lib/social/channels';
+import {
+  DEFAULT_OPPORTUNITY_BATCH_SIZE,
+  DEFAULT_OPPORTUNITY_BATCH_TIMES_AFT,
+  DEFAULT_OPPORTUNITY_DAILY_TARGET,
+  DEFAULT_OPPORTUNITY_REPEAT_DAYS,
+} from '@/lib/social/opportunity-distribution';
+import { checkPlatformConnection, publishToPlatform } from '@/lib/social/channels';
 import { decryptCredentials, encryptCredentials, maskCredentials } from '@/lib/social/credentials';
+import { ensureSocialDelivery, markDeliveryPublishing, markDeliveryResult } from '@/lib/social/delivery';
 import { getProviderHealth } from '@/lib/ai/failover';
 
 /**
@@ -81,18 +88,61 @@ export async function GET() {
   `;
   const counts = untranslated[0] ?? { opportunities: 0, news: 0 };
 
+  // Delivery tracking is additive. Gracefully return an empty list before the
+  // migration reaches an environment so the rest of Automation remains usable.
+  const deliveries = queue.length
+    ? await db.socialDelivery.findMany({
+        where: { queueId: { in: queue.map((row) => row.id) } },
+        select: {
+          id: true,
+          queueId: true,
+          platform: true,
+          status: true,
+          attempts: true,
+          errorCode: true,
+          error: true,
+          permalink: true,
+          publishedAt: true,
+          nextAttemptAt: true,
+        },
+        orderBy: [{ queueId: 'asc' }, { platform: 'asc' }],
+      }).catch(() => [])
+    : [];
+  const deliveriesByQueue = new Map<string, typeof deliveries>();
+  for (const delivery of deliveries) {
+    const list = deliveriesByQueue.get(delivery.queueId) ?? [];
+    list.push(delivery);
+    deliveriesByQueue.set(delivery.queueId, list);
+  }
+
   // Credentials NEVER leave the server — the panel gets "which fields are
   // configured" flags + public identifiers only.
-  const safeChannels = channels.map((ch) => ({
-    ...ch,
-    credentials: maskCredentials(ch.credentials),
-  }));
+  const safeChannels = channels.map((ch) => {
+    const credentials = maskCredentials(ch.credentials);
+    if (ch.platform === 'whatsapp' && !credentials.mode && typeof credentials.channelId === 'string') {
+      credentials.mode = 'channel';
+    }
+    return { ...ch, credentials };
+  });
 
   return NextResponse.json({
     ok: true,
-    state: { ...state, publishTimes: state.publishTimes?.length ? state.publishTimes : DEFAULT_SLOTS_AFT },
+    state: {
+      ...state,
+      publishTimes: state.publishTimes?.length ? state.publishTimes : DEFAULT_SLOTS_AFT,
+      opportunityOnlyAutomation: state.opportunityOnlyAutomation !== false,
+      opportunityDailyTarget: state.opportunityDailyTarget ?? DEFAULT_OPPORTUNITY_DAILY_TARGET,
+      opportunityBatchSize: state.opportunityBatchSize ?? DEFAULT_OPPORTUNITY_BATCH_SIZE,
+      opportunityRepeatDays: state.opportunityRepeatDays ?? DEFAULT_OPPORTUNITY_REPEAT_DAYS,
+      opportunityBatchTimes: state.opportunityBatchTimes?.length
+        ? state.opportunityBatchTimes
+        : DEFAULT_OPPORTUNITY_BATCH_TIMES_AFT,
+    },
     channels: safeChannels,
-    queue,
+    queue: queue.map((row) => ({
+      ...row,
+      deliveries: deliveriesByQueue.get(row.id) ?? [],
+    })),
     runs,
     untranslated: counts,
     aiProviders: getProviderHealth(),
@@ -128,6 +178,24 @@ export async function POST(req: NextRequest) {
         }
         if (typeof body.autoImport === 'boolean') patch.autoImport = body.autoImport;
         if (typeof body.autoPublish === 'boolean') patch.autoPublish = body.autoPublish;
+        if (typeof body.opportunityOnlyAutomation === 'boolean') {
+          patch.opportunityOnlyAutomation = body.opportunityOnlyAutomation;
+        }
+        if (body.opportunityDailyTarget !== undefined) {
+          patch.opportunityDailyTarget = Math.min(50, Math.max(1, Number(body.opportunityDailyTarget) || DEFAULT_OPPORTUNITY_DAILY_TARGET));
+        }
+        if (body.opportunityBatchSize !== undefined) {
+          patch.opportunityBatchSize = Math.min(10, Math.max(1, Number(body.opportunityBatchSize) || DEFAULT_OPPORTUNITY_BATCH_SIZE));
+        }
+        if (body.opportunityRepeatDays !== undefined) {
+          patch.opportunityRepeatDays = Math.min(90, Math.max(1, Number(body.opportunityRepeatDays) || DEFAULT_OPPORTUNITY_REPEAT_DAYS));
+        }
+        if (Array.isArray(body.opportunityBatchTimes)) {
+          const times = (body.opportunityBatchTimes as unknown[])
+            .map(String)
+            .filter((t) => /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(t));
+          if (times.length) patch.opportunityBatchTimes = [...new Set(times)].slice(0, 8).sort();
+        }
         if (typeof body.studioTheme === 'string' && body.studioTheme) patch.studioTheme = body.studioTheme;
         if (typeof body.studioLayout === 'string' && body.studioLayout) patch.studioLayout = body.studioLayout;
         const next = await patchState(patch);
@@ -166,18 +234,17 @@ export async function POST(req: NextRequest) {
         const ch = await db.publishChannel.findUnique({ where: { platform } });
         if (!ch) return NextResponse.json({ error: 'not_found' }, { status: 404 });
         const creds = decryptCredentials(ch.credentials);
-        // Honest test per platform: Instagram physically cannot post without
-        // an image, so a caption-only test there used to always "fail".
-        if (platform === 'instagram') {
-          const missing = ['igUserId', 'accessToken'].filter((k) => !String(creds[k] || ''));
-          return NextResponse.json({
-            ok: false,
-            error: missing.length
-              ? `instagram: missing ${missing.join('/')}`
-              : 'instagram: config present — Instagram needs a rendered image; use "Publish now" on a ready queue row to test end-to-end',
-            configOk: missing.length === 0,
+        // Facebook/Instagram "Test" is non-destructive: verify the configured
+        // identity/token without creating a real social post.
+        if (platform === 'facebook' || platform === 'instagram' || platform === 'linkedin' || platform === 'whatsapp') {
+          const check = await checkPlatformConnection(platform, creds);
+          await db.publishChannel.update({
+            where: { id: ch.id },
+            data: { lastStatus: check.ok ? 'ok' : 'error', lastError: check.ok ? null : check.error ?? 'failed' },
           });
+          return NextResponse.json(check);
         }
+
         const r = await publishToPlatform(platform, creds, {
           caption: 'ARIA HUB — test message from Brand Studio automation. ✅',
         });
@@ -203,6 +270,13 @@ export async function POST(req: NextRequest) {
           await renderOneQueueRow(row.id);
         }
         const fresh = await db.socialPostQueue.findUniqueOrThrow({ where: { id } });
+        const requiresImage = ['spotlight', 'deadline'].includes(fresh.templateType);
+        if (requiresImage && fresh.imageStatus !== 'ready') {
+          return NextResponse.json({
+            error: 'media_not_ready',
+            message: 'This opportunity post requires a rendered durable image before publishing.',
+          }, { status: 409 });
+        }
         const state = await getState();
         const channels = await db.publishChannel.findMany({ where: { enabled: true } });
         const langs = state.captionLangs?.length ? state.captionLangs : (['fa', 'ps', 'en'] as const);
@@ -215,7 +289,21 @@ export async function POST(req: NextRequest) {
         void external;
         let anyOk = Object.values(prevResults).some((r) => r.ok);
         for (const ch of channels) {
-          if (prevResults[ch.platform]?.ok) continue; // never double-post a channel
+          const legacyOk = Boolean(prevResults[ch.platform]?.ok);
+          const delivery = await ensureSocialDelivery(id, ch, legacyOk, external[ch.platform]);
+
+          if (legacyOk || delivery.status === 'published') {
+            results[ch.platform] = { ok: true };
+            anyOk = true;
+            continue;
+          }
+          if (['blocked', 'cancelled', 'failed'].includes(delivery.status) && body.force !== true) {
+            results[ch.platform] = { ok: false, error: delivery.error ?? `${ch.platform}: delivery ${delivery.status}` };
+            continue;
+          }
+
+          await markDeliveryPublishing(delivery.id);
+
           const caption = composeCaptionWithLimit(fresh.captionJson, [...langs], CAPTION_LIMITS[ch.platform] ?? 2200);
           const creds = decryptCredentials(ch.credentials);
           const r = await publishToPlatform(ch.platform, creds, {
@@ -223,11 +311,26 @@ export async function POST(req: NextRequest) {
             imageUrl: images.square ?? null,
             imagePath: images.local ?? null,
             link: deepLinkOf(caption) || (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.myariahub.com'),
+            requireImage: requiresImage,
           });
+          await markDeliveryResult(delivery.id, r, delivery.attempts);
+
           results[ch.platform] = { ok: r.ok, ...(r.error ? { error: r.error } : {}), ...(r.downgraded ? { downgraded: r.downgraded } : {}) };
           if (r.ok) {
             anyOk = true;
             external[ch.platform] = { id: r.id ?? null, permalink: r.permalink ?? null };
+            await db.publishChannel.update({
+              where: { id: ch.id },
+              data: { lastStatus: 'ok', lastError: null, lastPublishedAt: new Date() },
+            });
+          } else {
+            await db.publishChannel.update({
+              where: { id: ch.id },
+              data: { lastStatus: 'error', lastError: r.error ?? 'unknown' },
+            });
+            if (r.tokenExpired) {
+              await db.publishChannel.update({ where: { id: ch.id }, data: { enabled: false } });
+            }
           }
         }
         const mergedList = Object.values(results);

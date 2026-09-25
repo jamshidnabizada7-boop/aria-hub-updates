@@ -1,0 +1,25 @@
+[Unit]
+Description=ARIA HUB Social Publishing Worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ariahub
+WorkingDirectory=/opt/aria-hub
+Environment=NODE_ENV=production
+Environment=SOCIAL_REQUIRE_DURABLE_MEDIA=1
+EnvironmentFile=-/etc/aria-hub/social-worker.env
+ExecStart=/usr/local/bin/bun run worker:social
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+KillSignal=SIGTERM
+
+# Keep the worker isolated from the web process. Adjust only if the VM is small.
+MemoryMax=1800M
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

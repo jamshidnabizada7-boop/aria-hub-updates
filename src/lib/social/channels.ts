@@ -27,6 +27,8 @@ export interface PublishInput {
   imageUrl?: string | null; // public absolute URL
   imagePath?: string | null; // local FS path (server-side upload fallback)
   link?: string | null;
+  /** Opportunity automation requires a real media post; never silently downgrade. */
+  requireImage?: boolean;
 }
 
 export interface PublishResult {
@@ -46,7 +48,12 @@ const TIMEOUT_MS = 20000;
 /** IG containers can take ~15-30s to finish processing before media_publish. */
 const IG_STATUS_TIMEOUT_MS = 30000;
 
-async function safeFetch(url: string, init: RequestInit & { body?: BodyInit | undefined } = {}): Promise<{ ok: boolean; status: number; json: Record<string, unknown> | null; text: string }> {
+const rawMetaVersion = (process.env.META_GRAPH_VERSION || 'v26.0').trim();
+export const META_GRAPH_VERSION = rawMetaVersion.startsWith('v') ? rawMetaVersion : `v${rawMetaVersion}`;
+const graphUrl = (path: string) =>
+  `https://graph.facebook.com/${META_GRAPH_VERSION}/${path.replace(/^\/+/, '')}`;
+
+async function safeFetch(url: string, init: RequestInit & { body?: BodyInit | undefined } = {}): Promise<{ ok: boolean; status: number; json: Record<string, unknown> | null; text: string; headers: Headers }> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
@@ -54,7 +61,7 @@ async function safeFetch(url: string, init: RequestInit & { body?: BodyInit | un
     const text = await res.text();
     let json: Record<string, unknown> | null = null;
     try { json = JSON.parse(text); } catch { /* non-json */ }
-    return { ok: res.ok, status: res.status, json, text };
+    return { ok: res.ok, status: res.status, json, text, headers: res.headers };
   } finally {
     clearTimeout(t);
   }
@@ -65,7 +72,7 @@ const errOf = (e: unknown) => (e instanceof Error ? e.message : String(e)).slice
 /** Best-effort permalink lookup for a Graph-API post id. */
 async function graphPermalink(id: string, accessToken: string): Promise<string | null> {
   try {
-    const r = await safeFetch(`https://graph.facebook.com/v21.0/${encodeURIComponent(id)}?fields=permalink&access_token=${encodeURIComponent(accessToken)}`);
+    const r = await safeFetch(graphUrl(`${encodeURIComponent(id)}?fields=permalink&access_token=${encodeURIComponent(accessToken)}`));
     return (r.json as { permalink?: string } | null)?.permalink ?? null;
   } catch {
     return null;
@@ -114,6 +121,13 @@ async function publishTelegram(creds: Record<string, unknown>, input: PublishInp
       if (r.ok) return { ok: true, id: j?.result?.message_id ? String(j.result.message_id) : null };
       last = { ok: false, error: `telegram: ${r.status} sendPhoto failed` };
     }
+    if (input.requireImage && (input.imagePath || input.imageUrl)) {
+      return last ?? { ok: false, error: 'telegram: image required but photo publishing failed' };
+    }
+    if (input.requireImage && !input.imagePath && !input.imageUrl) {
+      return { ok: false, error: 'telegram: image required but no rendered media was provided' };
+    }
+
     const r2 = await safeFetch(api('sendMessage'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -140,7 +154,7 @@ async function publishFacebook(creds: Record<string, unknown>, input: PublishInp
   try {
     let photoError: string | null = null;
     if (input.imageUrl) {
-      const r = await safeFetch(`https://graph.facebook.com/v21.0/${pageId}/photos`, {
+      const r = await safeFetch(graphUrl(`${pageId}/photos`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: input.imageUrl, caption: input.caption.slice(0, 5000), access_token: accessToken }),
@@ -154,11 +168,16 @@ async function publishFacebook(creds: Record<string, unknown>, input: PublishInp
       const msg = (r.json as { error?: { message?: string } } | null)?.error?.message || r.text.slice(0, 160);
       if (cls.tokenExpired) return { ok: false, error: `facebook: token rejected — ${msg}`, tokenExpired: true };
       if (cls.rateLimited) return { ok: false, error: `facebook: rate limited — ${msg}`, rateLimited: true };
-      // Fall through to a text-only feed post, but SAY so — silent downgrades
-      // used to ship image-less posts with no trace.
+      if (input.requireImage) {
+        return { ok: false, error: `facebook: image publish failed — ${msg}`, ...cls };
+      }
+      // Editorial/manual text fallback remains available when the caller did
+      // not require media.
       photoError = msg;
+    } else if (input.requireImage) {
+      return { ok: false, error: 'facebook: image required but no rendered media was provided' };
     }
-    const r2 = await safeFetch(`https://graph.facebook.com/v21.0/${pageId}/feed`, {
+    const r2 = await safeFetch(graphUrl(`${pageId}/feed`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: input.caption.slice(0, 5000), link: input.link || undefined, access_token: accessToken }),
@@ -188,6 +207,9 @@ async function publishFacebook(creds: Record<string, unknown>, input: PublishInp
 // ── X (Twitter) — text-only v2 ───────────────────────────────────────────────
 async function publishX(creds: Record<string, unknown>, input: PublishInput): Promise<PublishResult> {
   const accessToken = String(creds.accessToken || '');
+  if (input.requireImage) {
+    return { ok: false, error: 'x: image-required opportunity publishing is not implemented for this connection' };
+  }
   if (!accessToken) return { ok: false, error: 'x: missing accessToken' };
   try {
     const r = await safeFetch('https://api.twitter.com/2/tweets', {
@@ -215,7 +237,7 @@ async function waitInstagramReady(creationId: string, accessToken: string): Prom
   const deadline = Date.now() + IG_STATUS_TIMEOUT_MS;
   while (Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, 3000));
-    const r = await safeFetch(`https://graph.facebook.com/v21.0/${encodeURIComponent(creationId)}?fields=status_code&access_token=${encodeURIComponent(accessToken)}`);
+    const r = await safeFetch(graphUrl(`${encodeURIComponent(creationId)}?fields=status_code&access_token=${encodeURIComponent(accessToken)}`));
     const code = (r.json as { status_code?: string } | null)?.status_code;
     if (code === 'FINISHED') return { ready: true };
     if (code === 'ERROR' || code === 'EXPIRED') return { ready: false, error: `instagram: container ${code}` };
@@ -230,7 +252,7 @@ async function publishInstagram(creds: Record<string, unknown>, input: PublishIn
   if (!igUserId || !accessToken) return { ok: false, error: 'instagram: missing igUserId/accessToken' };
   if (!input.imageUrl) return { ok: false, error: 'instagram: image required (render failed?)' };
   try {
-    const c = await safeFetch(`https://graph.facebook.com/v21.0/${igUserId}/media`, {
+    const c = await safeFetch(graphUrl(`${igUserId}/media`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ image_url: input.imageUrl, caption: input.caption.slice(0, 2200), access_token: accessToken }),
@@ -242,7 +264,7 @@ async function publishInstagram(creds: Record<string, unknown>, input: PublishIn
     }
     const wait = await waitInstagramReady(creationId, accessToken);
     if (!wait.ready) return { ok: false, error: wait.error };
-    const p = await safeFetch(`https://graph.facebook.com/v21.0/${igUserId}/media_publish`, {
+    const p = await safeFetch(graphUrl(`${igUserId}/media_publish`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ creation_id: creationId, access_token: accessToken }),
@@ -259,122 +281,245 @@ async function publishInstagram(creds: Record<string, unknown>, input: PublishIn
   }
 }
 
-// ── LinkedIn (official API — member or organization posts) ───────────────────
-// Credentials: { accessToken, authorUrn } — authorUrn is "urn:li:person:…" or
-// "urn:li:organization:…". Token comes from a LinkedIn developer app with the
-// "Share on LinkedIn" product; expires ~60 days → tokenExpired triggers the
-// standard reauthorization flow.
-
+// ── LinkedIn (current REST APIs — member or organization posts) ───────────────
+const LINKEDIN_VERSION = (process.env.LINKEDIN_API_VERSION || '202609').trim();
 const LINKEDIN_HEADERS = (accessToken: string): Record<string, string> => ({
   Authorization: `Bearer ${accessToken}`,
   'Content-Type': 'application/json',
   'X-Restli-Protocol-Version': '2.0.0',
-  'LinkedIn-Version': '202411',
+  'LinkedIn-Version': LINKEDIN_VERSION,
 });
 
-/** Normalize whatever the admin pasted into a proper LinkedIn URN.
- * Accepts: full URN, /in/slug profile URL, bare person slug, bare numeric org id. */
-function normalizeLinkedInUrn(raw: string): string {
+/**
+ * LinkedIn organization identifiers are numeric IDs, not public company slugs.
+ * Accept only a full person/organization URN or a bare numeric organization ID.
+ */
+export function normalizeLinkedInAuthorUrn(raw: string): string | null {
   const v = raw.trim();
-  if (v.startsWith('urn:li:')) return v;
-  const inMatch = v.match(/linkedin\.com\/(?:in|company)\/([^/?#]+)/i);
-  if (inMatch) return /company/i.test(v) ? 'urn:li:organization:' + inMatch[1] : 'urn:li:person:' + inMatch[1];
-  if (/^\d+$/.test(v)) return 'urn:li:organization:' + v;
-  return 'urn:li:person:' + v;
+  if (/^urn:li:(?:organization|person):[A-Za-z0-9_-]+$/.test(v)) return v;
+  if (/^\d+$/.test(v)) return `urn:li:organization:${v}`;
+  return null;
+}
+
+async function waitLinkedInImageAvailable(
+  imageUrn: string,
+  accessToken: string,
+): Promise<{ ready: boolean; error?: string }> {
+  for (let attempt = 0; attempt < 8; attempt++) {
+    if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, 1500));
+    const r = await safeFetch(
+      `https://api.linkedin.com/rest/images/${encodeURIComponent(imageUrn)}`,
+      { headers: LINKEDIN_HEADERS(accessToken) },
+    );
+    if (!r.ok) {
+      if (r.status === 401 || r.status === 403) {
+        return { ready: false, error: `linkedin: image status ${r.status} ${r.text.slice(0, 120)}` };
+      }
+      continue;
+    }
+    const status = String((r.json as { status?: string } | null)?.status || '');
+    if (status === 'AVAILABLE') return { ready: true };
+    if (status === 'PROCESSING_FAILED') {
+      return { ready: false, error: 'linkedin: image processing failed' };
+    }
+  }
+  return { ready: false, error: 'linkedin: image not AVAILABLE before timeout' };
 }
 
 async function publishLinkedIn(creds: Record<string, unknown>, input: PublishInput): Promise<PublishResult> {
   const accessToken = String(creds.accessToken || '');
-  const authorUrn = normalizeLinkedInUrn(String(creds.authorUrn || ''));
-  if (!accessToken || !authorUrn) return { ok: false, error: 'linkedin: missing accessToken/authorUrn' };
+  const rawAuthor = String(creds.authorUrn || creds.organizationId || '');
+  const authorUrn = normalizeLinkedInAuthorUrn(rawAuthor);
+
+  if (!accessToken) return { ok: false, error: 'linkedin: missing accessToken' };
+  if (!authorUrn) {
+    return {
+      ok: false,
+      error: 'linkedin: author must be a full person/organization URN or numeric organization ID; LinkedIn company URL slugs are not valid organization URNs',
+    };
+  }
+  if (input.requireImage && !input.imageUrl) {
+    return { ok: false, error: 'linkedin: image required but no durable image URL was provided' };
+  }
+
   try {
     let mediaUrn: string | null = null;
-    // Image post: register an upload asset, PUT the binary, reference the URN.
+
     if (input.imageUrl) {
-      const reg = await safeFetch('https://api.linkedin.com/v2/assets?action=registerUpload', {
+      const init = await safeFetch('https://api.linkedin.com/rest/images?action=initializeUpload', {
         method: 'POST',
         headers: LINKEDIN_HEADERS(accessToken),
         body: JSON.stringify({
-          registerUploadRequest: {
-            recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
-            owner: authorUrn,
-            serviceRelationships: [{ relationshipType: 'OWNER', identifier: 'urn:li:userGeneratedContent' }],
-          },
+          initializeUploadRequest: { owner: authorUrn },
         }),
       });
-      const rj = reg.json as { value?: { uploadUrl?: string; asset?: string } } | null;
-      const uploadUrl = rj?.value?.uploadUrl;
-      mediaUrn = rj?.value?.asset ?? null;
-      if (!reg.ok || !uploadUrl || !mediaUrn) {
-        const tokenExpired = reg.status === 401 || reg.status === 403;
-        return { ok: false, error: `linkedin: register upload ${reg.status} ${reg.text.slice(0, 120)}`, ...(tokenExpired ? { tokenExpired } : {}) };
+
+      const value = (init.json as {
+        value?: { uploadUrl?: string; image?: string };
+      } | null)?.value;
+      const uploadUrl = value?.uploadUrl;
+      mediaUrn = value?.image ?? null;
+
+      if (!init.ok || !uploadUrl || !mediaUrn) {
+        if (init.status === 429) {
+          return { ok: false, error: 'linkedin: image initialize rate limited', rateLimited: true };
+        }
+        if (init.status === 401 || init.status === 403) {
+          return {
+            ok: false,
+            error: `linkedin: image initialize ${init.status} ${init.text.slice(0, 160)}`,
+            tokenExpired: true,
+          };
+        }
+        return { ok: false, error: `linkedin: image initialize ${init.status} ${init.text.slice(0, 160)}` };
       }
-      const img = await fetch(input.imageUrl);
-      if (!img.ok) return { ok: false, error: `linkedin: image fetch ${img.status}` };
-      const buf = await img.arrayBuffer();
-      const up = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/octet-stream' },
-        body: Buffer.from(buf),
+
+      const imageFetch = await fetch(input.imageUrl, {
+        headers: { Accept: 'image/*' },
       });
-      if (!up.ok) return { ok: false, error: `linkedin: image upload ${up.status}` };
+      if (!imageFetch.ok) {
+        return { ok: false, error: `linkedin: image fetch ${imageFetch.status}` };
+      }
+      const contentType = imageFetch.headers.get('content-type') || 'image/png';
+      const bytes = await imageFetch.arrayBuffer();
+
+      const upload = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': contentType,
+        },
+        body: Buffer.from(bytes),
+      });
+      if (!upload.ok) {
+        return { ok: false, error: `linkedin: image upload ${upload.status}` };
+      }
+
+      const ready = await waitLinkedInImageAvailable(mediaUrn, accessToken);
+      if (!ready.ready) return { ok: false, error: ready.error || 'linkedin: image processing failed' };
     }
 
     const body: Record<string, unknown> = {
       author: authorUrn,
-      lifecycleState: 'PUBLISHED',
-      specificContent: {
-        'com.linkedin.ugc.ShareContent': {
-          shareCommentary: { text: input.caption.slice(0, 2900) },
-          shareMediaCategory: mediaUrn ? 'IMAGE' : 'NONE',
-          ...(mediaUrn
-            ? { media: [{ status: 'READY', media: mediaUrn, title: { text: 'ARIA HUB' } }] }
-            : {}),
-        },
+      commentary: input.caption.slice(0, 2900),
+      visibility: 'PUBLIC',
+      distribution: {
+        feedDistribution: 'MAIN_FEED',
+        targetEntities: [],
+        thirdPartyDistributionChannels: [],
       },
-      visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' },
+      ...(mediaUrn
+        ? {
+            content: {
+              media: {
+                id: mediaUrn,
+                title: 'ARIA HUB',
+              },
+            },
+          }
+        : {}),
+      lifecycleState: 'PUBLISHED',
+      isReshareDisabledByAuthor: false,
     };
-    const r = await safeFetch('https://api.linkedin.com/v2/ugcPosts', {
+
+    const r = await safeFetch('https://api.linkedin.com/rest/posts', {
       method: 'POST',
       headers: LINKEDIN_HEADERS(accessToken),
       body: JSON.stringify(body),
     });
+
     if (r.ok) {
-      const id = (r.json as { id?: string } | null)?.id ?? null;
-      return { ok: true, id, permalink: id ? `https://www.linkedin.com/feed/update/${id}` : null };
+      const id =
+        r.headers.get('x-restli-id') ||
+        (r.json as { id?: string } | null)?.id ||
+        null;
+      return {
+        ok: true,
+        id,
+        permalink: id ? `https://www.linkedin.com/feed/update/${encodeURIComponent(id)}` : null,
+      };
     }
     if (r.status === 429) return { ok: false, error: 'linkedin: 429 rate limited', rateLimited: true };
-    if (r.status === 401 || r.status === 403) return { ok: false, error: `linkedin: ${r.status} ${r.text.slice(0, 120)}`, tokenExpired: true };
-    return { ok: false, error: `linkedin: ${r.status} ${r.text.slice(0, 160)}` };
+    if (r.status === 401) {
+      return { ok: false, error: `linkedin: 401 ${r.text.slice(0, 160)}`, tokenExpired: true };
+    }
+    if (r.status === 403) {
+      return { ok: false, error: `linkedin: 403 permission denied ${r.text.slice(0, 160)}` };
+    }
+    return { ok: false, error: `linkedin: ${r.status} ${r.text.slice(0, 180)}` };
   } catch (e) {
     return { ok: false, error: `linkedin: ${errOf(e)}` };
   }
 }
 
-// ── WhatsApp Channel (Meta Cloud API — official Channels support) ────────────
-// Credentials: { accessToken, channelId } — channelId is the WhatsApp Channel
-// ID from a WhatsApp Business Account (Channels are one-way broadcasts).
-// NOTE: posting to WhatsApp GROUPS is not possible via any official API —
-// groups would require unofficial automation that violates WhatsApp ToS and
-// risks number bans. Use a Channel instead; share the channel link anywhere.
+
+// ── WhatsApp Business Platform ───────────────────────────────────────────────
+export type WhatsAppMode = 'individual' | 'group' | 'channel';
+
+export function resolveWhatsAppMode(creds: Record<string, unknown>): WhatsAppMode {
+  const explicit = String(creds.mode || '').trim().toLowerCase();
+  if (explicit === 'individual' || explicit === 'group' || explicit === 'channel') return explicit;
+  // Preserve old configurations honestly: the old UI stored channelId and
+  // incorrectly sent it through the 1:1 /messages endpoint.
+  if (creds.channelId) return 'channel';
+  if (creds.groupId) return 'group';
+  return 'individual';
+}
+
+function whatsappMessagePayload(
+  target: string,
+  input: PublishInput,
+  recipientType: 'individual' | 'group',
+): Record<string, unknown> {
+  const text = input.link ? `${input.caption}\n\n🔗 ${input.link}` : input.caption;
+  return {
+    messaging_product: 'whatsapp',
+    recipient_type: recipientType,
+    to: target,
+    type: input.imageUrl ? 'image' : 'text',
+    ...(input.imageUrl
+      ? { image: { link: input.imageUrl, caption: text.slice(0, 1000) } }
+      : { text: { preview_url: true, body: text.slice(0, 4000) } }),
+  };
+}
+
 async function publishWhatsApp(creds: Record<string, unknown>, input: PublishInput): Promise<PublishResult> {
   const accessToken = String(creds.accessToken || '');
   const phoneNumberId = String(creds.phoneNumberId || '');
-  const channelId = String(creds.channelId || '');
-  if (!accessToken || !phoneNumberId || !channelId) return { ok: false, error: 'whatsapp: missing accessToken/phoneNumberId/channelId' };
-  try {
-    const text = input.link ? `${input.caption}
+  const mode = resolveWhatsAppMode(creds);
 
-🔗 ${input.link}` : input.caption;
-    const body: Record<string, unknown> = {
-      messaging_product: 'whatsapp',
-      to: channelId,
-      type: input.imageUrl ? 'image' : 'text',
-      ...(input.imageUrl
-        ? { image: { link: input.imageUrl, caption: text.slice(0, 1000) } }
-        : { text: { preview_url: true, body: text.slice(0, 4000) } }),
+  if (!accessToken || !phoneNumberId) {
+    return { ok: false, error: 'whatsapp: missing accessToken/phoneNumberId' };
+  }
+  if (input.requireImage && !input.imageUrl) {
+    return { ok: false, error: 'whatsapp: image required but no durable image URL was provided' };
+  }
+
+  if (mode === 'channel') {
+    return {
+      ok: false,
+      error: 'whatsapp: Channel publishing is not supported by the configured official Business API connection; a WhatsApp Channel link/ID cannot be sent through /messages',
     };
-    const r = await safeFetch(`https://graph.facebook.com/v21.0/${encodeURIComponent(phoneNumberId)}/messages`, {
+  }
+
+  const target = mode === 'group'
+    ? String(creds.groupId || '')
+    : String(creds.recipient || creds.recipientPhone || '');
+  if (!target) {
+    return {
+      ok: false,
+      error: mode === 'group'
+        ? 'whatsapp: group mode requires groupId'
+        : 'whatsapp: individual mode requires recipient phone/WA ID',
+    };
+  }
+
+  try {
+    const endpoint = mode === 'group'
+      ? graphUrl(`${encodeURIComponent(phoneNumberId)}/group_messages`)
+      : graphUrl(`${encodeURIComponent(phoneNumberId)}/messages`);
+    const body = whatsappMessagePayload(target, input, mode === 'group' ? 'group' : 'individual');
+    const r = await safeFetch(endpoint, {
       method: 'POST',
       headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -385,13 +530,170 @@ async function publishWhatsApp(creds: Record<string, unknown>, input: PublishInp
       return { ok: true, id };
     }
     const cls = classifyGraph(r.json, r.status);
-    const hint = r.text.includes('does not exist')
-      ? ' (hint: phoneNumberId = your WhatsApp phone number ID from Meta Business; channelId = the API channel ID — the whatsapp.com/channel/ link id will NOT work)'
+    const raw = r.text.slice(0, 180);
+    const eligibilityHint = mode === 'group' && (r.status === 400 || r.status === 403)
+      ? ' (Groups API must be enabled for this WABA/phone number and the group must be an API-managed WhatsApp group)'
       : '';
-    return { ok: false, error: `whatsapp: ${r.status} ${r.text.slice(0, 140)}${hint}`, ...cls };
+    return {
+      ok: false,
+      error: `whatsapp: ${mode} ${r.status} ${raw}${eligibilityHint}`,
+      ...cls,
+    };
   } catch (e) {
     return { ok: false, error: `whatsapp: ${errOf(e)}` };
   }
+}
+
+
+export interface ConnectionCheckResult {
+  ok: boolean;
+  error?: string;
+  identity?: string;
+  details?: Record<string, string | number | boolean | null>;
+}
+
+async function checkFacebookConnection(creds: Record<string, unknown>): Promise<ConnectionCheckResult> {
+  const pageId = String(creds.pageId || '');
+  const accessToken = String(creds.accessToken || '');
+  if (!pageId || !accessToken) return { ok: false, error: 'facebook: missing pageId/accessToken' };
+
+  const r = await safeFetch(
+    graphUrl(`${encodeURIComponent(pageId)}?fields=id,name&access_token=${encodeURIComponent(accessToken)}`),
+  );
+  if (!r.ok) {
+    const cls = classifyGraph(r.json, r.status);
+    const msg = (r.json as { error?: { message?: string } } | null)?.error?.message || r.text.slice(0, 160);
+    return {
+      ok: false,
+      error: cls.tokenExpired ? `facebook: token rejected — ${msg}` : `facebook: ${r.status} ${msg}`,
+    };
+  }
+  const data = r.json as { id?: string; name?: string } | null;
+  return {
+    ok: true,
+    identity: data?.name || data?.id || pageId,
+    details: {
+      pageId: data?.id || pageId,
+      graphVersion: META_GRAPH_VERSION,
+    },
+  };
+}
+
+async function checkInstagramConnection(creds: Record<string, unknown>): Promise<ConnectionCheckResult> {
+  const igUserId = String(creds.igUserId || '');
+  const accessToken = String(creds.accessToken || '');
+  if (!igUserId || !accessToken) return { ok: false, error: 'instagram: missing igUserId/accessToken' };
+
+  const r = await safeFetch(
+    graphUrl(`${encodeURIComponent(igUserId)}?fields=id,username&access_token=${encodeURIComponent(accessToken)}`),
+  );
+  if (!r.ok) {
+    const cls = classifyGraph(r.json, r.status);
+    const msg = (r.json as { error?: { message?: string } } | null)?.error?.message || r.text.slice(0, 160);
+    return {
+      ok: false,
+      error: cls.tokenExpired ? `instagram: token rejected — ${msg}` : `instagram: ${r.status} ${msg}`,
+    };
+  }
+  const data = r.json as { id?: string; username?: string } | null;
+  return {
+    ok: true,
+    identity: data?.username ? `@${data.username}` : data?.id || igUserId,
+    details: {
+      igUserId: data?.id || igUserId,
+      graphVersion: META_GRAPH_VERSION,
+    },
+  };
+}
+
+async function checkWhatsAppConnection(creds: Record<string, unknown>): Promise<ConnectionCheckResult> {
+  const accessToken = String(creds.accessToken || '');
+  const phoneNumberId = String(creds.phoneNumberId || '');
+  const mode = resolveWhatsAppMode(creds);
+  if (!accessToken || !phoneNumberId) {
+    return { ok: false, error: 'whatsapp: missing accessToken/phoneNumberId' };
+  }
+
+  if (mode === 'channel') {
+    return {
+      ok: false,
+      error: 'whatsapp: this is configured as a Channel, but the official Business API connection used here does not expose Channel posting through /messages',
+      details: { mode, graphVersion: META_GRAPH_VERSION },
+    };
+  }
+
+  if (mode === 'individual') {
+    const recipient = String(creds.recipient || creds.recipientPhone || '');
+    if (!recipient) return { ok: false, error: 'whatsapp: individual mode requires recipient phone/WA ID' };
+    const r = await safeFetch(
+      graphUrl(`${encodeURIComponent(phoneNumberId)}?fields=id,display_phone_number,verified_name&access_token=${encodeURIComponent(accessToken)}`),
+    );
+    if (!r.ok) {
+      const cls = classifyGraph(r.json, r.status);
+      return {
+        ok: false,
+        error: cls.tokenExpired
+          ? 'whatsapp: access token rejected'
+          : `whatsapp: phone-number check ${r.status} ${r.text.slice(0, 140)}`,
+      };
+    }
+    const data = r.json as { display_phone_number?: string; verified_name?: string } | null;
+    return {
+      ok: true,
+      identity: data?.verified_name || data?.display_phone_number || phoneNumberId,
+      details: { mode, recipient, graphVersion: META_GRAPH_VERSION },
+    };
+  }
+
+  const groupId = String(creds.groupId || '');
+  if (!groupId) return { ok: false, error: 'whatsapp: group mode requires groupId' };
+  const r = await safeFetch(
+    graphUrl(`${encodeURIComponent(groupId)}?access_token=${encodeURIComponent(accessToken)}`),
+  );
+  if (!r.ok) {
+    const cls = classifyGraph(r.json, r.status);
+    return {
+      ok: false,
+      error: cls.tokenExpired
+        ? 'whatsapp: access token rejected'
+        : `whatsapp: group check ${r.status} ${r.text.slice(0, 140)} — Groups API must be enabled and this must be an API-managed group`,
+    };
+  }
+  return {
+    ok: true,
+    identity: groupId,
+    details: { mode, groupId, graphVersion: META_GRAPH_VERSION, groupsApi: true },
+  };
+}
+
+export async function checkPlatformConnection(
+  platform: string,
+  creds: Record<string, unknown>,
+): Promise<ConnectionCheckResult> {
+  if (platform === 'facebook') return checkFacebookConnection(creds);
+  if (platform === 'instagram') return checkInstagramConnection(creds);
+  if (platform === 'whatsapp') return checkWhatsAppConnection(creds);
+  if (platform === 'linkedin') {
+    const accessToken = String(creds.accessToken || '');
+    const authorUrn = normalizeLinkedInAuthorUrn(String(creds.authorUrn || creds.organizationId || ''));
+    if (!accessToken) return { ok: false, error: 'linkedin: missing accessToken' };
+    if (!authorUrn) {
+      return {
+        ok: false,
+        error: 'linkedin: enter a numeric organization ID or a full urn:li:organization / urn:li:person value',
+      };
+    }
+    return {
+      ok: true,
+      identity: authorUrn,
+      details: {
+        authorUrn,
+        linkedinVersion: LINKEDIN_VERSION,
+        note: 'Configuration format is valid. End-to-end permissions are verified by a queued media post.',
+      },
+    };
+  }
+  return { ok: false, error: `${platform}: non-posting connection check is not implemented yet` };
 }
 
 const ADAPTERS: Record<string, (creds: Record<string, unknown>, input: PublishInput) => Promise<PublishResult>> = {
