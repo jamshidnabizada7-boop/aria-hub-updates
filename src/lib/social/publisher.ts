@@ -436,14 +436,29 @@ export async function renderDueQueue(baseUrl: string, limit = 2): Promise<{ rend
   return { rendered };
 }
 
-/** Render (or re-render) ONE queue row's image and mark it ready. */
+/** Render (or re-render) ONE queue row's image and mark it ready.
+ *
+ * The claim is compare-and-swap just like publishing. This matters now that a
+ * persistent social worker can run beside the legacy tick/backstop: only one
+ * process may launch Chromium for a given queue row.
+ */
 export async function renderOneQueueRow(id: string, baseUrl = 'http://127.0.0.1:3000'): Promise<boolean> {
   const row = await db.socialPostQueue.findUnique({ where: { id } });
   if (!row) return false;
   // Re-check memory right before launching chrome — a compile wave may have
   // started between the tick's gate and this call.
   if (!process.env.VERCEL && Math.floor(os.freemem() / 1024 / 1024) < 900) return false;
-  await db.socialPostQueue.update({ where: { id }, data: { status: 'rendering', claimedAt: new Date() } });
+
+  const claim = await db.socialPostQueue.updateMany({
+    where: {
+      id,
+      status: { in: ['pending', 'failed'] },
+      imageStatus: { not: 'ready' },
+    },
+    data: { status: 'rendering', claimedAt: new Date() },
+  });
+  if (claim.count === 0) return false;
+
   const img = await renderQueueImage(baseUrl, row.contentJson as CanvasProps);
   await db.socialPostQueue.update({
     where: { id },
