@@ -21,22 +21,22 @@ async function acquireSocialLock(): Promise<boolean> {
   const now = new Date().toISOString();
   const stale = new Date(Date.now() - SOCIAL_LOCK_STALE_MS).toISOString();
   const claim = JSON.stringify({ socialTickRunning: true, socialTickStartedAt: now });
-  const n = await db.$executeRaw\`
+  const n = await db.$executeRaw`
     INSERT INTO "AutomationState" (id, state, "updatedAt")
     VALUES ('singleton', ${claim}::jsonb, now())
     ON CONFLICT (id) DO UPDATE
     SET state = "AutomationState".state || ${claim}::jsonb, "updatedAt" = now()
     WHERE COALESCE(("AutomationState".state->>'socialTickRunning')::boolean, false) = false
        OR ("AutomationState".state->>'socialTickStartedAt') IS NULL
-       OR ("AutomationState".state->>'socialTickStartedAt')::timestamptz < ${stale}::timestamptz\`;
+       OR ("AutomationState".state->>'socialTickStartedAt')::timestamptz < ${stale}::timestamptz`;
   return n === 1;
 }
 
 async function releaseSocialLock(): Promise<void> {
-  await db.$executeRaw\`
+  await db.$executeRaw`
     UPDATE "AutomationState"
     SET state = state || '{"socialTickRunning":false}'::jsonb
-    WHERE id = 'singleton'\`;
+    WHERE id = 'singleton'`;
 }
 
 /**
@@ -72,7 +72,7 @@ export async function runSocialTick(
     } catch (error) {
       const message = (error instanceof Error ? error.message : String(error)).slice(0, 180);
       result.queue = { created: 0, error: message };
-      result.errors.push(\`queue: ${message}\`);
+      result.errors.push(`queue: ${message}`);
     }
 
     try {
@@ -80,7 +80,7 @@ export async function runSocialTick(
       result.rendered = rendered.rendered;
     } catch (error) {
       const message = (error instanceof Error ? error.message : String(error)).slice(0, 180);
-      result.errors.push(\`render: ${message}\`);
+      result.errors.push(`render: ${message}`);
     }
 
     try {
@@ -89,7 +89,7 @@ export async function runSocialTick(
       result.failed = published.failed;
     } catch (error) {
       const message = (error instanceof Error ? error.message : String(error)).slice(0, 180);
-      result.errors.push(\`publish: ${message}\`);
+      result.errors.push(`publish: ${message}`);
     }
 
     await db.pipelineRun.update({
