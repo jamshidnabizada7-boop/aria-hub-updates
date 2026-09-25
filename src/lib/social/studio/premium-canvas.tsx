@@ -174,40 +174,73 @@ function MetaRow({ props, accent }: { props: PremiumCanvasProps; accent:string }
 
 function SplitEditorial({ props, side='left' }: { props:PremiumCanvasProps; side?:'left'|'right' }) {
   const theme=resolveTheme(props.themeId); const accent=theme.accent; const rtl=props.lang!=='en';
-  const textSide = side==='left' ? { left:70, right:510 } : { left:520, right:70 };
+  const career = props.designFamily === 'career-desk';
+  const textSide = career ? { left:72, right:545 } : side==='left' ? { left:70, right:510 } : { left:520, right:70 };
   return (
     <CanvasRoot props={props}>
       <Ambient accent={accent}/><HeroLayers media={props.media}/>
-      {!props.media?.hero?.url ? <PortalFallback accent={accent}/> : null}
+      {career ? (
+        <>
+          <div style={{position:'absolute',left:535,right:54,top:185,bottom:165,zIndex:4,borderRadius:42,border:'1px solid rgba(255,255,255,.10)',background:'linear-gradient(145deg,rgba(255,255,255,.07),rgba(255,255,255,.015))',boxShadow:'0 38px 90px rgba(0,0,0,.3)'}}/>
+          {!props.media?.hero?.url ? (
+            <div style={{position:'absolute',right:110,top:300,width:365,height:390,zIndex:8}}>
+              <div style={{position:'absolute',left:24,right:24,top:0,height:270,borderRadius:22,border:'2px solid rgba(248,216,152,.35)',background:'linear-gradient(145deg,#101C37,#263A63)',boxShadow:'0 34px 72px rgba(0,0,0,.46)'}}>
+                <div style={{position:'absolute',inset:22,borderRadius:12,background:'linear-gradient(135deg,#2E4778,#10182F)'}}/>
+              </div>
+              <div style={{position:'absolute',left:0,right:0,top:278,height:28,borderRadius:'0 0 18px 18px',background:'#0D1528'}}/>
+              <div style={{position:'absolute',left:70,right:70,bottom:12,height:24,borderRadius:'50%',background:'rgba(0,0,0,.38)',filter:'blur(8px)'}}/>
+            </div>
+          ) : null}
+        </>
+      ) : !props.media?.hero?.url ? <PortalFallback accent={accent}/> : null}
       <PremiumHeader accent={accent} eyebrow={props.eyebrow || props.category || props.badge}/>
       <div style={{position:'absolute',top:210,bottom:190,...textSide,zIndex:12,display:'flex',flexDirection:'column',justifyContent:'center',alignItems:rtl?'flex-end':'flex-start'}}>
-        <div style={{fontSize:20,fontWeight:900,color:accent,letterSpacing:1.2,textTransform:'uppercase'}}>{props.badge || (props.lang==='en'?'YOUR NEXT MOVE':'فرصت بعدی شما')}</div>
-        <div style={{marginTop:18,fontSize:clampTextSize(props.title,76,62,48),fontWeight:950,lineHeight:1.12,letterSpacing:-1.2,textAlign:rtl?'right':'left',textShadow:'0 14px 40px rgba(0,0,0,.38)'}}>{props.title}</div>
-        {props.note ? <div style={{marginTop:19,fontSize:25,lineHeight:1.55,fontWeight:600,color:'rgba(255,255,255,.72)',textAlign:rtl?'right':'left'}}>{props.note}</div>:null}
+        <div style={{fontSize:20,fontWeight:900,color:accent,letterSpacing:1.2,textTransform:'uppercase'}}>
+          {props.badge || (career ? (props.lang==='en'?'CAREER OPPORTUNITY':'فرصت شغلی') : (props.lang==='en'?'YOUR NEXT MOVE':'فرصت بعدی شما'))}
+        </div>
+        <div style={{marginTop:18,fontSize:clampTextSize(props.title,career?72:76,career?58:62,47),fontWeight:950,lineHeight:1.1,letterSpacing:-1,textAlign:rtl?'right':'left',textShadow:'0 14px 40px rgba(0,0,0,.38)'}}>{props.title}</div>
+        {career && props.organization ? <div style={{marginTop:15,fontSize:27,fontWeight:800,color:'rgba(255,255,255,.85)',textAlign:rtl?'right':'left'}}>{props.organization}</div> : null}
+        {props.note ? <div style={{marginTop:17,fontSize:24,lineHeight:1.52,fontWeight:600,color:'rgba(255,255,255,.70)',textAlign:rtl?'right':'left'}}>{props.note}</div>:null}
         <MetaRow props={props} accent={accent}/>
       </div>
       <Footer props={props}/>
     </CanvasRoot>
   );
 }
-
 function CenterObject({ props, objectKind='cap', document=false }: { props:PremiumCanvasProps; objectKind?:'cap'|'briefcase'|'document'; document?:boolean }) {
-  const theme=resolveTheme(props.themeId); const accent=theme.accent; const rtl=props.lang!=='en';
+  const theme=resolveTheme(props.themeId); const accent=theme.accent;
+  const commercial = props.designFamily === 'object-hero-3d';
   return (
     <CanvasRoot props={props}>
       <Ambient accent={accent}/><HeroLayers media={props.media}/>
-      {!props.media?.hero?.url ? <SphereFallback accent={accent} kind={document?'document':objectKind}/> : null}
+      {commercial ? (
+        <>
+          <div style={{position:'absolute',left:175,right:175,top:155,height:500,zIndex:4}}>
+            <div style={{position:'absolute',left:'50%',top:40,width:470,height:470,marginLeft:-235,borderRadius:'50%',background:'radial-gradient(circle,rgba(248,216,152,.20),rgba(248,216,152,.06) 42%,transparent 70%)'}}/>
+            <div style={{position:'absolute',left:'50%',bottom:12,width:510,height:118,marginLeft:-255,borderRadius:'50%',background:'radial-gradient(ellipse,rgba(0,0,0,.52),transparent 70%)',filter:'blur(4px)'}}/>
+          </div>
+          {!props.media?.hero?.url ? <SphereFallback accent={accent} kind={objectKind}/> : null}
+        </>
+      ) : (
+        <>
+          <div style={{position:'absolute',left:150,right:150,top:150,height:500,zIndex:4}}>
+            <div style={{position:'absolute',left:'50%',top:'50%',width:430,height:430,marginLeft:-215,marginTop:-215,borderRadius:'50%',border:'2px solid rgba(248,216,152,.28)',boxShadow:'0 0 90px rgba(248,216,152,.12)'}}/>
+            <div style={{position:'absolute',left:'50%',top:'50%',width:610,height:215,marginLeft:-305,marginTop:-107,borderRadius:'50%',border:'2px solid rgba(248,216,152,.23)',transform:'rotate(-13deg)'}}/>
+            <div style={{position:'absolute',left:'50%',top:'50%',width:540,height:180,marginLeft:-270,marginTop:-90,borderRadius:'50%',border:'1px solid rgba(255,255,255,.15)',transform:'rotate(19deg)'}}/>
+          </div>
+          {!props.media?.hero?.url ? <SphereFallback accent={accent} kind={document?'document':objectKind}/> : null}
+        </>
+      )}
       <PremiumHeader accent={accent} eyebrow={props.eyebrow || props.category || props.badge}/>
-      <div style={{position:'absolute',left:90,right:90,top:600,bottom:180,zIndex:12,display:'flex',flexDirection:'column',alignItems:'center',textAlign:'center'}}>
-        <div style={{fontSize:clampTextSize(props.title,68,57,46),fontWeight:950,lineHeight:1.13,maxWidth:860,textShadow:'0 12px 38px rgba(0,0,0,.42)'}}>{props.title}</div>
-        {props.note?<div style={{marginTop:14,fontSize:24,color:'rgba(255,255,255,.68)',fontWeight:600,maxWidth:740}}>{props.note}</div>:null}
-        <MetaRow props={props} accent={accent}/>
+      <div style={{position:'absolute',left:90,right:90,top:650,bottom:180,zIndex:12,display:'flex',flexDirection:'column',alignItems:'center',textAlign:'center'}}>
+        <div style={{fontSize:clampTextSize(props.title,commercial?72:68,commercial?59:57,46),fontWeight:950,lineHeight:1.1,maxWidth:860,textShadow:'0 12px 38px rgba(0,0,0,.42)'}}>{props.title}</div>
+        {props.note?<div style={{marginTop:14,fontSize:24,color:'rgba(255,255,255,.68)',fontWeight:600,maxWidth:740,lineHeight:1.5}}>{props.note}</div>:null}
+        {!commercial ? <div style={{display:'flex',justifyContent:'center'}}><MetaRow props={props} accent={accent}/></div> : null}
       </div>
       <Footer props={props}/>
     </CanvasRoot>
   );
 }
-
 function FullBleedEditorial({ props, bigType=false }: { props:PremiumCanvasProps; bigType?:boolean }) {
   const theme=resolveTheme(props.themeId); const accent=theme.accent; const rtl=props.lang!=='en';
   const family = props.designFamily;
