@@ -16,12 +16,30 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const admin = await getCurrentAdmin();
   if (!admin) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-  const body = await req.json().catch(() => null) as { action?: string; id?: string; label?: string; category?: string; url?: string; enabled?: boolean } | null;
+  const body = await req.json().catch(() => null) as {
+    action?: string; id?: string; label?: string; category?: string; url?: string;
+    enabled?: boolean; order?: number;
+  } | null;
   if (!body?.action) return NextResponse.json({ error: 'action required' }, { status: 400 });
   try {
     if (body.action === 'add') {
       if (!body.url || !body.label) return NextResponse.json({ error: 'label and url required' }, { status: 400 });
       const row = await db.studioVisual.create({ data: { label: body.label.slice(0, 80), category: (body.category || 'General').slice(0, 40), url: body.url, order: 0 } });
+      return NextResponse.json({ ok: true, row });
+    }
+    if (body.action === 'update' && body.id) {
+      const existing = await db.studioVisual.findUnique({ where: { id: body.id } });
+      if (!existing) return NextResponse.json({ error: 'not found' }, { status: 404 });
+      const row = await db.studioVisual.update({
+        where: { id: body.id },
+        data: {
+          label: typeof body.label === 'string' && body.label.trim() ? body.label.trim().slice(0, 80) : existing.label,
+          category: typeof body.category === 'string' && body.category.trim() ? body.category.trim().slice(0, 40) : existing.category,
+          url: typeof body.url === 'string' && /^https?:\/\//i.test(body.url) ? body.url : existing.url,
+          enabled: typeof body.enabled === 'boolean' ? body.enabled : existing.enabled,
+          order: typeof body.order === 'number' && Number.isFinite(body.order) ? Math.trunc(body.order) : existing.order,
+        },
+      });
       return NextResponse.json({ ok: true, row });
     }
     if (body.action === 'toggle' && body.id) {
