@@ -66,13 +66,35 @@ interface Status {
   aiProviders?: { name: string; configured: boolean; cooling: boolean; cooldownSecondsLeft: number; lastError: string | null; usedCount: number }[];
 }
 
-const PLATFORM_META: Record<string, { icon: React.ComponentType<{ className?: string }>; credFields: { key: string; label: string }[] }> = {
+const PLATFORM_META: Record<string, {
+  icon: React.ComponentType<{ className?: string }>;
+  credFields: { key: string; label: string; kind?: 'select'; options?: { value: string; label: string }[] }[];
+}> = {
   telegram: { icon: Send, credFields: [{ key: 'botToken', label: 'Bot token' }, { key: 'chatId', label: 'Channel ID (@channel or -100…)' }] },
   facebook: { icon: Facebook, credFields: [{ key: 'pageId', label: 'Page ID' }, { key: 'accessToken', label: 'Page access token' }] },
   instagram: { icon: Instagram, credFields: [{ key: 'igUserId', label: 'Instagram business user ID' }, { key: 'accessToken', label: 'Access token' }] },
   x: { icon: XIcon, credFields: [{ key: 'accessToken', label: 'OAuth 2.0 access token' }] },
   linkedin: { icon: Linkedin, credFields: [{ key: 'accessToken', label: 'LinkedIn access token' }, { key: 'authorUrn', label: 'Organization numeric ID or full author URN' }] },
-  whatsapp: { icon: MessageCircle, credFields: [{ key: 'accessToken', label: 'WhatsApp system-user access token' }, { key: 'phoneNumberId', label: 'Phone Number ID (Meta Business)' }, { key: 'channelId', label: 'Channel ID' }] },
+  whatsapp: {
+    icon: MessageCircle,
+    credFields: [
+      {
+        key: 'mode',
+        label: 'Destination mode',
+        kind: 'select',
+        options: [
+          { value: 'individual', label: 'Individual recipient' },
+          { value: 'group', label: 'Meta Groups API group' },
+          { value: 'channel', label: 'WhatsApp Channel (not supported by this API)' },
+        ],
+      },
+      { key: 'accessToken', label: 'WhatsApp system-user access token' },
+      { key: 'phoneNumberId', label: 'Phone Number ID (Meta Business)' },
+      { key: 'recipient', label: 'Recipient phone / WA ID (individual mode)' },
+      { key: 'groupId', label: 'Group ID (Groups API mode)' },
+      { key: 'channelId', label: 'Legacy Channel ID (diagnostic only)' },
+    ],
+  },
 };
 
 const ALL_TIMES = ['07:00', '08:00', '09:00', '12:00', '12:30', '13:00', '17:00', '19:00', '20:00', '21:00'];
@@ -422,13 +444,35 @@ export function AutomationPanel() {
                       {meta.credFields.map((f) => (
                         <div key={f.key}>
                           <Label className="text-[10px] text-muted-foreground">{f.label}</Label>
-                          <Input
-                            type="password"
-                            className="h-8 text-xs"
-                            value={draft[f.key] ?? (typeof ch?.credentials?.[f.key] === 'string' ? (ch?.credentials?.[f.key] as string) : '')}
-                            placeholder={ch?.credentials?.[f.key] === true ? 'saved — leave blank to keep' : f.label}
-                            onChange={(e) => setCredDrafts((prev) => ({ ...prev, [platform]: { ...prev[platform], [f.key]: e.target.value } }))}
-                          />
+                          {f.kind === 'select' ? (
+                            <Select
+                              value={
+                                draft[f.key] ??
+                                (typeof ch?.credentials?.[f.key] === 'string' ? (ch.credentials[f.key] as string) : 'individual')
+                              }
+                              onValueChange={(value) =>
+                                setCredDrafts((prev) => ({
+                                  ...prev,
+                                  [platform]: { ...prev[platform], [f.key]: value },
+                                }))
+                              }
+                            >
+                              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {(f.options ?? []).map((option) => (
+                                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Input
+                              type="password"
+                              className="h-8 text-xs"
+                              value={draft[f.key] ?? (typeof ch?.credentials?.[f.key] === 'string' ? (ch?.credentials?.[f.key] as string) : '')}
+                              placeholder={ch?.credentials?.[f.key] === true ? 'saved — leave blank to keep' : f.label}
+                              onChange={(e) => setCredDrafts((prev) => ({ ...prev, [platform]: { ...prev[platform], [f.key]: e.target.value } }))}
+                            />
+                          )}
                         </div>
                       ))}
                     </div>
