@@ -356,14 +356,10 @@ async function renderQueueImage(baseUrl: string, props: CanvasProps): Promise<{ 
     const buf = await readFile(shotPath).catch(() => null);
     if (!buf) return null;
 
-    // Vercel serverless filesystems are ephemeral and cannot be used as a
-    // durable media origin for Meta/LinkedIn. Production on Vercel therefore
-    // requires Blob storage; never fabricate a public URL for a temp file.
-    if (process.env.VERCEL) {
-      if (!process.env.BLOB_READ_WRITE_TOKEN) {
-        console.error('[render] durable media unavailable: BLOB_READ_WRITE_TOKEN is missing on Vercel');
-        return null;
-      }
+    // Prefer durable object storage on EVERY host when configured. A separate
+    // worker (for example Oracle VM) must not fabricate a myariahub.com URL for
+    // a file that only exists on its local filesystem.
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
       try {
         const { put } = await import('@vercel/blob');
         const blob = await put(`generated-posts/${file}`, buf, { access: 'public', addRandomSuffix: false });
@@ -378,7 +374,14 @@ async function renderQueueImage(baseUrl: string, props: CanvasProps): Promise<{ 
       }
     }
 
-    // Persistent/self-hosted deployments can serve files written under public/.
+    // Vercel is always ephemeral. External workers can opt into the same hard
+    // requirement with SOCIAL_REQUIRE_DURABLE_MEDIA=1.
+    if (process.env.VERCEL || process.env.SOCIAL_REQUIRE_DURABLE_MEDIA === '1') {
+      console.error('[render] durable media unavailable: BLOB_READ_WRITE_TOKEN is required');
+      return null;
+    }
+
+    // Persistent/self-hosted deployments may serve files written under public/.
     await writeFile(join(PUBLIC_DIR, file), buf);
     return { file, publicUrl: `${PUBLIC_BASE}/${file}`, localPath: join(PUBLIC_DIR, file) };
   } catch (e) {
