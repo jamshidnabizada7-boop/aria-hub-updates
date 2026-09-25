@@ -51,7 +51,7 @@ const IG_STATUS_TIMEOUT_MS = 30000;
 const rawMetaVersion = (process.env.META_GRAPH_VERSION || 'v26.0').trim();
 export const META_GRAPH_VERSION = rawMetaVersion.startsWith('v') ? rawMetaVersion : `v${rawMetaVersion}`;
 const graphUrl = (path: string) =>
-  `https://graph.facebook.com/${META_GRAPH_VERSION}/${path.replace(/^\\/+/, '')}`;
+  `https://graph.facebook.com/${META_GRAPH_VERSION}/${path.replace(/^\/+/, '')}`;
 
 async function safeFetch(url: string, init: RequestInit & { body?: BodyInit | undefined } = {}): Promise<{ ok: boolean; status: number; json: Record<string, unknown> | null; text: string }> {
   const ctrl = new AbortController();
