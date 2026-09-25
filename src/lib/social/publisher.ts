@@ -33,6 +33,11 @@ import type { Lang } from '@/lib/i18n-config';
 import type { PostTemplate } from '@/lib/social/brand';
 import type { PosterSize } from '@/lib/social/templates';
 import { translate } from '@/lib/i18n';
+import {
+  buildStudioCanvasProps,
+  studioContentRef,
+  type StudioDesignSnapshot,
+} from '@/lib/social/studio/canvas-props';
 
 // Afghanistan Time = UTC+4:30 (no DST).
 const AFT_OFFSET_MIN = 270;
@@ -108,60 +113,9 @@ export function buildCanvasProps(
   post: PlanPost,
   lang: Lang,
   size: PosterSize,
-  design?: { themeId?: string; layout?: string },
+  design?: StudioDesignSnapshot,
 ): CanvasProps {
-  const tr = (key: string, params?: Record<string, string | number>) => translate(lang, key, params);
-  const base: CanvasProps = {
-    template: post.template,
-    lang,
-    size,
-    themeId: design?.themeId,
-    layout: design?.layout,
-    title: post.title,
-    note: post.meta,
-  };
-  switch (post.template) {
-    case 'deadline':
-      return { ...base, deadlineDate: post.opp?.deadline ?? null, note: post.meta };
-    case 'tip':
-      return { ...base, seriesNo: post.seriesNo ?? 1 };
-    case 'quote':
-      return base;
-    case 'promo':
-      return {
-        ...base,
-        checklist: [tr('social.post.promoCheck1'), tr('social.post.promoCheck2'), tr('social.post.promoCheck3')],
-      };
-    case 'news':
-      return { ...base, newsDate: post.news?.publishedAt ?? null };
-    case 'stat':
-      return { ...base, stat: { value: post.stat?.value ?? '', label: tr(post.stat?.labelKey || 'social.post.statLiveOpps') } };
-    case 'story':
-      return { ...base, person: { name: post.story?.title ?? '', meta: post.meta ?? '' } };
-    case 'spotlight':
-    default: {
-      // Spotlight uses the rich OpportunityPoster — precompute its PosterData
-      // so the server-side renderer needs no DB access.
-      const opp = post.opp;
-      return {
-        ...base,
-        posterData: opp
-          ? {
-              slug: opp.slug,
-              title: opp.title,
-              titleI18n: opp.titleI18n ?? null,
-              organization: opp.organization,
-              country: opp.country,
-              deadline: opp.deadline,
-              featured: Boolean(opp.featured),
-              salary: opp.salary,
-              salaryI18n: opp.salaryI18n ?? null,
-              category: opp.category ? { name: opp.category.name, nameI18n: opp.category.nameI18n ?? null } : null,
-            }
-          : null,
-      };
-    }
-  }
+  return buildStudioCanvasProps(post, lang, size, design) as unknown as CanvasProps;
 }
 
 function captionInputOf(post: PlanPost, lang: Lang): CaptionInput {
@@ -194,9 +148,10 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
 
   // Studio defaults (theme/layout chosen in the Brand Studio apply to every
   // automated post unless a per-post StudioDesign override exists).
-  const defaultDesign = {
+  const defaultDesign: StudioDesignSnapshot = {
     themeId: state.studioTheme,
     layout: state.studioLayout,
+    overrides: {},
   };
 
   // Deterministic plan — same order in every language (zip by index).
@@ -205,9 +160,14 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
   if (!base || base.posts.length === 0) return { created: 0 };
 
   // Per-post designs saved from the Brand Studio override the defaults.
-  type StudioDesignRow = {
-    contentRef: string; templateType: string; themeId: string; layout: string;
-    size: string; overrides: unknown; captionOverride: unknown;
+  type StudioDesignRow = StudioDesignSnapshot & {
+    contentRef: string;
+    templateType: string;
+    themeId: string;
+    layout: string;
+    size: string;
+    overrides: Record<string, unknown> | null;
+    captionOverride: Record<string, string> | null;
   };
   const designs = (await db.studioDesign
     .findMany({ where: { forDate: todayUtc } })
@@ -233,17 +193,24 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
     const primary: Lang = captionLangs[0] ?? 'fa';
     const primaryIdx = (['fa', 'ps', 'en'] as Lang[]).indexOf(primary);
     const primaryPost = plans[primaryIdx]?.posts[idx] ?? post;
-    const ref = post.opp?.slug ?? post.news?.slug ?? post.idea?.id ?? post.story?.id ?? post.stat?.labelKey ?? null;
-    if (ref && designByRef.has(ref)) {
-      // A saved StudioDesign owns this post's queue row for today (created via
-      // the studio save flow) — building the plan row as well would double-post.
-      return;
+    const ref = studioContentRef(post);
+    const legacyRef = post.opp?.slug ?? post.news?.slug ?? post.idea?.id ?? post.story?.id ?? post.stat?.labelKey ?? null;
+    const savedDesign = designByRef.get(ref) ?? (legacyRef ? designByRef.get(legacyRef) : undefined);
+    const design = savedDesign ?? defaultDesign;
+    const requestedSize = savedDesign?.size;
+    const canvasSize: PosterSize = requestedSize === 'portrait' || requestedSize === 'story' ? requestedSize : 'square';
+
+    if (savedDesign?.captionOverride && typeof savedDesign.captionOverride === 'object') {
+      for (const [code, text] of Object.entries(savedDesign.captionOverride)) {
+        if (typeof text === 'string' && text.trim()) captions[code] = text;
+      }
     }
+
     rows.push({
       scheduledFor,
       templateType: post.template,
       contentRef: ref,
-      contentJson: buildCanvasProps(primaryPost, primary, 'square', defaultDesign),
+      contentJson: buildCanvasProps(primaryPost, primary, canvasSize, design),
       captionJson: captions,
     });
   });
