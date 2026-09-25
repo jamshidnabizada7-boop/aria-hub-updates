@@ -213,3 +213,30 @@ export function defaultDesignFamilyForTemplate(template: PostTemplate): DesignFa
   if (template === 'promo') return 'object-hero-3d';
   return 'legacy';
 }
+
+
+export const BUILTIN_PREMIUM_VISUALS = [
+  { id: 'builtin:global-portal', label: 'ARIA HUB · Global Portal', category: '3D Objects', url: '/images/studio/premium/global-portal.png' },
+  { id: 'builtin:scholarship-globe-cap', label: 'ARIA HUB · Scholarship Globe', category: 'Scholarship', url: '/images/studio/premium/scholarship-globe-cap.png' },
+  { id: 'builtin:career-professional', label: 'ARIA HUB · Career Professional', category: 'People', url: '/images/studio/premium/career-professional.png' },
+  { id: 'builtin:document-desk', label: 'ARIA HUB · Scholarship Documents', category: 'Documents', url: '/images/studio/premium/scholarship-document-desk.png' },
+] as const;
+
+export function defaultMediaForDesignFamily(id: DesignFamilyId) {
+  switch (id) {
+    case 'global-portal':
+    case 'surreal-opportunity':
+      return { hero: { visualId: 'builtin:global-portal', url: '/images/studio/premium/global-portal.png', x: 50, y: 50, scale: 1, opacity: 1, glow: 0.18, fit: 'contain' as const } };
+    case 'document-desk':
+      return { hero: { visualId: 'builtin:document-desk', url: '/images/studio/premium/scholarship-document-desk.png', x: 50, y: 50, scale: 1, opacity: 1, glow: 0.08, fit: 'contain' as const } };
+    case 'global-object':
+    case 'object-hero-3d':
+      return { hero: { visualId: 'builtin:scholarship-globe-cap', url: '/images/studio/premium/scholarship-globe-cap.png', x: 50, y: 50, scale: 1, opacity: 1, glow: 0.2, fit: 'contain' as const } };
+    case 'career-desk':
+    case 'talent-profile':
+    case 'cinematic-person':
+      return { hero: { visualId: 'builtin:career-professional', url: '/images/studio/premium/career-professional.png', x: 50, y: 50, scale: 1, opacity: 1, glow: 0.1, fit: 'contain' as const } };
+    default:
+      return {};
+  }
+}
