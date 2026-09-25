@@ -5,7 +5,7 @@ import {
   DEFAULT_OPPORTUNITY_DAILY_TARGET,
   opportunityDistributionCapacity,
   opportunityScheduleForIndex,
-} from '../src/lib/social/opportunity-distribution';
+} from '../src/lib/social/opportunity-distribution-schedule';
 
 describe('opportunity distribution scheduling', () => {
   test('default schedule supports the default 30-post target', () => {
