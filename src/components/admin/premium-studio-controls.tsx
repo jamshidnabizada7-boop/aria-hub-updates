@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
-import { designFamiliesForTemplate, getDesignFamily } from '@/lib/social/studio/registry';
+import { BUILTIN_PREMIUM_VISUALS, designFamiliesForTemplate, getDesignFamily } from '@/lib/social/studio/registry';
 import type { PostTemplate } from '@/lib/social/brand';
 import type { DesignFamilyId, StudioMediaConfig, StudioMediaLayer, StudioMediaRole } from '@/lib/social/studio/types';
 
@@ -36,6 +36,10 @@ export function PremiumStudioControls({
 }) {
   const families = designFamiliesForTemplate(template);
   const def = getDesignFamily(family);
+  const availableVisuals = [
+    ...BUILTIN_PREMIUM_VISUALS,
+    ...visuals.filter((visual) => !BUILTIN_PREMIUM_VISUALS.some((builtin) => builtin.url === visual.url)),
+  ];
   const media = (overrides.media && typeof overrides.media === 'object' ? overrides.media : {}) as StudioMediaConfig;
 
   const setLayer = (role: StudioMediaRole, patch: Partial<StudioMediaLayer>) => {
@@ -129,14 +133,14 @@ export function PremiumStudioControls({
                   value={layer.visualId || 'none'}
                   onValueChange={(id) => {
                     if (id === 'none') return setLayer(role, { visualId: null, url: null });
-                    const visual = visuals.find((v) => v.id === id);
+                    const visual = availableVisuals.find((v) => v.id === id);
                     if (visual) setLayer(role, { visualId: visual.id, url: visual.url, visible: true });
                   }}
                 >
                   <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select asset" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
-                    {visuals.map((v) => <SelectItem key={v.id} value={v.id}>{v.label} · {v.category}</SelectItem>)}
+                    {availableVisuals.map((v) => <SelectItem key={v.id} value={v.id}>{v.label} · {v.category}</SelectItem>)}
                   </SelectContent>
                 </Select>
 
