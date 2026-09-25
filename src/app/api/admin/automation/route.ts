@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentAdmin } from '@/lib/admin-auth';
 import { db } from '@/lib/db';
 import { getState, patchState, DEFAULT_SLOTS_AFT, composeCaptionWithLimit, deepLinkOf } from '@/lib/social/publisher';
+import {
+  DEFAULT_OPPORTUNITY_BATCH_SIZE,
+  DEFAULT_OPPORTUNITY_BATCH_TIMES_AFT,
+  DEFAULT_OPPORTUNITY_DAILY_TARGET,
+  DEFAULT_OPPORTUNITY_REPEAT_DAYS,
+} from '@/lib/social/opportunity-distribution';
 import { publishToPlatform } from '@/lib/social/channels';
 import { decryptCredentials, encryptCredentials, maskCredentials } from '@/lib/social/credentials';
 import { getProviderHealth } from '@/lib/ai/failover';
@@ -65,7 +71,17 @@ export async function GET() {
 
   return NextResponse.json({
     ok: true,
-    state: { ...state, publishTimes: state.publishTimes?.length ? state.publishTimes : DEFAULT_SLOTS_AFT },
+    state: {
+      ...state,
+      publishTimes: state.publishTimes?.length ? state.publishTimes : DEFAULT_SLOTS_AFT,
+      opportunityOnlyAutomation: state.opportunityOnlyAutomation !== false,
+      opportunityDailyTarget: state.opportunityDailyTarget ?? DEFAULT_OPPORTUNITY_DAILY_TARGET,
+      opportunityBatchSize: state.opportunityBatchSize ?? DEFAULT_OPPORTUNITY_BATCH_SIZE,
+      opportunityRepeatDays: state.opportunityRepeatDays ?? DEFAULT_OPPORTUNITY_REPEAT_DAYS,
+      opportunityBatchTimes: state.opportunityBatchTimes?.length
+        ? state.opportunityBatchTimes
+        : DEFAULT_OPPORTUNITY_BATCH_TIMES_AFT,
+    },
     channels: safeChannels,
     queue,
     runs,
@@ -103,6 +119,24 @@ export async function POST(req: NextRequest) {
         }
         if (typeof body.autoImport === 'boolean') patch.autoImport = body.autoImport;
         if (typeof body.autoPublish === 'boolean') patch.autoPublish = body.autoPublish;
+        if (typeof body.opportunityOnlyAutomation === 'boolean') {
+          patch.opportunityOnlyAutomation = body.opportunityOnlyAutomation;
+        }
+        if (body.opportunityDailyTarget !== undefined) {
+          patch.opportunityDailyTarget = Math.min(50, Math.max(1, Number(body.opportunityDailyTarget) || DEFAULT_OPPORTUNITY_DAILY_TARGET));
+        }
+        if (body.opportunityBatchSize !== undefined) {
+          patch.opportunityBatchSize = Math.min(10, Math.max(1, Number(body.opportunityBatchSize) || DEFAULT_OPPORTUNITY_BATCH_SIZE));
+        }
+        if (body.opportunityRepeatDays !== undefined) {
+          patch.opportunityRepeatDays = Math.min(90, Math.max(1, Number(body.opportunityRepeatDays) || DEFAULT_OPPORTUNITY_REPEAT_DAYS));
+        }
+        if (Array.isArray(body.opportunityBatchTimes)) {
+          const times = (body.opportunityBatchTimes as unknown[])
+            .map(String)
+            .filter((t) => /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(t));
+          if (times.length) patch.opportunityBatchTimes = [...new Set(times)].slice(0, 8).sort();
+        }
         if (typeof body.studioTheme === 'string' && body.studioTheme) patch.studioTheme = body.studioTheme;
         if (typeof body.studioLayout === 'string' && body.studioLayout) patch.studioLayout = body.studioLayout;
         const next = await patchState(patch);
