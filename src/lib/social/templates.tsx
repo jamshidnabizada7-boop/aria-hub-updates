@@ -31,6 +31,9 @@ import {
   type StudioLayout, type StudioTheme,
 } from '@/lib/social/themes';
 import type { Lang } from '@/lib/lang-route';
+import { PremiumTemplateCanvas } from '@/lib/social/premium-templates';
+import { getStudioDesignFamily } from '@/lib/social/studio/registry';
+import type { StudioMediaState } from '@/lib/social/studio/media';
 
 export type PosterSize = 'square' | 'portrait' | 'story';
 
@@ -47,8 +50,20 @@ export interface SocialCanvasProps {
   size: PosterSize;
   /** Studio theme id — resolved to a palette (midnight default). */
   themeId?: string;
-  /** Layout variant id — classic | minimal | bold. */
+  /** Layout variant id. */
   layout?: string;
+  /** Premium art-direction family. "legacy" preserves the existing renderer. */
+  designFamily?: string;
+  /** Persisted deterministic media layers. */
+  media?: StudioMediaState | null;
+  /** Premium editable copy controls. */
+  eyebrow?: string;
+  subheadline?: string;
+  badge?: string;
+  ctaLabel?: string;
+  accentText?: string;
+  showFooter?: boolean;
+  showQr?: boolean;
   /** Pre-localized headline (single line). */
   title: string;
   /** Pre-localized secondary line. */
@@ -65,6 +80,8 @@ export interface SocialCanvasProps {
     country: string;
     salary: string;
     featured: boolean;
+    fundingStatus?: string;
+    degreeLevel?: string;
   };
   /** Stat template: pre-localized value + label. */
   stat?: { value: string; label: string; sub?: string };
@@ -1044,10 +1061,40 @@ export function SocialCanvas(props: SocialCanvasProps) {
   const story = size === 'story';
   const theme = resolveTheme(props.themeId);
   const layout = resolveLayout(props.layout);
-  const visualUrl = props.visualUrl ?? null;
+  const family = getStudioDesignFamily(props.designFamily);
+  const visualUrl = props.visualUrl ?? props.media?.background?.url ?? null;
 
-  // Spotlight delegates to the proven opportunity poster (QR + deadline card).
-  // if (template === 'spotlight') — handled by the caller (needs PosterData).
+  if (family.premium) {
+    return (
+      <PremiumTemplateCanvas
+        template={template}
+        family={family.id}
+        lang={lang}
+        size={size}
+        theme={theme}
+        title={title}
+        note={note}
+        eyebrow={props.eyebrow}
+        subheadline={props.subheadline}
+        badge={props.badge}
+        ctaLabel={props.ctaLabel}
+        accentText={props.accentText}
+        showFooter={props.showFooter}
+        showQr={props.showQr}
+        qrDataUrl={qrDataUrl}
+        media={props.media}
+        deadlineDate={props.deadlineDate}
+        newsDate={props.newsDate}
+        checklist={props.checklist}
+        stat={props.stat}
+        person={props.person}
+        spotlight={props.spotlight}
+      />
+    );
+  }
+
+  // Spotlight delegates to the proven opportunity poster in legacy mode.
+  // Premium spotlight families are handled above.
   const kickerKey = `social.post.kicker.${template}`;
 
   if (template === 'deadline') {
