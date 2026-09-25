@@ -179,6 +179,18 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
     contentJson: object; captionJson: object;
   }[] = [];
 
+  const dayStart = new Date(`${todayUtc}T00:00:00.000Z`);
+  const dayEnd = new Date(dayStart.getTime() + 86400000);
+  const existingToday = await db.socialPostQueue.findMany({
+    where: {
+      scheduledFor: { gte: dayStart, lt: dayEnd },
+      contentRef: { not: null },
+      status: { not: 'cancelled' },
+    },
+    select: { contentRef: true },
+  });
+  const queuedToday = new Set(existingToday.map((row) => row.contentRef).filter((ref): ref is string => Boolean(ref)));
+
   base.posts.forEach((post, idx) => {
     const slot = slots[idx % slots.length];
     // Today's slots that already passed stay today (publish tick picks them up
@@ -194,6 +206,8 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
     const primaryIdx = (['fa', 'ps', 'en'] as Lang[]).indexOf(primary);
     const primaryPost = plans[primaryIdx]?.posts[idx] ?? post;
     const ref = studioContentRef(post);
+    if (queuedToday.has(ref)) return;
+
     const legacyRef = post.opp?.slug ?? post.news?.slug ?? post.idea?.id ?? post.story?.id ?? post.stat?.labelKey ?? null;
     const savedDesign = designByRef.get(ref) ?? (legacyRef ? designByRef.get(legacyRef) : undefined);
     const design = savedDesign ?? defaultDesign;
@@ -219,8 +233,7 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
   // build idempotent even if two ticks race past the daily cursor check.
   const res = await db.socialPostQueue.createMany({ data: rows, skipDuplicates: true });
   await patchState({ lastQueueBuildDate: todayUtc });
-  void res;
-  return { created: rows.length };
+  return { created: res.count };
 }
 
 // ── 2. renderer (playwright screenshots the CODE template) ──────────────────
