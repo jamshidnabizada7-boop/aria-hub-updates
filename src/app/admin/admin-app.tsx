@@ -227,7 +227,13 @@ function Dashboard({ onNavigate }: { onNavigate: (key: string) => void }) {
   const cards = [
     { labelKey: 'admin.stat.services', value: stats.counts.services, icon: Briefcase, color: 'from-blue-500 to-blue-600' },
     { labelKey: 'admin.stat.visas', value: stats.counts.visas, icon: Plane, color: 'from-cyan-500 to-cyan-600' },
-    { labelKey: 'admin.stat.opportunities', value: stats.counts.opportunities, icon: GraduationCap, color: 'from-teal-500 to-teal-600' },
+    {
+      labelKey: 'admin.stat.opportunities',
+      value: stats.opportunityLifecycle?.activePublished ?? stats.counts.opportunities,
+      icon: GraduationCap,
+      color: 'from-teal-500 to-teal-600',
+      badge: stats.opportunityLifecycle ? `${stats.opportunityLifecycle.total} total` : undefined,
+    },
     { labelKey: 'admin.stat.news', value: stats.counts.news, icon: Newspaper, color: 'from-amber-500 to-amber-600' },
     { labelKey: 'admin.stat.messages', value: stats.counts.contactMessages, icon: Mail, color: 'from-violet-500 to-violet-600', badge: stats.counts.newMessages > 0 ? t('admin.badge.new', { count: stats.counts.newMessages }) : undefined },
     { labelKey: 'admin.stat.subscribers', value: stats.counts.subscribers, icon: UserPlus, color: 'from-pink-500 to-pink-600' },
@@ -252,6 +258,45 @@ function Dashboard({ onNavigate }: { onNavigate: (key: string) => void }) {
           </div>
         ))}
       </div>
+
+      {stats.opportunityLifecycle ? (
+        <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="flex items-center gap-2 text-sm font-bold">
+                <GraduationCap className="h-4 w-4 text-primary" />
+                Opportunity visibility
+              </h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                The public website shows active published opportunities, while the database total also includes drafts, expired and archived rows.
+              </p>
+            </div>
+            <div className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+              {stats.opportunityLifecycle.activePublished} public now
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+            {[
+              ['Database total', stats.opportunityLifecycle.total],
+              ['Active published', stats.opportunityLifecycle.activePublished],
+              ['Draft', stats.opportunityLifecycle.draft],
+              ['Expired', stats.opportunityLifecycle.expired],
+              ['Archived', stats.opportunityLifecycle.archived],
+              ['Hidden from public', stats.opportunityLifecycle.hiddenFromPublic],
+            ].map(([label, value]) => (
+              <div key={String(label)} className="rounded-xl border border-border/60 bg-background/60 p-3">
+                <p className="text-xl font-black tabular-nums">{value}</p>
+                <p className="mt-1 text-[11px] text-muted-foreground">{label}</p>
+              </div>
+            ))}
+          </div>
+          {stats.opportunityLifecycle.publishedPastDeadline > 0 ? (
+            <p className="mt-3 text-[11px] text-amber-600 dark:text-amber-400">
+              {stats.opportunityLifecycle.publishedPastDeadline} published row(s) have a past deadline and are already hidden by the public query; the automation housekeeping will mark them expired.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       {/* Moderation queue — things awaiting a human decision */}
       <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm">
