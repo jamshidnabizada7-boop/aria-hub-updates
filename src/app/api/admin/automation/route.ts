@@ -63,6 +63,33 @@ export async function GET() {
   `;
   const counts = untranslated[0] ?? { opportunities: 0, news: 0 };
 
+  // Delivery tracking is additive. Gracefully return an empty list before the
+  // migration reaches an environment so the rest of Automation remains usable.
+  const deliveries = queue.length
+    ? await db.socialDelivery.findMany({
+        where: { queueId: { in: queue.map((row) => row.id) } },
+        select: {
+          id: true,
+          queueId: true,
+          platform: true,
+          status: true,
+          attempts: true,
+          errorCode: true,
+          error: true,
+          permalink: true,
+          publishedAt: true,
+          nextAttemptAt: true,
+        },
+        orderBy: [{ queueId: 'asc' }, { platform: 'asc' }],
+      }).catch(() => [])
+    : [];
+  const deliveriesByQueue = new Map<string, typeof deliveries>();
+  for (const delivery of deliveries) {
+    const list = deliveriesByQueue.get(delivery.queueId) ?? [];
+    list.push(delivery);
+    deliveriesByQueue.set(delivery.queueId, list);
+  }
+
   // Credentials NEVER leave the server — the panel gets "which fields are
   // configured" flags + public identifiers only.
   const safeChannels = channels.map((ch) => ({
@@ -84,7 +111,10 @@ export async function GET() {
         : DEFAULT_OPPORTUNITY_BATCH_TIMES_AFT,
     },
     channels: safeChannels,
-    queue,
+    queue: queue.map((row) => ({
+      ...row,
+      deliveries: deliveriesByQueue.get(row.id) ?? [],
+    })),
     runs,
     untranslated: counts,
     aiProviders: getProviderHealth(),
