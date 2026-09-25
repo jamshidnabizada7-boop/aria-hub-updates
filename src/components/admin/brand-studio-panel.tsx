@@ -40,6 +40,12 @@ import { toEasternDigits, formatDateLong } from '@/lib/date-format';
 import type { Lang } from '@/lib/lang-route';
 import { OpportunityPoster, buildPosterData } from '@/components/site/opportunity-poster';
 import { SocialCanvas, type PosterSize } from '@/lib/social/templates';
+import { PremiumSocialCanvas } from '@/lib/social/studio/premium-canvas';
+import { PremiumStudioControls } from '@/components/admin/premium-studio-controls';
+import {
+  defaultDesignFamilyForTemplate, resolveDesignFamily,
+} from '@/lib/social/studio/registry';
+import type { DesignFamilyId, StudioMediaConfig } from '@/lib/social/studio/types';
 import {
   STUDIO_THEME_LIST, LAYOUTS, resolveTheme, canvasHeight,
   type StudioThemeId, type StudioLayout,
@@ -152,6 +158,10 @@ export function BrandStudioPanel() {
     fetch('/api/admin/studio/visuals').then((r) => (r.ok ? r.json() : null)).then((d) => setVisuals(d?.visuals ?? [])).catch(() => {});
   }, []);
   const [overrides, setOverrides] = useState<Record<string, Record<string, unknown>>>({});
+  const [savedDesigns, setSavedDesigns] = useState<Record<string, {
+    themeId: StudioThemeId; layout: StudioLayout; size: PosterSize;
+    overrides: Record<string, unknown>; captionOverride?: Record<string, string>;
+  }>>({});
   const [savingDesign, setSavingDesign] = useState(false);
   const [publishingDesign, setPublishingDesign] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
@@ -177,6 +187,36 @@ export function BrandStudioPanel() {
   useEffect(() => {
     fetchPlan();
   }, [fetchPlan]);
+
+  // Load persisted StudioDesign rows so Save Design survives a page reload.
+  useEffect(() => {
+    const date = new Date().toISOString().slice(0, 10);
+    fetch(`/api/admin/studio/design?date=${date}`, { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        const rows = Array.isArray(d?.designs) ? d.designs : [];
+        const next: Record<string, {
+          themeId: StudioThemeId; layout: StudioLayout; size: PosterSize;
+          overrides: Record<string, unknown>; captionOverride?: Record<string, string>;
+        }> = {};
+        for (const row of rows) {
+          next[String(row.contentRef)] = {
+            themeId: row.themeId as StudioThemeId,
+            layout: row.layout as StudioLayout,
+            size: row.size as PosterSize,
+            overrides: (row.overrides && typeof row.overrides === 'object' ? row.overrides : {}) as Record<string, unknown>,
+            captionOverride: (row.captionOverride && typeof row.captionOverride === 'object' ? row.captionOverride : undefined) as Record<string, string> | undefined,
+          };
+        }
+        setSavedDesigns(next);
+        setOverrides((prev) => {
+          const merged = { ...prev };
+          for (const [key, design] of Object.entries(next)) merged[key] = design.overrides;
+          return merged;
+        });
+      })
+      .catch(() => {});
+  }, []);
 
   // debounce the picker query
   useEffect(() => {
@@ -288,6 +328,23 @@ export function BrandStudioPanel() {
 
   // ── per-post content overrides (reset when switching posts) ───────────────
   const activeOverrides = (activePost && overrides[activePost.key]) || {};
+  const activeFamily: DesignFamilyId = activePost
+    ? resolveDesignFamily(String(activeOverrides.designFamily ?? defaultDesignFamilyForTemplate(activePost.template)))
+    : 'legacy';
+
+  useEffect(() => {
+    if (!activePost) return;
+    const saved = savedDesigns[activePost.key];
+    if (!saved) return;
+    setThemeId(saved.themeId);
+    setLayout(saved.layout);
+    setSize(saved.size);
+    const caption = saved.captionOverride?.[lang];
+    if (caption) {
+      setCaptionOverrides((prev) => ({ ...prev, [activePost.key]: { caption, source: 'manual' } }));
+    }
+  }, [activePost?.key, lang, savedDesigns]);
+
   const setOverride = (key: string, value: unknown) => {
     if (!activePost) return;
     setOverrides((prev) => ({
@@ -379,12 +436,34 @@ export function BrandStudioPanel() {
         themeId,
         layout,
         size,
-        overrides: activeOverrides,
+        overrides: { ...activeOverrides, designFamily: activeFamily },
+        captionOverride: { [lang]: activeCaption },
       },
-      contentJson: socialPropsFor(activePost, lang, size, qrDataUrl, loc, tr, { themeId, layout, overrides: activeOverrides, visualUrl }),
+      contentJson: activeFamily === 'legacy'
+        ? socialPropsFor(activePost, lang, size, qrDataUrl, loc, tr, { themeId, layout, overrides: activeOverrides, visualUrl })
+        : {
+            template: activePost.template,
+            designFamily: activeFamily,
+            lang,
+            size,
+            themeId,
+            title: String(activeOverrides.title ?? activePost.title ?? ''),
+            note: String(activeOverrides.note ?? activePost.meta ?? ''),
+            eyebrow: String(activeOverrides.eyebrow ?? ''),
+            category: String(activeOverrides.category ?? activePost.opp?.category?.name ?? ''),
+            organization: String(activeOverrides.organization ?? activePost.opp?.organization ?? ''),
+            country: String(activeOverrides.country ?? activePost.opp?.country ?? ''),
+            location: String(activeOverrides.location ?? activePost.opp?.country ?? ''),
+            salary: String(activeOverrides.salary ?? activePost.opp?.salary ?? ''),
+            funding: String(activeOverrides.funding ?? ''),
+            deadlineDate: String(activeOverrides.deadlineDate ?? activePost.opp?.deadline ?? '') || null,
+            badge: String(activeOverrides.badge ?? ''),
+            cta: String(activeOverrides.cta ?? ''),
+            media: (activeOverrides.media ?? {}) as StudioMediaConfig,
+          },
       captionJson: { [lang]: activeCaption },
     };
-  }, [activePost, themeId, layout, size, activeOverrides, lang, qrDataUrl, loc, tr, activeCaption]);
+  }, [activePost, themeId, layout, size, activeOverrides, activeFamily, lang, qrDataUrl, loc, tr, activeCaption, visualUrl]);
 
   const saveDesign = useCallback(async (): Promise<boolean> => {
     const payload = designPayload();
@@ -525,6 +604,31 @@ export function BrandStudioPanel() {
   // ── preview node ──────────────────────────────────────────────────────────
   const previewNode = useMemo(() => {
     if (!activePost) return null;
+    if (activeFamily !== 'legacy') {
+      return (
+        <PremiumSocialCanvas
+          template={activePost.template}
+          designFamily={activeFamily}
+          lang={lang}
+          size={size}
+          themeId={themeId}
+          title={String(activeOverrides.title ?? activePost.title ?? '')}
+          note={String(activeOverrides.note ?? activePost.meta ?? '')}
+          eyebrow={String(activeOverrides.eyebrow ?? '')}
+          category={String(activeOverrides.category ?? activePost.opp?.category?.name ?? '')}
+          organization={String(activeOverrides.organization ?? activePost.opp?.organization ?? '')}
+          country={String(activeOverrides.country ?? activePost.opp?.country ?? '')}
+          location={String(activeOverrides.location ?? activePost.opp?.country ?? '')}
+          salary={String(activeOverrides.salary ?? activePost.opp?.salary ?? '')}
+          funding={String(activeOverrides.funding ?? '')}
+          deadlineDate={String(activeOverrides.deadlineDate ?? activePost.opp?.deadline ?? '') || null}
+          badge={String(activeOverrides.badge ?? '')}
+          cta={String(activeOverrides.cta ?? '')}
+          media={(activeOverrides.media ?? {}) as StudioMediaConfig}
+          qrDataUrl={qrDataUrl}
+        />
+      );
+    }
     if (activePost.template === 'spotlight' && activePost.opp) {
       const data = buildPosterData(
         {
@@ -548,7 +652,7 @@ export function BrandStudioPanel() {
       return <OpportunityPoster data={data} lang={lang} size={size} themeId={themeId} qrDataUrl={qrDataUrl} />;
     }
     return <SocialCanvas {...socialPropsFor(activePost, lang, size, qrDataUrl, loc, tr, { themeId, layout, overrides: activeOverrides, visualUrl })} />;
-  }, [activePost, lang, size, qrDataUrl, loc, tr, themeId, layout, activeOverrides]);
+  }, [activePost, activeFamily, lang, size, qrDataUrl, loc, tr, themeId, layout, activeOverrides, visualUrl]);
 
   return (
     <div className="space-y-4">
@@ -862,8 +966,17 @@ export function BrandStudioPanel() {
                   </div>
                 )}
 
-                {/* content editing */}
-                <div className="grid gap-2 sm:grid-cols-2">
+                <PremiumStudioControls
+                  template={activePost.template}
+                  family={activeFamily}
+                  overrides={activeOverrides}
+                  visuals={visuals}
+                  onFamily={(family) => setOverride('designFamily', family)}
+                  onOverride={setOverride}
+                />
+
+                {/* legacy content editing stays available for backwards-compatible families */}
+                <div className={cn('grid gap-2 sm:grid-cols-2', activeFamily !== 'legacy' && 'hidden')}>
                   <div className="sm:col-span-2">
                     <Label className="text-[10px] text-muted-foreground">Title</Label>
                     <Input
