@@ -208,7 +208,7 @@ export async function POST(req: NextRequest) {
         const creds = decryptCredentials(ch.credentials);
         // Facebook/Instagram "Test" is non-destructive: verify the configured
         // identity/token without creating a real social post.
-        if (platform === 'facebook' || platform === 'instagram' || platform === 'linkedin') {
+        if (platform === 'facebook' || platform === 'instagram' || platform === 'linkedin' || platform === 'whatsapp') {
           const check = await checkPlatformConnection(platform, creds);
           await db.publishChannel.update({
             where: { id: ch.id },
