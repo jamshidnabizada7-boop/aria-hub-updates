@@ -169,7 +169,6 @@ export function studioVisualLayerStyle(
         borderRadius: layer.borderRadius,
         zIndex: layer.z,
         pointerEvents: 'none',
-        filterOrigin: 'center',
         boxShadow: layer.shadow > 0
           ? `0 ${Math.round(30 * layer.shadow)}px ${Math.round(76 * layer.shadow)}px rgba(0,0,0,${shadowAlpha})`
           : undefined,
