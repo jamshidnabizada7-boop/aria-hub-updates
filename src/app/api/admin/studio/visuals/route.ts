@@ -1,3 +1,4 @@
+import { canManageSocial } from '@/lib/social/permissions';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentAdmin } from '@/lib/admin-auth';
 import { db } from '@/lib/db';
@@ -17,6 +18,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const admin = await getCurrentAdmin();
   if (!admin) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  if (!canManageSocial(admin.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const body = await req.json().catch(() => null) as {
     action?: string; id?: string; label?: string; category?: string; url?: string;
     enabled?: boolean; order?: number;

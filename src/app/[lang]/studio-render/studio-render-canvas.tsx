@@ -16,6 +16,8 @@ import type { Lang } from '@/lib/i18n-config';
 import type { PostTemplate } from '@/lib/social/brand';
 
 interface RenderProps {
+  sourceSlug?: string;
+  visualUrl?: string | null;
   template: PostTemplate;
   lang: Lang;
   size: PosterSize;
@@ -55,7 +57,7 @@ export default function StudioRenderCanvas({ p }: { p?: string }) {
   const props = useMemo<RenderProps | null>(() => {
     try {
       if (!p) return null;
-      const parsed = JSON.parse(decodeURIComponent(p)) as RenderProps;
+      const parsed = JSON.parse(p) as RenderProps;
       if (!parsed || typeof parsed.template !== 'string') return null;
       return parsed;
     } catch {
@@ -66,7 +68,7 @@ export default function StudioRenderCanvas({ p }: { p?: string }) {
   const [qr, setQr] = useState<string | null>(null);
   useEffect(() => {
     if (!props) return;
-    const slug = props.posterData?.slug;
+    const slug = props.sourceSlug || props.posterData?.slug;
     const url = slug
       ? `https://www.myariahub.com/${props.lang}/opportunities/${slug}`
       : 'https://www.myariahub.com';
@@ -82,7 +84,7 @@ export default function StudioRenderCanvas({ p }: { p?: string }) {
 
   return (
     <div className="flex min-h-screen items-start justify-center bg-white p-0">
-      <div data-studio-canvas="1">
+      <div data-studio-canvas="1" data-render-ready={qr ? "1" : "0"}>
         {props.designFamily && props.designFamily !== 'legacy' ? (
           <PremiumSocialCanvas
             template={props.template}
@@ -120,6 +122,7 @@ export default function StudioRenderCanvas({ p }: { p?: string }) {
             size={props.size || 'square'}
             themeId={props.themeId}
             layout={props.layout}
+            visualUrl={props.visualUrl}
             title={String(props.title ?? '')}
             note={props.note}
             seriesNo={props.seriesNo}

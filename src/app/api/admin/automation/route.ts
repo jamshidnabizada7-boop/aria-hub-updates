@@ -1,7 +1,9 @@
+import { canManageSocial } from '@/lib/social/permissions';
+import { socialRenderBaseUrl } from '@/lib/automation/auth';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentAdmin } from '@/lib/admin-auth';
 import { db } from '@/lib/db';
-import { getState, patchState, DEFAULT_SLOTS_AFT, composeCaptionWithLimit, deepLinkOf } from '@/lib/social/publisher';
+import { getState, patchState, DEFAULT_SLOTS_AFT } from '@/lib/social/publisher';
 import {
   DEFAULT_OPPORTUNITY_BATCH_SIZE,
   DEFAULT_OPPORTUNITY_BATCH_TIMES_AFT,
@@ -10,7 +12,6 @@ import {
 } from '@/lib/social/opportunity-distribution';
 import { checkPlatformConnection, publishToPlatform } from '@/lib/social/channels';
 import { decryptCredentials, encryptCredentials, maskCredentials } from '@/lib/social/credentials';
-import { ensureSocialDelivery, markDeliveryPublishing, markDeliveryResult } from '@/lib/social/delivery';
 import { getProviderHealth } from '@/lib/ai/failover';
 
 /**
@@ -32,7 +33,6 @@ export const dynamic = 'force-dynamic';
 
 const PLATFORMS = ['telegram', 'facebook', 'instagram', 'x', 'linkedin', 'whatsapp'] as const;
 /** Per-platform caption budgets (same table the publisher uses). */
-const CAPTION_LIMITS: Record<string, number> = { telegram: 1000, facebook: 4500, x: 270, instagram: 2100, linkedin: 2900, whatsapp: 3800 };
 
 export async function GET() {
   const admin = await getCurrentAdmin();
@@ -152,6 +152,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const admin = await getCurrentAdmin();
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!canManageSocial(admin.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   let body: Record<string, unknown>;
   try {
@@ -252,105 +253,36 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: r.ok, error: r.error });
       }
 
+
       case 'publish-now': {
         const id = String(body.id || '');
         const row = await db.socialPostQueue.findUnique({ where: { id } });
         if (!row) return NextResponse.json({ error: 'not_found' }, { status: 404 });
-        // Guard: re-publishing an already-published row used to be one click
-        // away (and one double-click away from duplicates).
-        if (row.status === 'published' && body.force !== true) {
-          return NextResponse.json({ error: 'already_published', message: 'This post is already published. Pass force:true to republish deliberately.' }, { status: 409 });
+        if (['published', 'cancelled', 'publishing', 'rendering'].includes(row.status)) {
+          return NextResponse.json({ error: 'post_not_claimable', status: row.status }, { status: 409 });
         }
-        const { renderOneQueueRow } = await import('@/lib/social/publisher');
-        // Force-render this specific row if it has no image yet, then publish.
+        const { renderOneQueueRow, publishQueueRow } = await import('@/lib/social/publisher');
         if (row.imageStatus !== 'ready') {
-          await renderOneQueueRow(row.id);
+          await renderOneQueueRow(id, socialRenderBaseUrl());
         }
-        const fresh = await db.socialPostQueue.findUniqueOrThrow({ where: { id } });
-        const requiresImage = ['spotlight', 'deadline'].includes(fresh.templateType);
-        if (requiresImage && fresh.imageStatus !== 'ready') {
-          return NextResponse.json({
-            error: 'media_not_ready',
-            message: 'This opportunity post requires a rendered durable image before publishing.',
-          }, { status: 409 });
-        }
-        const state = await getState();
-        const channels = await db.publishChannel.findMany({ where: { enabled: true } });
-        const langs = state.captionLangs?.length ? state.captionLangs : (['fa', 'ps', 'en'] as const);
-        const images = (fresh.imagePaths ?? {}) as { square?: string; local?: string };
-        const prevResults = (fresh.results ?? {}) as Record<string, { ok?: boolean; error?: string }>;
-        const results: Record<string, { ok: boolean; error?: string; downgraded?: string }> =
-          { ...(prevResults as Record<string, { ok: boolean; error?: string; downgraded?: string }>) };
-        const external: Record<string, { id: string | null; permalink: string | null }> =
-          (fresh.externalIds ?? {}) as Record<string, { id: string | null; permalink: string | null }>;
-        void external;
-        let anyOk = Object.values(prevResults).some((r) => r.ok);
-        for (const ch of channels) {
-          const legacyOk = Boolean(prevResults[ch.platform]?.ok);
-          const delivery = await ensureSocialDelivery(id, ch, legacyOk, external[ch.platform]);
-
-          if (legacyOk || delivery.status === 'published') {
-            results[ch.platform] = { ok: true };
-            anyOk = true;
-            continue;
-          }
-          if (['blocked', 'cancelled', 'failed'].includes(delivery.status) && body.force !== true) {
-            results[ch.platform] = { ok: false, error: delivery.error ?? `${ch.platform}: delivery ${delivery.status}` };
-            continue;
-          }
-
-          await markDeliveryPublishing(delivery.id);
-
-          const caption = composeCaptionWithLimit(fresh.captionJson, [...langs], CAPTION_LIMITS[ch.platform] ?? 2200);
-          const creds = decryptCredentials(ch.credentials);
-          const r = await publishToPlatform(ch.platform, creds, {
-            caption,
-            imageUrl: images.square ?? null,
-            imagePath: images.local ?? null,
-            link: deepLinkOf(caption) || (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.myariahub.com'),
-            requireImage: requiresImage,
-          });
-          await markDeliveryResult(delivery.id, r, delivery.attempts);
-
-          results[ch.platform] = { ok: r.ok, ...(r.error ? { error: r.error } : {}), ...(r.downgraded ? { downgraded: r.downgraded } : {}) };
-          if (r.ok) {
-            anyOk = true;
-            external[ch.platform] = { id: r.id ?? null, permalink: r.permalink ?? null };
-            await db.publishChannel.update({
-              where: { id: ch.id },
-              data: { lastStatus: 'ok', lastError: null, lastPublishedAt: new Date() },
-            });
-          } else {
-            await db.publishChannel.update({
-              where: { id: ch.id },
-              data: { lastStatus: 'error', lastError: r.error ?? 'unknown' },
-            });
-            if (r.tokenExpired) {
-              await db.publishChannel.update({ where: { id: ch.id }, data: { enabled: false } });
-            }
-          }
-        }
-        const mergedList = Object.values(results);
-        const allOk = mergedList.length > 0 && mergedList.every((r) => r.ok);
-        const status = allOk ? 'published' : anyOk ? 'partial' : 'failed';
-        await db.socialPostQueue.update({
-          where: { id },
-          data: {
-            status,
-            results,
-            externalIds: Object.keys(external).length ? external : undefined,
-            attempts: { increment: 1 },
-            publishedAt: allOk ? (fresh.publishedAt ?? new Date()) : fresh.publishedAt ?? null,
-            error: allOk ? null : mergedList.map((r) => r.error).filter(Boolean).join(' | ').slice(0, 500) || 'no enabled channels or all failed',
-          },
-        });
-        return NextResponse.json({ ok: anyOk, status, results });
+        const result = await publishQueueRow(id, { manual: true, force: body.force === true });
+        return NextResponse.json(result, { status: result.ok || result.attempted ? 200 : 409 });
       }
 
       case 'cancel-post': {
         const id = String(body.id || '');
-        await db.socialPostQueue.update({ where: { id }, data: { status: 'cancelled', claimedAt: null } });
-        return NextResponse.json({ ok: true });
+        const cancelled = await db.$transaction(async (tx) => {
+          const result = await tx.socialPostQueue.updateMany({
+            where: { id, status: { notIn: ['publishing', 'rendering', 'published'] } },
+            data: { status: 'cancelled', claimedAt: null },
+          });
+          if (result.count) await tx.socialDelivery.updateMany({
+            where: { queueId: id, status: { notIn: ['published', 'publishing'] } },
+            data: { status: 'cancelled', nextAttemptAt: null },
+          });
+          return result.count;
+        });
+        return NextResponse.json({ ok: Boolean(cancelled) }, { status: cancelled ? 200 : 409 });
       }
 
       default:

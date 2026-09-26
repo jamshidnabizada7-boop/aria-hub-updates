@@ -1,4 +1,6 @@
 export type SocialDeliveryErrorCode =
+  | 'OUTCOME_UNKNOWN'
+  | 'UNSUPPORTED'
   | 'AUTH_EXPIRED'
   | 'RATE_LIMITED'
   | 'PERMISSION_MISSING'
@@ -16,6 +18,9 @@ export function classifySocialDeliveryError(input: {
   if (input.rateLimited) return 'RATE_LIMITED';
 
   const msg = (input.error || '').toLowerCase();
+  if (/outcome unknown/.test(msg)) return 'OUTCOME_UNKNOWN';
+  if (/not implemented|not supported|unsupported|not enabled for this deployment/.test(msg)) return 'UNSUPPORTED';
+  if (/missing|requires (?:groupid|recipient)|must be a full|not valid organization/.test(msg)) return 'DESTINATION_INVALID';
   if (/permission|not authorized|insufficient|forbidden|scope/.test(msg)) return 'PERMISSION_MISSING';
   if (/image|photo|media|upload|fetch/.test(msg) && /fail|error|invalid|unreachable|403|404/.test(msg)) return 'MEDIA_UNREACHABLE';
   if (/does not exist|invalid.*(?:id|destination|recipient|page|organization)|not found/.test(msg)) return 'DESTINATION_INVALID';

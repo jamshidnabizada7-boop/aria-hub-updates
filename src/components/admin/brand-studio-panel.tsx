@@ -190,7 +190,7 @@ export function BrandStudioPanel() {
 
   // Load persisted StudioDesign rows so Save Design survives a page reload.
   useEffect(() => {
-    const date = new Date().toISOString().slice(0, 10);
+    const date = new Date(Date.now() + 270 * 60000).toISOString().slice(0, 10);
     fetch(`/api/admin/studio/design?date=${date}`, { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
@@ -339,6 +339,7 @@ export function BrandStudioPanel() {
     setThemeId(saved.themeId);
     setLayout(saved.layout);
     setSize(saved.size);
+    setVisualUrl(typeof saved.overrides.visualUrl === 'string' ? saved.overrides.visualUrl : null);
     const caption = saved.captionOverride?.[lang];
     if (caption) {
       setCaptionOverrides((prev) => ({ ...prev, [activePost.key]: { caption, source: 'manual' } }));
@@ -423,7 +424,7 @@ export function BrandStudioPanel() {
     }
   }, [activePost, aiBusyKey, lang, loc, tr, t, toast]);
 
-  const todayIso = () => new Date().toISOString().slice(0, 10);
+  const todayIso = () => new Date(Date.now() + 270 * 60000).toISOString().slice(0, 10);
 
   const designPayload = useCallback(() => {
     if (!activePost) return null;
@@ -436,13 +437,16 @@ export function BrandStudioPanel() {
         themeId,
         layout,
         size,
-        overrides: { ...activeOverrides, designFamily: activeFamily },
+        overrides: { ...activeOverrides, designFamily: activeFamily, visualUrl },
         captionOverride: { [lang]: activeCaption },
       },
-      contentJson: activeFamily === 'legacy'
+      contentJson: activeFamily === 'legacy' && activePost.template === 'spotlight' && activePost.opp
+        ? { template: 'spotlight', lang, size, themeId, sourceSlug: activePost.opp.slug, posterData: { ...activePost.opp, ...(activeOverrides.title ? { title: activeOverrides.title, titleI18n: { [lang]: activeOverrides.title } } : {}), ...(activeOverrides.deadlineDate ? { deadline: activeOverrides.deadlineDate } : {}) } }
+        : activeFamily === 'legacy'
         ? socialPropsFor(activePost, lang, size, qrDataUrl, loc, tr, { themeId, layout, overrides: activeOverrides, visualUrl })
         : {
             template: activePost.template,
+            sourceSlug: activePost.opp?.slug,
             designFamily: activeFamily,
             lang,
             size,
@@ -502,7 +506,7 @@ export function BrandStudioPanel() {
       const pubRes = await fetch('/api/admin/automation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'publish-now', id: saved.row.id, force: true }),
+        body: JSON.stringify({ action: 'publish-now', id: saved.row.id }),
       });
       const pub = await pubRes.json();
       if (!pubRes.ok || !pub.ok) throw new Error(pub.error || 'publish failed');

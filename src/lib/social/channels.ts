@@ -1,3 +1,4 @@
+import { readPublicImage } from '@/lib/import/public-image-url';
 /**
  * Social channel adapters — publish a ready post to each platform.
  *
@@ -54,14 +55,19 @@ const graphUrl = (path: string) =>
   `https://graph.facebook.com/${META_GRAPH_VERSION}/${path.replace(/^\/+/, '')}`;
 
 async function safeFetch(url: string, init: RequestInit & { body?: BodyInit | undefined } = {}): Promise<{ ok: boolean; status: number; json: Record<string, unknown> | null; text: string; headers: Headers }> {
+  const createsPost = init.method === 'POST' && /\/(?:photos|feed|media_publish|posts|messages|group_messages|tweets|sendPhoto|sendMessage)$/.test(new URL(url).pathname);
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
     const res = await fetch(url, { ...init, signal: ctrl.signal });
+    if (createsPost && res.status >= 500) throw new Error('publish outcome unknown');
     const text = await res.text();
     let json: Record<string, unknown> | null = null;
     try { json = JSON.parse(text); } catch { /* non-json */ }
     return { ok: res.ok, status: res.status, json, text, headers: res.headers };
+  } catch (error) {
+    if (createsPost) throw new Error('publish outcome unknown — verify the destination before retrying');
+    throw error;
   } finally {
     clearTimeout(t);
   }
@@ -223,7 +229,8 @@ async function publishX(creds: Record<string, unknown>, input: PublishInput): Pr
       return { ok: true, id, permalink: id ? `https://x.com/i/web/status/${id}` : null };
     }
     if (r.status === 429) return { ok: false, error: 'x: 429 rate limited', rateLimited: true };
-    if (r.status === 401 || r.status === 403) return { ok: false, error: `x: ${r.status} ${r.text.slice(0, 120)}`, tokenExpired: true };
+    if (r.status === 401) return { ok: false, error: 'x: access token rejected', tokenExpired: true };
+    if (r.status === 403) return { ok: false, error: 'x: permission denied' };
     return { ok: false, error: `x: ${r.status} ${r.text.slice(0, 160)}` };
   } catch (e) {
     return { ok: false, error: `x: ${errOf(e)}` };
@@ -296,7 +303,7 @@ const LINKEDIN_HEADERS = (accessToken: string): Record<string, string> => ({
  */
 export function normalizeLinkedInAuthorUrn(raw: string): string | null {
   const v = raw.trim();
-  if (/^urn:li:(?:organization|person):[A-Za-z0-9_-]+$/.test(v)) return v;
+  if (/^urn:li:organization:\d+$/.test(v) || /^urn:li:person:[A-Za-z0-9_-]+$/.test(v)) return v;
   if (/^\d+$/.test(v)) return `urn:li:organization:${v}`;
   return null;
 }
@@ -364,7 +371,7 @@ async function publishLinkedIn(creds: Record<string, unknown>, input: PublishInp
         if (init.status === 429) {
           return { ok: false, error: 'linkedin: image initialize rate limited', rateLimited: true };
         }
-        if (init.status === 401 || init.status === 403) {
+        if (init.status === 401) {
           return {
             ok: false,
             error: `linkedin: image initialize ${init.status} ${init.text.slice(0, 160)}`,
@@ -374,22 +381,15 @@ async function publishLinkedIn(creds: Record<string, unknown>, input: PublishInp
         return { ok: false, error: `linkedin: image initialize ${init.status} ${init.text.slice(0, 160)}` };
       }
 
-      const imageFetch = await fetch(input.imageUrl, {
-        headers: { Accept: 'image/*' },
-      });
-      if (!imageFetch.ok) {
-        return { ok: false, error: `linkedin: image fetch ${imageFetch.status}` };
-      }
-      const contentType = imageFetch.headers.get('content-type') || 'image/png';
-      const bytes = await imageFetch.arrayBuffer();
 
+      if (!isLinkedInUploadUrl(uploadUrl)) return { ok: false, error: 'linkedin: invalid upload destination' };
+      const { bytes, contentType } = await readPublicImage(input.imageUrl);
       const upload = await fetch(uploadUrl, {
         method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': contentType,
-        },
-        body: Buffer.from(bytes),
+        headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': contentType },
+        body: new Uint8Array(bytes),
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+        redirect: 'error',
       });
       if (!upload.ok) {
         return { ok: false, error: `linkedin: image upload ${upload.status}` };
@@ -500,6 +500,10 @@ async function publishWhatsApp(creds: Record<string, unknown>, input: PublishInp
       ok: false,
       error: 'whatsapp: Channel publishing is not supported by the configured official Business API connection; a WhatsApp Channel link/ID cannot be sent through /messages',
     };
+  }
+
+  if (mode === 'group' && process.env.WHATSAPP_GROUPS_API_ENABLED !== '1') {
+    return { ok: false, error: 'whatsapp: Groups API is not enabled for this deployment; verify official endpoint and account eligibility first' };
   }
 
   const target = mode === 'group'
@@ -645,6 +649,7 @@ async function checkWhatsAppConnection(creds: Record<string, unknown>): Promise<
     };
   }
 
+  if (process.env.WHATSAPP_GROUPS_API_ENABLED !== '1') return { ok: false, error: 'whatsapp: Groups API is not enabled for this deployment' };
   const groupId = String(creds.groupId || '');
   if (!groupId) return { ok: false, error: 'whatsapp: group mode requires groupId' };
   const r = await safeFetch(
@@ -666,7 +671,7 @@ async function checkWhatsAppConnection(creds: Record<string, unknown>): Promise<
   };
 }
 
-export async function checkPlatformConnection(
+async function checkPlatformConnectionInternal(
   platform: string,
   creds: Record<string, unknown>,
 ): Promise<ConnectionCheckResult> {
@@ -711,5 +716,43 @@ export const TEXT_ONLY_PLATFORMS = new Set(['telegram', 'facebook', 'x']);
 export async function publishToPlatform(platform: string, creds: Record<string, unknown>, input: PublishInput): Promise<PublishResult> {
   const fn = ADAPTERS[platform];
   if (!fn) return { ok: false, error: `unknown platform: ${platform}` };
-  return fn(creds, input);
+
+  try {
+    const result = await fn(creds, input);
+    if (result.ok && !result.id) return { ok: false, error: 'publish outcome unknown — response omitted a post/message identifier' };
+    return {
+      ...result,
+      ...(result.error ? { error: redactSocialError(result.error, creds) } : {}),
+      ...(result.downgraded ? { downgraded: redactSocialError(result.downgraded, creds) } : {}),
+    };
+  } catch {
+    return { ok: false, error: 'publish outcome unknown — verify the destination before retrying' };
+  }
+}
+
+export function isLinkedInUploadUrl(raw: string): boolean {
+  try {
+    const url = new URL(raw);
+    return url.protocol === 'https:' && !url.username && !url.password && !url.port &&
+      (url.hostname === 'linkedin.com' || url.hostname.endsWith('.linkedin.com') || url.hostname.endsWith('.licdn.com'));
+  } catch { return false; }
+}
+
+export function redactSocialError(message: string, creds: Record<string, unknown>): string {
+  let safe = message;
+  for (const [key, value] of Object.entries(creds)) {
+    if (/token|secret|password|key/i.test(key) && typeof value === 'string' && value.length >= 4) {
+      safe = safe.split(value).join('[redacted]').split(encodeURIComponent(value)).join('[redacted]');
+    }
+  }
+  return safe.replace(/https?:\/\/[^\s]+/g, '[remote URL]').slice(0, 500);
+}
+
+export async function checkPlatformConnection(platform: string, creds: Record<string, unknown>): Promise<ConnectionCheckResult> {
+  try {
+    const result = await checkPlatformConnectionInternal(platform, creds);
+    return { ...result, ...(result.error ? { error: redactSocialError(result.error, creds) } : {}) };
+  } catch {
+    return { ok: false, error: platform + ': connection check failed' };
+  }
 }

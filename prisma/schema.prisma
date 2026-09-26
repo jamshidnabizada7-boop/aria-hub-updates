@@ -1267,6 +1267,8 @@ model SocialPostQueue {
   contentJson   Json // full content snapshot for deterministic rendering
   captionJson   Json // { en, fa, ps }
   imageStatus   String    @default("none") // none | ready | failed
+  renderAttempts Int     @default(0)
+  nextRenderAttemptAt DateTime?
   imagePaths    Json? // { square?, portrait? } → /generated-posts/*.png
   status        String    @default("pending") // pending | rendering | ready | publishing | published | partial | failed | cancelled
   results       Json? // per-channel { platform: { ok, error?, downgraded? } }

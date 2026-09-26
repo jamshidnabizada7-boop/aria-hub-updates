@@ -1,3 +1,5 @@
+import { canManageSocial } from '@/lib/social/permissions';
+import { saveStudioDesign } from '@/lib/social/studio/persistence';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentAdmin } from '@/lib/admin-auth';
 import { db } from '@/lib/db';
@@ -60,6 +62,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const admin = await getCurrentAdmin();
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!canManageSocial(admin.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   let body: Record<string, unknown>;
   try {
@@ -76,70 +79,15 @@ export async function POST(req: NextRequest) {
 
   try {
     if (action === 'save' || action === 'ensure-row') {
-      const saved = await db.studioDesign.upsert({
-        where: { contentRef_forDate: { contentRef: design.contentRef, forDate: design.forDate } },
-        create: design as unknown as Parameters<typeof db.studioDesign.upsert>[0]['create'],
-        update: {
-          templateType: design.templateType,
-          themeId: design.themeId,
-          layout: design.layout,
-          size: design.size,
-          overrides: design.overrides as object,
-          captionOverride: design.captionOverride as object,
-        },
-      });
 
-      if (action === 'save') {
-        return NextResponse.json({ ok: true, design: saved });
-      }
+      const result = await saveStudioDesign(
+        design, (body.contentJson ?? {}) as object, (body.captionJson ?? {}) as object, action === 'ensure-row',
+      );
 
-      // ensure-row: the queue row must exist for today with this design's
-      // content, so "Publish now" renders exactly what was designed.
-      const dayStart = new Date(`${design.forDate}T00:00:00.000Z`);
-      const dayEnd = new Date(dayStart.getTime() + 86400000);
-      const existing = await db.socialPostQueue.findFirst({
-        where: { contentRef: design.contentRef, scheduledFor: { gte: dayStart, lt: dayEnd } },
-        orderBy: { scheduledFor: 'asc' },
-      });
-
-      const contentJson = (body.contentJson ?? {}) as object;
-      const captionJson = (body.captionJson ?? {}) as object;
-
-      if (existing) {
-        // Replacing the plan row's content — also pull it back into the due
-        // window so publish-now renders the NEW design immediately.
-        const row = await db.socialPostQueue.update({
-          where: { id: existing.id },
-          data: {
-            templateType: design.templateType,
-            contentJson,
-            captionJson,
-            requiresManualPublish: true,
-            scheduledFor: existing.scheduledFor < new Date() ? existing.scheduledFor : new Date(),
-          },
-        });
-        return NextResponse.json({ ok: true, design: saved, row, created: false });
-      }
-
-      const row = await db.socialPostQueue.create({
-        data: {
-          scheduledFor: new Date(Date.now() + 60000), // due immediately
-          templateType: design.templateType,
-          contentRef: design.contentRef,
-          contentJson,
-          captionJson,
-          requiresManualPublish: true,
-          status: 'pending',
-        },
-      });
-      return NextResponse.json({ ok: true, design: saved, row, created: true });
+      return NextResponse.json({ ok: true, ...result });
     }
-
     return NextResponse.json({ error: 'unknown_action' }, { status: 400 });
-  } catch (e) {
-    return NextResponse.json(
-      { error: (e instanceof Error ? e.message : String(e)).slice(0, 200) },
-      { status: 500 },
-    );
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message.slice(0, 200) : 'Design save failed' }, { status: 409 });
   }
 }

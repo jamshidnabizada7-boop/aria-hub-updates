@@ -13,7 +13,7 @@ EnvironmentFile=-/etc/aria-hub/social-worker.env
 ExecStart=/usr/local/bin/bun run worker:social
 Restart=always
 RestartSec=5
-TimeoutStopSec=30
+TimeoutStopSec=900
 KillSignal=SIGTERM
 
 # Keep the worker isolated from the web process. Adjust only if the VM is small.

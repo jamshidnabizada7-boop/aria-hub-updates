@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { getLocalizedContent } from '@/lib/i18n-content';
 import { formatDateLong } from '@/lib/date-format';
@@ -74,54 +75,47 @@ export async function buildOpportunityDistributionPlan(
   const repeatDays = Math.min(90, Math.max(1, options.repeatDays ?? DEFAULT_OPPORTUNITY_REPEAT_DAYS));
   const repeatCutoff = new Date(now.getTime() - repeatDays * 86400000);
 
-  const [rows, history] = await Promise.all([
-    db.opportunity.findMany({
-      where: {
-        status: 'published',
-        OR: [{ deadline: null }, { deadline: { gte: now } }],
-      },
-      orderBy: [
-        { featured: 'desc' },
-        { updatedAt: 'desc' },
-        { slug: 'asc' },
-      ],
-      take: 1000,
-      select: {
-        slug: true,
-        title: true,
-        titleI18n: true,
-        organization: true,
-        country: true,
-        deadline: true,
-        featured: true,
-        salary: true,
-        salaryI18n: true,
-        updatedAt: true,
-        category: { select: { name: true, nameI18n: true } },
-      },
-    }),
-    db.socialPostQueue.findMany({
-      where: {
-        contentRef: { not: null },
-        templateType: { in: ['spotlight', 'deadline'] },
-      },
-      orderBy: { scheduledFor: 'desc' },
-      take: 5000,
-      select: { contentRef: true, scheduledFor: true },
-    }),
-  ]);
 
+  const history = await db.socialPostQueue.groupBy({
+    by: ['contentRef'],
+    where: { contentRef: { not: null }, templateType: { in: ['spotlight', 'deadline'] }, status: { not: 'cancelled' } },
+    _max: { scheduledFor: true },
+  });
   const lastScheduled = new Map<string, Date>();
   for (const item of history) {
-    if (!item.contentRef || lastScheduled.has(item.contentRef)) continue;
-    lastScheduled.set(item.contentRef, item.scheduledFor);
+    if (item.contentRef && item._max.scheduledFor) lastScheduled.set(item.contentRef, item._max.scheduledFor);
   }
-
-  const eligible = rows.filter((row) => {
-    const last = lastScheduled.get(row.slug);
-    return !last || last < repeatCutoff;
-  });
-
+  const recentRefs = [...lastScheduled].filter(([, date]) => date >= repeatCutoff).map(([ref]) => ref);
+  const today = new Date(now);
+  today.setUTCHours(0, 0, 0, 0);
+  const select = {
+    slug: true, title: true, titleI18n: true, organization: true, country: true,
+    deadline: true, featured: true, salary: true, salaryI18n: true, updatedAt: true,
+    category: { select: { name: true, nameI18n: true } },
+  } as const;
+  // Apply cooldown before limiting results. Otherwise the first 1,000 recently
+  // posted rows can indefinitely hide eligible older inventory.
+  async function candidates(slug: Prisma.StringFilter, take: number) {
+    const urgentUntil = new Date(now.getTime() + 7 * 86400000);
+    const orderBy = [{ featured: 'desc' }, { updatedAt: 'desc' }, { createdAt: 'desc' }, { slug: 'asc' }] as const;
+    // Apply priority before LIMIT; an older urgent/featured record must not
+    // disappear behind the newest page of inventory.
+    const urgent = await db.opportunity.findMany({
+      where: { status: 'published', slug, deadline: { gte: today, lte: urgentUntil } },
+      orderBy: [...orderBy], take, select,
+    });
+    if (urgent.length === take) return urgent;
+    const other = await db.opportunity.findMany({
+      where: { status: 'published', slug, OR: [{ deadline: null }, { deadline: { gt: urgentUntil } }] },
+      orderBy: [...orderBy], take: take - urgent.length, select,
+    });
+    return [...urgent, ...other];
+  }
+  const neverPosted = await candidates({ notIn: [...lastScheduled.keys()] }, target);
+  const repeats = neverPosted.length >= target ? [] : await candidates(
+    { in: [...lastScheduled.keys()], notIn: recentRefs }, target - neverPosted.length,
+  );
+  const eligible = [...neverPosted, ...repeats];
   // Stable multi-factor priority:
   // 1) never distributed
   // 2) deadline <= 7 days

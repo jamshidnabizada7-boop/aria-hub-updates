@@ -1,3 +1,5 @@
+import { canManageSocial } from '@/lib/social/permissions';
+import { matchesSecret, socialRenderBaseUrl } from '@/lib/automation/auth';
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentAdmin } from '@/lib/admin-auth';
 import { runTick } from '@/lib/automation/tick';
@@ -14,11 +16,12 @@ export const maxDuration = 300;
 export async function POST(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   const provided = req.headers.get('x-cron-secret');
-  if (!(secret && provided && provided === secret)) {
+  if (!(matchesSecret(provided, secret))) {
     const admin = await getCurrentAdmin();
     if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!canManageSocial(admin.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
-  const origin = new URL(req.url).origin;
+  const origin = socialRenderBaseUrl();
   const onlyRender = new URL(req.url).searchParams.get('only') === 'render';
   const result = await runTick(origin, onlyRender ? { skipImport: true, skipTranslate: true } : undefined);
   return NextResponse.json({ ok: true, result });

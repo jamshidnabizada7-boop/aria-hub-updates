@@ -281,6 +281,12 @@ export async function POST(req: NextRequest) {
       case 'job-action': {
         const id = String(body.id || '');
         const op = String(body.op || '');
+        if (['open', 'resume', 'retry'].includes(op)) {
+          const state = await getState();
+          if (state.facebookGroupPaused || state.facebookGroupsEnabled === false) {
+            return NextResponse.json({ error: 'facebook_groups_paused' }, { status: 409 });
+          }
+        }
         const job = await db.facebookGroupDistributionJob.findUnique({
           where: { id },
           include: { group: true },

@@ -22,15 +22,20 @@ describe.skipIf(process.env.E2E !== '1')('browser smoke (E2E=1)', () => {
     try {
       const page = await browser.newPage();
       await page.goto(`${BASE}/en/opportunities`, { waitUntil: 'domcontentloaded', timeout: 60000 });
-      await page.waitForSelector('a[href*="/opportunities/"]', { timeout: 30000 });
-
-      const firstLink = await page.$eval('a[href*="/opportunities/"]', (a) => (a as HTMLAnchorElement).href);
-      expect(firstLink).toContain('/en/opportunities/');
-
-      await page.goto(firstLink, { waitUntil: 'domcontentloaded', timeout: 60000 });
-      const h1 = await page.$eval('h1', (el) => el.textContent?.trim() ?? '');
-      expect(h1.length).toBeGreaterThan(3);
-      expect(await page.content()).toContain('aria-lang');
+      // Use an actual public record: the navigation also contains /saved.
+      const response = await page.request.get(BASE + '/api/opportunities/list?limit=1');
+      expect(response.ok()).toBe(true);
+      const data = await response.json();
+      const item = (data.items ?? data.opportunities ?? data.data)?.[0];
+      expect(item?.slug).toBeTruthy();
+      const detailLink = page.locator('a[href="/en/opportunities/' + item.slug + '"]').first();
+      await detailLink.waitFor({ timeout: 30000 });
+      await detailLink.click();
+      await page.waitForURL('**/en/opportunities/' + item.slug, { timeout: 30000 });
+      const h1 = await page.locator('h1').innerText();
+      expect(h1).toContain(item.titleI18n?.en || item.title);
+      expect(await page.locator('html').getAttribute('lang')).toBe('en');
+      expect(await page.locator('html').getAttribute('dir')).toBe('ltr');
     } finally {
       await browser.close();
     }

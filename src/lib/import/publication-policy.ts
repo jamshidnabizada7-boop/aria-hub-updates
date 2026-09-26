@@ -14,15 +14,12 @@ export interface ImportedOpportunityStatusInput {
  * Rules:
  * - New records follow the source's autoPublish policy.
  * - Existing records keep their publication state on scraper refresh.
- * - A new record with a known past deadline starts expired.
+ * - Public queries independently hide records whose deadlines have passed.
  */
 export function resolveImportedOpportunityStatus({
   existingStatus = null,
   autoPublish,
-  deadline = null,
-  now = new Date(),
 }: ImportedOpportunityStatusInput): OpportunityStatus {
   if (existingStatus) return existingStatus;
-  if (deadline && deadline.getTime() < now.getTime()) return 'expired';
   return autoPublish ? 'published' : 'draft';
 }

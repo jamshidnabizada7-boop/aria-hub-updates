@@ -453,7 +453,7 @@ async function processListing(
     // or trusted source already published.
     const existing = await db.opportunity.findUnique({
       where: { id: dedupe.existing.id },
-      select: { slug: true, title: true, status: true },
+      select: { slug: true, title: true },
     });
     let newSlug = existing?.slug || slugBase;
     if (existing && slugify(listing.title) !== slugify(existing.title)) {
@@ -466,11 +466,9 @@ async function processListing(
         ...importFields,
         ...(categoryId ? { categoryId } : {}),
         slug: newSlug,
-        status: resolveImportedOpportunityStatus({
-          existingStatus: existing?.status ?? 'draft',
-          autoPublish: source.autoPublish,
-          deadline: importFields.deadline,
-        }),
+        // Omit status from the UPDATE, including any AI-produced value.
+        // Rewriting a previously read status could undo a concurrent admin edit.
+        status: undefined,
         importStatus: 'updated',
       },
     });

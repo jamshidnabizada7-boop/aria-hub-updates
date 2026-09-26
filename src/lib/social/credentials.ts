@@ -20,6 +20,7 @@ let warned = false;
 function key(): Buffer | null {
   const secret = process.env.CREDENTIALS_SECRET || process.env.ADMIN_SESSION_SECRET;
   if (!secret || secret.length < 16) {
+    if (process.env.NODE_ENV === 'production') throw new Error('A valid CREDENTIALS_SECRET or ADMIN_SESSION_SECRET is required');
     if (!warned) {
       warned = true;
       console.warn(

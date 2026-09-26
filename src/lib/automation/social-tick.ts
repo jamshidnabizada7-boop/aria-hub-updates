@@ -95,6 +95,7 @@ export async function runSocialTick(
     try {
       const rendered = await renderDueQueue(baseUrl, Math.min(10, Math.max(1, options.renderLimit ?? 5)));
       result.rendered = rendered.rendered;
+      result.failed += rendered.failed;
     } catch (error) {
       const message = (error instanceof Error ? error.message : String(error)).slice(0, 180);
       result.errors.push(`render: ${message}`);
@@ -103,7 +104,7 @@ export async function runSocialTick(
     try {
       const published = await publishDueQueue(Math.min(10, Math.max(1, options.publishLimit ?? 5)));
       result.published = published.published;
-      result.failed = published.failed;
+      result.failed += published.failed;
     } catch (error) {
       const message = (error instanceof Error ? error.message : String(error)).slice(0, 180);
       result.errors.push(`publish: ${message}`);

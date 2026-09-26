@@ -175,6 +175,7 @@ export async function ensureAutoCampaigns(limit = 5): Promise<{ created: number;
   const rows = await db.socialPostQueue.findMany({
     where: {
       facebookGroupDistribution: true,
+      facebookGroupMode: 'auto',
       status: { not: 'cancelled' },
       facebookGroupCampaigns: { none: {} },
     },

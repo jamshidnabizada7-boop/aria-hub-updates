@@ -59,12 +59,13 @@ describe('import publication policy', () => {
     })).toBe('expired');
   });
 
-  test('a past deadline makes a new record expired', () => {
+  test('new records follow autoPublish even when a past deadline hides them publicly', () => {
     expect(resolveImportedOpportunityStatus({
       autoPublish: true,
       deadline: past,
       now,
-    })).toBe('expired');
+    })).toBe('published');
+    expect(resolveImportedOpportunityStatus({ autoPublish: false, deadline: past, now })).toBe('draft');
   });
 
   test('a scraper refresh does not demote an existing published record', () => {

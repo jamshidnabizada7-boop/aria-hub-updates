@@ -23,6 +23,8 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
+      REQUIRE_TEST_DATABASE: '1'
+      ARIA_DISABLE_SCHEDULER: '1'
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5433/ariahub_test?sslmode=disable
       DIRECT_URL: postgresql://postgres:postgres@127.0.0.1:5433/ariahub_test?sslmode=disable
     steps:
@@ -34,6 +36,9 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      - name: Dependency security audit
+        run: bun audit --audit-level high
 
       - name: Prisma schema validation + client generation
         run: |
@@ -51,8 +56,12 @@ jobs:
       - name: Tests (unit, scraper fixtures, publish safety, security guards*)
         run: bun test tests/
         # * The api-guards tests skip automatically: no running server in CI.
-        #   Publish-safety cases also report skips if the server-only publisher
-        #   cannot load in Bun's standalone test runner.
+        #   Database/publisher tests are required and fail if setup is missing.
+
+      - name: Standalone worker runtime
+        run: |
+          export CREDENTIALS_SECRET="$(openssl rand -hex 32)"
+          bun run worker:social --once
 
       - name: Production build
         run: |
