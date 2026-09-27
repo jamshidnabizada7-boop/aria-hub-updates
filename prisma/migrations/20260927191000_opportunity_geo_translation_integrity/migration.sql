@@ -129,3 +129,24 @@ SELECT
   'loc_' || md5(opportunity_id || '|jobsaf|' || province),
   opportunity_id,'Afghanistan','AF',province,raw_province,'source',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
 FROM norm;
+
+
+-- Never expose the scraped source article as an application destination.
+-- Genuine same-host application endpoints (e.g. /apply/...) are preserved
+-- because they differ from sourceUrl/originalUrl.
+UPDATE "Opportunity"
+SET "applyUrl" = NULL
+WHERE "applyUrl" IS NOT NULL
+  AND (
+    "applyUrl" = "sourceUrl"
+    OR "applyUrl" = "originalUrl"
+  );
+
+-- O4AF has a rich detail parser; production had detailFetch=false, which
+-- prevented it from ever collecting the full opportunity body.
+UPDATE "ImportSource"
+SET config = (
+  COALESCE(NULLIF(config, ''), '{}')::jsonb
+  || '{"detailFetch":true}'::jsonb
+)::text
+WHERE "scraperKey" = 'o4af';
