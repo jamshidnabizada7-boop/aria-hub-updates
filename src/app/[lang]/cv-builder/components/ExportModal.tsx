@@ -34,12 +34,17 @@ export function ExportModal({
     'issues.atsPhoto':'Some ATS-focused applications prefer a CV without a photo.',
   } as Record<string,string>)[key]||key);
 
+  const sectionName=(section:CVIssue['section'])=>c(({
+    document:'CV settings',personal:'Personal information',summary:'Professional summary',experience:'Experience',
+    education:'Education',projects:'Projects',skills:'Skills',languages:'Languages',certifications:'Certifications',
+    awards:'Awards & honors',volunteering:'Volunteering & leadership',research:'Research',publications:'Publications',references:'References',
+  } as Record<string,string>)[section]||section);
   const IssueList=({items,color}:{items:CVIssue[];color:'red'|'amber'|'blue'})=>(
     <ul className="space-y-2">
       {items.map(issue=>(
         <li key={issue.id} className="flex items-start justify-between gap-3 rounded-lg bg-background/70 p-2.5 text-sm">
           <div className="min-w-0">
-            <div className="font-medium">{issue.itemLabel || c(issue.section==='document'?'CV settings':issue.section)}</div>
+            <div className="font-medium">{sectionName(issue.section)}{issue.itemLabel ? ` · ${issue.itemLabel}` : ''}</div>
             <div className="text-muted-foreground">{message(issue.messageKey)}</div>
           </div>
           {issue.anchorId?<Button type="button" variant="ghost" size="sm" className={color==='red'?'text-destructive':color==='amber'?'text-amber-700':'text-primary'} onClick={()=>onNavigateToIssue(issue)}>{c('Fix')} →</Button>:null}
