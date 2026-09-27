@@ -10,6 +10,7 @@ import { ExportModal } from './components/ExportModal';
 import { useCVDrafts } from './hooks/use-cv-drafts';
 import { DEFAULT_TEMPLATE_BY_PURPOSE, displayDraftName } from './lib/cv-utils';
 import { validateDraft } from './lib/cv-validation';
+import { cvText } from './lib/cv-copy';
 import type { CVOutputLang, CVPurpose, CVSourceContext, PaperSize, TemplateType } from './types';
 
 interface Props {
@@ -18,11 +19,11 @@ interface Props {
   source?: CVSourceContext;
 }
 
-function saveLabel(status: string) {
-  if (status === 'loading') return 'Loading drafts…';
-  if (status === 'saving') return 'Saving…';
-  if (status === 'error') return 'Save problem';
-  return 'Saved on this device';
+function saveLabel(status: string, lang: CVOutputLang) {
+  if (status === 'loading') return cvText(lang, 'Loading drafts…');
+  if (status === 'saving') return cvText(lang, 'Saving…');
+  if (status === 'error') return cvText(lang, 'Save problem');
+  return cvText(lang, 'Saved on this device');
 }
 
 export function CVBuilderClient({ initialLang, initialPurpose = 'professional', source }: Props) {
@@ -43,7 +44,7 @@ export function CVBuilderClient({ initialLang, initialPurpose = 'professional', 
   const readiness = useMemo(() => activeDraft ? validateDraft(activeDraft) : null, [activeDraft]);
 
   if (!activeDraft || !readiness) {
-    return <div className="mx-auto max-w-7xl px-4 py-16 text-center text-muted-foreground">Loading your CV drafts…</div>;
+    return <div className="mx-auto max-w-7xl px-4 py-16 text-center text-muted-foreground">{cvText(initialLang, 'Loading your CV drafts…')}</div>;
   }
 
   const updateMeta = <K extends 'name'|'purpose'|'template'|'paperSize'|'outputLang'>(key: K, value: any) => {
@@ -69,12 +70,12 @@ export function CVBuilderClient({ initialLang, initialPurpose = 'professional', 
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <FileText className="size-5 text-primary" />
-              <h1 className="text-xl font-bold sm:text-2xl">ARIA HUB CV Builder</h1>
+              <h1 className="text-xl font-bold sm:text-2xl">{cvText(initialLang, 'ARIA HUB CV Builder')}</h1>
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-700">
-                <Save className="size-3.5" /> {saveLabel(status)}
+                <Save className="size-3.5" /> {saveLabel(status, initialLang)}
               </span>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">Build a professional CV with purpose-aware guidance, local autosave, multilingual output, ATS checks, and print-ready PDF export.</p>
+            <p className="mt-1 text-sm text-muted-foreground">{cvText(initialLang, 'Build a professional CV with purpose-aware guidance, local autosave, multilingual output, ATS checks, and print-ready PDF export.')}</p>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -92,33 +93,33 @@ export function CVBuilderClient({ initialLang, initialPurpose = 'professional', 
 
         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
           <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground" htmlFor="draft-select">Saved CV</label>
+            <label className="text-xs font-medium text-muted-foreground" htmlFor="draft-select">{cvText(initialLang, 'Saved CV')}</label>
             <select id="draft-select" className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={activeDraft.id} onChange={(e) => switchDraft(e.target.value)}>
               {drafts.map((draft) => <option key={draft.id} value={draft.id}>{displayDraftName(draft, 'Untitled CV')}</option>)}
             </select>
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground" htmlFor="cv-name">CV name</label>
-            <input id="cv-name" className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={activeDraft.name} onChange={(e) => updateMeta('name', e.target.value)} placeholder="e.g. Software internship CV" />
+            <label className="text-xs font-medium text-muted-foreground" htmlFor="cv-name">{cvText(initialLang, 'CV name')}</label>
+            <input id="cv-name" className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={activeDraft.name} onChange={(e) => updateMeta('name', e.target.value)} placeholder={cvText(initialLang, 'e.g. Software internship CV')} />
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground" htmlFor="cv-purpose">Purpose</label>
+            <label className="text-xs font-medium text-muted-foreground" htmlFor="cv-purpose">{cvText(initialLang, 'Purpose')}</label>
             <select id="cv-purpose" className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={activeDraft.purpose} onChange={(e) => updateMeta('purpose', e.target.value as CVPurpose)}>
-              <option value="professional">Job / Professional</option>
-              <option value="student">Student / Internship</option>
-              <option value="scholarship">Scholarship / Academic</option>
+              <option value="professional">{cvText(initialLang, 'Job / Professional')}</option>
+              <option value="student">{cvText(initialLang, 'Student / Internship')}</option>
+              <option value="scholarship">{cvText(initialLang, 'Scholarship / Academic')}</option>
             </select>
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground" htmlFor="cv-template">Template</label>
+            <label className="text-xs font-medium text-muted-foreground" htmlFor="cv-template">{cvText(initialLang, 'Template')}</label>
             <select id="cv-template" className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={activeDraft.template} onChange={(e) => updateMeta('template', e.target.value as TemplateType)}>
-              <option value="ats">ATS Simple</option>
-              <option value="modern">Modern Professional</option>
-              <option value="academic">Academic Classic</option>
+              <option value="ats">{cvText(initialLang, 'ATS Simple')}</option>
+              <option value="modern">{cvText(initialLang, 'Modern Professional')}</option>
+              <option value="academic">{cvText(initialLang, 'Academic Classic')}</option>
             </select>
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground" htmlFor="cv-language">CV language</label>
+            <label className="text-xs font-medium text-muted-foreground" htmlFor="cv-language">{cvText(initialLang, 'CV language')}</label>
             <select id="cv-language" className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={activeDraft.outputLang} onChange={(e) => updateMeta('outputLang', e.target.value as CVOutputLang)}>
               <option value="en">English</option>
               <option value="fa">فارسی</option>
@@ -126,7 +127,7 @@ export function CVBuilderClient({ initialLang, initialPurpose = 'professional', 
             </select>
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground" htmlFor="cv-paper">Paper size</label>
+            <label className="text-xs font-medium text-muted-foreground" htmlFor="cv-paper">{cvText(initialLang, 'Paper size')}</label>
             <select id="cv-paper" className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={activeDraft.paperSize} onChange={(e) => updateMeta('paperSize', e.target.value as PaperSize)}>
               <option value="a4">A4</option>
               <option value="letter">US Letter</option>
@@ -136,18 +137,18 @@ export function CVBuilderClient({ initialLang, initialPurpose = 'professional', 
 
         {source?.opportunityTitle ? (
           <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-sm">
-            Building this CV for: <strong>{source.opportunityTitle}</strong>
-            {source.returnTo ? <a href={source.returnTo} className="ms-2 font-medium text-primary hover:underline">Return to opportunity</a> : null}
+            {cvText(initialLang, 'Building this CV for:')} <strong>{source.opportunityTitle}</strong>
+            {source.returnTo ? <a href={source.returnTo} className="ms-2 font-medium text-primary hover:underline">{cvText(initialLang, 'Return to opportunity')}</a> : null}
           </div>
         ) : null}
       </div>
 
       <Tabs value={mobileTab} onValueChange={setMobileTab} className="lg:hidden print:hidden">
         <TabsList className="mb-4 grid h-11 w-full grid-cols-2">
-          <TabsTrigger value="edit">Edit</TabsTrigger>
-          <TabsTrigger value="preview">Preview</TabsTrigger>
+          <TabsTrigger value="edit">{cvText(initialLang, 'Edit')}</TabsTrigger>
+          <TabsTrigger value="preview">{cvText(initialLang, 'Preview')}</TabsTrigger>
         </TabsList>
-        <TabsContent value="edit"><CVForm draft={activeDraft} onChange={updateActive} /></TabsContent>
+        <TabsContent value="edit"><CVForm draft={activeDraft} onChange={updateActive} uiLang={initialLang} /></TabsContent>
         <TabsContent value="preview">
           <div className="overflow-x-auto rounded-xl bg-slate-200/70 p-2 dark:bg-slate-950/50">
             <div className="min-w-[700px]"><CVPreview draft={activeDraft} /></div>
@@ -156,12 +157,12 @@ export function CVBuilderClient({ initialLang, initialPurpose = 'professional', 
       </Tabs>
 
       <div className="hidden gap-6 lg:grid lg:grid-cols-[minmax(0,0.95fr)_minmax(620px,1.05fr)] print:block">
-        <div className="print:hidden min-w-0"><CVForm draft={activeDraft} onChange={updateActive} /></div>
+        <div className="print:hidden min-w-0"><CVForm draft={activeDraft} onChange={updateActive} uiLang={initialLang} /></div>
         <div className="min-w-0">
           <div className="sticky top-4 print:static">
             <div className="print:hidden mb-2 flex items-center justify-between text-xs text-muted-foreground">
-              <span>Live preview</span>
-              <span>{readiness.completion}% complete · {readiness.issues.filter((x) => x.severity === 'error').length} blocking issues</span>
+              <span>{cvText(initialLang, 'Live preview')}</span>
+              <span>{readiness.completion}% {cvText(initialLang, 'complete')} · {readiness.issues.filter((x) => x.severity === 'error').length} {cvText(initialLang, 'blocking issues')}</span>
             </div>
             <CVPreview draft={activeDraft} />
           </div>
@@ -170,14 +171,14 @@ export function CVBuilderClient({ initialLang, initialPurpose = 'professional', 
 
       <div className="print:hidden mt-5 flex flex-wrap justify-between gap-3 rounded-2xl border bg-card p-4">
         <div className="text-sm text-muted-foreground">
-          Draft data is stored locally in your browser. Cloud sync is not enabled until ARIA HUB has end-user authentication wired to these drafts.
+          {cvText(initialLang, 'Draft data is stored locally in your browser. Cloud sync is not enabled until ARIA HUB has end-user authentication wired to these drafts.')}
         </div>
         <Button type="button" variant="destructive" onClick={() => removeDraft(activeDraft.id)} disabled={drafts.length === 1 && !activeDraft.data.personal.fullName}>
           <Trash2 className="size-4" /> Delete this CV
         </Button>
       </div>
 
-      <ExportModal isOpen={exportOpen} onOpenChange={setExportOpen} draft={activeDraft} readiness={readiness} onConfirm={doPrint} />
+      <ExportModal isOpen={exportOpen} onOpenChange={setExportOpen} draft={activeDraft} readiness={readiness} onConfirm={doPrint} uiLang={initialLang} />
     </div>
   );
 }
