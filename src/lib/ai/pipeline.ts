@@ -104,9 +104,20 @@ export function extractApplyLink(listing: RawListing): string | null {
     }
   }
 
-  // 4. A scraped applyUrl (e.g. Wazifaha's own apply page) — keep as final fallback
+  // 4. A scraped applyUrl is accepted only when it is a genuine application
+  // endpoint, not the article/source page where ARIA HUB discovered the item.
   if (listing.applyUrl && !candidates.includes(listing.applyUrl)) {
-    candidates.push(listing.applyUrl);
+    const candidate = listing.applyUrl.trim();
+    const sameAsSource = candidate === listing.sourceUrl || candidate === listing.originalUrl;
+    let sourceHost = '';
+    let candidateHost = '';
+    try { sourceHost = new URL(listing.sourceUrl).hostname.replace(/^www\./, ''); } catch { /* ignore */ }
+    try { candidateHost = new URL(candidate).hostname.replace(/^www\./, ''); } catch { /* mailto */ }
+    const looksLikeSourceArticle =
+      sameAsSource ||
+      (!!sourceHost && candidateHost === sourceHost &&
+        !/\/apply(?:\/|$)|\/application(?:\/|$)|form|survey|jobs\/apply/i.test(candidate));
+    if (!looksLikeSourceArticle) candidates.push(candidate);
   }
 
   return candidates[0] || null;
@@ -207,7 +218,7 @@ export async function runAIPipeline(
     educationReq: listing.educationReq || null,
     experience: listing.experience || null,
     extractedData: listing.extractedData || null,
-    applyUrl: exactApplyUrl || listing.applyUrl || null,
+    applyUrl: exactApplyUrl,
 
     seoTitle: listing.title,
     seoDescription: shortDesc,
