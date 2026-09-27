@@ -477,6 +477,10 @@ async function processListing(
       },
     });
     await syncOpportunityLocations(db, updatedOpportunity.id, listing);
+    await db.opportunityTranslationProgress.updateMany({
+      where: { opportunityId: updatedOpportunity.id },
+      data: { status: 'pending', sourceHash: null, nextAttemptAt: null, completedAt: null, lastError: null, attempts: 0 },
+    });
     counters.updated++;
   } else {
     // Create new
