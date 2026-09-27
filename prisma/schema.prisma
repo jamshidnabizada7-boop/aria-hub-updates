@@ -705,6 +705,25 @@ model AlertSubscriber {
   @@index([status, createdAt])
 }
 
+/// Separate from category alerts: one opt-in saved Opportunity Matcher profile
+/// per email address. The profile contains canonical non-display identifiers
+/// only and is activated by double opt-in before any personalized digest.
+model MatcherAlertSubscriber {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  lang         String   @default("fa")
+  profile      Json
+  frequency    String   @default("daily")
+  status       String   @default("pending")
+  confirmToken String?
+  sourceIp     String?
+  lastDigestAt DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([status, createdAt])
+}
+
 // ─── Users / Auth ────────────────────────────────────────────────────────────
 model AdminUser {
   id               String    @id @default(cuid())
