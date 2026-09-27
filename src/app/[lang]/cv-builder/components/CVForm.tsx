@@ -174,7 +174,7 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
       const image = await prepareProfileImage(file);
       setPersonal('picture', image);
     } catch (error) {
-      toast({ title: 'Could not use this image', description: error instanceof Error && error.message === 'image-too-large' ? 'Choose an image smaller than 8 MB.' : 'Choose a valid image file.' });
+      toast({ title: c('Could not use this image'), description: error instanceof Error && error.message === 'image-too-large' ? c('Choose an image smaller than 8 MB.') : c('Choose a valid image file.') });
     } finally {
       setImageBusy(false);
     }
