@@ -20,6 +20,7 @@ import Link from 'next/link';
 import { track } from '@vercel/analytics';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -93,7 +94,9 @@ const COPY = {
     saveHint: 'Save this opportunity', cv: 'Prepare CV for this opportunity',
     helpful: 'Helpful', notRelevant: 'Not relevant',
     deadline: 'Deadline', noDeadline: 'No deadline listed',
-    categoryAlert: 'Get category alerts', alertHint: 'ARIA HUB can email you new opportunities in this category. Current alerts are category-based, not personalized match alerts.',
+    categoryAlert: 'Notify me about strong matches', alertHint: 'Save these Matcher preferences by email. After confirmation, ARIA HUB will notify you only when a new strong match appears.',
+    alertEmail: 'Email address', alertDaily: 'Daily', alertWeekly: 'Weekly', alertButton: 'Save match alert', alertSending: 'Saving…', alertSuccess: 'Check your inbox to confirm this match alert.', alertError: 'Could not save the alert. Please try again.',
+    viewDetails: 'View details',
     privacy: 'Matcher preferences stay in this browser session. Only the submitted profile and selected evidence may be sent to the configured AI provider for explanation.',
   },
   fa: {
@@ -121,7 +124,9 @@ const COPY = {
     saveHint: 'ذخیره این فرصت', cv: 'آماده‌سازی CV برای این فرصت',
     helpful: 'مفید بود', notRelevant: 'مرتبط نبود',
     deadline: 'آخرین مهلت', noDeadline: 'مهلت ثبت نشده',
-    categoryAlert: 'دریافت اطلاع‌رسانی دسته‌بندی', alertHint: 'آریا هاب می‌تواند فرصت‌های جدید این دسته را ایمیل کند. اطلاع‌رسانی فعلی براساس دسته‌بندی است، نه تطبیق شخصی.',
+    categoryAlert: 'اطلاع‌رسانی تطبیق‌های قوی', alertHint: 'این ترجیحات Matcher را با ایمیل ذخیره کنید. پس از تأیید، آریا هاب فقط وقتی یک تطبیق قوی جدید پیدا شود به شما اطلاع می‌دهد.',
+    alertEmail: 'آدرس ایمیل', alertDaily: 'روزانه', alertWeekly: 'هفتگی', alertButton: 'ذخیره اطلاع‌رسانی تطبیق', alertSending: 'در حال ذخیره…', alertSuccess: 'برای تأیید اطلاع‌رسانی، ایمیل خود را بررسی کنید.', alertError: 'ذخیره اطلاع‌رسانی ممکن نشد. دوباره تلاش کنید.',
+    viewDetails: 'مشاهده جزئیات',
     privacy: 'ترجیحات تطبیق در همین نشست مرورگر نگه‌داری می‌شود. فقط پروفایل ارسال‌شده و شواهد انتخاب‌شده ممکن است برای توضیح به ارائه‌دهنده AI تنظیم‌شده فرستاده شود.',
   },
   ps: {
@@ -149,7 +154,9 @@ const COPY = {
     saveHint: 'فرصت خوندي کړئ', cv: 'د دې فرصت لپاره CV چمتو کړئ',
     helpful: 'ګټور و', notRelevant: 'اړوند نه و',
     deadline: 'وروستۍ نېټه', noDeadline: 'نېټه نه ده ثبت شوې',
-    categoryAlert: 'د کټګورۍ خبرتیاوې', alertHint: 'آریا هاب د همدې کټګورۍ نوي فرصتونه ایمیل کولای شي. اوسني خبرتیاوې کټګوري-بنسټ دي، شخصي matcher خبرتیاوې نه دي.',
+    categoryAlert: 'د قوي برابرښت خبرتیا راکړئ', alertHint: 'دا Matcher غوره توبونه د ایمیل له لارې خوندي کړئ. له تایید وروسته آریا هاب یوازې د نوي قوي برابرښت پر مهال خبر درکوي.',
+    alertEmail: 'بریښنالیک', alertDaily: 'ورځنی', alertWeekly: 'اونیز', alertButton: 'د برابرښت خبرتیا خوندي کړئ', alertSending: 'خوندي کېږي…', alertSuccess: 'د خبرتیا د تایید لپاره خپل ایمیل وګورئ.', alertError: 'خبرتیا ونه خوندي شوه. بیا هڅه وکړئ.',
+    viewDetails: 'تفصیل وګورئ',
     privacy: 'د matcher غوره توبونه د همدې براوزر په ناسته کې پاتې کېږي. یوازې لېږل شوی پروفایل او ټاکل شوي شواهد ښايي د تشریح لپاره تنظیم شوي AI چمتوکوونکي ته واستول شي.',
   },
 } as const;
@@ -384,8 +391,9 @@ export function OpportunityMatcherClient() {
           ))}
         </div>
 
-        <GlassCard className="mt-6 text-center">
-          <p className="text-sm text-muted-foreground">{c.privacy}</p>
+        <GlassCard className="mt-6">
+          <MatcherAlertSignup profile={profile} lang={lang} copy={c} />
+          <p className="mt-5 text-center text-xs text-muted-foreground">{c.privacy}</p>
           <div className="mt-5 flex flex-wrap justify-center gap-3">
             <Button variant="outline" onClick={() => { setState('idle'); setStep(1); track('matcher_edit_preferences'); }}>
               {c.edit}
@@ -416,11 +424,7 @@ export function OpportunityMatcherClient() {
           </div>
           {isNoMatch && (
             <div className="mt-7 border-t pt-6 text-start">
-              <p className="font-semibold">{c.categoryAlert}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{c.alertHint}</p>
-              <Button asChild variant="link" className="mt-2 px-0">
-                <Link href={hrefFn('/opportunities') + '#alerts'}><Bell className="me-2 h-4 w-4" />{c.categoryAlert}</Link>
-              </Button>
+              <MatcherAlertSignup profile={profile} lang={lang} copy={c} />
             </div>
           )}
         </GlassCard>
@@ -631,7 +635,7 @@ function ResultCard({
         <div className="mt-5 flex flex-wrap items-center gap-2">
           <Button asChild>
             <Link href={hrefFn(`/opportunities/${result.slug}`)}>
-              {copy.why}
+              {copy.viewDetails}
               <ArrowRight className="ms-2 h-4 w-4 rtl:rotate-180" aria-hidden="true" />
             </Link>
           </Button>
@@ -648,6 +652,84 @@ function ResultCard({
         </div>
       </div>
     </Card>
+  );
+}
+
+function MatcherAlertSignup({
+  profile,
+  lang,
+  copy,
+}: {
+  profile: Profile;
+  lang: Lang;
+  copy: (typeof COPY)[Lang];
+}) {
+  const [email, setEmail] = useState('');
+  const [frequency, setFrequency] = useState<'daily' | 'weekly'>('daily');
+  const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!email.trim()) return;
+    setStatus('sending');
+    try {
+      const res = await fetch('/api/matcher-alerts/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          frequency,
+          profile: { ...profile, lang },
+          website: '',
+        }),
+      });
+      if (!res.ok) throw new Error(`matcher alert ${res.status}`);
+      setStatus('success');
+      track('matcher_alert_created', { frequency });
+    } catch {
+      setStatus('error');
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className="text-start">
+      <div className="flex items-start gap-2">
+        <Bell className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" aria-hidden="true" />
+        <div>
+          <p className="font-semibold">{copy.categoryAlert}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{copy.alertHint}</p>
+        </div>
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto_auto]">
+        <div>
+          <Label htmlFor="matcher-alert-email" className="sr-only">{copy.alertEmail}</Label>
+          <Input
+            id="matcher-alert-email"
+            type="email"
+            autoComplete="email"
+            required
+            maxLength={200}
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder={copy.alertEmail}
+          />
+        </div>
+        <Select value={frequency} onValueChange={(value) => setFrequency(value as 'daily' | 'weekly')}>
+          <SelectTrigger aria-label={frequency === 'daily' ? copy.alertDaily : copy.alertWeekly}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="daily">{copy.alertDaily}</SelectItem>
+            <SelectItem value="weekly">{copy.alertWeekly}</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button type="submit" disabled={status === 'sending' || status === 'success'}>
+          {status === 'sending' ? copy.alertSending : copy.alertButton}
+        </Button>
+      </div>
+      {status === 'success' && <p className="mt-2 text-sm text-emerald-700 dark:text-emerald-400" role="status">{copy.alertSuccess}</p>}
+      {status === 'error' && <p className="mt-2 text-sm text-destructive" role="alert">{copy.alertError}</p>}
+    </form>
   );
 }
 
