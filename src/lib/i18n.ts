@@ -576,6 +576,7 @@ export const translations: Record<string, Record<string, string>> = {
     'admin.nav.submissions': 'Submissions',
     'admin.nav.alertSubscribers': 'Alert Subscribers',
     'admin.nav.pages': 'Pages',
+    'admin.nav.cvBuilder': 'CV Builder',
     'admin.nav.whyChooseUs': 'Why ARIA HUB',
     // R21-c completeness: nav group headers + newly wired panels
     'admin.group.overview': 'Overview',
@@ -2045,6 +2046,7 @@ export const translations: Record<string, Record<string, string>> = {
     'admin.nav.submissions': 'درخواست‌ها',
     'admin.nav.alertSubscribers': 'مشترکان هشدار',
     'admin.nav.pages': 'صفحه‌ها',
+    'admin.nav.cvBuilder': 'سی‌وی ساز',
     'admin.nav.whyChooseUs': 'چرا ARIA HUB',
     // R21-c completeness: nav group headers + newly wired panels
     'admin.group.overview': 'نمای کلی',
@@ -3560,6 +3562,7 @@ export const translations: Record<string, Record<string, string>> = {
     'admin.nav.submissions': 'سپارنې',
     'admin.nav.alertSubscribers': 'د خبرتیا غړي',
     'admin.nav.pages': 'پاڼې',
+    'admin.nav.cvBuilder': 'سي وي جوړونکی',
     'admin.nav.whyChooseUs': 'ولې ARIA HUB',
     // R21-c completeness: nav group headers + newly wired panels
     'admin.group.overview': 'لنډه کتنه',
