@@ -21,7 +21,7 @@
  *
  * Extraction per post:
  *   title.rendered        → title (entity-decoded, tags stripped)
- *   link                  → sourceUrl / applyUrl / originalUrl
+ *   link                  → sourceUrl / originalUrl (never auto-used as Apply)
  *   excerpt.rendered      → description fallback (plain text)
  *   content.rendered      → description (boilerplate-stripped HTML → text)
  *   date_gmt              → publishedDate (ISO)
@@ -92,6 +92,62 @@ export function extractDeadlineFromText(text: string): string | null {
     if (parsed) return parsed;
   }
   return null;
+}
+
+
+function extractWpStructuredFacts(rawContent: string, sourceUrl: string): {
+  applyUrl: string | null;
+  organization: string | null;
+  country: string | null;
+} {
+  const $ = cheerio.load(rawContent || '');
+  let applyUrl: string | null = null;
+
+  $('a[href]').each((_, el) => {
+    if (applyUrl) return;
+    const href = ($(el).attr('href') || '').trim();
+    const label = $(el).text().replace(/\s+/g, ' ').trim().toLowerCase();
+    if (!href) return;
+    let absolute: string;
+    try { absolute = new URL(href, sourceUrl).toString(); } catch { return; }
+
+    const looksDirect =
+      /apply|application|register|registration|submit/i.test(label) ||
+      /forms\.|docs\.google\.com\/forms|typeform|jotform|survey/i.test(absolute) ||
+      /\/(apply|application|applications|register|registration|submit)(\/|\?|$)/i.test(absolute);
+    if (!looksDirect) return;
+
+    try {
+      const target = new URL(absolute);
+      const source = new URL(sourceUrl);
+      const sameArticle = target.href.replace(/\/$/, '') === source.href.replace(/\/$/, '');
+      if (sameArticle) return;
+      // Same-host links are accepted only when their path itself is an
+      // application endpoint; external direct forms/portals are allowed.
+      if (target.hostname === source.hostname &&
+          !/\/(apply|application|applications|register|registration|submit)(\/|\?|$)/i.test(target.pathname + target.search)) {
+        return;
+      }
+      applyUrl = absolute;
+    } catch { /* ignore malformed URL */ }
+  });
+
+  const text = stripHtml(rawContent || '').replace(/\r/g, '');
+  const labelValue = (labels: string[]): string | null => {
+    for (const label of labels) {
+      const re = new RegExp('(?:^|\\\\n)\\\\s*' + label + '\\\\s*[:\\\\-]\\\\s*([^\\\\n]{2,120})', 'i');
+      const m = text.match(re);
+      if (m?.[1]) return m[1].trim().replace(/[|•]+.*$/, '').trim();
+    }
+    return null;
+  };
+
+  const organization = labelValue([
+    'host institution','host organization','organization','organizer','organiser','offered by','hosted by','university'
+  ]);
+  const country = labelValue(['host country','country','location']);
+
+  return { applyUrl, organization, country };
 }
 
 export class WpApiScraper extends BaseScraper {
@@ -256,6 +312,7 @@ export class WpApiScraper extends BaseScraper {
       stripHtml(stripTextJunk(stripWpBoilerplate(rawContent))) ||
       htmlToExcerpt(post.excerpt?.rendered || '');
 
+    const structured = extractWpStructuredFacts(rawContent, link);
     const publishedDate = parseDate(post.date_gmt || post.date);
 
     // Deadline: only an explicit "Deadline: <date>" line in the body counts.
@@ -275,10 +332,9 @@ export class WpApiScraper extends BaseScraper {
       title,
       sourceUrl: link,
       originalUrl: link,
-      // Do not expose the scraped article as an Apply destination.
-      // An exact email/form/application URL may be discovered later by the
-      // deterministic application-link extractor.
-      applyUrl: null,
+      // Only a deterministic direct application endpoint is allowed here.
+      // The WordPress article itself is never an Apply destination.
+      applyUrl: structured.applyUrl,
       sourceName: this.source.name,
       sourceLanguage: 'en',
       jobType,
@@ -287,11 +343,15 @@ export class WpApiScraper extends BaseScraper {
       publishedDate,
       deadline,
       imageUrl,
-      country: null,
-      organization: null,
+      country: structured.country,
+      organization: structured.organization,
       extractedData: {
         wpPostId: post.id ?? null,
         terms: termNames.slice(0, 10),
+        detailLevel: 'full',
+        structuredOrganization: structured.organization,
+        structuredCountry: structured.country,
+        directApplyFound: Boolean(structured.applyUrl),
       },
     } as RawListing;
   }
