@@ -356,8 +356,8 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
                 <Field id={`project-role-${item.id}`} label={c('Your role')} value={item.role} onChange={(v) => updateItem('projects', item.id, { role: v })} />
                 <Field id={`project-tech-${item.id}`} label={c('Technologies / methods')} value={item.technologies} onChange={(v) => updateItem('projects', item.id, { technologies: v })} />
                 <Field id={`project-link-${item.id}`} {...issueProps(`project-link-${item.id}`)} label={c('Project link')} dir="ltr" type="url" value={item.link} onChange={(v) => updateItem('projects', item.id, { link: v })} />
-                <Field id={`project-start-${item.id}`} label="Start" type="month" value={item.startDate} onChange={(v) => updateItem('projects', item.id, { startDate: v })} />
-                <Field id={`project-end-${item.id}`} label="End" type="month" value={item.endDate} onChange={(v) => updateItem('projects', item.id, { endDate: v })} />
+                <Field id={`project-start-${item.id}`} label={c('Start')} type="month" value={item.startDate} onChange={(v) => updateItem('projects', item.id, { startDate: v })} />
+                <Field id={`project-end-${item.id}`} {...issueProps(`project-end-${item.id}`)} label={c('End')} type="month" value={item.endDate} onChange={(v) => updateItem('projects', item.id, { endDate: v })} />
               </div>
               <div className="mt-3"><TextField id={`project-desc-${item.id}`} label={c('What you built / achieved')} value={item.description} onChange={(v) => updateItem('projects', item.id, { description: v })} /></div>
               <div className="mt-3 flex items-center justify-between gap-2"><ReorderButtons section="projects" id={item.id} /><Button type="button" variant="ghost" className="min-h-11 text-destructive" onClick={() => removeItem('projects', item.id, 'Project')}><Trash2 className="size-4" /> {c('Remove')}</Button></div>
