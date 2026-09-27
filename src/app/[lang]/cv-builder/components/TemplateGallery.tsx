@@ -79,6 +79,7 @@ export function TemplateGallery({
                   <div>
                     <div className="font-semibold">{c(template.name)}</div>
                     <div className="mt-1 text-xs text-muted-foreground">{c(template.bestFor)}</div>
+                    <p className="mt-2 line-clamp-3 text-[11px] leading-4 text-muted-foreground">{c(template.description)}</p>
                   </div>
                   {isSelected?<Check className="size-4 shrink-0 text-primary" />:null}
                 </div>
