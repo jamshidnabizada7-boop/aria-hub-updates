@@ -423,6 +423,10 @@ export function rankOpportunity(row: MatcherOpportunity, profile: MatcherProfile
   else if (unknowns >= 2) eligibilityStatus = 'incomplete';
   else eligibilityStatus = 'needs_check';
 
+  if (eligibilityStatus === 'incomplete' && check.length === 0) {
+    check.push('Some eligibility requirements are not structured; verify the official eligibility criteria before applying.');
+  }
+
   score = Math.max(0, Math.min(100, score));
   const strength: MatchStrength = score >= 76 ? 'strong' : score >= 56 ? 'good' : 'possible';
 
