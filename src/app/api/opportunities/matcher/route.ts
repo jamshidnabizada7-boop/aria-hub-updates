@@ -173,6 +173,7 @@ async function addGroundedAiExplanations(
       JSON.stringify({ profile: {
         intents: profile.intents,
         education: profile.education,
+        targetEducation: profile.targetEducation,
         destinations: profile.destinations,
         fieldArea: profile.fieldArea,
       }, candidates: evidencePackage }),
