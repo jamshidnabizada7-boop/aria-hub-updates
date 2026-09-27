@@ -14,6 +14,7 @@ import {
   Clock,
   Globe,
   GraduationCap,
+  FileText,
   Info,
   ListChecks,
   Mail,
@@ -206,6 +207,16 @@ export default async function OpportunityDetailPage({
     : '';
 
   const pageUrl = `${SITE_URL}/${lang}/opportunities/${opp.slug}`;
+  const cvPurpose =
+    /scholar|fellow|academic|research/i.test(opp.jobType || '') ? 'scholarship'
+      : /intern|student|trainee/i.test(opp.jobType || '') ? 'student'
+        : 'professional';
+  const cvBuilderHref =
+    `/${lang}/cv-builder?purpose=${cvPurpose}&opportunity=${encodeURIComponent(opp.slug)}&title=${encodeURIComponent(title)}&returnTo=${encodeURIComponent(`/${lang}/opportunities/${opp.slug}`)}`;
+  const cvBuilderLabel =
+    lang === 'fa' ? 'ساخت CV برای این فرصت'
+      : lang === 'ps' ? 'د دې فرصت لپاره CV جوړ کړئ'
+        : 'Build a CV for this opportunity';
 
   // ---- JSON-LD (JobPosting + BreadcrumbList) --------------------------------
   const jsonLd: Record<string, unknown> = {
@@ -569,6 +580,12 @@ export default async function OpportunityDetailPage({
 
               {/* Apply CTA — mobile position (desktop lives in the sidebar) */}
               <ApplyCard apply={apply} lang={lang} className="mt-6 lg:hidden print:hidden" />
+              <Button asChild variant="outline" className="mt-3 h-11 w-full rounded-xl lg:hidden print:hidden">
+                <Link href={cvBuilderHref}>
+                  <FileText className="me-1.5 h-4 w-4" aria-hidden="true" />
+                  {cvBuilderLabel}
+                </Link>
+              </Button>
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3 lg:hidden">
                 <ShareBar url={pageUrl} title={title} lang={lang} />
                 <div className="flex items-center gap-2">
@@ -618,6 +635,12 @@ export default async function OpportunityDetailPage({
             <aside className="hidden space-y-4 lg:block print:block">
               <div className="sticky top-24 space-y-4 print:static">
                 <ApplyCard apply={apply} lang={lang} />
+                <Button asChild variant="outline" className="w-full print:hidden">
+                  <Link href={cvBuilderHref}>
+                    <FileText className="me-1.5 h-4 w-4" aria-hidden="true" />
+                    {cvBuilderLabel}
+                  </Link>
+                </Button>
                 <Card className="p-4">
                   <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
                     {t('detail.share')}
