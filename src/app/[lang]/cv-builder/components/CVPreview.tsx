@@ -2,6 +2,7 @@
 
 import type { CVDraft } from '../types';
 import { cvRendererCss, renderCvBody } from '../lib/cv-renderer';
+import { cvText } from '../lib/cv-copy';
 
 export function CVPreview({ draft }: { draft: CVDraft }) {
   const isEmpty =
@@ -32,7 +33,7 @@ export function CVPreview({ draft }: { draft: CVDraft }) {
       <style dangerouslySetInnerHTML={{ __html: cvRendererCss }} />
       {isEmpty ? (
         <div className="absolute inset-0 z-20 grid place-items-center bg-white/90 p-8 text-center text-sm text-slate-400">
-          Start adding your details to preview your CV.
+          {cvText(draft.outputLang, 'Start adding your details to preview your CV.')}
         </div>
       ) : null}
       <div
