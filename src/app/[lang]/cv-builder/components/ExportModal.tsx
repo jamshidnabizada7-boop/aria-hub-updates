@@ -1,60 +1,107 @@
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useT } from '@/hooks/use-t';
+'use client';
 
-interface ExportModalProps {
+import { AlertCircle, CheckCircle2, FileText, Info, TriangleAlert } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle
+} from '@/components/ui/dialog';
+import type { CVDraft, CVReadiness } from '../types';
+
+interface Props {
   isOpen: boolean;
-  onClose: () => void;
+  onOpenChange: (open: boolean) => void;
+  draft: CVDraft;
+  readiness: CVReadiness;
   onConfirm: () => void;
+  onNavigateToIssue?: (section: string) => void;
 }
 
-export function ExportModal({ isOpen, onClose, onConfirm }: ExportModalProps) {
-  const t = useT();
+export function ExportModal({ isOpen, onOpenChange, draft, readiness, onConfirm, onNavigateToIssue }: Props) {
+  const errors = readiness.issues.filter((issue) => issue.severity === 'error');
+  const warnings = readiness.issues.filter((issue) => issue.severity === 'warning');
+  const info = readiness.issues.filter((issue) => issue.severity === 'info');
+
+  const message = (key: string) => ({
+    'issues.fullNameRequired': 'Add your full name.',
+    'issues.contactRequired': 'Add at least one contact method: email or phone.',
+    'issues.emailInvalid': 'Enter a valid email address.',
+    'issues.headlineMissing': 'A professional headline helps readers understand your profile quickly.',
+    'issues.summaryMissing': 'A short summary can make the CV easier to scan.',
+    'issues.summaryLong': 'Your summary is long; aim for roughly 3–5 focused lines.',
+    'issues.contentRequired': 'Add at least one substantive section such as education, experience, projects, research, or awards.',
+    'issues.urlInvalid': 'One of your links is invalid or uses an unsupported URL scheme.',
+    'issues.dateOrderInvalid': 'A start date occurs after its end date.',
+    'issues.achievementMissing': 'An experience entry has no achievements or responsibilities.',
+    'issues.tooManySkills': 'Consider reducing your skills list to the most relevant items.',
+    'issues.duplicateSkills': 'Your skills list contains duplicates.',
+    'issues.visualTemplateAts': 'This visual template is less conservative than the ATS Simple template.',
+    'issues.atsPhoto': 'Some ATS-focused applications prefer a CV without a photo.',
+  } as Record<string, string>)[key] || key;
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] print:hidden"
-          />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl z-[101] overflow-hidden border border-slate-200 dark:border-slate-800 print:hidden"
-          >
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-5">
-                <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                  <FileText className="w-6 h-6" />
-                </div>
-                <button onClick={onClose} className="text-slate-400 hover:text-slate-500 dark:hover:text-slate-300">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              
-              <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">{t('tools.cvBuilder.export.title') || 'Export CV as PDF'}</h3>
-              <p className="text-slate-600 dark:text-slate-400 text-sm mb-6 leading-relaxed" dangerouslySetInnerHTML={{ __html: t('tools.cvBuilder.export.desc') || 'We will use your browser\'s built-in print functionality. When the print dialog opens, select <strong>"Save as PDF"</strong> as the destination and ensure <strong>"Background graphics"</strong> is checked for the best result.' }} />
-              
-              <div className="flex space-x-3 w-full">
-                <Button variant="outline" onClick={onClose} className="flex-1">
-                  {t('tools.cvBuilder.export.cancel') || 'Cancel'}
-                </Button>
-                <Button onClick={onConfirm} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
-                  {t('tools.cvBuilder.export.confirm') || 'Continue to Print'}
-                </Button>
-              </div>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+        <DialogHeader>
+          <div className="mb-1 grid size-11 place-items-center rounded-full bg-primary/10 text-primary">
+            <FileText className="size-5" />
+          </div>
+          <DialogTitle>Review and export your CV</DialogTitle>
+          <DialogDescription>
+            Your CV stays on this device. ARIA HUB uses the browser print dialog for PDF export, so choose “Save as PDF” after continuing.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 gap-2 rounded-xl border bg-muted/30 p-3 text-center text-sm">
+            <div><div className="font-bold">{readiness.completion}%</div><div className="text-xs text-muted-foreground">Complete</div></div>
+            <div><div className="font-bold uppercase">{draft.paperSize}</div><div className="text-xs text-muted-foreground">Paper</div></div>
+            <div><div className="font-bold">{draft.template === 'ats' ? 'ATS Simple' : draft.template === 'modern' ? 'Modern' : 'Academic'}</div><div className="text-xs text-muted-foreground">Template</div></div>
+          </div>
+
+          {errors.length ? (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3">
+              <div className="mb-2 flex items-center gap-2 font-semibold text-destructive"><AlertCircle className="size-4" /> Fix before export</div>
+              <ul className="space-y-2 text-sm">
+                {errors.map((issue) => (
+                  <li key={issue.id}>
+                    <button type="button" className="text-start hover:underline" onClick={() => onNavigateToIssue?.(issue.section)}>
+                      {message(issue.messageKey)}
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+          ) : (
+            <div className="flex items-start gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm">
+              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" />
+              <div><strong>Ready to export.</strong> No blocking validation errors were found.</div>
+            </div>
+          )}
+
+          {warnings.length ? (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+              <div className="mb-2 flex items-center gap-2 font-semibold"><TriangleAlert className="size-4 text-amber-600" /> Quality suggestions</div>
+              <ul className="space-y-1.5 text-sm">{warnings.map((issue) => <li key={issue.id}>• {message(issue.messageKey)}</li>)}</ul>
+            </div>
+          ) : null}
+
+          {info.length ? (
+            <div className="rounded-xl border p-3">
+              <div className="mb-2 flex items-center gap-2 font-semibold"><Info className="size-4 text-primary" /> ATS notes</div>
+              <ul className="space-y-1.5 text-sm">{info.map((issue) => <li key={issue.id}>• {message(issue.messageKey)}</li>)}</ul>
+            </div>
+          ) : null}
+
+          <div className="rounded-xl bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">
+            For the cleanest browser PDF, disable browser headers/footers if your print dialog shows that option. The dedicated CV print layout already controls page size, margins, colors, and website chrome.
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Back to editing</Button>
+          <Button type="button" onClick={onConfirm} disabled={!readiness.canExport}>Continue to PDF</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
