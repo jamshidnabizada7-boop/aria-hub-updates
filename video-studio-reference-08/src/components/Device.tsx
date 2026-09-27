@@ -1,0 +1,2 @@
+import React from 'react';
+export const Phone:React.FC<{children:React.ReactNode;style?:React.CSSProperties}> = ({children,style}) => <div style={{width:390,height:780,borderRadius:65,background:'#15151c',padding:14,boxShadow:'0 50px 120px rgba(48,29,80,.22)',...style}}><div style={{width:'100%',height:'100%',borderRadius:52,background:'#fff',overflow:'hidden',position:'relative'}}><div style={{position:'absolute',left:'50%',top:13,transform:'translateX(-50%)',width:120,height:28,borderRadius:999,background:'#101015',zIndex:10}}/>{children}</div></div>;
