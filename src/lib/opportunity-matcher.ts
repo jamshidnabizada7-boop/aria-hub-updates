@@ -54,6 +54,23 @@ export const MatcherProfileSchema = z.object({
 
 export type MatcherProfile = z.infer<typeof MatcherProfileSchema>;
 
+export interface MatcherStructuredFacts {
+  eligibleNationalities?: unknown;
+  eligibleCountries?: unknown;
+  educationLevels?: unknown;
+  fieldAreas?: unknown;
+  minAge?: number | null;
+  maxAge?: number | null;
+  minExperienceYears?: number | null;
+  languages?: unknown;
+  fundingType?: string | null;
+  locationType?: string | null;
+  visaSponsorship?: boolean | null;
+  provenance?: unknown;
+  confidence?: unknown;
+  reviewed?: boolean;
+}
+
 export interface MatcherOpportunity {
   id: string;
   slug: string;
@@ -71,6 +88,7 @@ export interface MatcherOpportunity {
   benefits: string | null;
   tags: unknown;
   extractedData: unknown;
+  structuredFacts?: MatcherStructuredFacts | null;
   sourceName: string | null;
   lastChecked: Date | null;
   updatedAt: Date;
@@ -157,6 +175,18 @@ function flattenJson(value: unknown): string {
 
 function includesAny(text: string, terms: string[]): boolean {
   return terms.some((term) => text.includes(term));
+}
+
+function normalizedStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(normalize).filter(Boolean);
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed.map(normalize).filter(Boolean);
+    } catch {}
+    return value.split(/[,;|]/).map(normalize).filter(Boolean);
+  }
+  return [];
 }
 
 function categoryMatches(profile: MatcherProfile, opportunity: MatcherOpportunity): boolean {
@@ -250,6 +280,13 @@ function educationEvidence(profile: MatcherProfile, text: string): 'match' | 'un
 
 function confidenceFor(opportunity: MatcherOpportunity): DataConfidence {
   let points = 0;
+  if (opportunity.structuredFacts) {
+    const f = opportunity.structuredFacts;
+    if (normalizedStringArray(f.eligibleNationalities).length) points += 2;
+    if (normalizedStringArray(f.educationLevels).length) points += 2;
+    if (normalizedStringArray(f.fieldAreas).length) points += 1;
+    if (f.reviewed) points += 2;
+  }
   if (opportunity.eligibility?.trim()) points += 2;
   if (opportunity.educationReq?.trim()) points += 2;
   if (opportunity.requirements?.trim()) points += 1;
@@ -289,7 +326,11 @@ export function rankOpportunity(profile: MatcherProfile, opportunity: MatcherOpp
     `${opportunity.eligibility ?? ''} ${opportunity.requirements ?? ''} ${opportunity.educationReq ?? ''} ${flattenJson(opportunity.extractedData)}`
   );
 
-  if (educationEvidence(profile, eligibilityText) === 'match') {
+  const structuredEducation = normalizedStringArray(opportunity.structuredFacts?.educationLevels);
+  if (
+    structuredEducation.includes(normalize(profile.education)) ||
+    educationEvidence(profile, eligibilityText) === 'match'
+  ) {
     score += 10;
     verified.push('education');
     reasons.push('education');
@@ -298,10 +339,14 @@ export function rankOpportunity(profile: MatcherProfile, opportunity: MatcherOpp
   }
 
   if (profile.fieldArea !== 'any') {
+    const structuredFields = normalizedStringArray(opportunity.structuredFacts?.fieldAreas);
     const semanticText = normalize(
       `${opportunity.title} ${opportunity.jobType ?? ''} ${opportunity.requirements ?? ''} ${opportunity.eligibility ?? ''} ${flattenJson(opportunity.tags)}`
     );
-    if (includesAny(semanticText, FIELD_TERMS[profile.fieldArea])) {
+    if (
+      structuredFields.includes(normalize(profile.fieldArea)) ||
+      includesAny(semanticText, FIELD_TERMS[profile.fieldArea])
+    ) {
       score += 12;
       reasons.push('field');
     } else {
@@ -309,19 +354,32 @@ export function rankOpportunity(profile: MatcherProfile, opportunity: MatcherOpp
     }
   }
 
+  const structuredNationalities = normalizedStringArray(opportunity.structuredFacts?.eligibleNationalities);
   const nationalityRestriction = extractNationalityRestriction(
     opportunity.extractedData,
     opportunity.eligibility ?? ''
   );
-  if (nationalityRestriction.present) {
-    const nationality = normalize(profile.nationality);
+  const nationality = normalizeCountry(profile.nationality);
+
+  if (structuredNationalities.length > 0) {
+    const normalizedAllowed = structuredNationalities.map(normalizeCountry);
+    const openToAll = normalizedAllowed.some((value) =>
+      ['all nationalities', 'any nationality', 'all countries', 'international', 'worldwide', 'global'].some((marker) => value.includes(marker))
+    );
+    if (openToAll || normalizedAllowed.some((value) => value === nationality || value.includes(nationality) || nationality.includes(value))) {
+      verified.push('nationality');
+      score += 5;
+    } else {
+      conflicts.push('nationality');
+    }
+  } else if (nationalityRestriction.present) {
     const openToAll = ['all nationalities', 'any nationality', 'all countries', 'international', 'worldwide', 'global']
       .some((marker) => nationalityRestriction.text.includes(marker));
 
     if (
       openToAll ||
-      (nationality && nationalityRestriction.values.some((value) => value.includes(nationality) || nationality.includes(value))) ||
-      (nationality && nationalityRestriction.text.includes(nationality))
+      (nationality && nationalityRestriction.values.some((value) => normalizeCountry(value).includes(nationality) || nationality.includes(normalizeCountry(value)))) ||
+      (nationality && nationalityRestriction.text.includes(normalize(profile.nationality)))
     ) {
       verified.push('nationality');
       score += 5;
@@ -332,6 +390,18 @@ export function rankOpportunity(profile: MatcherProfile, opportunity: MatcherOpp
     }
   } else {
     unknowns.push('nationality');
+  }
+
+  const minimumExperience = opportunity.structuredFacts?.minExperienceYears;
+  if (typeof minimumExperience === 'number' && typeof profile.experienceYears === 'number') {
+    if (profile.experienceYears >= minimumExperience) {
+      verified.push('experience');
+      score += 4;
+    } else {
+      conflicts.push('experience');
+    }
+  } else if (minimumExperience != null || opportunity.experience?.trim()) {
+    unknowns.push('experience');
   }
 
   if (opportunity.deadline) {
