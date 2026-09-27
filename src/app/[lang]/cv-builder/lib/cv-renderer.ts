@@ -53,6 +53,8 @@ function orderedMain(draft:CVDraft,p:any){
 
 export function renderCvBody(draft:CVDraft, config:CVBuilderAdminConfig = DEFAULT_CV_BUILDER_ADMIN_CONFIG):string{
   const p=buildParts(draft,config), template=draft.template, dir=draft.outputLang==='en'?'ltr':'rtl';
+  const renderedAccent=config.features.allowAccentCustomization?draft.appearance.accent:'navy';
+  const renderedDensity=config.features.allowDensityCustomization?draft.appearance.density:'comfortable';
   let body='';
   switch(template){
     case 'ats-simple':
@@ -72,7 +74,7 @@ export function renderCvBody(draft:CVDraft, config:CVBuilderAdminConfig = DEFAUL
     case 'scholarship-profile':
       body=header(draft,'center',config)+`<div class="cv-layout-scholarship"><main>${p.summary}${p.education}${p.projects}${p.volunteering}${p.research}${p.publications}${p.experience}</main><aside>${p.awards}${p.languages}${p.skills}${p.certifications}${p.references}</aside></div>`; break;
   }
-  return `<div class="cv-document cv-template-${esc(template)} cv-density-${esc(draft.appearance.density)}" dir="${dir}" lang="${esc(draft.outputLang)}" style="--cv-accent:${accent[draft.appearance.accent]}">${body}</div>`;
+  return `<div class="cv-document cv-template-${esc(template)} cv-density-${esc(renderedDensity)}" dir="${dir}" lang="${esc(draft.outputLang)}" style="--cv-accent:${accent[renderedAccent]}">${body}</div>`;
 }
 
 export const cvRendererCss=`
