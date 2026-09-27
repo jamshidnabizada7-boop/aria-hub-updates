@@ -27,7 +27,7 @@ import { ReliefWebPendingError } from './scrapers/reliefweb';
 import { sanitizeError, slugify } from './utils';
 import type { RawListing, SourceHandle } from './types';
 import { resolveImportedOpportunityStatus } from './publication-policy';
-import { syncOpportunityLocations } from '@/lib/opportunity-location';
+import { inferOpportunityCountry, syncOpportunityLocations } from '@/lib/opportunity-location';
 
 /** Safely convert a date string (ISO or parseable) to a Date object, or null. */
 function safeDate(input: string | null | undefined): Date | null {
@@ -439,7 +439,7 @@ async function processListing(
     salary: listing.salary || null,
     educationReq: listing.educationReq || null,
     experience: listing.experience || null,
-    country: listing.country || listing.location || null,
+    country: inferOpportunityCountry(listing.country, listing.location),
     deadline: safeDate(listing.deadline),
     organization: listing.organization || null,
     website: listing.website || null,
