@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   ChevronRight,
   CircleHelp,
-  GraduationCap,
   Search,
   Sparkles,
   ThumbsDown,
@@ -102,7 +101,7 @@ const COPY = {
     categoryAlert: 'Notify me about strong matches', alertHint: 'Save these Matcher preferences by email. After confirmation, ARIA HUB will notify you only when a new strong match appears.',
     alertEmail: 'Email address', alertDaily: 'Daily', alertWeekly: 'Weekly', alertButton: 'Save match alert', alertSending: 'Saving…', alertSuccess: 'Check your inbox to confirm this match alert.', alertError: 'Could not save the alert. Please try again.',
     viewDetails: 'View details',
-    privacy: 'Matcher preferences stay in this browser session. Only the submitted profile and selected evidence may be sent to the configured AI provider for explanation.',
+    privacy: 'Matcher answers stay in this browser session unless you opt into email alerts. For optional AI explanations, ARIA HUB sends only opportunity evidence plus intent, education/target level, destinations and field area — not nationality or residence.',
   },
   fa: {
     title: 'فرصت‌هایی را پیدا کنید که واقعاً با شما سازگارند',
@@ -133,7 +132,7 @@ const COPY = {
     categoryAlert: 'اطلاع‌رسانی تطبیق‌های قوی', alertHint: 'این ترجیحات Matcher را با ایمیل ذخیره کنید. پس از تأیید، آریا هاب فقط وقتی یک تطبیق قوی جدید پیدا شود به شما اطلاع می‌دهد.',
     alertEmail: 'آدرس ایمیل', alertDaily: 'روزانه', alertWeekly: 'هفتگی', alertButton: 'ذخیره اطلاع‌رسانی تطبیق', alertSending: 'در حال ذخیره…', alertSuccess: 'برای تأیید اطلاع‌رسانی، ایمیل خود را بررسی کنید.', alertError: 'ذخیره اطلاع‌رسانی ممکن نشد. دوباره تلاش کنید.',
     viewDetails: 'مشاهده جزئیات',
-    privacy: 'ترجیحات تطبیق در همین نشست مرورگر نگه‌داری می‌شود. فقط پروفایل ارسال‌شده و شواهد انتخاب‌شده ممکن است برای توضیح به ارائه‌دهنده AI تنظیم‌شده فرستاده شود.',
+    privacy: 'پاسخ‌های Matcher در همین نشست مرورگر می‌ماند مگر این‌که اطلاع‌رسانی ایمیلی را فعال کنید. برای توضیح اختیاری AI فقط شواهد فرصت و ترجیحات غیرحساس مانند نوع فرصت، تحصیل/مقطع هدف، مقصد و حوزه فرستاده می‌شود؛ تابعیت و محل اقامت به AI فرستاده نمی‌شود.',
   },
   ps: {
     title: 'هغه فرصتونه ومومئ چې رښتیا درسره برابر وي',
@@ -164,7 +163,7 @@ const COPY = {
     categoryAlert: 'د قوي برابرښت خبرتیا راکړئ', alertHint: 'دا Matcher غوره توبونه د ایمیل له لارې خوندي کړئ. له تایید وروسته آریا هاب یوازې د نوي قوي برابرښت پر مهال خبر درکوي.',
     alertEmail: 'بریښنالیک', alertDaily: 'ورځنی', alertWeekly: 'اونیز', alertButton: 'د برابرښت خبرتیا خوندي کړئ', alertSending: 'خوندي کېږي…', alertSuccess: 'د خبرتیا د تایید لپاره خپل ایمیل وګورئ.', alertError: 'خبرتیا ونه خوندي شوه. بیا هڅه وکړئ.',
     viewDetails: 'تفصیل وګورئ',
-    privacy: 'د matcher غوره توبونه د همدې براوزر په ناسته کې پاتې کېږي. یوازې لېږل شوی پروفایل او ټاکل شوي شواهد ښايي د تشریح لپاره تنظیم شوي AI چمتوکوونکي ته واستول شي.',
+    privacy: 'د Matcher ځوابونه د براوزر په همدې ناسته کې پاتې کېږي، تر هغه چې د ایمیل خبرتیاوې فعالې نه کړئ. د اختیاري AI تشریح لپاره یوازې د فرصت شواهد او غیرحساس غوره توبونه لکه ډول، زده کړه/هدف کچه، ځایونه او حوزه لېږل کېږي؛ تابعیت او اوسېدنه AI ته نه لېږل کېږي.',
   },
 } as const;
 
