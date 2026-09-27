@@ -1,93 +1,78 @@
 import type { CVDraft, CVIssue, CVReadiness, CVSectionKey } from '../types';
 import { safeExternalUrl } from './cv-utils';
+import { CV_TEMPLATE_BY_ID } from './cv-templates';
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_RE=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function push(issues: CVIssue[], id: string, severity: CVIssue['severity'], section: CVIssue['section'], messageKey: string, field?: string) {
-  issues.push({ id, severity, section, messageKey, field });
-}
+function add(issues:CVIssue[],issue:CVIssue){ issues.push(issue); }
+function dateIsAfter(start:string,end:string){ return /^\d{4}-\d{2}$/.test(start)&&/^\d{4}-\d{2}$/.test(end)&&start>end; }
+function label(...parts:(string|undefined)[]){ return parts.map(x=>x?.trim()).filter(Boolean).join(' — ') || undefined; }
 
-function dateIsAfter(start: string, end: string) {
-  return /^\d{4}-\d{2}$/.test(start) && /^\d{4}-\d{2}$/.test(end) && start > end;
-}
-
-function sectionDone(draft: CVDraft, section: CVSectionKey): boolean {
-  const d = draft.data;
-  switch (section) {
-    case 'personal': return Boolean(d.personal.fullName && (d.personal.email || d.personal.phone));
+function sectionDone(draft:CVDraft,section:CVSectionKey):boolean{
+  const d=draft.data;
+  switch(section){
+    case 'personal': return Boolean(d.personal.fullName&&(d.personal.email||d.personal.phone));
     case 'summary': return Boolean(d.personal.summary.trim());
-    case 'experience': return d.experience.some((x) => Boolean(x.role || x.company));
-    case 'education': return d.education.some((x) => Boolean(x.degree || x.institution));
-    case 'projects': return d.projects.some((x) => Boolean(x.name));
-    case 'skills': return d.skills.some((x) => Boolean(x.name));
-    case 'languages': return d.languages.some((x) => Boolean(x.name));
-    case 'certifications': return d.certifications.some((x) => Boolean(x.name));
-    case 'awards': return d.awards.some((x) => Boolean(x.title));
-    case 'volunteering': return d.volunteering.some((x) => Boolean(x.role || x.organization));
-    case 'research': return d.research.some((x) => Boolean(x.title));
-    case 'publications': return d.publications.some((x) => Boolean(x.title));
-    case 'references': return d.references.some((x) => Boolean(x.name));
+    case 'experience': return d.experience.some(x=>Boolean(x.role||x.company));
+    case 'education': return d.education.some(x=>Boolean(x.degree||x.institution));
+    case 'projects': return d.projects.some(x=>Boolean(x.name));
+    case 'skills': return d.skills.some(x=>Boolean(x.name));
+    case 'languages': return d.languages.some(x=>Boolean(x.name));
+    case 'certifications': return d.certifications.some(x=>Boolean(x.name));
+    case 'awards': return d.awards.some(x=>Boolean(x.title));
+    case 'volunteering': return d.volunteering.some(x=>Boolean(x.role||x.organization));
+    case 'research': return d.research.some(x=>Boolean(x.title));
+    case 'publications': return d.publications.some(x=>Boolean(x.title));
+    case 'references': return d.references.some(x=>Boolean(x.name));
   }
 }
 
-export function getRecommendedSections(draft: CVDraft): CVSectionKey[] {
-  if (draft.purpose === 'scholarship') return ['personal', 'summary', 'education', 'research', 'publications', 'awards', 'projects', 'skills', 'languages'];
-  if (draft.purpose === 'student') return ['personal', 'summary', 'education', 'projects', 'experience', 'volunteering', 'awards', 'skills', 'languages'];
-  return ['personal', 'summary', 'experience', 'education', 'projects', 'skills', 'languages', 'certifications'];
+export function getRecommendedSections(draft:CVDraft):CVSectionKey[]{
+  if(draft.purpose==='scholarship') return ['personal','summary','education','research','publications','awards','projects','volunteering','skills','languages'];
+  if(draft.purpose==='student') return ['personal','summary','education','projects','experience','volunteering','awards','skills','languages'];
+  return ['personal','summary','experience','education','projects','skills','languages','certifications'];
 }
 
-export function validateDraft(draft: CVDraft): CVReadiness {
-  const issues: CVIssue[] = [];
-  const d = draft.data;
+export function validateDraft(draft:CVDraft):CVReadiness{
+  const issues:CVIssue[]=[]; const d=draft.data;
+  if(!d.personal.fullName.trim()) add(issues,{id:'full-name-required',severity:'error',section:'personal',messageKey:'issues.fullNameRequired',field:'fullName',anchorId:'cv-full-name'});
+  if(!d.personal.email.trim()&&!d.personal.phone.trim()) add(issues,{id:'contact-required',severity:'error',section:'personal',messageKey:'issues.contactRequired',anchorId:'cv-email'});
+  if(d.personal.email&&!EMAIL_RE.test(d.personal.email.trim())) add(issues,{id:'email-invalid',severity:'error',section:'personal',messageKey:'issues.emailInvalid',field:'email',anchorId:'cv-email'});
+  if(!d.personal.headline.trim()) add(issues,{id:'headline-missing',severity:'warning',section:'personal',messageKey:'issues.headlineMissing',field:'headline',anchorId:'cv-headline'});
+  const summaryWords=d.personal.summary.trim().split(/\s+/).filter(Boolean).length;
+  if(!summaryWords) add(issues,{id:'summary-missing',severity:'warning',section:'summary',messageKey:'issues.summaryMissing',anchorId:'cv-summary'});
+  else if(summaryWords>100) add(issues,{id:'summary-long',severity:'warning',section:'summary',messageKey:'issues.summaryLong',anchorId:'cv-summary'});
 
-  if (!d.personal.fullName.trim()) push(issues, 'full-name-required', 'error', 'personal', 'issues.fullNameRequired', 'fullName');
-  if (!d.personal.email.trim() && !d.personal.phone.trim()) push(issues, 'contact-required', 'error', 'personal', 'issues.contactRequired');
-  if (d.personal.email && !EMAIL_RE.test(d.personal.email.trim())) push(issues, 'email-invalid', 'error', 'personal', 'issues.emailInvalid', 'email');
-  if (!d.personal.headline.trim()) push(issues, 'headline-missing', 'warning', 'personal', 'issues.headlineMissing', 'headline');
+  const substantive=d.experience.length||d.education.length||d.projects.length||d.research.length||d.publications.length||d.volunteering.length||d.awards.length;
+  if(!substantive) add(issues,{id:'content-required',severity:'error',section:'document',messageKey:'issues.contentRequired',anchorId:'cv-section-education'});
 
-  const summaryWords = d.personal.summary.trim().split(/\s+/).filter(Boolean).length;
-  if (!summaryWords) push(issues, 'summary-missing', 'warning', 'summary', 'issues.summaryMissing');
-  else if (summaryWords > 120) push(issues, 'summary-long', 'warning', 'summary', 'issues.summaryLong');
+  d.socialLinks.forEach(item=>{ if(item.url&&!safeExternalUrl(item.url)) add(issues,{id:`social-url-${item.id}`,severity:'error',section:'personal',messageKey:'issues.urlInvalid',field:'url',itemId:item.id,itemLabel:item.platform||'Social link',anchorId:`social-url-${item.id}`}); });
+  d.projects.forEach(item=>{
+    if(item.link&&!safeExternalUrl(item.link)) add(issues,{id:`project-url-${item.id}`,severity:'error',section:'projects',messageKey:'issues.urlInvalid',field:'link',itemId:item.id,itemLabel:item.name||'Project',anchorId:`project-link-${item.id}`});
+    if(dateIsAfter(item.startDate,item.endDate)) add(issues,{id:`project-date-${item.id}`,severity:'error',section:'projects',messageKey:'issues.dateOrderInvalid',field:'endDate',itemId:item.id,itemLabel:item.name||'Project',anchorId:`project-end-${item.id}`});
+  });
+  d.certifications.forEach(item=>{ if(item.credentialUrl&&!safeExternalUrl(item.credentialUrl)) add(issues,{id:`cert-url-${item.id}`,severity:'error',section:'certifications',messageKey:'issues.urlInvalid',field:'credentialUrl',itemId:item.id,itemLabel:item.name||'Certification',anchorId:`cert-url-${item.id}`}); });
+  d.research.forEach(item=>{
+    if(item.link&&!safeExternalUrl(item.link)) add(issues,{id:`research-url-${item.id}`,severity:'error',section:'research',messageKey:'issues.urlInvalid',field:'link',itemId:item.id,itemLabel:item.title||'Research',anchorId:`research-link-${item.id}`});
+    if(!item.isCurrent&&dateIsAfter(item.startDate,item.endDate)) add(issues,{id:`research-date-${item.id}`,severity:'error',section:'research',messageKey:'issues.dateOrderInvalid',field:'endDate',itemId:item.id,itemLabel:item.title||'Research',anchorId:`research-${item.id}-end`});
+  });
+  d.publications.forEach(item=>{ if(item.link&&!safeExternalUrl(item.link)) add(issues,{id:`publication-url-${item.id}`,severity:'error',section:'publications',messageKey:'issues.urlInvalid',field:'link',itemId:item.id,itemLabel:item.title||'Publication',anchorId:`pub-link-${item.id}`}); });
+  d.experience.forEach(item=>{
+    if(!item.isCurrent&&dateIsAfter(item.startDate,item.endDate)) add(issues,{id:`experience-date-${item.id}`,severity:'error',section:'experience',messageKey:'issues.dateOrderInvalid',field:'endDate',itemId:item.id,itemLabel:label(item.role,item.company),anchorId:`exp-${item.id}-end`});
+    if((item.role||item.company)&&!item.description.trim()) add(issues,{id:`experience-description-${item.id}`,severity:'warning',section:'experience',messageKey:'issues.achievementMissing',field:'description',itemId:item.id,itemLabel:label(item.role,item.company),anchorId:`exp-desc-${item.id}`});
+  });
+  d.education.forEach(item=>{ if(!item.isCurrent&&dateIsAfter(item.startDate,item.endDate)) add(issues,{id:`education-date-${item.id}`,severity:'error',section:'education',messageKey:'issues.dateOrderInvalid',field:'endDate',itemId:item.id,itemLabel:label(item.degree,item.institution),anchorId:`edu-${item.id}-end`}); });
+  d.volunteering.forEach(item=>{ if(!item.isCurrent&&dateIsAfter(item.startDate,item.endDate)) add(issues,{id:`volunteering-date-${item.id}`,severity:'error',section:'volunteering',messageKey:'issues.dateOrderInvalid',field:'endDate',itemId:item.id,itemLabel:label(item.role,item.organization),anchorId:`vol-${item.id}-end`}); });
 
-  const substantive = d.experience.length || d.education.length || d.projects.length || d.research.length || d.publications.length || d.volunteering.length || d.awards.length;
-  if (!substantive) push(issues, 'content-required', 'error', 'document', 'issues.contentRequired');
+  if(d.skills.length>20) add(issues,{id:'too-many-skills',severity:'warning',section:'skills',messageKey:'issues.tooManySkills',anchorId:'cv-section-skills'});
+  const skills=d.skills.map(x=>x.name.trim().toLowerCase()).filter(Boolean);
+  if(new Set(skills).size!==skills.length) add(issues,{id:'duplicate-skills',severity:'warning',section:'skills',messageKey:'issues.duplicateSkills',anchorId:'cv-section-skills'});
+  const template=CV_TEMPLATE_BY_ID[draft.template];
+  if(!template.atsFocused) add(issues,{id:'visual-template-ats',severity:'info',section:'document',messageKey:'issues.visualTemplateAts',itemLabel:template.name,anchorId:'cv-template-button'});
+  if(template.atsFocused&&draft.data.personal.picture&&draft.appearance.showPhoto) add(issues,{id:'ats-photo',severity:'info',section:'personal',messageKey:'issues.atsPhoto',anchorId:'cv-photo'});
 
-  d.socialLinks.forEach((link) => {
-    if (link.url && !safeExternalUrl(link.url)) push(issues, `social-url-${link.id}`, 'error', 'personal', 'issues.urlInvalid', link.id);
-  });
-  d.projects.forEach((item) => {
-    if (item.link && !safeExternalUrl(item.link)) push(issues, `project-url-${item.id}`, 'error', 'projects', 'issues.urlInvalid', item.id);
-    if (dateIsAfter(item.startDate, item.endDate)) push(issues, `project-date-${item.id}`, 'error', 'projects', 'issues.dateOrderInvalid', item.id);
-  });
-  d.certifications.forEach((item) => {
-    if (item.credentialUrl && !safeExternalUrl(item.credentialUrl)) push(issues, `cert-url-${item.id}`, 'error', 'certifications', 'issues.urlInvalid', item.id);
-  });
-  d.research.forEach((item) => {
-    if (item.link && !safeExternalUrl(item.link)) push(issues, `research-url-${item.id}`, 'error', 'research', 'issues.urlInvalid', item.id);
-    if (!item.isCurrent && dateIsAfter(item.startDate, item.endDate)) push(issues, `research-date-${item.id}`, 'error', 'research', 'issues.dateOrderInvalid', item.id);
-  });
-  d.publications.forEach((item) => {
-    if (item.link && !safeExternalUrl(item.link)) push(issues, `publication-url-${item.id}`, 'error', 'publications', 'issues.urlInvalid', item.id);
-  });
-  d.experience.forEach((item) => {
-    if (!item.isCurrent && dateIsAfter(item.startDate, item.endDate)) push(issues, `experience-date-${item.id}`, 'error', 'experience', 'issues.dateOrderInvalid', item.id);
-    if ((item.role || item.company) && !item.description.trim()) push(issues, `experience-description-${item.id}`, 'warning', 'experience', 'issues.achievementMissing', item.id);
-  });
-  d.education.forEach((item) => {
-    if (!item.isCurrent && dateIsAfter(item.startDate, item.endDate)) push(issues, `education-date-${item.id}`, 'error', 'education', 'issues.dateOrderInvalid', item.id);
-  });
-  d.volunteering.forEach((item) => {
-    if (!item.isCurrent && dateIsAfter(item.startDate, item.endDate)) push(issues, `volunteering-date-${item.id}`, 'error', 'volunteering', 'issues.dateOrderInvalid', item.id);
-  });
-
-  if (d.skills.length > 20) push(issues, 'too-many-skills', 'warning', 'skills', 'issues.tooManySkills');
-  const skills = d.skills.map((x) => x.name.trim().toLowerCase()).filter(Boolean);
-  if (new Set(skills).size !== skills.length) push(issues, 'duplicate-skills', 'warning', 'skills', 'issues.duplicateSkills');
-  if (draft.template !== 'ats') push(issues, 'visual-template-ats', 'info', 'document', 'issues.visualTemplateAts');
-  if (draft.template === 'ats' && d.personal.picture) push(issues, 'ats-photo', 'info', 'personal', 'issues.atsPhoto');
-
-  const recommended = getRecommendedSections(draft);
-  const completion = Math.round((recommended.filter((section) => sectionDone(draft, section)).length / recommended.length) * 100);
-
-  return { completion, canExport: !issues.some((issue) => issue.severity === 'error'), issues };
+  const recommended=getRecommendedSections(draft);
+  const completion=Math.round((recommended.filter(section=>sectionDone(draft,section)).length/recommended.length)*100);
+  const errorCount=issues.filter(x=>x.severity==='error').length, warningCount=issues.filter(x=>x.severity==='warning').length, infoCount=issues.filter(x=>x.severity==='info').length;
+  return { completion, canExport:errorCount===0, issues, errorCount, warningCount, infoCount, health:errorCount?'blocked':warningCount?'attention':'good' };
 }
