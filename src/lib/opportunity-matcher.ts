@@ -20,8 +20,23 @@ export const EDUCATION_LEVELS = [
   'other',
 ] as const;
 
+export const FIELD_AREAS = [
+  'any',
+  'technology',
+  'engineering',
+  'business',
+  'health',
+  'education',
+  'social_sciences',
+  'law_policy',
+  'natural_sciences',
+  'environment_agriculture',
+  'arts_humanities',
+] as const;
+
 export type MatcherIntent = (typeof MATCHER_INTENTS)[number];
 export type EducationLevel = (typeof EDUCATION_LEVELS)[number];
+export type FieldArea = (typeof FIELD_AREAS)[number];
 export type MatchStrength = 'strong' | 'good' | 'possible';
 export type EligibilityStatus = 'likely_eligible' | 'needs_check' | 'potential_conflict' | 'incomplete';
 export type DataConfidence = 'high' | 'medium' | 'low';
@@ -32,7 +47,7 @@ export const MatcherProfileSchema = z.object({
   nationality: z.string().trim().min(2).max(80),
   residence: z.string().trim().min(2).max(80),
   destinations: z.array(z.string().trim().min(2).max(80)).min(1).max(8),
-  field: z.string().trim().max(80).optional().default(''),
+  fieldArea: z.enum(FIELD_AREAS).default('any'),
   experienceYears: z.number().int().min(0).max(50).optional(),
   lang: z.enum(['fa', 'ps', 'en']).default('en'),
 });
@@ -107,6 +122,20 @@ const EDUCATION_TERMS: Record<EducationLevel, string[]> = {
   masters: ['master', 'postgraduate', 'msc', 'ms ', 'ma '],
   phd: ['phd', 'doctoral', 'doctorate'],
   other: [],
+};
+
+const FIELD_TERMS: Record<FieldArea, string[]> = {
+  any: [],
+  technology: ['computer science', 'software', 'technology', 'information technology', 'data', 'cyber', 'ai', 'artificial intelligence'],
+  engineering: ['engineering', 'engineer', 'mechanical', 'electrical', 'civil', 'chemical engineering'],
+  business: ['business', 'management', 'finance', 'economics', 'accounting', 'marketing', 'entrepreneurship'],
+  health: ['health', 'medicine', 'medical', 'nursing', 'public health', 'pharmacy', 'clinical'],
+  education: ['education', 'teaching', 'teacher', 'pedagogy'],
+  social_sciences: ['social science', 'sociology', 'psychology', 'development studies', 'international relations'],
+  law_policy: ['law', 'legal', 'policy', 'governance', 'public administration'],
+  natural_sciences: ['biology', 'chemistry', 'physics', 'mathematics', 'science', 'biotechnology'],
+  environment_agriculture: ['environment', 'climate', 'agriculture', 'agricultural', 'sustainability', 'forestry'],
+  arts_humanities: ['arts', 'humanities', 'history', 'literature', 'language', 'design', 'media', 'journalism'],
 };
 
 function normalize(value: unknown): string {
@@ -244,12 +273,11 @@ export function rankOpportunity(profile: MatcherProfile, opportunity: MatcherOpp
     unknowns.push('education');
   }
 
-  const field = normalize(profile.field);
-  if (field) {
+  if (profile.fieldArea !== 'any') {
     const semanticText = normalize(
       `${opportunity.title} ${opportunity.jobType ?? ''} ${opportunity.requirements ?? ''} ${opportunity.eligibility ?? ''} ${flattenJson(opportunity.tags)}`
     );
-    if (semanticText.includes(field)) {
+    if (includesAny(semanticText, FIELD_TERMS[profile.fieldArea])) {
       score += 12;
       reasons.push('field');
     } else {
