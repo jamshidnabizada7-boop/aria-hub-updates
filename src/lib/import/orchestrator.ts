@@ -27,6 +27,7 @@ import { ReliefWebPendingError } from './scrapers/reliefweb';
 import { sanitizeError, slugify } from './utils';
 import type { RawListing, SourceHandle } from './types';
 import { resolveImportedOpportunityStatus } from './publication-policy';
+import { syncOpportunityLocations } from '@/lib/opportunity-location';
 
 /** Safely convert a date string (ISO or parseable) to a Date object, or null. */
 function safeDate(input: string | null | undefined): Date | null {
@@ -185,6 +186,9 @@ async function runOneSource(
     // 1. Scrape
     const listings = await scraper.scrapeAll();
     counters.found = listings.length;
+    if (source.type !== 'news' && listings.length === 0) {
+      throw new Error('source returned zero opportunity listings; possible selector, transport, or anti-bot regression');
+    }
 
     // 2. Process each listing
     for (const listing of listings) {
@@ -402,7 +406,7 @@ async function processListing(
   // refresh lastChecked (NOT a duplicate — the same known record, unchanged).
   if (dedupe.action === 'update' && !force && dedupe.existing.contentHash === hash) {
     counters.skipped++;
-    await db.opportunity.update({
+    const updatedOpportunity = await db.opportunity.update({
       where: { id: dedupe.existing.id },
       data: { lastChecked: new Date() },
     });
@@ -472,11 +476,12 @@ async function processListing(
         importStatus: 'updated',
       },
     });
+    await syncOpportunityLocations(db, updatedOpportunity.id, listing);
     counters.updated++;
   } else {
     // Create new
     const slug = await ensureUniqueSlug(db, slugBase);
-    await db.opportunity.create({
+    const createdOpportunity = await db.opportunity.create({
       data: {
         ...pipeline.data,
         ...importFields,
@@ -489,6 +494,7 @@ async function processListing(
         categoryId,
       } as unknown as Prisma.OpportunityUncheckedCreateInput,
     });
+    await syncOpportunityLocations(db, createdOpportunity.id, listing);
     counters.imported++;
   }
 }
