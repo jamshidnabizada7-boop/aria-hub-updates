@@ -556,3 +556,13 @@
     break-inside: avoid-page;
   }
 }
+
+
+/* CV Builder: validation focus feedback and overflow safety */
+@keyframes cv-field-flash {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  20%, 70% { box-shadow: 0 0 0 4px color-mix(in oklab, var(--destructive) 28%, transparent); }
+}
+.cv-field-flash { animation: cv-field-flash 1.4s ease-out; }
+.cv-print-sheet, .cv-print-sheet * { min-width: 0; }
+.cv-print-sheet .cv-rich { overflow-wrap: anywhere; word-break: break-word; }
