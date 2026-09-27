@@ -213,7 +213,7 @@ describe('CV Builder admin linkage', () => {
         allowAccentCustomization: false,
         allowDensityCustomization: false,
       },
-      guidance: { summaryMinWords: 10, summaryMaxWords: 12, maxSkills: 2 },
+      guidance: { summaryMinWords: 10, summaryMaxWords: 12, maxSkills: 5 },
     });
     const draft = createDraft('professional', 'en', undefined, { template: 'modern-sidebar' });
     draft.data.personal.fullName = 'Candidate';
@@ -230,6 +230,9 @@ describe('CV Builder admin linkage', () => {
       { id: 's1', name: 'TypeScript', level: 'expert' },
       { id: 's2', name: 'React', level: 'expert' },
       { id: 's3', name: 'PostgreSQL', level: 'intermediate' },
+      { id: 's4', name: 'Node.js', level: 'expert' },
+      { id: 's5', name: 'Docker', level: 'intermediate' },
+      { id: 's6', name: 'Git', level: 'expert' },
     ];
 
     const body = renderCvBody(draft, config);
