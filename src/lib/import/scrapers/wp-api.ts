@@ -256,6 +256,34 @@ export class WpApiScraper extends BaseScraper {
       stripHtml(stripTextJunk(stripWpBoilerplate(rawContent))) ||
       htmlToExcerpt(post.excerpt?.rendered || '');
 
+    // The WP article URL is provenance, NOT an application destination.
+    // Only retain a link that is explicitly application-oriented and points
+    // away from the source article itself.
+    let directApplyUrl: string | null = null;
+    try {
+      const $content = cheerio.load(rawContent || '');
+      const sourceHost = new URL(link).hostname.replace(/^www\./, '');
+      $content('a[href]').each((_, el) => {
+        if (directApplyUrl) return;
+        const href = ($content(el).attr('href') || '').trim();
+        const label = $content(el).text().replace(/\s+/g, ' ').trim().toLowerCase();
+        if (!href) return;
+        const absolute = (() => { try { return new URL(href, link).toString(); } catch { return ''; } })();
+        if (!absolute) return;
+        const explicit = /apply|application|register|registration|submit|form|portal|official website/i.test(label + ' ' + absolute);
+        if (!explicit) return;
+        let host = '';
+        try { host = new URL(absolute).hostname.replace(/^www\./, ''); } catch { return; }
+        const sameArticle = absolute.replace(/\/$/, '') === link.replace(/\/$/, '');
+        const sameHostArticle = host === sourceHost && !/\/apply(?:\/|$)|\/application(?:\/|$)|form|survey/i.test(absolute);
+        if (!sameArticle && !sameHostArticle) directApplyUrl = absolute;
+      });
+      if (!directApplyUrl) {
+        const email = description.match(/[\w.+-]+@[\w-]+\.[a-z]{2,}/i)?.[0];
+        if (email) directApplyUrl = `mailto:${email}`;
+      }
+    } catch { /* keep null: never fall back to the source article */ }
+
     const publishedDate = parseDate(post.date_gmt || post.date);
 
     // Deadline: only an explicit "Deadline: <date>" line in the body counts.
@@ -275,7 +303,7 @@ export class WpApiScraper extends BaseScraper {
       title,
       sourceUrl: link,
       originalUrl: link,
-      applyUrl: link,
+      applyUrl: directApplyUrl,
       sourceName: this.source.name,
       sourceLanguage: 'en',
       jobType,
