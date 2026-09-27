@@ -85,13 +85,18 @@ function CoreSections({ draft }: { draft: CVDraft }) {
   const d = draft.data;
   const lang = draft.outputLang;
   const c = copy[lang];
+  const order = draft.purpose === 'scholarship'
+    ? { summary: 'order-0', education: 'order-1', research: 'order-2', publications: 'order-3', awards: 'order-4', projects: 'order-5', experience: 'order-6', volunteering: 'order-7' }
+    : draft.purpose === 'student'
+      ? { summary: 'order-0', education: 'order-1', projects: 'order-2', experience: 'order-3', volunteering: 'order-4', awards: 'order-5', research: 'order-6', publications: 'order-7' }
+      : { summary: 'order-0', experience: 'order-1', education: 'order-2', projects: 'order-3', volunteering: 'order-4', research: 'order-5', publications: 'order-6', awards: 'order-7' };
 
   return (
-    <>
-      {d.personal.summary ? <Section title={c.summary}><TextBlock value={d.personal.summary} /></Section> : null}
+    <div className="flex flex-col gap-4">
+      {d.personal.summary ? <Section title={c.summary} className={order.summary}><TextBlock value={d.personal.summary} /></Section> : null}
 
       {d.experience.length ? (
-        <Section title={c.experience}>
+        <Section title={c.experience} className={order.experience}>
           <div className="space-y-3">
             {d.experience.map((item) => (
               <div key={item.id} className="break-inside-avoid">
@@ -108,7 +113,7 @@ function CoreSections({ draft }: { draft: CVDraft }) {
       ) : null}
 
       {d.education.length ? (
-        <Section title={c.education}>
+        <Section title={c.education} className={order.education}>
           <div className="space-y-3">
             {d.education.map((item) => (
               <div key={item.id} className="break-inside-avoid">
@@ -125,7 +130,7 @@ function CoreSections({ draft }: { draft: CVDraft }) {
       ) : null}
 
       {d.projects.length ? (
-        <Section title={c.projects}>
+        <Section title={c.projects} className={order.projects}>
           <div className="space-y-3">
             {d.projects.map((item) => (
               <div key={item.id} className="break-inside-avoid">
@@ -143,7 +148,7 @@ function CoreSections({ draft }: { draft: CVDraft }) {
       ) : null}
 
       {d.volunteering.length ? (
-        <Section title={c.volunteering}>
+        <Section title={c.volunteering} className={order.volunteering}>
           <div className="space-y-3">
             {d.volunteering.map((item) => (
               <div key={item.id} className="break-inside-avoid">
@@ -160,7 +165,7 @@ function CoreSections({ draft }: { draft: CVDraft }) {
       ) : null}
 
       {d.research.length ? (
-        <Section title={c.research}>
+        <Section title={c.research} className={order.research}>
           <div className="space-y-3">
             {d.research.map((item) => (
               <div key={item.id} className="break-inside-avoid">
@@ -178,7 +183,7 @@ function CoreSections({ draft }: { draft: CVDraft }) {
       ) : null}
 
       {d.publications.length ? (
-        <Section title={c.publications}>
+        <Section title={c.publications} className={order.publications}>
           <div className="space-y-2">
             {d.publications.map((item) => (
               <div key={item.id} className="break-inside-avoid">
@@ -196,7 +201,7 @@ function CoreSections({ draft }: { draft: CVDraft }) {
       ) : null}
 
       {d.awards.length ? (
-        <Section title={c.awards}>
+        <Section title={c.awards} className={order.awards}>
           <div className="space-y-2">
             {d.awards.map((item) => (
               <div key={item.id} className="break-inside-avoid">
@@ -208,7 +213,7 @@ function CoreSections({ draft }: { draft: CVDraft }) {
           </div>
         </Section>
       ) : null}
-    </>
+    </div>
   );
 }
 
