@@ -169,7 +169,7 @@ export class JobsAfScraper extends BaseScraper {
         organization,
         sourceUrl,
         originalUrl: sourceUrl,
-        applyUrl: sourceUrl, // applications flow through jobs.af
+        applyUrl: null, // source article is not an application destination
         sourceName: this.source.name,
         sourceLanguage: 'en',
         jobType: 'job',
@@ -180,6 +180,7 @@ export class JobsAfScraper extends BaseScraper {
         imageUrl: job.company?.profile?.logoUrl || null,
         description: this.synthesizeDescription(job, title, organization, provinces, areas),
         educationReq: this.humanize(job.educationLevel),
+        salary: this.buildSalary(job),
         extractedData: {
           reference: job.reference || null,
           vacancies: job.numberOfVacancies ?? null,
