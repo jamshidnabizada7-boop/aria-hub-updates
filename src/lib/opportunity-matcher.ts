@@ -277,6 +277,36 @@ function assessNationality(row: MatcherOpportunity, nationality?: string | null)
   return { status: 'unknown', message: 'Nationality information exists but needs manual verification.' };
 }
 
+function assessResidence(row: MatcherOpportunity, residence?: string | null): {
+  status: 'pass' | 'unknown' | 'conflict';
+  message?: string;
+} {
+  if (!residence) return { status: 'unknown' };
+
+  const data = getExtractedStrings(row.extractedData);
+  const residenceText =
+    data.residence ||
+    data['country of residence'] ||
+    data['eligible residents'] ||
+    data['residency requirement'] ||
+    '';
+
+  if (!residenceText) return { status: 'unknown' };
+  if (/any country|all countries|worldwide|international applicants/.test(residenceText)) {
+    return { status: 'pass', message: 'Structured residence information indicates broad geographic eligibility.' };
+  }
+
+  if (containsAny(residenceText, countryAliases(residence))) {
+    return { status: 'pass', message: 'Structured residence information includes your current country of residence.' };
+  }
+
+  if (/(only|must reside|residents? of|based in|eligible countries)/.test(residenceText)) {
+    return { status: 'conflict', message: 'Structured residence information may exclude your current country of residence.' };
+  }
+
+  return { status: 'unknown', message: 'Residence information exists but needs manual verification.' };
+}
+
 function assessEducation(row: MatcherOpportunity, education: EducationLevel): {
   status: 'pass' | 'unknown' | 'conflict';
   message?: string;
@@ -351,9 +381,10 @@ export function rankOpportunity(row: MatcherOpportunity, profile: MatcherProfile
 
   const education = assessEducation(row, profile.education);
   const nationality = assessNationality(row, profile.nationality);
+  const residence = assessResidence(row, profile.residence);
   const experience = assessExperience(row, profile.experienceYears);
 
-  const assessments = [education, nationality, experience];
+  const assessments = [education, nationality, residence, experience];
   for (const assessment of assessments) {
     if (assessment.status === 'pass' && assessment.message) {
       score += 8;
