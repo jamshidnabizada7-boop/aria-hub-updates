@@ -5,83 +5,279 @@
  * processes ONE row per call so the pipeline tick can drain the backlog in
  * small, quota-friendly batches ("1 hour, 1 day, 2 days — as long as it takes").
  *
- * Priority order: Opportunity (newest first) → News → then other tables.
- * On 429 the caller records a backoff window in AutomationState and skips.
+ * Opportunity translations use a durable Persian-first queue. Free-model
+ * outages and rate limits checkpoint partial work and retry later.
  */
+import { createHash } from 'node:crypto';
 import { db } from '@/lib/db';
 import { getProviderSlots, chatWithFailover } from '@/lib/ai/failover';
 import { Prisma } from '@prisma/client';
-type JsonValue = Prisma.JsonValue;
-
-const PrismaAnyNull = Prisma.DbNull;
-
-const SYMBOL_RE = /^[\s\d.,+%~×x°–—\-/$€£#&*'"()[\]]+$/u;
-const isSymbol = (s: string) => s.length <= 12 && SYMBOL_RE.test(s) && /[\d+%+]/.test(s);
-
-const SYSTEM_PROMPT = `You are a professional translator for ARIA HUB, an Afghan opportunities portal (jobs, scholarships, visas, interviews).
-Translate the given English fields into TWO languages:
-- "fa": Farsi/Persian (فارسی فارسی)
-- "ps": Pashto (پښتو)
-Rules:
-- Natural, fluent, concise, professional tone for an Afghan audience. Correct RTL script.
-- Keep URLs, emails, phone numbers, dates' numerals, org/brand names (UNICEF, IELTS, TOEFL, Chevening), and technical terms as-is.
-- If a field contains simple HTML or markdown, translate the text and PRESERVE the tags/structure exactly.
-- Never invent facts. If a value is a proper noun with no sensible translation, transliterate naturally.
-- Respond ONLY with strict JSON: {"<fieldKey>": {"fa": "<translation>", "ps": "<translation>"}} — no markdown fences, no commentary.`;
-
-function parseJsonLoose(raw: string): Record<string, { fa?: string; ps?: string }> | null {
-  if (!raw) return null;
-  const text = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
-  const start = text.indexOf('{');
-  const end = text.lastIndexOf('}');
-  if (start === -1 || end <= start) return null;
-  try { return JSON.parse(text.slice(start, end + 1)); } catch { return null; }
-}
-
-/** Translate one batch of fields {key: enText} → {key: {fa, ps}}. Throws on 429. */
-async function translateFields(fields: Record<string, string>): Promise<Record<string, { fa: string; ps: string }> | null> {
-  const slots = await getProviderSlots();
-  if (!slots.length) throw new Error('no ai provider configured');
-  const prompt = `Translate these fields to fa (Farsi/Persian) and ps (Pashto).\nReturn JSON: {"<fieldKey>":{"fa":"…","ps":"…"}}.\n\n${JSON.stringify(fields, null, 1)}`;
-  const { text: raw, provider: servedBy } = await chatWithFailover(slots, SYSTEM_PROMPT, prompt);
-  console.log(`[translate] served by: ${servedBy}`);
-  const parsed = parseJsonLoose(raw);
-  if (!parsed) return null;
-  const out: Record<string, { fa: string; ps: string }> = {};
-  for (const [k, v] of Object.entries(parsed)) {
-    if (v && typeof v === 'object' && typeof v.fa === 'string' && typeof v.ps === 'string' && v.fa.trim() && v.ps.trim()) {
-      out[k] = { fa: v.fa.trim(), ps: v.ps.trim() };
-    }
-  }
-  return Object.keys(out).length ? out : null;
-}
-
-const OPP_SELECT = {
-  id: true, title: true, description: true, slug: true,
-  titleI18n: true, descriptionI18n: true,
-} as const;
-
-type OppRow = {
-  id: string; title: string; description: string; slug: string;
-  titleI18n: unknown; descriptionI18n: unknown;
+const LANG_SYSTEM: Record<'fa' | 'ps', string> = {
+  fa:
+    'You are the Persian translation engine for ARIA HUB. Translate all supplied opportunity content fully into natural professional Persian. ' +
+    'Never summarize, shorten, skip, merge away, or invent content. Preserve paragraph and list order. ' +
+    'Keep URLs, emails, phone numbers, organization and brand names when appropriate, technical abbreviations, and ASCII numbers exactly as written. ' +
+    'Return only the translation, with no commentary.',
+  ps:
+    'You are the Pashto translation engine for ARIA HUB. Translate all supplied opportunity content fully into natural professional Pashto. ' +
+    'Never summarize, shorten, skip, merge away, or invent content. Preserve paragraph and list order. ' +
+    'Keep URLs, emails, phone numbers, organization and brand names when appropriate, technical abbreviations, and ASCII numbers exactly as written. ' +
+    'Return only the translation, with no commentary.',
 };
 
-function enOf(json: unknown, base: string): string {
-  if (json && typeof json === 'object') {
-    const en = (json as Record<string, unknown>).en;
-    if (typeof en === 'string' && en.trim()) return en;
-  }
-  return base || '';
+const CHUNK_SIZE = Math.max(900, Math.min(3500, Number(process.env.TRANSLATION_CHUNK_CHARS || 2200) || 2200));
+const MAX_CALLS_PER_TICK = Math.max(1, Math.min(6, Number(process.env.TRANSLATION_MAX_CALLS_PER_TICK || 4) || 4));
+
+type TargetLang = 'fa' | 'ps';
+type TranslationStage = {
+  version: 1;
+  sourceHash: string;
+  fields: Record<string, string>;
+  chunks: Record<string, { sourceHash: string; parts: string[] }>;
+};
+
+function stripHtmlPreservingBreaks(value: string): string {
+  return (value || '')
+    .replace(/<(br|\/p|\/li|\/h[1-6]|\/div|\/tr)\s*\/?>/gi, '\n')
+    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
-function hasFa(json: unknown): boolean {
-  if (!json || typeof json !== 'object') return false;
-  const fa = (json as Record<string, unknown>).fa;
-  return typeof fa === 'string' && fa.trim().length > 0;
+function chunkText(text: string): string[] {
+  const clean = stripHtmlPreservingBreaks(text);
+  if (!clean) return [];
+  if (clean.length <= CHUNK_SIZE) return [clean];
+  const out: string[] = [];
+  let rest = clean;
+  while (rest.length > CHUNK_SIZE) {
+    let cut = rest.lastIndexOf('\n\n', CHUNK_SIZE);
+    if (cut < CHUNK_SIZE * 0.45) cut = rest.lastIndexOf('\n', CHUNK_SIZE);
+    if (cut < CHUNK_SIZE * 0.45) cut = rest.lastIndexOf('. ', CHUNK_SIZE);
+    if (cut < CHUNK_SIZE * 0.45) cut = rest.lastIndexOf(' ', CHUNK_SIZE);
+    if (cut < CHUNK_SIZE * 0.45) cut = CHUNK_SIZE;
+    out.push(rest.slice(0, cut).trim());
+    rest = rest.slice(cut).trim();
+  }
+  if (rest) out.push(rest);
+  return out.filter(Boolean);
 }
-void hasFa; // reserved for stricter completeness checks
-function asJsonObject(v: JsonValue | null | undefined): Record<string, unknown> | null {
-  return v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
+
+function protectedTokens(text: string): string[] {
+  const values = new Set<string>();
+  for (const m of text.matchAll(/https?:\/\/[^\s<>"')]+/gi)) values.add(m[0]);
+  for (const m of text.matchAll(/[\w.+-]+@[\w-]+\.[a-z]{2,}/gi)) values.add(m[0]);
+  for (const m of text.matchAll(/\b\d[\d,./:%+\-]*\b/g)) values.add(m[0]);
+  return [...values];
+}
+
+function validTranslation(source: string, translated: string): boolean {
+  const out = translated.trim();
+  if (!out) return false;
+  if (source.length >= 250 && out.length < source.length * 0.38) return false;
+  if (source.length >= 120 && !/[\u0600-\u06FF]/.test(out)) return false;
+  for (const token of protectedTokens(source)) if (!out.includes(token)) return false;
+  if (/^(i['’]?m sorry|sorry,? i|as an ai|i cannot|i can'?t)/i.test(out)) return false;
+  return true;
+}
+
+function isRateLimitError(message: string): boolean {
+  return /\b429\b|rate.?limit|quota|too many|cooling down/i.test(message);
+}
+
+async function translateChunk(source: string, lang: TargetLang): Promise<string> {
+  const slots = await getProviderSlots();
+  if (!slots.length) throw new Error('no ai provider configured');
+  let last = '';
+  let rateLimited = false;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const result = await chatWithFailover(
+        slots,
+        LANG_SYSTEM[lang],
+        'Translate this content completely and preserve every detail and protected token exactly.\n\n' + source,
+      );
+      const text = result.text.trim();
+      if (validTranslation(source, text)) return text;
+      last = 'translation validation failed';
+    } catch (e) {
+      last = e instanceof Error ? e.message : String(e);
+      if (isRateLimitError(last)) rateLimited = true;
+    }
+    if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, attempt === 0 ? 1500 : 5000));
+  }
+  const err = new Error(last || 'translation failed') as Error & { rateLimited?: boolean };
+  err.rateLimited = rateLimited;
+  throw err;
+}
+
+function sourceHash(fields: Record<string, string>): string {
+  const stable = Object.keys(fields).sort().map((key) => key + '\u0000' + fields[key]).join('\u0001');
+  return createHash('sha256').update(stable).digest('hex');
+}
+
+function emptyStage(hash: string): TranslationStage {
+  return { version: 1, sourceHash: hash, fields: {}, chunks: {} };
+}
+
+function parseStage(raw: unknown, hash: string): TranslationStage {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return emptyStage(hash);
+  const v = raw as Partial<TranslationStage>;
+  if (v.version !== 1 || v.sourceHash !== hash) return emptyStage(hash);
+  return {
+    version: 1,
+    sourceHash: hash,
+    fields: v.fields && typeof v.fields === 'object' ? { ...v.fields } : {},
+    chunks: v.chunks && typeof v.chunks === 'object' ? { ...v.chunks } : {},
+  };
+}
+
+function retryDelay(attempts: number, rateLimited: boolean): number {
+  const base = rateLimited ? 5 * 60_000 : 2 * 60_000;
+  return Math.min(6 * 60 * 60_000, base * Math.pow(2, Math.min(6, Math.max(0, attempts - 1))));
+}
+
+const FIELD_DEFS = [
+  ['title', 'titleI18n'],
+  ['description', 'descriptionI18n'],
+  ['eligibility', 'eligibilityI18n'],
+  ['benefits', 'benefitsI18n'],
+  ['responsibilities', 'responsibilitiesI18n'],
+  ['requirements', 'requirementsI18n'],
+  ['guidelines', 'guidelinesI18n'],
+  ['jobType', 'jobTypeI18n'],
+  ['salary', 'salaryI18n'],
+  ['educationReq', 'educationReqI18n'],
+  ['experience', 'experienceI18n'],
+  ['aiSummary', 'aiSummaryI18n'],
+] as const;
+
+function sourceFields(row: Record<string, unknown>): Record<string, string> {
+  const fields: Record<string, string> = {};
+  for (const [base] of FIELD_DEFS) {
+    const raw = row[base];
+    if (typeof raw !== 'string' || !raw.trim()) continue;
+    const cleaned = stripHtmlPreservingBreaks(raw);
+    if (cleaned) fields[base] = cleaned;
+  }
+  return fields;
+}
+
+async function saveStage(
+  opportunityId: string,
+  lang: TargetLang,
+  hash: string,
+  stage: TranslationStage,
+  status: 'processing' | 'failed',
+  attempts: number,
+  lastError: string | null,
+  nextAttemptAt: Date | null,
+): Promise<void> {
+  await db.opportunityTranslationProgress.upsert({
+    where: { opportunityId_lang: { opportunityId, lang } },
+    create: {
+      opportunityId,
+      lang,
+      status,
+      sourceHash: hash,
+      fieldProgress: stage as unknown as Prisma.InputJsonValue,
+      attempts,
+      lastError,
+      nextAttemptAt,
+    },
+    update: {
+      status,
+      sourceHash: hash,
+      fieldProgress: stage as unknown as Prisma.InputJsonValue,
+      attempts,
+      lastError,
+      nextAttemptAt,
+      completedAt: null,
+    },
+  });
+}
+
+function mergeLang(existing: unknown, en: string, lang: TargetLang, translated: string): Prisma.InputJsonValue {
+  const current =
+    existing && typeof existing === 'object' && !Array.isArray(existing)
+      ? { ...(existing as Record<string, unknown>) }
+      : {};
+  if (!current.en && en) current.en = en;
+  current[lang] = translated;
+  return current as Prisma.InputJsonValue;
+}
+
+async function commitLanguage(
+  row: Record<string, any>,
+  lang: TargetLang,
+  fields: Record<string, string>,
+  stage: TranslationStage,
+  hash: string,
+): Promise<void> {
+  const update: Record<string, unknown> = {};
+  for (const [base, i18nField] of FIELD_DEFS) {
+    if (!fields[base]) continue;
+    const translated = stage.fields[base];
+    if (!translated) throw new Error('translation stage incomplete for ' + base);
+    update[i18nField] = mergeLang(row[i18nField], fields[base], lang, translated);
+  }
+
+  const translatedTitle = stage.fields.title;
+  const translatedSummary = stage.fields.aiSummary || stage.fields.description;
+  if (translatedTitle) {
+    update.seoTitleI18n = mergeLang(row.seoTitleI18n, fields.title || row.title || '', lang, translatedTitle);
+    update.ogTitleI18n = mergeLang(row.ogTitleI18n, fields.title || row.title || '', lang, translatedTitle);
+  }
+  if (translatedSummary) {
+    const seoDesc = translatedSummary.length > 158
+      ? translatedSummary.slice(0, 155).trimEnd() + '…'
+      : translatedSummary;
+    const en = fields.aiSummary || fields.description || '';
+    update.seoDescriptionI18n = mergeLang(row.seoDescriptionI18n, en, lang, seoDesc);
+    update.ogDescriptionI18n = mergeLang(row.ogDescriptionI18n, en, lang, seoDesc);
+  }
+
+  await db.$transaction(async (tx) => {
+    await tx.opportunity.update({
+      where: { id: row.id },
+      data: {
+        ...(update as Prisma.OpportunityUpdateInput),
+        translationStatus: lang === 'fa' ? 'persian_complete' : 'complete',
+      },
+    });
+    await tx.opportunityTranslationProgress.upsert({
+      where: { opportunityId_lang: { opportunityId: row.id, lang } },
+      create: {
+        opportunityId: row.id,
+        lang,
+        status: 'complete',
+        sourceHash: hash,
+        fieldProgress: stage as unknown as Prisma.InputJsonValue,
+        attempts: 0,
+        nextAttemptAt: null,
+        lastError: null,
+        completedAt: new Date(),
+      },
+      update: {
+        status: 'complete',
+        sourceHash: hash,
+        fieldProgress: stage as unknown as Prisma.InputJsonValue,
+        attempts: 0,
+        nextAttemptAt: null,
+        lastError: null,
+        completedAt: new Date(),
+      },
+    });
+  });
 }
 
 export interface TranslateBatchResult {
@@ -90,106 +286,146 @@ export interface TranslateBatchResult {
   rateLimited: boolean;
 }
 
-/**
- * Process up to `batch` rows starting from the highest-priority untranslated
- * content. Returns whether a 429 was hit (caller sets backoff).
- */
-export async function translateNextBatch(batch = 3): Promise<TranslateBatchResult> {
-  let processed = 0;
-  let failed = 0;
-  let rateLimited = false;
-
-  // 1. Opportunities first — newest published with missing fa title.
-  const opps = await db.opportunity.findMany({
+/** Count opportunities that still need the requested language. */
+async function pendingCount(lang: TargetLang): Promise<number> {
+  if (lang === 'fa') {
+    return db.opportunity.count({
+      where: {
+        status: { not: 'archived' },
+        translationProgress: { none: { lang: 'fa', status: 'complete' } },
+      },
+    });
+  }
+  return db.opportunity.count({
     where: {
-      status: 'published',
-      OR: [
-        { titleI18n: { equals: PrismaAnyNull } },
-        { titleI18n: { path: ['fa'], equals: PrismaAnyNull } },
-        { NOT: { titleI18n: { path: ['fa'], string_contains: '' } } },
+      status: { not: 'archived' },
+      AND: [
+        { translationProgress: { some: { lang: 'fa', status: 'complete' } } },
+        { translationProgress: { none: { lang: 'ps', status: 'complete' } } },
       ],
     },
-    orderBy: { createdAt: 'desc' },
-    take: batch,
-    select: OPP_SELECT,
+  });
+}
+
+async function findCandidate(lang: TargetLang): Promise<Record<string, any> | null> {
+  const now = new Date();
+  const rows = await db.opportunity.findMany({
+    where:
+      lang === 'fa'
+        ? {
+            status: { not: 'archived' },
+            translationProgress: { none: { lang: 'fa', status: 'complete' } },
+          }
+        : {
+            status: { not: 'archived' },
+            AND: [
+              { translationProgress: { some: { lang: 'fa', status: 'complete' } } },
+              { translationProgress: { none: { lang: 'ps', status: 'complete' } } },
+            ],
+          },
+    orderBy: [
+      { deadline: { sort: 'asc', nulls: 'last' } },
+      { createdAt: 'desc' },
+    ],
+    take: 50,
+    include: {
+      translationProgress: { where: { lang }, take: 1 },
+    },
   });
 
-  for (const opp of opps as OppRow[]) {
-    if (processed >= batch) break;
-    const title = enOf(opp.titleI18n, opp.title);
-    const desc = enOf(opp.descriptionI18n, opp.description).slice(0, 900);
-    if (!title) continue;
-    const fields: Record<string, string> = { title };
-    if (desc && !isSymbol(desc)) fields.description = desc;
-    try {
-      const got = await translateFields(fields);
-      if (got) {
-        const titleI18n = { ...(typeof opp.titleI18n === 'object' && opp.titleI18n ? opp.titleI18n as object : { en: opp.title }), ...(got.title ? { fa: got.title.fa, ps: got.title.ps } : {}) };
-        const descriptionI18n = got.description
-          ? { ...(typeof opp.descriptionI18n === 'object' && opp.descriptionI18n ? opp.descriptionI18n as object : { en: opp.description }), fa: got.description.fa, ps: got.description.ps }
-          : (typeof opp.descriptionI18n === 'object' && opp.descriptionI18n ? opp.descriptionI18n as object : undefined);
-        await db.opportunity.update({
-          where: { id: opp.id },
-          data: { titleI18n, ...(descriptionI18n ? { descriptionI18n } : {}) },
-        });
-        processed++;
-      } else {
-        failed++;
-      }
-    } catch (e) {
-      const msg = (e instanceof Error ? e.message : String(e));
-      if (msg.includes('429') || msg.toLowerCase().includes('too many')) {
-        rateLimited = true;
-        break;
-      }
-      failed++;
-    }
+  for (const row of rows) {
+    const progress = row.translationProgress[0];
+    if (progress?.nextAttemptAt && progress.nextAttemptAt > now) continue;
+    return row as unknown as Record<string, any>;
   }
+  return null;
+}
 
-  // 2. News (title + excerpt only; long content stays with the offline script).
-  if (processed < batch && !rateLimited) {
-    const newsRows = await db.news.findMany({
-      where: {
-        status: 'published',
-        OR: [
-          { titleI18n: { equals: PrismaAnyNull } },
-          { NOT: { titleI18n: { path: ['fa'], string_contains: '' } } },
-        ],
-      },
-      orderBy: { publishedAt: 'desc' },
-      take: batch - processed,
-      select: { id: true, title: true, excerpt: true, titleI18n: true, excerptI18n: true },
-    });
-    for (const n of newsRows) {
-      const title = enOf(n.titleI18n, n.title);
-      if (!title) continue;
-      const fields: Record<string, string> = { title };
-      const excerpt = enOf(n.excerptI18n, n.excerpt ?? '');
-      if (excerpt) fields.excerpt = excerpt.slice(0, 400);
-      try {
-        const got = await translateFields(fields);
-        if (got) {
-          await db.news.update({
-            where: { id: n.id },
-            data: {
-              titleI18n: { ...(typeof n.titleI18n === 'object' && n.titleI18n ? n.titleI18n as object : { en: n.title }), ...(got.title ?? {}) },
-              ...(got.excerpt
-                ? { excerptI18n: { ...(typeof n.excerptI18n === 'object' && n.excerptI18n ? n.excerptI18n as object : { en: excerpt }), fa: got.excerpt.fa, ps: got.excerpt.ps } }
-                : {}),
-            },
-          });
-          processed++;
-        } else failed++;
-      } catch (e) {
-        const msg = (e instanceof Error ? e.message : String(e));
-        if (msg.includes('429') || msg.toLowerCase().includes('too many')) {
-          rateLimited = true;
-          break;
-        }
-        failed++;
+async function workOnOpportunity(
+  row: Record<string, any>,
+  lang: TargetLang,
+): Promise<{ completed: boolean; failed: boolean; rateLimited: boolean }> {
+  const fields = sourceFields(row);
+  const hash = sourceHash(fields);
+  const progress = row.translationProgress[0];
+  const attempts = progress?.attempts ?? 0;
+  const stage = parseStage(progress?.fieldProgress, hash);
+  let calls = 0;
+
+  try {
+    for (const [field] of FIELD_DEFS) {
+      const source = fields[field];
+      if (!source || stage.fields[field]) continue;
+
+      const chunks = chunkText(source);
+      const chunkHash = createHash('sha256').update(source).digest('hex');
+      const previous = stage.chunks[field];
+      const checkpoint =
+        previous && previous.sourceHash === chunkHash
+          ? previous
+          : { sourceHash: chunkHash, parts: [] as string[] };
+
+      while (checkpoint.parts.length < chunks.length && calls < MAX_CALLS_PER_TICK) {
+        const index = checkpoint.parts.length;
+        checkpoint.parts.push(await translateChunk(chunks[index], lang));
+        calls++;
+        stage.chunks[field] = checkpoint;
+        await saveStage(row.id, lang, hash, stage, 'processing', attempts, null, null);
+      }
+
+      if (checkpoint.parts.length === chunks.length) {
+        const joined = checkpoint.parts.join('\n\n').trim();
+        if (!joined) throw new Error('translated field assembled empty: ' + field);
+        stage.fields[field] = joined;
+        delete stage.chunks[field];
+        await saveStage(row.id, lang, hash, stage, 'processing', attempts, null, null);
+      }
+
+      if (calls >= MAX_CALLS_PER_TICK) {
+        return { completed: false, failed: false, rateLimited: false };
       }
     }
-  }
 
-  return { processed, failed, rateLimited };
+    const missing = Object.keys(fields).filter((field) => !stage.fields[field]);
+    if (missing.length) return { completed: false, failed: false, rateLimited: false };
+
+    await commitLanguage(row, lang, fields, stage, hash);
+    return { completed: true, failed: false, rateLimited: false };
+  } catch (error) {
+    const message = (error instanceof Error ? error.message : String(error)).slice(0, 500);
+    const rateLimited =
+      Boolean((error as Error & { rateLimited?: boolean })?.rateLimited) ||
+      isRateLimitError(message);
+    const nextAttempts = attempts + 1;
+    await saveStage(
+      row.id,
+      lang,
+      hash,
+      stage,
+      'failed',
+      nextAttempts,
+      message,
+      new Date(Date.now() + retryDelay(nextAttempts, rateLimited)),
+    );
+    return { completed: false, failed: true, rateLimited };
+  }
+}
+
+/**
+ * Do one bounded, resumable unit of opportunity translation work.
+ * Persian has global priority; Pashto cannot start until every non-archived
+ * opportunity has a complete Persian progress row.
+ */
+export async function translateNextBatch(_batch = 3): Promise<TranslateBatchResult> {
+  const faRemaining = await pendingCount('fa');
+  const lang: TargetLang = faRemaining > 0 ? 'fa' : 'ps';
+  const candidate = await findCandidate(lang);
+  if (!candidate) return { processed: 0, failed: 0, rateLimited: false };
+
+  const result = await workOnOpportunity(candidate, lang);
+  return {
+    processed: result.completed || !result.failed ? 1 : 0,
+    failed: result.failed ? 1 : 0,
+    rateLimited: result.rateLimited,
+  };
 }

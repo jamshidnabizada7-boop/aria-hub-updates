@@ -244,6 +244,8 @@ model Opportunity {
   categoryId      String?
   category        OpportunityCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   monetizationOrders MonetizationOrder[]
+  locations       OpportunityLocation[]
+  translationProgress OpportunityTranslationProgress[]
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
 
@@ -297,6 +299,47 @@ model Opportunity {
   @@index([importStatus])
   @@index([deadline])
   @@index([createdAt])
+}
+
+model OpportunityLocation {
+  id            String      @id @default(cuid())
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  country       String      @default("")
+  countryCode   String?
+  province      String      @default("")
+  city          String      @default("")
+  district      String?
+  rawLabel      String
+  source        String      @default("unknown")
+  confidence    Float       @default(1)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([opportunityId, country, province, city, rawLabel])
+  @@index([opportunityId])
+  @@index([country])
+  @@index([country, province])
+}
+
+model OpportunityTranslationProgress {
+  id            String      @id @default(cuid())
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  lang          String
+  status        String      @default("pending")
+  sourceHash    String?
+  fieldProgress Json?
+  attempts      Int         @default(0)
+  nextAttemptAt DateTime?
+  lastError     String?
+  completedAt   DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([opportunityId, lang])
+  @@index([lang, status])
+  @@index([nextAttemptAt])
 }
 
 // ─── Automated import sources ────────────────────────────────────────────────

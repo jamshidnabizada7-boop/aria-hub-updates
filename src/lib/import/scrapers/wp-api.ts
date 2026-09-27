@@ -256,6 +256,88 @@ export class WpApiScraper extends BaseScraper {
       stripHtml(stripTextJunk(stripWpBoilerplate(rawContent))) ||
       htmlToExcerpt(post.excerpt?.rendered || '');
 
+    // The WP article URL is provenance, NOT an application destination.
+    // Only retain a link that is explicitly application-oriented and points
+    // away from the source article itself.
+    let directApplyUrl: string | null = null;
+    try {
+      const $content = cheerio.load(rawContent || '');
+      const sourceHost = new URL(link).hostname.replace(/^www\./, '');
+      $content('a[href]').each((_, el) => {
+        if (directApplyUrl) return;
+        const href = ($content(el).attr('href') || '').trim();
+        const label = $content(el).text().replace(/\s+/g, ' ').trim().toLowerCase();
+        if (!href) return;
+        const absolute = (() => { try { return new URL(href, link).toString(); } catch { return ''; } })();
+        if (!absolute) return;
+        const explicit = /apply|application|register|registration|submit|form|portal/i.test(label + ' ' + absolute);
+        if (!explicit) return;
+        let host = '';
+        try { host = new URL(absolute).hostname.replace(/^www\./, ''); } catch { return; }
+        const sameArticle = absolute.replace(/\/$/, '') === link.replace(/\/$/, '');
+        const sameHostArticle = host === sourceHost && !/\/apply(?:\/|$)|\/application(?:\/|$)|form|survey/i.test(absolute);
+        if (!sameArticle && !sameHostArticle) directApplyUrl = absolute;
+      });
+      if (!directApplyUrl) {
+        const email = description.match(/[\w.+-]+@[\w-]+\.[a-z]{2,}/i)?.[0];
+        if (email) directApplyUrl = `mailto:${email}`;
+      }
+    } catch { /* keep null: never fall back to the source article */ }
+
+    // Deterministic structured extraction from article headings/labels.
+    // This keeps generic WordPress sources useful without asking an LLM to
+    // guess missing facts.
+    const structured: {
+      eligibility?: string;
+      benefits?: string;
+      requirements?: string;
+      guidelines?: string;
+      organization?: string;
+      country?: string;
+      location?: string;
+    } = {};
+    try {
+      const $body = cheerio.load(rawContent || '');
+      const sectionText = (headingRe: RegExp): string | null => {
+        let found: string | null = null;
+        $body('h1,h2,h3,h4,h5,h6').each((_, el) => {
+          if (found) return;
+          const heading = $body(el).text().replace(/\s+/g, ' ').trim();
+          if (!headingRe.test(heading)) return;
+          const parts: string[] = [];
+          let node = $body(el).next();
+          while (node.length && !/^h[1-6]$/i.test(node.get(0)?.tagName || '')) {
+            const t = node.text().replace(/\s+/g, ' ').trim();
+            if (t) parts.push(t);
+            node = node.next();
+          }
+          const text = parts.join('\n').trim();
+          if (text) found = text;
+        });
+        return found;
+      };
+      structured.eligibility = sectionText(/eligib|who can apply|selection criteria/i) || undefined;
+      structured.benefits = sectionText(/benefit|funding|financial coverage|what.*covers/i) || undefined;
+      structured.requirements = sectionText(/requirement|required document|documents required/i) || undefined;
+      structured.guidelines = sectionText(/how to apply|application process|submission guideline|application procedure/i) || undefined;
+
+      const plain = stripHtml(rawContent || '').replace(/\r/g, '');
+      const valueAfter = (label: RegExp): string | null => {
+        const m = plain.match(new RegExp('(?:^|\\\\n)\\\\s*(?:' + label.source + ')\\\\s*[:：-]\\\\s*([^\\\\n]{2,180})', 'im'));
+        return m?.[1]?.trim() || null;
+      };
+      structured.country =
+        valueAfter(/host country|country|location country/) ||
+        null ||
+        undefined;
+      structured.location =
+        valueAfter(/location|city|province/) ||
+        undefined;
+      structured.organization =
+        valueAfter(/host institution|host university|organization|organizer|employer/) ||
+        undefined;
+    } catch { /* optional deterministic enrichment */ }
+
     const publishedDate = parseDate(post.date_gmt || post.date);
 
     // Deadline: only an explicit "Deadline: <date>" line in the body counts.
@@ -275,7 +357,7 @@ export class WpApiScraper extends BaseScraper {
       title,
       sourceUrl: link,
       originalUrl: link,
-      applyUrl: link,
+      applyUrl: directApplyUrl,
       sourceName: this.source.name,
       sourceLanguage: 'en',
       jobType,
@@ -284,8 +366,13 @@ export class WpApiScraper extends BaseScraper {
       publishedDate,
       deadline,
       imageUrl,
-      country: null,
-      organization: null,
+      country: structured.country || null,
+      location: structured.location || null,
+      organization: structured.organization || null,
+      eligibility: structured.eligibility || null,
+      benefits: structured.benefits || null,
+      requirements: structured.requirements || null,
+      guidelines: structured.guidelines || null,
       extractedData: {
         wpPostId: post.id ?? null,
         terms: termNames.slice(0, 10),

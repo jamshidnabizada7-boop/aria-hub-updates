@@ -91,7 +91,9 @@ export default async function OpportunitiesPage({
   // ---- filters from the URL -------------------------------------------------
   const category = firstParam(sp.category) || 'all';
   const q = (firstParam(sp.q) || '').trim();
-  const location = firstParam(sp.location) || 'all';
+  const legacyLocation = firstParam(sp.location) || 'all';
+  const country = firstParam(sp.country) || (legacyLocation !== 'all' ? legacyLocation : 'all');
+  const province = country === 'Afghanistan' ? (firstParam(sp.province) || 'all') : 'all';
   const deadlineParam = firstParam(sp.deadline);
   const deadlineDays = ['7', '30', '90'].includes(deadlineParam || '')
     ? Number(deadlineParam)
@@ -105,7 +107,7 @@ export default async function OpportunitiesPage({
   const page = Math.max(1, parseInt(firstParam(sp.page) || '1', 10) || 1);
 
   const [list, facets, spotlightId] = await Promise.all([
-    listOpportunities({ lang, category, q, location, deadlineDays, sort, page, perPage: PER_PAGE, includeExpired }),
+    listOpportunities({ lang, category, q, country, province, deadlineDays, sort, page, perPage: PER_PAGE, includeExpired }),
     getFacets(lang),
     getDailySpotlightId(),
   ]);
@@ -118,7 +120,8 @@ export default async function OpportunitiesPage({
       lang,
       category,
       q,
-      location,
+      country,
+      province,
       deadlineDays,
       sort,
       page: list.totalPages,
@@ -135,7 +138,8 @@ export default async function OpportunitiesPage({
     const merged: Record<string, string | null> = {
       category: category !== 'all' ? category : null,
       q: q || null,
-      location: location !== 'all' ? location : null,
+      country: country !== 'all' ? country : null,
+      province: province !== 'all' ? province : null,
       deadline: deadlineDays ? String(deadlineDays) : null,
       sort: sort !== 'newest' ? sort : null,
       show: includeExpired ? showParam || 'expired' : null,
@@ -341,7 +345,8 @@ export default async function OpportunitiesPage({
                 >
                   {category !== 'all' && <input type="hidden" name="category" value={category} />}
                   {q && <input type="hidden" name="q" value={q} />}
-                  {location !== 'all' && <input type="hidden" name="location" value={location} />}
+                  {country !== 'all' && <input type="hidden" name="country" value={country} />}
+                  {province !== 'all' && <input type="hidden" name="province" value={province} />}
                   {deadlineDays && <input type="hidden" name="deadline" value={String(deadlineDays)} />}
                   {includeExpired && <input type="hidden" name="show" value={showParam || 'expired'} />}
                   <div className="relative flex-1 lg:w-44">
@@ -398,16 +403,39 @@ export default async function OpportunitiesPage({
               />
             </div>
 
-            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div className="relative">
                 <select
-                  name="location"
-                  defaultValue={location}
-                  aria-label={t('opportunities.location')}
+                  name="country"
+                  defaultValue={country}
+                  aria-label={t('opportunities.country')}
                   className={selectClasses}
                 >
-                  <option value="all">{t('opportunities.allLocations')}</option>
-                  {facets.locations.map((loc) => (
+                  <option value="all">{t('opportunities.allCountries')}</option>
+                  {facets.countries.map((loc) => (
+                    <option key={loc.name} value={loc.name}>
+                      {loc.name} · {loc.count}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  className="pointer-events-none absolute inset-y-0 end-2.5 my-auto h-4 w-4 text-muted-foreground"
+                  aria-hidden="true"
+                />
+              </div>
+
+              <div className="relative">
+                <select
+                  name="province"
+                  defaultValue={province}
+                  aria-label={t('opportunities.province')}
+                  className={selectClasses}
+                  disabled={country !== 'Afghanistan'}
+                >
+                  <option value="all">
+                    {country === 'Afghanistan' ? t('opportunities.allProvinces') : t('opportunities.province')}
+                  </option>
+                  {country === 'Afghanistan' && facets.provinces.map((loc) => (
                     <option key={loc.name} value={loc.name}>
                       {loc.name} · {loc.count}
                     </option>
@@ -460,7 +488,7 @@ export default async function OpportunitiesPage({
             >
               {includeExpired ? t('opportunities.activeOnly') : t('opportunities.showExpired')}
             </Link>
-            {(q || category !== 'all' || location !== 'all' || deadlineDays || includeExpired) && (
+            {(q || category !== 'all' || country !== 'all' || province !== 'all' || deadlineDays || includeExpired) && (
               <Link
                 href={`/${lang}/opportunities`}
                 className="inline-flex min-h-[44px] items-center gap-1 rounded-full px-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground sm:min-h-0"
@@ -505,7 +533,7 @@ export default async function OpportunitiesPage({
             </div>
           ) : (
             <OpportunityFeed
-              key={[category, q, location, deadlineDays ?? '', sort, showParam ?? '', currentPage].join('|')}
+              key={[category, q, country, province, deadlineDays ?? '', sort, showParam ?? '', currentPage].join('|')}
               lang={lang}
               initialItems={effectiveList.items}
               initialTotalPages={effectiveList.totalPages}
@@ -513,7 +541,8 @@ export default async function OpportunitiesPage({
               query={{
                 category,
                 q,
-                location,
+                country,
+                province,
                 deadline: deadlineDays ? String(deadlineDays) : '',
                 sort,
                 show: includeExpired ? showParam || 'expired' : '',

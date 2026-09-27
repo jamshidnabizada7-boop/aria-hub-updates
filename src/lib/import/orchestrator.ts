@@ -27,6 +27,7 @@ import { ReliefWebPendingError } from './scrapers/reliefweb';
 import { sanitizeError, slugify } from './utils';
 import type { RawListing, SourceHandle } from './types';
 import { resolveImportedOpportunityStatus } from './publication-policy';
+import { inferOpportunityCountry, syncOpportunityLocations } from '@/lib/opportunity-location';
 
 /** Safely convert a date string (ISO or parseable) to a Date object, or null. */
 function safeDate(input: string | null | undefined): Date | null {
@@ -185,6 +186,9 @@ async function runOneSource(
     // 1. Scrape
     const listings = await scraper.scrapeAll();
     counters.found = listings.length;
+    if (source.type !== 'news' && listings.length === 0) {
+      throw new Error('source returned zero opportunity listings; possible selector, transport, or anti-bot regression');
+    }
 
     // 2. Process each listing
     for (const listing of listings) {
@@ -402,7 +406,7 @@ async function processListing(
   // refresh lastChecked (NOT a duplicate — the same known record, unchanged).
   if (dedupe.action === 'update' && !force && dedupe.existing.contentHash === hash) {
     counters.skipped++;
-    await db.opportunity.update({
+    const updatedOpportunity = await db.opportunity.update({
       where: { id: dedupe.existing.id },
       data: { lastChecked: new Date() },
     });
@@ -435,11 +439,11 @@ async function processListing(
     salary: listing.salary || null,
     educationReq: listing.educationReq || null,
     experience: listing.experience || null,
-    country: listing.country || listing.location || null,
+    country: inferOpportunityCountry(listing.country, listing.location),
     deadline: safeDate(listing.deadline),
     organization: listing.organization || null,
     website: listing.website || null,
-    applyUrl: listing.applyUrl || null,
+    applyUrl: typeof pipeline.data.applyUrl === 'string' ? pipeline.data.applyUrl : null,
     image: featured.path,
     logoUrl: logo.path || null,
     publishedDate: listing.publishedDate || null,  // String field in schema, no conversion needed
@@ -459,7 +463,7 @@ async function processListing(
     if (existing && slugify(listing.title) !== slugify(existing.title)) {
       newSlug = await ensureUniqueSlug(db, slugBase, dedupe.existing.id);
     }
-    await db.opportunity.update({
+    const updatedOpportunity = await db.opportunity.update({
       where: { id: dedupe.existing.id },
       data: {
         ...pipeline.data,
@@ -472,11 +476,16 @@ async function processListing(
         importStatus: 'updated',
       },
     });
+    await syncOpportunityLocations(db, updatedOpportunity.id, listing);
+    await db.opportunityTranslationProgress.updateMany({
+      where: { opportunityId: updatedOpportunity.id },
+      data: { status: 'pending', sourceHash: null, nextAttemptAt: null, completedAt: null, lastError: null, attempts: 0 },
+    });
     counters.updated++;
   } else {
     // Create new
     const slug = await ensureUniqueSlug(db, slugBase);
-    await db.opportunity.create({
+    const createdOpportunity = await db.opportunity.create({
       data: {
         ...pipeline.data,
         ...importFields,
@@ -489,6 +498,7 @@ async function processListing(
         categoryId,
       } as unknown as Prisma.OpportunityUncheckedCreateInput,
     });
+    await syncOpportunityLocations(db, createdOpportunity.id, listing);
     counters.imported++;
   }
 }

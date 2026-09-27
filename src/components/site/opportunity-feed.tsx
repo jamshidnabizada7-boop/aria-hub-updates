@@ -34,7 +34,8 @@ function reviveItem(raw: RawItem): OpportunityCardData {
 export interface FeedQuery {
   category: string;
   q: string;
-  location: string;
+  country: string;
+  province: string;
   deadline: string;
   sort: string;
   show: string;
@@ -93,7 +94,8 @@ export function OpportunityFeed({
         page: String(page + 1),
         category: query.category,
         q: query.q,
-        location: query.location,
+        country: query.country,
+        province: query.province,
         deadline: query.deadline,
         sort: query.sort,
         show: query.show,
