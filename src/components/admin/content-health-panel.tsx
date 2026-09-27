@@ -27,6 +27,7 @@ interface ContentHealth {
   deadlines: { expiring7: number; expiring30: number; noApplyLink: number };
   submissions: { pending: number };
   alerts: { pending: number; active: number; unsubscribed: number };
+  matcherProduct: { alertPending: number; alertActive: number; alertUnsubscribed: number; helpful: number; notRelevant: number };
   categories: { id: string; name: string; slug: string; count: number }[];
   sources: {
     id: string;
@@ -94,7 +95,7 @@ export function ContentHealthPanel() {
     );
   }
 
-  const { opportunities: opp, translation, matchability, deadlines, submissions, alerts } = data;
+  const { opportunities: opp, translation, matchability, deadlines, submissions, alerts, matcherProduct } = data;
   const coveragePct = translation.publishedTotal
     ? Math.round((translation.trilingual / translation.publishedTotal) * 100)
     : 0;
@@ -139,7 +140,7 @@ export function ContentHealthPanel() {
           </Badge>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
             <div className="rounded-lg border bg-muted/20 p-3">
               <p className="text-xs font-medium text-muted-foreground">Eligibility-rich</p>
               <p className="mt-1 text-xl font-black tabular-nums">{matchability.eligibilityRich}</p>
@@ -159,6 +160,16 @@ export function ContentHealthPanel() {
               <p className="text-xs font-medium text-muted-foreground">Human-reviewed</p>
               <p className="mt-1 text-xl font-black tabular-nums">{matchability.reviewedProfiles}</p>
               <p className="mt-1 text-[11px] text-muted-foreground">normalized profiles explicitly reviewed</p>
+            </div>
+            <div className="rounded-lg border bg-muted/20 p-3">
+              <p className="text-xs font-medium text-muted-foreground">Match alerts</p>
+              <p className="mt-1 text-xl font-black tabular-nums">{matcherProduct.alertActive}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">{matcherProduct.alertPending} pending confirmation · {matcherProduct.alertUnsubscribed} unsubscribed</p>
+            </div>
+            <div className="rounded-lg border bg-muted/20 p-3">
+              <p className="text-xs font-medium text-muted-foreground">Matcher feedback</p>
+              <p className="mt-1 text-xl font-black tabular-nums">{matcherProduct.helpful + matcherProduct.notRelevant}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">{matcherProduct.helpful} helpful · {matcherProduct.notRelevant} not relevant</p>
             </div>
             <div className="rounded-lg border bg-muted/20 p-3">
               <p className="text-xs font-medium text-muted-foreground">Weak match data</p>
