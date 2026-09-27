@@ -424,7 +424,7 @@ export function rankOpportunity(row: MatcherOpportunity, profile: MatcherProfile
   else eligibilityStatus = 'needs_check';
 
   if (eligibilityStatus === 'incomplete' && check.length === 0) {
-    check.push('Some eligibility requirements are not structured; verify the official eligibility criteria before applying.');
+    check.push('Some eligibility requirements are not structured yet; review the full requirements before applying.');
   }
 
   score = Math.max(0, Math.min(100, score));
