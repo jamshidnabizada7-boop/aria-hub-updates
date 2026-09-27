@@ -28,6 +28,8 @@ export async function GET() {
     sources,
     lastRuns,
     alertSubscribers,
+    matcherAlertSubscribers,
+    matcherFeedback,
   ] = await Promise.all([
     db.opportunity.count(),
     db.opportunity.count({ where: { status: 'published' } }),
@@ -61,6 +63,14 @@ export async function GET() {
     // Email-alert subscribers (lead capture) — status breakdown.
     db.alertSubscriber.groupBy({
       by: ['status'],
+      _count: true,
+    }),
+    db.matcherAlertSubscriber.groupBy({
+      by: ['status'],
+      _count: true,
+    }),
+    db.matcherFeedback.groupBy({
+      by: ['signal'],
       _count: true,
     }),
   ]);
@@ -185,6 +195,13 @@ export async function GET() {
       pending: alertSubscribers.find((g) => g.status === 'pending')?._count ?? 0,
       active: alertSubscribers.find((g) => g.status === 'active')?._count ?? 0,
       unsubscribed: alertSubscribers.find((g) => g.status === 'unsubscribed')?._count ?? 0,
+    },
+    matcherProduct: {
+      alertPending: matcherAlertSubscribers.find((g) => g.status === 'pending')?._count ?? 0,
+      alertActive: matcherAlertSubscribers.find((g) => g.status === 'active')?._count ?? 0,
+      alertUnsubscribed: matcherAlertSubscribers.find((g) => g.status === 'unsubscribed')?._count ?? 0,
+      helpful: matcherFeedback.find((g) => g.signal === 'helpful')?._count ?? 0,
+      notRelevant: matcherFeedback.find((g) => g.signal === 'not_relevant')?._count ?? 0,
     },
     categories: categories.map((c) => ({
       id: c.id,
