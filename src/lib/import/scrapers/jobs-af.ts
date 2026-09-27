@@ -169,7 +169,7 @@ export class JobsAfScraper extends BaseScraper {
         organization,
         sourceUrl,
         originalUrl: sourceUrl,
-        applyUrl: sourceUrl, // applications flow through jobs.af
+        applyUrl: null, // source article is not an application destination
         sourceName: this.source.name,
         sourceLanguage: 'en',
         jobType: 'job',
@@ -180,6 +180,7 @@ export class JobsAfScraper extends BaseScraper {
         imageUrl: job.company?.profile?.logoUrl || null,
         description: this.synthesizeDescription(job, title, organization, provinces, areas),
         educationReq: this.humanize(job.educationLevel),
+        salary: this.buildSalary(job),
         extractedData: {
           reference: job.reference || null,
           vacancies: job.numberOfVacancies ?? null,
@@ -192,6 +193,7 @@ export class JobsAfScraper extends BaseScraper {
           extendable: job.isExtendable == null ? null : job.isExtendable ? 'Yes' : 'No',
           submission: this.humanize(job.submissionThroughout),
           functionalAreas: areas,
+          detailLevel: 'list',
           slug,
         },
       });
@@ -248,9 +250,12 @@ export class JobsAfScraper extends BaseScraper {
       if (flight) {
         const jobs = extractFlightObjects<JobsAfJob>(flight, '{"id":"', ['title', 'slug']);
         const match = jobs.find((j) => listing.sourceUrl.endsWith(`/jobs/${j.slug}`));
-        const detail = match?.description || match?.howToApply || match?.applyInstructions || null;
-        if (detail && detail.trim().length > 80) {
-          listing.description = stripHtml(detail).trim();
+        const description = match?.description || null;
+        const howToApply = match?.howToApply || match?.applyInstructions || null;
+        if (description && description.trim().length > 80) {
+          listing.description = stripHtml(description).trim();
+          if (howToApply?.trim()) listing.guidelines = stripHtml(howToApply).trim();
+          listing.extractedData = { ...(listing.extractedData || {}), detailLevel: 'full' };
           return listing;
         }
       }
@@ -280,6 +285,7 @@ export class JobsAfScraper extends BaseScraper {
           if (parsed.facts && Object.keys(parsed.facts).length) {
             listing.extractedData = { ...(listing.extractedData || {}), ...parsed.facts };
           }
+          listing.extractedData = { ...(listing.extractedData || {}), detailLevel: 'full' };
         }
       }
     } catch {

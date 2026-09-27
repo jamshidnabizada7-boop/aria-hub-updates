@@ -41,7 +41,8 @@ interface SlotState {
   usedCount: number;
 }
 
-const COOLDOWN_MS = 60 * 1000; // free tiers are per-minute — one minute is enough
+const COOLDOWN_MS = Math.max(60_000, Number(process.env.AI_PROVIDER_COOLDOWN_MS) || 60_000);
+const TRANSIENT_COOLDOWN_MS = Math.max(30_000, Number(process.env.AI_PROVIDER_TRANSIENT_COOLDOWN_MS) || 120_000);
 
 const states = new Map<string, SlotState>();
 const instances = new Map<string, AIProvider | null>();
@@ -96,6 +97,10 @@ function isRateLimitError(msg: string): boolean {
   return /\b429\b|rate.?limit|quota|too many requests/i.test(msg);
 }
 
+function isTransientProviderError(msg: string): boolean {
+  return /\b(500|502|503|504)\b|timeout|temporar|overload|service unavailable|network|fetch failed/i.test(msg);
+}
+
 export interface FailoverResult {
   text: string;
   provider: string;
@@ -137,6 +142,8 @@ export async function chatWithFailover(
       errors.push(`${name}: ${msg}`);
       if (isRateLimitError(msg)) {
         st.cooldownUntil = Date.now() + COOLDOWN_MS;
+      } else if (isTransientProviderError(msg)) {
+        st.cooldownUntil = Date.now() + TRANSIENT_COOLDOWN_MS;
       }
     }
   }

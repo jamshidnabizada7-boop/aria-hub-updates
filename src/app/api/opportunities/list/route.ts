@@ -13,7 +13,7 @@ function firstParam(value: string | null): string {
 }
 
 /**
- * GET /api/opportunities/list?lang=en&category=jobs&q=&location=&deadline=&sort=&show=&page=2
+ * GET /api/opportunities/list?lang=en&category=jobs&q=&country=&province=&deadline=&sort=&show=&page=2
  *
  * Paginated feed endpoint backing the listing page's infinite scroll.
  * Same query contract (and same DB access layer) as the server-rendered
@@ -28,7 +28,9 @@ export async function GET(req: NextRequest) {
 
     const category = firstParam(sp.get('category')) || 'all';
     const q = firstParam(sp.get('q')).trim().slice(0, 200);
-    const location = firstParam(sp.get('location')) || 'all';
+    const legacyLocation = firstParam(sp.get('location'));
+    const country = firstParam(sp.get('country')) || legacyLocation || 'all';
+    const province = firstParam(sp.get('province')) || 'all';
     const deadlineParam = firstParam(sp.get('deadline'));
     const deadlineDays = ['7', '30', '90'].includes(deadlineParam) ? Number(deadlineParam) : undefined;
     const sortParam = firstParam(sp.get('sort'));
@@ -44,7 +46,8 @@ export async function GET(req: NextRequest) {
         lang,
         category,
         q,
-        location,
+        country,
+        province,
         deadlineDays,
         sort,
         page,

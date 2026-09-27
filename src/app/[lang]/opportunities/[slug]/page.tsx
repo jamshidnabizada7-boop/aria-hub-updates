@@ -57,6 +57,7 @@ import {
 } from '@/lib/opportunity-queries';
 import { cn } from '@/lib/utils';
 import { ensureSeoDescription } from '@/lib/seo-metadata';
+import { formatOpportunityLocation } from '@/lib/opportunity-location';
 
 const SITE_URL = 'https://www.myariahub.com';
 
@@ -179,6 +180,7 @@ export default async function OpportunityDetailPage({
   const title = localize(opp.title, opp.titleI18n as I18nJson, lang);
   const organization = opp.organization;
   const jobType = localize(opp.jobType, opp.jobTypeI18n as I18nJson, lang) || null;
+  const locationLabel = formatOpportunityLocation(opp.locations, opp.country);
   const salary = localize(opp.salary, opp.salaryI18n as I18nJson, lang) || null;
   const educationReq = localize(opp.educationReq, opp.educationReqI18n as I18nJson, lang) || null;
   const experience = localize(opp.experience, opp.experienceI18n as I18nJson, lang) || null;
@@ -220,10 +222,15 @@ export default async function OpportunityDetailPage({
   if (organization) jsonLd.hiringOrganization = { '@type': 'Organization', name: organization };
   if (postedDateIso) jsonLd.datePosted = postedDateIso;
   if (opp.deadline) jsonLd.validThrough = opp.deadline.toISOString();
-  if (opp.country) {
+  if (opp.country || opp.locations.length) {
+    const regions = [...new Set(opp.locations.map((l) => l.province).filter((v): v is string => Boolean(v)))];
     jsonLd.jobLocation = {
       '@type': 'Place',
-      address: { '@type': 'PostalAddress', addressCountry: opp.country },
+      address: {
+        '@type': 'PostalAddress',
+        ...(opp.country ? { addressCountry: opp.country } : {}),
+        ...(regions.length ? { addressRegion: regions.join(', ') } : {}),
+      },
     };
   }
   if (opp.jobType) {
@@ -274,7 +281,7 @@ export default async function OpportunityDetailPage({
         : 'text-primary';
   const keyFacts: { icon: LucideIcon; label: string; value: string; emphasis?: boolean; href?: string }[] = [
     { icon: Building2, label: t('opportunities.organization'), value: organization || '' },
-    { icon: MapPin, label: t('opportunities.location'), value: opp.country || '' },
+    { icon: MapPin, label: t('opportunities.location'), value: locationLabel || '' },
     { icon: Briefcase, label: t('detail.jobType'), value: jobType || '' },
     { icon: Banknote, label: t('opportunities.salary'), value: salary || '' },
     { icon: GraduationCap, label: t('opportunities.education'), value: educationReq || '' },

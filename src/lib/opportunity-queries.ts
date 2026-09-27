@@ -10,6 +10,7 @@ import { getLocalizedContent } from '@/lib/i18n-content';
 import { translate } from '@/lib/i18n';
 import type { Lang } from '@/lib/lang-route';
 import type { Prisma } from '@prisma/client';
+import { formatOpportunityLocation } from '@/lib/opportunity-location';
 import {
   categoryLabel,
   cleanSummary,
@@ -27,7 +28,7 @@ import {
 export * from '@/lib/opportunity-shared';
 
 export type OpportunityDetail = Prisma.OpportunityGetPayload<{
-  include: { category: true };
+  include: { category: true; locations: true };
 }>;
 
 // ---------------------------------------------------------------------------
@@ -61,6 +62,10 @@ const CARD_SELECT = {
   titleI18n: true,
   organization: true,
   country: true,
+  locations: {
+    select: { country: true, province: true, city: true },
+    orderBy: [{ province: 'asc' }, { city: 'asc' }],
+  },
   jobType: true,
   jobTypeI18n: true,
   deadline: true,
@@ -83,6 +88,8 @@ function toCardData(row: CardRow, lang: Lang): OpportunityCardData {
     title: getLocalizedContent(row.title, row.titleI18n as Record<string, string> | null, lang),
     organization: row.organization,
     country: row.country,
+    locationLabel: formatOpportunityLocation(row.locations, row.country),
+    provinces: [...new Set(row.locations.map((l) => l.province).filter((v): v is string => Boolean(v)))],
     jobType: getLocalizedContent(row.jobType, row.jobTypeI18n as Record<string, string> | null, lang),
     deadline: row.deadline,
     applyUrl: row.applyUrl,
@@ -109,6 +116,8 @@ export async function listOpportunities(
     lang,
     category = 'all',
     q = '',
+    country = 'all',
+    province = 'all',
     location = 'all',
     deadlineDays,
     source = 'all',
@@ -132,8 +141,19 @@ export async function listOpportunities(
   if (category && category !== 'all') {
     where.category = { slug: category };
   }
-  if (location && location !== 'all') {
-    where.country = location;
+  // "location" is a legacy alias for country from pre-province URLs.
+  const effectiveCountry = country && country !== 'all'
+    ? country
+    : (location && location !== 'all' ? location : 'all');
+  if (effectiveCountry !== 'all') {
+    where.country = effectiveCountry;
+  }
+  if (province && province !== 'all') {
+    AND.push({
+      locations: {
+        some: { province: { equals: province, mode: 'insensitive' } },
+      },
+    });
   }
   // Deadline horizon: only rows that HAVE a deadline closing within N days.
   if (deadlineDays && [7, 30, 90].includes(deadlineDays)) {
@@ -152,6 +172,17 @@ export async function listOpportunities(
         { organization: { contains: term, mode: 'insensitive' } },
         { aiSummary: { contains: term, mode: 'insensitive' } },
         { country: { contains: term, mode: 'insensitive' } },
+        {
+          locations: {
+            some: {
+              OR: [
+                { province: { contains: term, mode: 'insensitive' } },
+                { city: { contains: term, mode: 'insensitive' } },
+                { rawLabel: { contains: term, mode: 'insensitive' } },
+              ],
+            },
+          },
+        },
       ],
     });
   }
@@ -298,7 +329,7 @@ export async function listByDeadline(
 export async function getOpportunityBySlug(slug: string): Promise<OpportunityDetail | null> {
   return db.opportunity.findFirst({
     where: { slug, status: { not: 'draft' } },
-    include: { category: true },
+    include: { category: true, locations: true },
   });
 }
 
@@ -383,7 +414,7 @@ export async function getFacets(lang?: Lang): Promise<Facets> {
     OR: [{ deadline: null }, { deadline: { gte: today } }],
   };
 
-  const [categories, byCategory, byCountry, totalActive] = await Promise.all([
+  const [categories, byCategory, byCountry, byProvince, totalActive] = await Promise.all([
     db.opportunityCategory.findMany({
       orderBy: { order: 'asc' },
       select: { id: true, slug: true, name: true, nameI18n: true },
@@ -398,7 +429,18 @@ export async function getFacets(lang?: Lang): Promise<Facets> {
       where: { ...where, country: { not: null } },
       _count: { country: true },
       orderBy: { _count: { country: 'desc' } },
-      take: 15,
+      take: 50,
+    }),
+    db.opportunityLocation.groupBy({
+      by: ['province'],
+      where: {
+        province: { not: null },
+        country: 'Afghanistan',
+        opportunity: where,
+      },
+      _count: { province: true },
+      orderBy: { _count: { province: 'desc' } },
+      take: 34,
     }),
     db.opportunity.count({ where }),
   ]);
@@ -417,6 +459,17 @@ export async function getFacets(lang?: Lang): Promise<Facets> {
         : c.name,
       count: countByCategory.get(c.id) ?? 0,
     })),
+    countries: byCountry.map((g) => ({
+      name: g.country as string,
+      count: g._count?.country ?? 0,
+    })),
+    provinces: byProvince
+      .filter((g) => Boolean(g.province))
+      .map((g) => ({
+        name: g.province as string,
+        count: g._count?.province ?? 0,
+      })),
+    // Compatibility for pre-migration callers.
     locations: byCountry.map((g) => ({
       name: g.country as string,
       count: g._count?.country ?? 0,

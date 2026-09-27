@@ -309,7 +309,7 @@ export class AcbarScraper extends BaseScraper {
       if (extracted['Category']) listing.category = extracted['Category'];
 
       // Store everything for future reference
-      listing.extractedData = { ...extracted };
+      listing.extractedData = { ...extracted, detailLevel: 'full' };
 
       // ── Deadline ───────────────────────────────────────────────────────────
       const deadlineText = $('.acbar-jd__deadline-value').first().text().trim();

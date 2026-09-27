@@ -24,6 +24,10 @@ export interface OpportunityCardData {
   title: string;
   organization: string | null;
   country: string | null;
+  /** Human-readable normalized location, e.g. "Kabul, Afghanistan". */
+  locationLabel: string;
+  /** Normalized provinces/admin-1 values, primarily for filtering. */
+  provinces: string[];
   jobType: string | null;
   deadline: Date | null;
   applyUrl: string | null;
@@ -54,7 +58,11 @@ export interface CategoryFacet {
 
 export interface Facets {
   categories: CategoryFacet[];
-  /** Top countries by active-opportunity count (label + count for filters). */
+  /** Countries by active-opportunity count. */
+  countries: { name: string; count: number }[];
+  /** Afghanistan provinces/admin-1 by active-opportunity count. */
+  provinces: { name: string; count: number }[];
+  /** Backward-compatible alias for older callers; same as countries. */
   locations: { name: string; count: number }[];
   /** Total active (published + unexpired) opportunities across all categories. */
   totalActive: number;
@@ -64,7 +72,12 @@ export interface ListOpportunitiesOptions {
   lang: Lang;
   category?: string; // category slug, or 'all'
   q?: string;
-  location?: string; // exact country value, or 'all'
+  /** Exact country value, or 'all'. */
+  country?: string;
+  /** Exact normalized province/admin-1 value, or 'all'. */
+  province?: string;
+  /** Legacy country alias retained for old URLs/API callers. */
+  location?: string;
   /** Only opportunities whose deadline lands within N days (7/30/90). */
   deadlineDays?: number;
   /** Exact sourceName filter, or 'all'. */

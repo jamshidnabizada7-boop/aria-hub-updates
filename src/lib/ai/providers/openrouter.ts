@@ -9,7 +9,11 @@ import type { AIProvider, RewriteResult, SEOResult } from '../provider';
 import { REWRITE_SYSTEM, translateSystem, seoSystem, categorizeSystem } from '../prompts';
 import { parseJSON, retry } from './helpers';
 
-const MODEL = process.env.OPENROUTER_MODEL || 'meta-llama/llama-3.3-70b-instruct';
+// "openrouter/free" lets OpenRouter route across currently available free
+// models. Owners can pin a specific free model with OPENROUTER_MODEL.
+const MODEL = process.env.OPENROUTER_MODEL || 'openrouter/free';
+const REQUEST_TIMEOUT_MS = Math.max(15000, Number(process.env.OPENROUTER_TIMEOUT_MS) || 60000);
+const MAX_TOKENS = Math.max(512, Math.min(8000, Number(process.env.OPENROUTER_MAX_TOKENS) || 4000));
 const API_BASE = 'https://openrouter.ai/api/v1';
 
 export class OpenRouterProvider implements AIProvider {
@@ -75,7 +79,11 @@ export class OpenRouterProvider implements AIProvider {
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) throw new Error('OPENROUTER_API_KEY not configured');
 
-    const response = await fetch(`${API_BASE}/chat/completions`, {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -88,10 +96,19 @@ export class OpenRouterProvider implements AIProvider {
           { role: 'system', content: system },
           { role: 'user', content: user },
         ],
-        temperature: 0.3,
-        max_tokens: 4000,
+        temperature: 0.2,
+        max_tokens: MAX_TOKENS,
       }),
+      signal: controller.signal,
     });
+    } catch (e) {
+      if ((e as Error)?.name === 'AbortError') {
+        throw new Error(`OpenRouter API timeout after ${REQUEST_TIMEOUT_MS}ms`);
+      }
+      throw e;
+    } finally {
+      clearTimeout(timeout);
+    }
 
     if (!response.ok) {
       const err = await response.text();

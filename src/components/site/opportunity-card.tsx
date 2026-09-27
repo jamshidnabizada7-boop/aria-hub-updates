@@ -221,7 +221,7 @@ export function OpportunityCard({
             {opportunity.title}
           </h3>
 
-          {(opportunity.organization || opportunity.country) && (
+          {(opportunity.organization || opportunity.locationLabel) && (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
               {opportunity.organization && (
                 <span className="inline-flex min-w-0 items-center gap-1">
@@ -231,10 +231,10 @@ export function OpportunityCard({
                   </span>
                 </span>
               )}
-              {opportunity.country && (
+              {opportunity.locationLabel && (
                 <span className="inline-flex items-center gap-1">
                   <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                  <span dir="auto">{opportunity.country}</span>
+                  <span dir="auto">{opportunity.locationLabel}</span>
                 </span>
               )}
             </div>

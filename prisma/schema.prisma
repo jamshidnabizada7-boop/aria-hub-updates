@@ -244,6 +244,8 @@ model Opportunity {
   categoryId      String?
   category        OpportunityCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   monetizationOrders MonetizationOrder[]
+  locations          OpportunityLocation[]
+  translationStates OpportunityTranslation[]
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
 
@@ -288,6 +290,7 @@ model Opportunity {
   publishedDate        String?
   extractedData        Json? // store extra dynamic metadata scraped from the source
   extractedDataI18n    Json? // localized dynamic metadata scraped from the source
+  qualityReport        Json? // extraction/apply/location completeness + provenance; admin/internal
 
   @@index([categoryId])
   @@index([featured])
@@ -297,6 +300,49 @@ model Opportunity {
   @@index([importStatus])
   @@index([deadline])
   @@index([createdAt])
+}
+
+// ─── Structured opportunity geography ────────────────────────────────────────
+model OpportunityLocation {
+  id            String      @id @default(cuid())
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  country       String
+  countryCode   String?
+  province      String?
+  city          String?
+  district      String?
+  rawLabel      String?
+  provenance    String      @default("source") // source | deterministic | admin | inferred
+  confidence    Float       @default(1)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([opportunityId])
+  @@index([country])
+  @@index([province])
+  @@index([country, province])
+}
+
+// ─── Atomic, resumable per-language opportunity translation state ────────────
+model OpportunityTranslation {
+  id            String      @id @default(cuid())
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  lang          String      // fa | ps
+  sourceHash    String
+  status        String      @default("pending") // pending | processing | complete | failed
+  staging       Json?
+  attempts      Int         @default(0)
+  nextAttemptAt DateTime?
+  lastError     String?
+  completedAt   DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([opportunityId, lang])
+  @@index([lang, status, nextAttemptAt])
+  @@index([opportunityId])
 }
 
 // ─── Automated import sources ────────────────────────────────────────────────

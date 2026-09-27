@@ -1,195 +1,189 @@
 /**
- * translate-core — server-side, rate-limit-aware fa/ps translation for the
- * automation pipeline. Same translation contract as
- * scripts/translate-fill-all.mjs (which remains the bulk/offline tool), but
- * processes ONE row per call so the pipeline tick can drain the backlog in
- * small, quota-friendly batches ("1 hour, 1 day, 2 days — as long as it takes").
- *
- * Priority order: Opportunity (newest first) → News → then other tables.
- * On 429 the caller records a backoff window in AutomationState and skips.
+ * Atomic Persian-first opportunity translation worker.
+ * Free-model outages/rate limits never expose partial translations.
  */
+import { createHash } from 'node:crypto';
 import { db } from '@/lib/db';
 import { getProviderSlots, chatWithFailover } from '@/lib/ai/failover';
+import { stripHtml } from '@/lib/import/utils';
 import { Prisma } from '@prisma/client';
-type JsonValue = Prisma.JsonValue;
 
-const PrismaAnyNull = Prisma.DbNull;
+type TargetLang = 'fa' | 'ps';
+const CHUNK_CHARS = Math.max(700, Math.min(2400, Number(process.env.TRANSLATION_CHUNK_CHARS) || 1500));
 
-const SYMBOL_RE = /^[\s\d.,+%~×x°–—\-/$€£#&*'"()[\]]+$/u;
-const isSymbol = (s: string) => s.length <= 12 && SYMBOL_RE.test(s) && /[\d+%+]/.test(s);
+const FIELDS = [
+  'title','description','aiSummary','eligibility','benefits','responsibilities',
+  'requirements','guidelines','jobType','salary','educationReq','experience',
+] as const;
+type FieldName = (typeof FIELDS)[number];
 
-const SYSTEM_PROMPT = `You are a professional translator for ARIA HUB, an Afghan opportunities portal (jobs, scholarships, visas, interviews).
-Translate the given English fields into TWO languages:
-- "fa": Farsi/Persian (فارسی فارسی)
-- "ps": Pashto (پښتو)
-Rules:
-- Natural, fluent, concise, professional tone for an Afghan audience. Correct RTL script.
-- Keep URLs, emails, phone numbers, dates' numerals, org/brand names (UNICEF, IELTS, TOEFL, Chevening), and technical terms as-is.
-- If a field contains simple HTML or markdown, translate the text and PRESERVE the tags/structure exactly.
-- Never invent facts. If a value is a proper noun with no sensible translation, transliterate naturally.
-- Respond ONLY with strict JSON: {"<fieldKey>": {"fa": "<translation>", "ps": "<translation>"}} — no markdown fences, no commentary.`;
-
-function parseJsonLoose(raw: string): Record<string, { fa?: string; ps?: string }> | null {
-  if (!raw) return null;
-  const text = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
-  const start = text.indexOf('{');
-  const end = text.lastIndexOf('}');
-  if (start === -1 || end <= start) return null;
-  try { return JSON.parse(text.slice(start, end + 1)); } catch { return null; }
-}
-
-/** Translate one batch of fields {key: enText} → {key: {fa, ps}}. Throws on 429. */
-async function translateFields(fields: Record<string, string>): Promise<Record<string, { fa: string; ps: string }> | null> {
-  const slots = await getProviderSlots();
-  if (!slots.length) throw new Error('no ai provider configured');
-  const prompt = `Translate these fields to fa (Farsi/Persian) and ps (Pashto).\nReturn JSON: {"<fieldKey>":{"fa":"…","ps":"…"}}.\n\n${JSON.stringify(fields, null, 1)}`;
-  const { text: raw, provider: servedBy } = await chatWithFailover(slots, SYSTEM_PROMPT, prompt);
-  console.log(`[translate] served by: ${servedBy}`);
-  const parsed = parseJsonLoose(raw);
-  if (!parsed) return null;
-  const out: Record<string, { fa: string; ps: string }> = {};
-  for (const [k, v] of Object.entries(parsed)) {
-    if (v && typeof v === 'object' && typeof v.fa === 'string' && typeof v.ps === 'string' && v.fa.trim() && v.ps.trim()) {
-      out[k] = { fa: v.fa.trim(), ps: v.ps.trim() };
-    }
-  }
-  return Object.keys(out).length ? out : null;
-}
-
-const OPP_SELECT = {
-  id: true, title: true, description: true, slug: true,
-  titleI18n: true, descriptionI18n: true,
-} as const;
-
-type OppRow = {
-  id: string; title: string; description: string; slug: string;
-  titleI18n: unknown; descriptionI18n: unknown;
+type Opp = {
+  id: string; status: string; createdAt: Date; deadline: Date | null;
+  title: string; description: string; aiSummary: string | null;
+  eligibility: string | null; benefits: string | null; responsibilities: string | null;
+  requirements: string | null; guidelines: string | null; jobType: string | null;
+  salary: string | null; educationReq: string | null; experience: string | null;
+  titleI18n: unknown; descriptionI18n: unknown; aiSummaryI18n: unknown;
+  eligibilityI18n: unknown; benefitsI18n: unknown; responsibilitiesI18n: unknown;
+  requirementsI18n: unknown; guidelinesI18n: unknown; jobTypeI18n: unknown;
+  salaryI18n: unknown; educationReqI18n: unknown; experienceI18n: unknown;
+  seoTitleI18n?: unknown; ogTitleI18n?: unknown; seoDescriptionI18n?: unknown; ogDescriptionI18n?: unknown;
+  translationStates: Array<{id:string;lang:string;sourceHash:string;status:string;staging:unknown;attempts:number;nextAttemptAt:Date|null}>;
 };
 
-function enOf(json: unknown, base: string): string {
-  if (json && typeof json === 'object') {
-    const en = (json as Record<string, unknown>).en;
-    if (typeof en === 'string' && en.trim()) return en;
+interface StagedField { sourceHash: string; chunks: string[]; translated: Array<string | null>; }
+interface Staging { version: 1; fields: Partial<Record<FieldName, StagedField>>; }
+
+function hash(s: string): string { return createHash('sha256').update(s).digest('hex'); }
+function clean(v: unknown): string {
+  if (typeof v !== 'string') return '';
+  return stripHtml(v).replace(/\r\n/g,'\n').replace(/\u0000/g,'').replace(/\n{4,}/g,'\n\n\n').trim();
+}
+function sources(opp: Opp): Partial<Record<FieldName,string>> {
+  const out: Partial<Record<FieldName,string>> = {};
+  for (const f of FIELDS) { const v = clean(opp[f]); if (v) out[f] = v; }
+  return out;
+}
+function overallHash(src: Partial<Record<FieldName,string>>): string {
+  return hash(JSON.stringify(FIELDS.map((f) => [f, src[f] || ''])));
+}
+
+/** Full-text chunking: every source character is assigned to a chunk. */
+export function chunkTranslationText(input: string, maxChars = CHUNK_CHARS): string[] {
+  const text = input.trim();
+  if (!text) return [];
+  if (text.length <= maxChars) return [text];
+  const out: string[] = []; let rest = text;
+  while (rest.length > maxChars) {
+    let cut = rest.lastIndexOf('\n\n', maxChars);
+    if (cut < maxChars * 0.45) cut = rest.lastIndexOf('\n', maxChars);
+    if (cut < maxChars * 0.45) cut = rest.lastIndexOf('. ', maxChars);
+    if (cut < maxChars * 0.45) cut = rest.lastIndexOf(' ', maxChars);
+    if (cut < maxChars * 0.45) cut = maxChars;
+    out.push(rest.slice(0, cut).trim()); rest = rest.slice(cut).trimStart();
   }
-  return base || '';
+  if (rest.trim()) out.push(rest.trim());
+  return out.filter(Boolean);
 }
 
-function hasFa(json: unknown): boolean {
-  if (!json || typeof json !== 'object') return false;
-  const fa = (json as Record<string, unknown>).fa;
-  return typeof fa === 'string' && fa.trim().length > 0;
+function fresh(src: Partial<Record<FieldName,string>>): Staging {
+  const s: Staging = { version: 1, fields: {} };
+  for (const f of FIELDS) {
+    const text = src[f]; if (!text) continue;
+    const chunks = chunkTranslationText(text);
+    s.fields[f] = { sourceHash: hash(text), chunks, translated: chunks.map(() => null) };
+  }
+  return s;
 }
-void hasFa; // reserved for stricter completeness checks
-function asJsonObject(v: JsonValue | null | undefined): Record<string, unknown> | null {
-  return v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
+function parseStaging(v: unknown): Staging | null {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+  const s = v as Staging; return s.version === 1 && s.fields && typeof s.fields === 'object' ? s : null;
+}
+function nextChunk(s: Staging): {field:FieldName;index:number;source:string} | null {
+  for (const f of FIELDS) { const w=s.fields[f]; if(!w) continue; for(let i=0;i<w.chunks.length;i++) if(!w.translated[i]) return {field:f,index:i,source:w.chunks[i]}; }
+  return null;
+}
+function complete(s: Staging): boolean { return nextChunk(s) === null; }
+
+function parseTranslation(raw: string): string | null {
+  if (!raw) return null;
+  const text = raw.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');
+  const a=text.indexOf('{'), b=text.lastIndexOf('}');
+  if(a>=0 && b>a){ try { const p=JSON.parse(text.slice(a,b+1)); const v=typeof p.translation==='string'?p.translation:typeof p.text==='string'?p.text:null; if(v&&v.trim()) return v.trim(); } catch {} }
+  return text && !/^\{/.test(text) ? text : null;
 }
 
-export interface TranslateBatchResult {
-  processed: number;
-  failed: number;
-  rateLimited: boolean;
+async function translateChunk(lang: TargetLang, field: FieldName, chunk: string): Promise<string> {
+  const slots = await getProviderSlots(); if (!slots.length) throw new Error('no AI provider configured');
+  const target = lang === 'fa' ? 'Farsi/Persian (فارسی)' : 'Pashto (پښتو)';
+  const system = 'You are a professional translator for ARIA HUB. Translate into '+target+'. Translate EVERY sentence and bullet. Never summarize, shorten, omit, or invent facts. Preserve URLs, emails, phone numbers, dates, amounts, organization names and technical terms. Keep line breaks/bullets where practical. Return ONLY strict JSON: {"translation":"..."}. If already in the target language, return it faithfully.';
+  const prompt = 'FIELD: '+field+'\nTARGET: '+lang+'\n\nSOURCE CHUNK:\n'+chunk;
+  const served = await chatWithFailover(slots, system, prompt);
+  const value = parseTranslation(served.text); if(!value) throw new Error('unparseable translation from '+served.provider);
+  return value;
 }
 
-/**
- * Process up to `batch` rows starting from the highest-priority untranslated
- * content. Returns whether a 429 was hit (caller sets backoff).
- */
-export async function translateNextBatch(batch = 3): Promise<TranslateBatchResult> {
-  let processed = 0;
-  let failed = 0;
-  let rateLimited = false;
+function rateLimited(msg:string):boolean { return /\b429\b|rate.?limit|quota|too many requests|cooling down/i.test(msg); }
+function backoff(attempts:number, limited:boolean):number {
+  if(limited) return Math.min(60*60_000, Math.max(60_000, attempts*5*60_000));
+  return Math.min(60*60_000, Math.max(60_000, Math.pow(2,Math.max(0,attempts-1))*60_000));
+}
+function obj(v:unknown):Record<string,unknown>{ return v&&typeof v==='object'&&!Array.isArray(v)?{...(v as Record<string,unknown>)}:{}; }
 
-  // 1. Opportunities first — newest published with missing fa title.
-  const opps = await db.opportunity.findMany({
-    where: {
-      status: 'published',
-      OR: [
-        { titleI18n: { equals: PrismaAnyNull } },
-        { titleI18n: { path: ['fa'], equals: PrismaAnyNull } },
-        { NOT: { titleI18n: { path: ['fa'], string_contains: '' } } },
-      ],
-    },
-    orderBy: { createdAt: 'desc' },
-    take: batch,
-    select: OPP_SELECT,
-  });
+async function commitLanguage(opp:Opp, lang:TargetLang, staging:Staging, stateId:string):Promise<void>{
+  if(!complete(staging)) throw new Error('incomplete translation staging');
+  const src=sources(opp); const data:Record<string,unknown>={};
+  for(const f of FIELDS){
+    const w=staging.fields[f]; if(!w) continue;
+    if(w.translated.some((x)=>!x)) throw new Error('missing translated chunk for '+f);
+    const finalText=w.translated.filter((x):x is string=>Boolean(x)).join('\n\n').trim();
+    if(!finalText) throw new Error('empty completed translation for '+f);
+    const col=f+'I18n'; const existing=obj((opp as unknown as Record<string,unknown>)[col]);
+    data[col]={...existing,...(existing.en?{}:{en:src[f]||''}),[lang]:finalText};
+  }
+  const titleMap=(data.titleI18n||opp.titleI18n) as Record<string,unknown>|null;
+  const sumMap=(data.aiSummaryI18n||opp.aiSummaryI18n||data.descriptionI18n||opp.descriptionI18n) as Record<string,unknown>|null;
+  const t=typeof titleMap?.[lang]==='string'?String(titleMap[lang]):'';
+  const s=typeof sumMap?.[lang]==='string'?String(sumMap[lang]):'';
+  if(t){ for(const col of ['seoTitleI18n','ogTitleI18n']) data[col]={...obj((opp as unknown as Record<string,unknown>)[col]),[lang]:t}; }
+  if(s){ const meta=s.replace(/\s+/g,' ').trim().slice(0,158); for(const col of ['seoDescriptionI18n','ogDescriptionI18n']) data[col]={...obj((opp as unknown as Record<string,unknown>)[col]),[lang]:meta}; }
+  await db.$transaction([
+    db.opportunity.update({where:{id:opp.id},data:{...data,translationStatus:lang==='fa'?'fa_complete':'complete'} as Prisma.OpportunityUpdateInput}),
+    db.opportunityTranslation.update({where:{id:stateId},data:{status:'complete',staging:staging as unknown as Prisma.InputJsonValue,nextAttemptAt:null,lastError:null,completedAt:new Date()}})
+  ]);
+}
 
-  for (const opp of opps as OppRow[]) {
-    if (processed >= batch) break;
-    const title = enOf(opp.titleI18n, opp.title);
-    const desc = enOf(opp.descriptionI18n, opp.description).slice(0, 900);
-    if (!title) continue;
-    const fields: Record<string, string> = { title };
-    if (desc && !isSymbol(desc)) fields.description = desc;
-    try {
-      const got = await translateFields(fields);
-      if (got) {
-        const titleI18n = { ...(typeof opp.titleI18n === 'object' && opp.titleI18n ? opp.titleI18n as object : { en: opp.title }), ...(got.title ? { fa: got.title.fa, ps: got.title.ps } : {}) };
-        const descriptionI18n = got.description
-          ? { ...(typeof opp.descriptionI18n === 'object' && opp.descriptionI18n ? opp.descriptionI18n as object : { en: opp.description }), fa: got.description.fa, ps: got.description.ps }
-          : (typeof opp.descriptionI18n === 'object' && opp.descriptionI18n ? opp.descriptionI18n as object : undefined);
-        await db.opportunity.update({
-          where: { id: opp.id },
-          data: { titleI18n, ...(descriptionI18n ? { descriptionI18n } : {}) },
-        });
-        processed++;
-      } else {
-        failed++;
+async function ensureState(opp:Opp, lang:TargetLang){
+  const src=sources(opp), sourceHash=overallHash(src); const current=opp.translationStates.find((s)=>s.lang===lang);
+  if(!current){
+    const staging=fresh(src); const row=await db.opportunityTranslation.create({data:{opportunityId:opp.id,lang,sourceHash,status:'pending',staging:staging as unknown as Prisma.InputJsonValue}});
+    return {id:row.id,status:row.status,attempts:row.attempts,nextAttemptAt:row.nextAttemptAt,staging};
+  }
+  const parsed=parseStaging(current.staging);
+  if(current.sourceHash!==sourceHash || !parsed){
+    const staging=fresh(src); const row=await db.opportunityTranslation.update({where:{id:current.id},data:{sourceHash,status:'pending',staging:staging as unknown as Prisma.InputJsonValue,attempts:0,nextAttemptAt:null,lastError:current.sourceHash!==sourceHash?'source changed; restaged':'invalid staging reset',completedAt:null}});
+    return {id:row.id,status:row.status,attempts:row.attempts,nextAttemptAt:row.nextAttemptAt,staging};
+  }
+  return {id:current.id,status:current.status,attempts:current.attempts,nextAttemptAt:current.nextAttemptAt,staging:parsed};
+}
+
+const INCLUDE={translationStates:{select:{id:true,lang:true,sourceHash:true,status:true,staging:true,attempts:true,nextAttemptAt:true}}} as const;
+async function candidate(lang:TargetLang):Promise<Opp|null>{
+  const now=new Date();
+  for(const status of ['published','expired'] as const){
+    const rows=await db.opportunity.findMany({where:{status},include:INCLUDE,orderBy:status==='published'?[{deadline:{sort:'asc',nulls:'last'}},{createdAt:'desc'}]:[{createdAt:'desc'}],take:100});
+    for(const row of rows as unknown as Opp[]){
+      const currentHash=overallHash(sources(row));
+      const st=row.translationStates.find((x)=>x.lang===lang);
+      if(st?.nextAttemptAt&&st.nextAttemptAt>now) continue;
+      if(st?.status==='complete'&&st.sourceHash===currentHash) continue;
+      if(lang==='ps'){
+        const fa=row.translationStates.find((x)=>x.lang==='fa');
+        if(!fa||fa.status!=='complete'||fa.sourceHash!==currentHash) continue;
       }
-    } catch (e) {
-      const msg = (e instanceof Error ? e.message : String(e));
-      if (msg.includes('429') || msg.toLowerCase().includes('too many')) {
-        rateLimited = true;
-        break;
-      }
-      failed++;
+      return row;
     }
   }
+  return null;
+}
 
-  // 2. News (title + excerpt only; long content stays with the offline script).
-  if (processed < batch && !rateLimited) {
-    const newsRows = await db.news.findMany({
-      where: {
-        status: 'published',
-        OR: [
-          { titleI18n: { equals: PrismaAnyNull } },
-          { NOT: { titleI18n: { path: ['fa'], string_contains: '' } } },
-        ],
-      },
-      orderBy: { publishedAt: 'desc' },
-      take: batch - processed,
-      select: { id: true, title: true, excerpt: true, titleI18n: true, excerptI18n: true },
-    });
-    for (const n of newsRows) {
-      const title = enOf(n.titleI18n, n.title);
-      if (!title) continue;
-      const fields: Record<string, string> = { title };
-      const excerpt = enOf(n.excerptI18n, n.excerpt ?? '');
-      if (excerpt) fields.excerpt = excerpt.slice(0, 400);
-      try {
-        const got = await translateFields(fields);
-        if (got) {
-          await db.news.update({
-            where: { id: n.id },
-            data: {
-              titleI18n: { ...(typeof n.titleI18n === 'object' && n.titleI18n ? n.titleI18n as object : { en: n.title }), ...(got.title ?? {}) },
-              ...(got.excerpt
-                ? { excerptI18n: { ...(typeof n.excerptI18n === 'object' && n.excerptI18n ? n.excerptI18n as object : { en: excerpt }), fa: got.excerpt.fa, ps: got.excerpt.ps } }
-                : {}),
-            },
-          });
-          processed++;
-        } else failed++;
-      } catch (e) {
-        const msg = (e instanceof Error ? e.message : String(e));
-        if (msg.includes('429') || msg.toLowerCase().includes('too many')) {
-          rateLimited = true;
-          break;
-        }
-        failed++;
-      }
+export interface TranslateBatchResult { processed:number; failed:number; rateLimited:boolean; }
+export async function translateNextBatch(batch=3):Promise<TranslateBatchResult>{
+  let processed=0, failed=0, limited=false; const limit=Math.max(1,Math.min(8,batch));
+  for(let unit=0;unit<limit;unit++){
+    let lang:TargetLang='fa'; let opp=await candidate('fa'); if(!opp){lang='ps';opp=await candidate('ps');} if(!opp) break;
+    const state=await ensureState(opp,lang); if(state.status==='complete') continue;
+    const work=nextChunk(state.staging);
+    if(!work){ try{await commitLanguage(opp,lang,state.staging,state.id);processed++;}catch(e){failed++;const msg=e instanceof Error?e.message:String(e);await db.opportunityTranslation.update({where:{id:state.id},data:{status:'pending',lastError:msg.slice(0,400),nextAttemptAt:new Date(Date.now()+5*60_000)}});} continue; }
+    try{
+      const translated=await translateChunk(lang,work.field,work.source); const fw=state.staging.fields[work.field]; if(!fw) throw new Error('missing staging field '+work.field); fw.translated[work.index]=translated;
+      await db.opportunityTranslation.update({where:{id:state.id},data:{status:'processing',staging:state.staging as unknown as Prisma.InputJsonValue,attempts:{increment:1},nextAttemptAt:null,lastError:null}});
+      if(complete(state.staging)) await commitLanguage(opp,lang,state.staging,state.id); processed++;
+    }catch(e){
+      const msg=(e instanceof Error?e.message:String(e)).slice(0,500); const isLimited=rateLimited(msg); limited=limited||isLimited; failed++;
+      const attempts=state.attempts+1; await db.opportunityTranslation.update({where:{id:state.id},data:{status:'pending',attempts:{increment:1},lastError:msg,nextAttemptAt:new Date(Date.now()+backoff(attempts,isLimited))}});
+      if(isLimited||/all AI providers failed|timeout|temporar|503|502|504/i.test(msg)) break;
     }
   }
-
-  return { processed, failed, rateLimited };
+  return {processed,failed,rateLimited:limited};
 }

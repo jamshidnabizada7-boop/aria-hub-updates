@@ -27,6 +27,7 @@ import { ReliefWebPendingError } from './scrapers/reliefweb';
 import { sanitizeError, slugify } from './utils';
 import type { RawListing, SourceHandle } from './types';
 import { resolveImportedOpportunityStatus } from './publication-policy';
+import { inferCountryFromLocation, syncOpportunityLocations } from '@/lib/opportunity-location';
 
 /** Safely convert a date string (ISO or parseable) to a Date object, or null. */
 function safeDate(input: string | null | undefined): Date | null {
@@ -53,6 +54,60 @@ const DETAIL_RECHECK_MS = 24 * 60 * 60 * 1000;
  * value ("All", "International", "Afghan Nationals") instead of the article.
  */
 const JUNK_DESC_RE = /^(all|international|afghan nationals|male|female|none|n\/?a|sponsored links?)$/i;
+
+interface OpportunityQualityReport {
+  publishable: boolean;
+  reasons: string[];
+  fields: Record<string, boolean>;
+  applyLinkType: 'email' | 'form' | 'url' | 'none';
+  detailLevel: 'full' | 'partial' | 'unknown';
+}
+
+function assessOpportunityQuality(
+  listing: RawListing,
+  exactApplyUrl: string | null,
+): OpportunityQualityReport {
+  const desc = (listing.description || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  const isJob = /job|full.?time|part.?time|contract|intern/i.test(listing.jobType || '');
+  const hasLocation = Boolean(listing.country || listing.location);
+  const hasOrganization = Boolean(listing.organization?.trim());
+  const hasApply = Boolean(exactApplyUrl);
+  const hasUsefulDescription = desc.length >= 120;
+
+  const reasons: string[] = [];
+  if (!hasUsefulDescription) reasons.push('description_too_thin');
+  if (!hasApply) reasons.push('exact_application_destination_missing');
+  if (isJob && !hasOrganization) reasons.push('job_organization_missing');
+  if (isJob && !hasLocation) reasons.push('job_location_missing');
+
+  const detailLevelRaw = String((listing.extractedData as Record<string, unknown> | undefined)?.detailLevel || '');
+  const detailLevel: OpportunityQualityReport['detailLevel'] =
+    detailLevelRaw === 'full' ? 'full' : detailLevelRaw === 'partial' || detailLevelRaw === 'list' ? 'partial' : 'unknown';
+
+  const applyLinkType: OpportunityQualityReport['applyLinkType'] =
+    !exactApplyUrl ? 'none'
+      : exactApplyUrl.startsWith('mailto:') ? 'email'
+      : /forms\.|docs\.google\.com\/forms|typeform|jotform|survey/i.test(exactApplyUrl) ? 'form'
+      : 'url';
+
+  return {
+    publishable: reasons.length === 0,
+    reasons,
+    fields: {
+      title: Boolean(listing.title?.trim()),
+      description: hasUsefulDescription,
+      organization: hasOrganization,
+      location: hasLocation,
+      deadline: Boolean(listing.deadline),
+      applyDestination: hasApply,
+      salary: Boolean(listing.salary),
+      education: Boolean(listing.educationReq),
+      experience: Boolean(listing.experience),
+    },
+    applyLinkType,
+    detailLevel,
+  };
+}
 
 export interface RunImportOptions {
   sourceId?: string | null;
@@ -185,6 +240,14 @@ async function runOneSource(
     // 1. Scrape
     const listings = await scraper.scrapeAll();
     counters.found = listings.length;
+
+    let sourceConfig: Record<string, unknown> = {};
+    try { sourceConfig = source.config ? JSON.parse(source.config) : {}; } catch { /* ignore */ }
+    if (listings.length === 0 && sourceConfig.allowEmpty !== true) {
+      throw new Error(
+        `source returned zero opportunities; treating as unhealthy instead of silently recording ok (set config.allowEmpty=true only when zero is expected)`,
+      );
+    }
 
     // 2. Process each listing
     for (const listing of listings) {
@@ -419,6 +482,8 @@ async function processListing(
 
   // Resolve category
   const categoryId = resolveCategory(pipeline.categorySlugs, listing.category, listing.jobType, source.defaultCategory, categories);
+  const exactApplyUrl = (pipeline.data.applyUrl as string | null | undefined) ?? null;
+  const qualityReport = assessOpportunityQuality(listing, exactApplyUrl);
 
   // Common import-tracking fields
   const importFields = {
@@ -435,16 +500,21 @@ async function processListing(
     salary: listing.salary || null,
     educationReq: listing.educationReq || null,
     experience: listing.experience || null,
-    country: listing.country || listing.location || null,
+    // Country remains a country. Province/city are persisted separately in
+    // OpportunityLocation; never collapse "Kabul" into Opportunity.country.
+    country: listing.country || inferCountryFromLocation(listing.location) || null,
     deadline: safeDate(listing.deadline),
     organization: listing.organization || null,
     website: listing.website || null,
-    applyUrl: listing.applyUrl || null,
+    // runAIPipeline validates the exact application destination. Never
+    // overwrite it with the scraper/source article URL.
+    applyUrl: exactApplyUrl,
     image: featured.path,
     logoUrl: logo.path || null,
     publishedDate: listing.publishedDate || null,  // String field in schema, no conversion needed
     canonicalUrl: listing.sourceUrl,
     extractedData: listing.extractedData || {},
+    qualityReport: qualityReport as unknown as Prisma.InputJsonValue,
   };
 
   if (dedupe.action === 'update') {
@@ -472,16 +542,17 @@ async function processListing(
         importStatus: 'updated',
       },
     });
+    await syncOpportunityLocations(db, dedupe.existing.id, listing);
     counters.updated++;
   } else {
     // Create new
     const slug = await ensureUniqueSlug(db, slugBase);
-    await db.opportunity.create({
+    const created = await db.opportunity.create({
       data: {
         ...pipeline.data,
         ...importFields,
         status: resolveImportedOpportunityStatus({
-          autoPublish: source.autoPublish,
+          autoPublish: source.autoPublish && qualityReport.publishable,
           deadline: importFields.deadline,
         }),
         slug,
@@ -489,6 +560,7 @@ async function processListing(
         categoryId,
       } as unknown as Prisma.OpportunityUncheckedCreateInput,
     });
+    await syncOpportunityLocations(db, created.id, listing);
     counters.imported++;
   }
 }

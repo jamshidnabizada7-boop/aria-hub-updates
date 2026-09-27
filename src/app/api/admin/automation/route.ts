@@ -74,19 +74,55 @@ export async function GET() {
     db.pipelineRun.findMany({ orderBy: { startedAt: 'desc' }, take: 8 }),
   ]);
 
-  // Exact untranslated counters via SQL (Prisma JSON path filters are
-  // unreliable for "missing key" matching — they reported 0 while ~425 rows
-  // still lacked fa).
-  const untranslated = await db.$queryRaw<{ opportunities: number; news: number }[]>`
+  // Translation progress is driven by atomic per-language state, not merely
+  // the presence of a title key. This prevents truncated bodies from being
+  // counted as "translated".
+  const untranslated = await db.$queryRaw<{ opportunities: number; news: number }[]>\`
     SELECT
-      (SELECT COUNT(*)::int FROM "Opportunity"
-        WHERE status = 'published'
-          AND ("titleI18n" IS NULL OR "titleI18n"->>'fa' IS NULL OR "titleI18n"->>'fa' = '')) AS opportunities,
+      (SELECT COUNT(*)::int FROM "Opportunity" o
+        WHERE o.status = 'published'
+          AND NOT EXISTS (
+            SELECT 1 FROM "OpportunityTranslation" t
+            WHERE t."opportunityId" = o.id AND t.lang = 'fa' AND t.status = 'complete'
+          )) AS opportunities,
       (SELECT COUNT(*)::int FROM "News"
         WHERE status = 'published'
           AND ("titleI18n" IS NULL OR "titleI18n"->>'fa' IS NULL OR "titleI18n"->>'fa' = '')) AS news
-  `;
+  \`;
   const counts = untranslated[0] ?? { opportunities: 0, news: 0 };
+
+  const progressRows = await db.$queryRaw<Array<{
+    active: number;
+    faComplete: number;
+    faProcessing: number;
+    faFailed: number;
+    psComplete: number;
+    psProcessing: number;
+    psFailed: number;
+  }>>\`
+    SELECT
+      COUNT(*) FILTER (WHERE o.status = 'published')::int AS active,
+      COUNT(*) FILTER (WHERE o.status = 'published' AND fa.status = 'complete')::int AS "faComplete",
+      COUNT(*) FILTER (WHERE o.status = 'published' AND fa.status = 'processing')::int AS "faProcessing",
+      COUNT(*) FILTER (WHERE o.status = 'published' AND fa.status = 'failed')::int AS "faFailed",
+      COUNT(*) FILTER (WHERE o.status = 'published' AND ps.status = 'complete')::int AS "psComplete",
+      COUNT(*) FILTER (WHERE o.status = 'published' AND ps.status = 'processing')::int AS "psProcessing",
+      COUNT(*) FILTER (WHERE o.status = 'published' AND ps.status = 'failed')::int AS "psFailed"
+    FROM "Opportunity" o
+    LEFT JOIN "OpportunityTranslation" fa
+      ON fa."opportunityId" = o.id AND fa.lang = 'fa'
+    LEFT JOIN "OpportunityTranslation" ps
+      ON ps."opportunityId" = o.id AND ps.lang = 'ps'
+  \`;
+  const translationProgress = progressRows[0] ?? {
+    active: 0,
+    faComplete: 0,
+    faProcessing: 0,
+    faFailed: 0,
+    psComplete: 0,
+    psProcessing: 0,
+    psFailed: 0,
+  };
 
   // Delivery tracking is additive. Gracefully return an empty list before the
   // migration reaches an environment so the rest of Automation remains usable.
@@ -145,6 +181,12 @@ export async function GET() {
     })),
     runs,
     untranslated: counts,
+    translationProgress: {
+      ...translationProgress,
+      faPending: Math.max(0, translationProgress.active - translationProgress.faComplete),
+      psWaitingForPersian: Math.max(0, translationProgress.active - translationProgress.faComplete),
+      psPending: Math.max(0, translationProgress.faComplete - translationProgress.psComplete),
+    },
     aiProviders: getProviderHealth(),
   });
 }
