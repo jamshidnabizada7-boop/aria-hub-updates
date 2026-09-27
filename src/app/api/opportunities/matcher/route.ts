@@ -159,7 +159,7 @@ async function addGroundedAiExplanations(
         nationality: profile.nationality,
         residence: profile.residence,
         destinations: profile.destinations,
-        field: profile.field || '',
+        fieldArea: profile.fieldArea,
       }, candidates: evidencePackage }),
     ].join('\n');
 
