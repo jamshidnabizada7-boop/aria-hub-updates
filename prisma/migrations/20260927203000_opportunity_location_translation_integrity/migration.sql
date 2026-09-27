@@ -36,7 +36,7 @@ CREATE TABLE "OpportunityTranslationProgress" (
   "lastError" TEXT,
   "completedAt" TIMESTAMP(3),
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
   CONSTRAINT "OpportunityTranslationProgress_pkey" PRIMARY KEY ("id"),
   CONSTRAINT "OpportunityTranslationProgress_opportunityId_fkey"
     FOREIGN KEY ("opportunityId") REFERENCES "Opportunity"("id")
