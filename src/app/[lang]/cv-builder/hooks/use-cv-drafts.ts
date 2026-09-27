@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { CVDraft, CVOutputLang, CVPurpose, SaveStatus } from '../types';
+import type { CVDraft, CVOutputLang, CVPurpose, PaperSize, SaveStatus, TemplateType } from '../types';
 import { createDraft, normalizeDraft } from '../lib/cv-utils';
 import {
   deleteDraft as deletePersistedDraft,
@@ -16,6 +16,8 @@ interface InitialContext {
   purpose?: CVPurpose;
   outputLang?: CVOutputLang;
   source?: CVDraft['source'];
+  template?: TemplateType;
+  paperSize?: PaperSize;
 }
 
 export function useCVDrafts(initial: InitialContext) {
@@ -33,7 +35,7 @@ export function useCVDrafts(initial: InitialContext) {
       let next = stored;
       let active = readActiveDraftId();
       if (!next.length) {
-        const fresh = createDraft(initial.purpose || 'professional', initial.outputLang || 'en', initial.source);
+        const fresh = createDraft(initial.purpose || 'professional', initial.outputLang || 'en', initial.source, { template: initial.template, paperSize: initial.paperSize });
         next = [fresh];
         active = fresh.id;
       }
@@ -45,7 +47,7 @@ export function useCVDrafts(initial: InitialContext) {
       initialized.current = true;
     })();
     return () => { cancelled = true; };
-  }, [initial.outputLang, initial.purpose, initial.source]);
+  }, [initial.outputLang, initial.paperSize, initial.purpose, initial.source, initial.template]);
 
   const activeDraft = useMemo(
     () => drafts.find((draft) => draft.id === activeDraftId) || drafts[0] || null,
@@ -84,8 +86,8 @@ export function useCVDrafts(initial: InitialContext) {
     );
   }, [activeDraftId]);
 
-  const createNewDraft = useCallback((purpose: CVPurpose, outputLang: CVOutputLang, source?: CVDraft['source']) => {
-    const fresh = createDraft(purpose, outputLang, source);
+  const createNewDraft = useCallback((purpose: CVPurpose, outputLang: CVOutputLang, source?: CVDraft['source'], options?: { template?: TemplateType; paperSize?: PaperSize }) => {
+    const fresh = createDraft(purpose, outputLang, source, options);
     setDrafts((current) => [fresh, ...current]);
     setActiveDraftId(fresh.id);
     writeActiveDraftId(fresh.id);
@@ -118,7 +120,7 @@ export function useCVDrafts(initial: InitialContext) {
     setDrafts((current) => {
       const remaining = current.filter((draft) => draft.id !== id);
       if (!remaining.length) {
-        const fresh = createDraft(initial.purpose || 'professional', initial.outputLang || 'en', initial.source);
+        const fresh = createDraft(initial.purpose || 'professional', initial.outputLang || 'en', initial.source, { template: initial.template, paperSize: initial.paperSize });
         setActiveDraftId(fresh.id);
         writeActiveDraftId(fresh.id);
         return [fresh];
@@ -129,7 +131,7 @@ export function useCVDrafts(initial: InitialContext) {
       }
       return remaining;
     });
-  }, [activeDraftId, initial.outputLang, initial.purpose, initial.source]);
+  }, [activeDraftId, initial.outputLang, initial.paperSize, initial.purpose, initial.source, initial.template]);
 
   return { drafts, activeDraft, activeDraftId, status, updateActive, createNewDraft, duplicateActive, switchDraft, removeDraft };
 }
