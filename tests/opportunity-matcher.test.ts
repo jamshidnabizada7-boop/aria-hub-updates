@@ -106,6 +106,19 @@ describe('Opportunity Matcher canonical contract', () => {
     expect(json).not.toContain('"match":');
   });
 
+  test('explicit structured nationality restriction produces a potential conflict', () => {
+    const result = rankOpportunity(
+      baseProfile,
+      opportunity({
+        extractedData: { eligibleNationalities: ['Pakistan', 'India'] },
+        eligibility: 'Only listed nationalities are eligible.',
+      })
+    );
+    expect(result).not.toBeNull();
+    expect(result?.eligibilityStatus).toBe('potential_conflict');
+    expect(result?.evidence.conflicts).toContain('nationality');
+  });
+
   test('same-day active opportunity is not rejected by ranking', () => {
     const today = new Date();
     today.setUTCHours(23, 59, 59, 999);
