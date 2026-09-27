@@ -207,13 +207,20 @@ describe('CV Builder admin linkage', () => {
   test('photo and quality guidance policies are enforced by shared validation and renderer', () => {
     const config = normalizeCVBuilderAdminConfig({
       ...DEFAULT_CV_BUILDER_ADMIN_CONFIG,
-      features: { ...DEFAULT_CV_BUILDER_ADMIN_CONFIG.features, allowPhoto: false },
+      features: {
+        ...DEFAULT_CV_BUILDER_ADMIN_CONFIG.features,
+        allowPhoto: false,
+        allowAccentCustomization: false,
+        allowDensityCustomization: false,
+      },
       guidance: { summaryMinWords: 10, summaryMaxWords: 12, maxSkills: 2 },
     });
     const draft = createDraft('professional', 'en', undefined, { template: 'modern-sidebar' });
     draft.data.personal.fullName = 'Candidate';
     draft.data.personal.email = 'candidate@example.com';
     draft.data.personal.picture = 'data:image/png;base64,AAAA';
+    draft.appearance.accent = 'emerald';
+    draft.appearance.density = 'compact';
     draft.data.personal.summary = 'one two three four five six seven eight nine ten eleven twelve thirteen';
     draft.data.experience.push({
       id: 'e1', role: 'Developer', company: 'Example', location: '',
@@ -229,6 +236,8 @@ describe('CV Builder admin linkage', () => {
     const readiness = validateDraft(draft, config);
 
     expect(body).not.toContain('cv-photo');
+    expect(body).toContain('cv-density-comfortable');
+    expect(body).toContain('--cv-accent:#172554');
     expect(readiness.issues.some((issue) => issue.id === 'summary-long')).toBe(true);
     expect(readiness.issues.some((issue) => issue.id === 'too-many-skills')).toBe(true);
   });
