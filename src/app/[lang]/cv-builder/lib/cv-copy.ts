@@ -267,6 +267,9 @@ const COPY: CopyTable = {
   'Please try again.': { fa: 'لطفاً دوباره تلاش کنید.', ps: 'مهرباني وکړئ بیا هڅه وکړئ.' },
   'Drafts are saved locally in your browser. PDF generation sends the validated draft only to the ARIA HUB renderer and does not store it.': { fa: 'پیش‌نویس‌ها در مرورگر شما ذخیره می‌شوند. برای ساخت PDF، فقط پیش‌نویس تأییدشده به سامانه آریا هاب ارسال می‌شود و ذخیره نمی‌گردد.', ps: 'مسودې ستاسو په براوزر کې ساتل کېږي. د PDF لپاره یوازې تایید شوې مسوده د آریا هاب جوړوونکي ته لېږل کېږي او نه ساتل کېږي.' },
 
+  'ATS templates keep conservative neutral styling.': { fa: 'قالب‌های ATS سبک بصری محافظه‌کارانه و خنثی را حفظ می‌کنند.', ps: 'د ATS قالبونه محافظه کاره او خنثی بڼه ساتي.' },
+  'Start adding your details to preview your CV.': { fa: 'برای دیدن پیش‌نمایش، اطلاعات سی‌وی خود را وارد کنید.', ps: 'د سي وي د مخکتنې لپاره خپل معلومات ولیکئ.' },
+
 };
 
 export function cvText(lang: CVOutputLang, english: string): string {
