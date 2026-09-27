@@ -250,9 +250,12 @@ export class JobsAfScraper extends BaseScraper {
       if (flight) {
         const jobs = extractFlightObjects<JobsAfJob>(flight, '{"id":"', ['title', 'slug']);
         const match = jobs.find((j) => listing.sourceUrl.endsWith(`/jobs/${j.slug}`));
-        const detail = match?.description || match?.howToApply || match?.applyInstructions || null;
-        if (detail && detail.trim().length > 80) {
-          listing.description = stripHtml(detail).trim();
+        const description = match?.description || null;
+        const howToApply = match?.howToApply || match?.applyInstructions || null;
+        if (description && description.trim().length > 80) {
+          listing.description = stripHtml(description).trim();
+          if (howToApply?.trim()) listing.guidelines = stripHtml(howToApply).trim();
+          listing.extractedData = { ...(listing.extractedData || {}), detailLevel: 'full' };
           return listing;
         }
       }
@@ -282,6 +285,7 @@ export class JobsAfScraper extends BaseScraper {
           if (parsed.facts && Object.keys(parsed.facts).length) {
             listing.extractedData = { ...(listing.extractedData || {}), ...parsed.facts };
           }
+          listing.extractedData = { ...(listing.extractedData || {}), detailLevel: 'full' };
         }
       }
     } catch {
