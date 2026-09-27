@@ -1,6 +1,9 @@
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { createDraft, normalizeDraft, safeExternalUrl } from '../src/app/[lang]/cv-builder/lib/cv-utils';
 import { getRecommendedSections, validateDraft } from '../src/app/[lang]/cv-builder/lib/cv-validation';
+import { cvText } from '../src/app/[lang]/cv-builder/lib/cv-copy';
 
 describe('CV Builder draft model', () => {
   test('creates a versioned purpose-aware draft', () => {
@@ -108,5 +111,28 @@ describe('CV Builder readiness', () => {
     expect(getRecommendedSections(academic)).toContain('publications');
     expect(getRecommendedSections(student)).toContain('volunteering');
     expect(getRecommendedSections(student)).toContain('projects');
+  });
+});
+
+
+describe('CV Builder privacy and multilingual regressions', () => {
+  test('masks the CV editing subtree from Microsoft Clarity session replay', () => {
+    const page = readFileSync(join(process.cwd(), 'src/app/[lang]/cv-builder/page.tsx'), 'utf8');
+    expect(page).toContain('data-clarity-mask="true"');
+  });
+
+  test('does not print ARIA HUB contact details into the applicant CV renderer', () => {
+    const preview = readFileSync(join(process.cwd(), 'src/app/[lang]/cv-builder/components/CVPreview.tsx'), 'utf8');
+    expect(preview).not.toContain('PrintFooter');
+    expect(preview).not.toContain("settings?.email");
+    expect(preview).not.toContain("settings?.phone");
+    expect(preview).not.toContain("settings?.logoUrl");
+  });
+
+  test('ships native Persian and Pashto editor copy for core actions', () => {
+    expect(cvText('fa', 'New CV')).not.toBe('New CV');
+    expect(cvText('ps', 'New CV')).not.toBe('New CV');
+    expect(cvText('fa', 'Review & export')).not.toBe('Review & export');
+    expect(cvText('ps', 'Personal information')).not.toBe('Personal information');
   });
 });
