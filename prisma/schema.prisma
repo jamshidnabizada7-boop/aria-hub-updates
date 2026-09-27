@@ -206,6 +206,33 @@ model Visa {
 }
 
 // ─── Opportunities (jobs, scholarships, etc.) ────────────────────────────────
+model OpportunityMatchProfile {
+  id                 String      @id @default(cuid())
+  opportunityId      String      @unique
+  opportunity        Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  eligibleNationalities Json?
+  eligibleCountries  Json?
+  educationLevels    Json?
+  fieldAreas         Json?
+  minAge             Int?
+  maxAge             Int?
+  minExperienceYears Int?
+  languages          Json?
+  fundingType        String?
+  locationType       String?
+  visaSponsorship    Boolean?
+  provenance         Json?
+  confidence         Json?
+  extractionVersion  String      @default("v1")
+  reviewed           Boolean     @default(false)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  @@index([reviewed])
+  @@index([fundingType])
+  @@index([locationType])
+}
+
 model OpportunityCategory {
   id            String        @id @default(cuid())
   name          String
@@ -243,6 +270,7 @@ model Opportunity {
   seoDescription  String?
   categoryId      String?
   category        OpportunityCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  matchProfile    OpportunityMatchProfile?
   monetizationOrders MonetizationOrder[]
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
