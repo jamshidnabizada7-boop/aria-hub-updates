@@ -14,6 +14,7 @@ import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 import type { CVDraft, CVIssue, CVSectionKey } from '../types';
+import type { CVBuilderAdminConfig } from '../lib/cv-admin-config';
 import { getRecommendedSections, validateDraft } from '../lib/cv-validation';
 import { makeId, prepareProfileImage } from '../lib/cv-utils';
 import { cvText } from '../lib/cv-copy';
@@ -22,6 +23,7 @@ interface Props {
   draft: CVDraft;
   onChange: (updater: (draft: CVDraft) => CVDraft) => void;
   uiLang: CVDraft['outputLang'];
+  config: CVBuilderAdminConfig;
 }
 
 const sectionMeta: Record<CVSectionKey, { icon: React.ElementType; label: string }> = {
@@ -117,9 +119,9 @@ function MonthRange({ prefix, startDate, endDate, isCurrent, onStart, onEnd, onC
   );
 }
 
-function SectionCard({ section, title, icon: Icon, children, recommended, complete, uiLang, issues }: {
+function SectionCard({ section, title, icon: Icon, children, recommended, complete, uiLang, issues, enabled = true }: {
   section: CVSectionKey; title: string; icon: React.ElementType; children: React.ReactNode; recommended?: boolean;
-  complete?: boolean; uiLang: CVDraft['outputLang']; issues: CVIssue[];
+  complete?: boolean; uiLang: CVDraft['outputLang']; issues: CVIssue[]; enabled?: boolean;
 }) {
   const c = (text: string) => cvText(uiLang, text);
   const sectionIssues = issues.filter((issue) => issue.section === section);
@@ -127,6 +129,7 @@ function SectionCard({ section, title, icon: Icon, children, recommended, comple
   const warnings = sectionIssues.filter((issue) => issue.severity === 'warning').length;
   const [open, setOpen] = useState(title === c('Personal information') || errors > 0);
   useEffect(() => { if (errors > 0) setOpen(true); }, [errors]);
+  if (!enabled) return null;
 
   return (
     <details
@@ -155,11 +158,11 @@ function SectionCard({ section, title, icon: Icon, children, recommended, comple
   );
 }
 
-export function CVForm({ draft, onChange, uiLang }: Props) {
+export function CVForm({ draft, onChange, uiLang, config }: Props) {
   const c = (text: string) => cvText(uiLang, text);
   const { toast } = useToast();
   const [imageBusy, setImageBusy] = useState(false);
-  const readiness = validateDraft(draft);
+  const readiness = validateDraft(draft, config);
   const recommended = new Set(getRecommendedSections(draft));
   const issueMessage = (key: string) => c(({
     'issues.fullNameRequired': 'Add your full name.',
@@ -178,6 +181,7 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
     return { issue, issueText: issue ? issueMessage(issue.messageKey) : undefined };
   };
   const summaryWords = draft.data.personal.summary.trim().split(/\s+/).filter(Boolean).length;
+  const summaryRecommendation = `${config.guidance.summaryMinWords}–${config.guidance.summaryMaxWords} ${c('words recommended')}`;
 
   const setData = (updater: (data: CVDraft['data']) => CVDraft['data']) =>
     onChange((current) => ({ ...current, data: updater(current.data) }));
@@ -261,7 +265,7 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
         </div>
       </div>
 
-      <SectionCard uiLang={uiLang} section="personal" issues={readiness.issues} title={c('Personal information')} icon={UserRound} recommended complete={Boolean(draft.data.personal.fullName)}>
+      <SectionCard uiLang={uiLang} section="personal" enabled={config.sections.personal.enabled} issues={readiness.issues} title={c('Personal information')} icon={UserRound} recommended complete={Boolean(draft.data.personal.fullName)}>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field id="cv-full-name" {...issueProps('cv-full-name')} label={c('Full name')} required value={draft.data.personal.fullName} onChange={(v) => setPersonal('fullName', v)} />
           <Field id="cv-headline" {...issueProps('cv-headline')} label={c('Professional headline')} value={draft.data.personal.headline} onChange={(v) => setPersonal('headline', v)} placeholder={c('Software Engineering Student | Python & Web Development')} />
@@ -277,7 +281,7 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
               <option value="other">{c('Other')}</option>
             </select>
           </div>
-          <div className="sm:col-span-2">
+          {config.features.allowPhoto ? <div className="sm:col-span-2">
             <Label htmlFor="cv-photo">{c('Profile photo')} <span className="text-muted-foreground">{c('(optional)')}</span></Label>
             <div className="mt-1.5 flex flex-wrap items-center gap-3">
               {draft.data.personal.picture ? <img src={draft.data.personal.picture} alt="Current profile preview" className="size-14 rounded-full object-cover" /> : null}
@@ -288,7 +292,7 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
               {draft.data.personal.picture ? <Button type="button" variant="ghost" className="min-h-11" onClick={() => setPersonal('picture', '')}>{c('Remove photo')}</Button> : null}
             </div>
             <p className="mt-2 text-xs text-muted-foreground">{c('Photos are optional. Some employers and scholarship applications prefer CVs without one.')}</p>
-          </div>
+          </div> : null}
         </div>
 
         <div className="mt-5 space-y-3">
@@ -306,11 +310,11 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
         </div>
       </SectionCard>
 
-      <SectionCard uiLang={uiLang} section="summary" issues={readiness.issues} title={c('Professional summary')} icon={FileText} recommended={recommended.has('summary')} complete={Boolean(draft.data.personal.summary)}>
-        <TextField id="cv-summary" {...issueProps('cv-summary')} meta={`${summaryWords} ${c('words')} · ${c('Recommended: 40–100')}`} label={c('Summary')} value={draft.data.personal.summary} onChange={(v) => setPersonal('summary', v)} placeholder={c('In 3–5 lines, explain who you are, your strongest skills, and the value you bring.')} hint={c('Focus on strengths, goals, and evidence. Avoid generic statements that could describe anyone.')} />
+      <SectionCard uiLang={uiLang} section="summary" enabled={config.sections.summary.enabled} issues={readiness.issues} title={c('Professional summary')} icon={FileText} recommended={recommended.has('summary')} complete={Boolean(draft.data.personal.summary)}>
+        <TextField id="cv-summary" {...issueProps('cv-summary')} meta={`${summaryWords} ${c('words')} · ${summaryRecommendation}`} label={c('Summary')} value={draft.data.personal.summary} onChange={(v) => setPersonal('summary', v)} placeholder={c('In 3–5 lines, explain who you are, your strongest skills, and the value you bring.')} hint={c('Focus on strengths, goals, and evidence. Avoid generic statements that could describe anyone.')} />
       </SectionCard>
 
-      <SectionCard uiLang={uiLang} section="experience" issues={readiness.issues} title={c('Experience')} icon={Briefcase} recommended={recommended.has('experience')} complete={draft.data.experience.length > 0}>
+      <SectionCard uiLang={uiLang} section="experience" enabled={config.sections.experience.enabled} issues={readiness.issues} title={c('Experience')} icon={Briefcase} recommended={recommended.has('experience')} complete={draft.data.experience.length > 0}>
         <div className="space-y-3">
           {draft.data.experience.map((item) => (
             <div key={item.id} className="rounded-xl border bg-muted/20 p-4">
@@ -329,7 +333,7 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
         </div>
       </SectionCard>
 
-      <SectionCard uiLang={uiLang} section="education" issues={readiness.issues} title={c('Education')} icon={GraduationCap} recommended={recommended.has('education')} complete={draft.data.education.length > 0}>
+      <SectionCard uiLang={uiLang} section="education" enabled={config.sections.education.enabled} issues={readiness.issues} title={c('Education')} icon={GraduationCap} recommended={recommended.has('education')} complete={draft.data.education.length > 0}>
         <div className="space-y-3">
           {draft.data.education.map((item) => (
             <div key={item.id} className="rounded-xl border bg-muted/20 p-4">
@@ -347,7 +351,7 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
         </div>
       </SectionCard>
 
-      <SectionCard uiLang={uiLang} section="projects" issues={readiness.issues} title={c('Projects')} icon={FolderGit2} recommended={recommended.has('projects')} complete={draft.data.projects.length > 0}>
+      <SectionCard uiLang={uiLang} section="projects" enabled={config.sections.projects.enabled} issues={readiness.issues} title={c('Projects')} icon={FolderGit2} recommended={recommended.has('projects')} complete={draft.data.projects.length > 0}>
         <div className="space-y-3">
           {draft.data.projects.map((item) => (
             <div key={item.id} className="rounded-xl border bg-muted/20 p-4">
@@ -367,7 +371,7 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
         </div>
       </SectionCard>
 
-      <SectionCard uiLang={uiLang} section="skills" issues={readiness.issues} title={c('Skills')} icon={Wrench} recommended={recommended.has('skills')} complete={draft.data.skills.length > 0}>
+      <SectionCard uiLang={uiLang} section="skills" enabled={config.sections.skills.enabled} issues={readiness.issues} title={c('Skills')} icon={Wrench} recommended={recommended.has('skills')} complete={draft.data.skills.length > 0}>
         <div className="space-y-2">
           {draft.data.skills.map((item) => (
             <div key={item.id} className="grid gap-2 sm:grid-cols-[1fr_180px_auto]">
@@ -382,7 +386,7 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
         </div>
       </SectionCard>
 
-      <SectionCard uiLang={uiLang} section="languages" issues={readiness.issues} title={c('Languages')} icon={LanguagesIcon} recommended={recommended.has('languages')} complete={draft.data.languages.length > 0}>
+      <SectionCard uiLang={uiLang} section="languages" enabled={config.sections.languages.enabled} issues={readiness.issues} title={c('Languages')} icon={LanguagesIcon} recommended={recommended.has('languages')} complete={draft.data.languages.length > 0}>
         <div className="space-y-2">
           {draft.data.languages.map((item) => (
             <div key={item.id} className="grid gap-2 sm:grid-cols-[1fr_180px_auto]">
@@ -397,7 +401,7 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
         </div>
       </SectionCard>
 
-      <SectionCard uiLang={uiLang} section="certifications" issues={readiness.issues} title={c('Certifications')} icon={Award} recommended={recommended.has('certifications')} complete={draft.data.certifications.length > 0}>
+      <SectionCard uiLang={uiLang} section="certifications" enabled={config.sections.certifications.enabled} issues={readiness.issues} title={c('Certifications')} icon={Award} recommended={recommended.has('certifications')} complete={draft.data.certifications.length > 0}>
         <div className="space-y-3">
           {draft.data.certifications.map((item) => (
             <div key={item.id} className="grid gap-3 rounded-xl border bg-muted/20 p-4 sm:grid-cols-2">
@@ -412,7 +416,7 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
         </div>
       </SectionCard>
 
-      <SectionCard uiLang={uiLang} section="awards" issues={readiness.issues} title={c('Awards & honors')} icon={Award} recommended={recommended.has('awards')} complete={draft.data.awards.length > 0}>
+      <SectionCard uiLang={uiLang} section="awards" enabled={config.sections.awards.enabled} issues={readiness.issues} title={c('Awards & honors')} icon={Award} recommended={recommended.has('awards')} complete={draft.data.awards.length > 0}>
         <div className="space-y-3">
           {draft.data.awards.map((item) => (
             <div key={item.id} className="rounded-xl border bg-muted/20 p-4">
@@ -429,7 +433,7 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
         </div>
       </SectionCard>
 
-      <SectionCard uiLang={uiLang} section="volunteering" issues={readiness.issues} title={c('Volunteering & leadership')} icon={HeartHandshake} recommended={recommended.has('volunteering')} complete={draft.data.volunteering.length > 0}>
+      <SectionCard uiLang={uiLang} section="volunteering" enabled={config.sections.volunteering.enabled} issues={readiness.issues} title={c('Volunteering & leadership')} icon={HeartHandshake} recommended={recommended.has('volunteering')} complete={draft.data.volunteering.length > 0}>
         <div className="space-y-3">
           {draft.data.volunteering.map((item) => (
             <div key={item.id} className="rounded-xl border bg-muted/20 p-4">
@@ -446,7 +450,7 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
         </div>
       </SectionCard>
 
-      <SectionCard uiLang={uiLang} section="research" issues={readiness.issues} title={c('Research')} icon={FlaskConical} recommended={recommended.has('research')} complete={draft.data.research.length > 0}>
+      <SectionCard uiLang={uiLang} section="research" enabled={config.sections.research.enabled} issues={readiness.issues} title={c('Research')} icon={FlaskConical} recommended={recommended.has('research')} complete={draft.data.research.length > 0}>
         <div className="space-y-3">
           {draft.data.research.map((item) => (
             <div key={item.id} className="rounded-xl border bg-muted/20 p-4">
@@ -464,7 +468,7 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
         </div>
       </SectionCard>
 
-      <SectionCard uiLang={uiLang} section="publications" issues={readiness.issues} title={c('Publications')} icon={BookOpen} recommended={recommended.has('publications')} complete={draft.data.publications.length > 0}>
+      <SectionCard uiLang={uiLang} section="publications" enabled={config.sections.publications.enabled} issues={readiness.issues} title={c('Publications')} icon={BookOpen} recommended={recommended.has('publications')} complete={draft.data.publications.length > 0}>
         <div className="space-y-3">
           {draft.data.publications.map((item) => (
             <div key={item.id} className="rounded-xl border bg-muted/20 p-4">
@@ -482,7 +486,7 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
         </div>
       </SectionCard>
 
-      <SectionCard uiLang={uiLang} section="references" issues={readiness.issues} title={c('References')} icon={UsersRound} recommended={false} complete={draft.data.references.length > 0}>
+      <SectionCard uiLang={uiLang} section="references" enabled={config.sections.references.enabled} issues={readiness.issues} title={c('References')} icon={UsersRound} recommended={false} complete={draft.data.references.length > 0}>
         <div className="space-y-3">
           {draft.data.references.map((item) => (
             <div key={item.id} className="grid gap-3 rounded-xl border bg-muted/20 p-4 sm:grid-cols-2">
