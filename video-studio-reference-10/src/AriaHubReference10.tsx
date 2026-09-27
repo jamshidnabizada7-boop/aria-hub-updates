@@ -1,0 +1,43 @@
+import React from 'react';
+import {AbsoluteFill,Audio,Easing,Img,Sequence,interpolate,spring,staticFile,useCurrentFrame,useVideoConfig} from 'remotion';
+import '@fontsource-variable/vazirmatn';
+import '@fontsource-variable/noto-kufi-arabic';
+import {OpportunityMini} from './components/OpportunityMini';
+import {ScanFrame} from './components/ScanFrame';
+
+const UI="'Vazirmatn Variable',system-ui,sans-serif";
+const DISPLAY="'Noto Kufi Arabic Variable','Vazirmatn Variable',sans-serif";
+const C={extrapolateLeft:'clamp',extrapolateRight:'clamp'} as const;
+const E=Easing.bezier(.22,1,.36,1);
+const logo=staticFile('logo-vector.svg');
+const NAVY='#162850',GOLD='#E7B95D',MINT='#88C779',INK='#1f2231';
+const fade=(f:number,d:number)=>interpolate(f,[0,5,d-6,d],[0,1,1,0],C);
+const o=(f:number,a:number,b=a+11)=>interpolate(f,[a,b],[0,1],C);
+const y=(f:number,a:number,px=30)=>interpolate(f,[a,a+16],[px,0],{...C,easing:E});
+
+const White:React.FC<{children:React.ReactNode;opacity?:number}>=({children,opacity=1})=><AbsoluteFill style={{background:'#fbfbf8',fontFamily:UI,color:INK,overflow:'hidden',opacity}}>{children}</AbsoluteFill>;
+
+const Hook:React.FC<{d:number}>=({d})=>{const f=useCurrentFrame();const cards=[['بورسیه کامل','ددلاین گذشته'],['کارآموزی','مهلت تمام شد'],['فلوشیپ','ثبت‌نام بسته شد'],['شغل ریموت','فرصت از دست رفت']];const pos=[[220,140],[1320,130],[250,690],[1300,690]];return <White opacity={fade(f,d)}><AbsoluteFill style={{alignItems:'center',justifyContent:'center'}}><div dir="rtl" style={{fontFamily:DISPLAY,fontSize:74,fontWeight:650}}>فرصت دیگری را <span style={{color:GOLD}}>از دست دادی؟</span></div>{cards.map((c,i)=><div key={c[0]} style={{position:'absolute',left:pos[i][0],top:pos[i][1],opacity:o(f,i*5),transform:`translateY(${y(f,i*5,34)}px) rotate(${i%2?-4:4}deg)`}}><OpportunityMini title={c[0]} meta={c[1]} accent={i%2?GOLD:NAVY} compact/></div>)}</White>};
+
+const Promise:React.FC<{d:number}>=({d})=>{const f=useCurrentFrame();return <White opacity={fade(f,d)}><AbsoluteFill style={{alignItems:'center',justifyContent:'center'}}><div dir="rtl" style={{fontFamily:DISPLAY,fontSize:76,fontWeight:700,transform:`translateY(${y(f,0,24)}px)`}}>فرصت مناسب را <span style={{color:MINT}}>از دست نده.</span></div></AbsoluteFill></White>};
+
+const Analyze:React.FC<{d:number}>=({d})=>{const f=useCurrentFrame();return <White opacity={fade(f,d)}><AbsoluteFill style={{alignItems:'center',justifyContent:'center'}}><div style={{display:'flex',alignItems:'center',gap:90}}><div style={{width:690,height:470,borderRadius:36,background:'linear-gradient(145deg,#eef1f8,#fff7ed)',boxShadow:'0 28px 90px rgba(45,48,66,.10)',position:'relative',overflow:'hidden'}}><div style={{position:'absolute',right:-70,top:-80,width:360,height:360,borderRadius:'50%',background:'radial-gradient(circle,rgba(231,185,93,.40),transparent 70%)'}}/><div dir="rtl" style={{padding:42}}><span style={{padding:'8px 13px',borderRadius:999,background:'#eef6ec',color:'#4F8F43',fontWeight:800}}>بورسیه</span><div style={{fontFamily:DISPLAY,fontSize:38,fontWeight:760,lineHeight:1.55,marginTop:18}}>بورسیه بین‌المللی ۲۰۲۷</div><div style={{fontSize:19,color:'rgba(31,34,49,.48)',marginTop:10}}>کارشناسی ارشد · اروپا · تمویل کامل</div><div style={{marginTop:44,width:210,padding:'14px 18px',borderRadius:999,background:'#fff',boxShadow:'0 12px 34px rgba(30,34,55,.10)',display:'flex',alignItems:'center',gap:12,fontWeight:800}}><span style={{width:32,height:32,borderRadius:'50%',background:MINT,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff'}}>⌕</span> بررسی فرصت</div></div></div><div dir="rtl" style={{fontFamily:DISPLAY,fontSize:50,fontWeight:700,width:520,lineHeight:1.6}}>ARIA HUB شرایط را<br/><span style={{color:NAVY}}>برای تو بررسی می‌کند.</span></div></div></AbsoluteFill></White>};
+
+const Scan:React.FC<{d:number}>=({d})=>{const f=useCurrentFrame();const ready=f>30;return <White opacity={fade(f,d)}><AbsoluteFill style={{alignItems:'center',justifyContent:'center'}}><div style={{display:'flex',alignItems:'center',gap:70}}><ScanFrame><div dir="rtl" style={{height:'100%',display:'flex',alignItems:'center',justifyContent:'center',padding:60}}><div style={{transform:'scale(.88)'}}><OpportunityMini title="بورسیه بین‌المللی ۲۰۲۷" meta="اروپا · تمویل کامل" accent={MINT}/></div></div></ScanFrame><div dir="rtl" style={{width:520}}><div style={{fontFamily:DISPLAY,fontSize:48,fontWeight:760}}>{ready?'تطبیق آماده است':'در حال بررسی شرایط…'}</div><div style={{fontSize:21,color:'rgba(31,34,49,.48)',marginTop:12}}>{ready?'شرایط، ددلاین و تطبیق با پروفایل تو آماده است.':'در حال مقایسهٔ شرایط فرصت با پروفایل تو.'}</div></div></div></AbsoluteFill></White>};
+
+const Dashboard:React.FC<{d:number}>=({d})=>{const f=useCurrentFrame();return <White opacity={fade(f,d)}><AbsoluteFill style={{alignItems:'center',justifyContent:'center'}}><div style={{width:1420,height:730,borderRadius:38,background:'#fff',border:'1px solid rgba(31,34,49,.08)',boxShadow:'0 34px 105px rgba(45,48,66,.12)',padding:42}}><div dir="rtl" style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}><div><div style={{fontFamily:DISPLAY,fontSize:37,fontWeight:780}}>نتیجهٔ بررسی</div><div style={{fontSize:17,color:'rgba(31,34,49,.44)',marginTop:5}}>بورسیه بین‌المللی ۲۰۲۷</div></div><div style={{padding:'10px 15px',borderRadius:999,background:'#eef7eb',color:'#4d8e42',fontWeight:800}}>شرایط مناسب</div></div><div style={{display:'grid',gridTemplateColumns:'1.05fr 1fr',gap:28,marginTop:32}}><div dir="rtl" style={{padding:28,borderRadius:26,background:'#faf9f6'}}><div style={{fontSize:15,color:'rgba(31,34,49,.43)'}}>تطبیق با پروفایل</div><div style={{fontSize:58,fontWeight:900,color:MINT,marginTop:5}}>۹۲٪</div><div style={{height:10,borderRadius:999,background:'#e8e8e3',marginTop:10,overflow:'hidden'}}><div style={{width:'92%',height:'100%',background:MINT,borderRadius:999}}/></div><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginTop:24}}>{[['ددلاین','۱۲ روز'],['تمویل','کامل'],['سطح','کارشناسی ارشد'],['کشور','اروپا']].map(([a,b],i)=><div key={a} style={{padding:16,borderRadius:16,background:'#fff',opacity:o(f,i*4)}}><div style={{fontSize:13,color:'rgba(31,34,49,.42)'}}>{a}</div><b style={{fontSize:19,display:'block',marginTop:4}}>{b}</b></div>)}</div></div><div dir="rtl" style={{padding:28,borderRadius:26,background:'#fbfbfd'}}><div style={{fontFamily:DISPLAY,fontSize:27,fontWeight:750}}>کارهای بعدی</div>{[['بررسی مدارک','آماده'],['ذخیره فرصت','انجام شد'],['یادآوری ددلاین','فعال'],['شروع درخواست','بعدی']].map(([a,b],i)=><div key={a} style={{height:68,borderBottom:'1px solid rgba(31,34,49,.07)',display:'flex',alignItems:'center',justifyContent:'space-between',opacity:o(f,i*5)}}><b>{a}</b><span style={{fontSize:14,color:i<3?'#4d8e42':'#8a6b1f'}}>{b}</span></div>)}</div></div></div></AbsoluteFill></White>};
+
+const Success:React.FC<{d:number}>=({d})=>{const f=useCurrentFrame();const {fps}=useVideoConfig();const p=spring({frame:f,fps,config:{damping:16,stiffness:92}});return <White opacity={fade(f,d)}><AbsoluteFill style={{alignItems:'center',justifyContent:'center'}}><div style={{textAlign:'center',transform:`scale(${interpolate(p,[0,1],[.76,1])})`}}><div style={{display:'flex',justifyContent:'center',gap:20,alignItems:'center'}}><Img src={logo} style={{width:118,height:118,borderRadius:26}}/><div style={{fontFamily:DISPLAY,fontSize:68,fontWeight:850,color:NAVY}}>ARIA HUB</div></div><div dir="rtl" style={{fontFamily:DISPLAY,fontSize:46,fontWeight:700,marginTop:28}}>فرصت مناسب را <span style={{color:MINT}}>از دست نده.</span></div><div dir="rtl" style={{fontSize:22,color:'rgba(31,34,49,.48)',marginTop:12}}>جستجو · بررسی · ذخیره · اقدام</div><div style={{display:'inline-flex',marginTop:24,padding:'12px 27px',borderRadius:999,background:NAVY,color:'#fff',fontWeight:800}}>myariahub.com</div></div></AbsoluteFill></White>};
+
+const D=[45,42,54,48,54,63];
+const S=D.reduce((a,v,i)=>{a.push(i?a[i-1]+D[i-1]:0);return a},[] as number[]);
+
+export const AriaHubReference10:React.FC=()=> <AbsoluteFill style={{background:'#fbfbf8',fontFamily:UI}}>
+ <Audio src={staticFile('audio/reference-10-ad-original.m4a')} volume={1}/>
+ <Sequence from={S[0]} durationInFrames={D[0]}><Hook d={D[0]}/></Sequence>
+ <Sequence from={S[1]} durationInFrames={D[1]}><Promise d={D[1]}/></Sequence>
+ <Sequence from={S[2]} durationInFrames={D[2]}><Analyze d={D[2]}/></Sequence>
+ <Sequence from={S[3]} durationInFrames={D[3]}><Scan d={D[3]}/></Sequence>
+ <Sequence from={S[4]} durationInFrames={D[4]}><Dashboard d={D[4]}/></Sequence>
+ <Sequence from={S[5]} durationInFrames={D[5]}><Success d={D[5]}/></Sequence>
+</AbsoluteFill>;
