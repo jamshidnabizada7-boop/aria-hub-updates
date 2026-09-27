@@ -28,7 +28,9 @@ export async function GET(req: NextRequest) {
 
     const category = firstParam(sp.get('category')) || 'all';
     const q = firstParam(sp.get('q')).trim().slice(0, 200);
-    const location = firstParam(sp.get('location')) || 'all';
+    const legacyLocation = firstParam(sp.get('location')) || 'all';
+    const country = firstParam(sp.get('country')) || (legacyLocation !== 'all' ? legacyLocation : 'all');
+    const province = firstParam(sp.get('province')) || 'all';
     const deadlineParam = firstParam(sp.get('deadline'));
     const deadlineDays = ['7', '30', '90'].includes(deadlineParam) ? Number(deadlineParam) : undefined;
     const sortParam = firstParam(sp.get('sort'));
@@ -44,7 +46,8 @@ export async function GET(req: NextRequest) {
         lang,
         category,
         q,
-        location,
+        country,
+        province,
         deadlineDays,
         sort,
         page,
