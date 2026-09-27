@@ -91,6 +91,7 @@ export async function GET() {
       extractedData: true,
       sourceName: true,
       lastChecked: true,
+      matchProfile: { select: { id: true, reviewed: true } },
     },
   });
   let trilingual = 0;
@@ -100,6 +101,8 @@ export async function GET() {
   let eligibilityRich = 0;
   let weakMatchData = 0;
   let freshVerified = 0;
+  let normalizedProfiles = 0;
+  let reviewedProfiles = 0;
   for (const o of all) {
     const title = (o.titleI18n ?? {}) as Record<string, unknown>;
     const summary = (o.aiSummaryI18n ?? {}) as Record<string, unknown>;
@@ -133,6 +136,10 @@ export async function GET() {
       Date.now() - o.lastChecked.getTime() <= 30 * 86_400_000
     ) {
       freshVerified++;
+    }
+    if (o.matchProfile) {
+      normalizedProfiles++;
+      if (o.matchProfile.reviewed) reviewedProfiles++;
     }
   }
 
@@ -169,6 +176,8 @@ export async function GET() {
       eligibilityRich,
       weakData: weakMatchData,
       freshVerified,
+      normalizedProfiles,
+      reviewedProfiles,
     },
     deadlines: { expiring7, expiring30, noApplyLink },
     submissions: { pending: pendingSubmissions },
