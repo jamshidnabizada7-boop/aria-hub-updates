@@ -52,7 +52,7 @@ function deadlineIso(deadline: Date | null): string | null {
 }
 
 function publicResult(item: RankedOpportunity, lang: MatcherProfile['lang']) {
-  const row = item.opportunity as MatcherDbRow;
+  const row = item.opportunity as unknown as MatcherDbRow;
   return {
     id: row.id,
     slug: row.slug,
@@ -131,7 +131,7 @@ async function addGroundedAiExplanations(
     if (!provider) return { results, ai: false };
 
     const evidencePackage = ranked.slice(0, results.length).map((item) => {
-      const row = item.opportunity as MatcherDbRow;
+      const row = item.opportunity as unknown as MatcherDbRow;
       return {
         id: row.id,
         title: row.title,
