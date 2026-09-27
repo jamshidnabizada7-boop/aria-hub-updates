@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import {
-  Award, BookOpen, Briefcase, Check, FlaskConical, GraduationCap, Languages as LanguagesIcon,
+  ArrowDown, ArrowUp, Award, BookOpen, Briefcase, Check, FlaskConical, GraduationCap, Languages as LanguagesIcon,
   Plus, Trash2, Upload, UserRound, Wrench, FolderGit2, HeartHandshake, FileText, UsersRound
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -135,6 +135,32 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
     }
   };
 
+  const moveItem = (section: keyof CVDraft['data'], id: string, direction: -1 | 1) => {
+    setData((data) => {
+      const items = [...(data[section] as any[])];
+      const index = items.findIndex((item) => item.id === id);
+      const target = index + direction;
+      if (index < 0 || target < 0 || target >= items.length) return data;
+      [items[index], items[target]] = [items[target], items[index]];
+      return { ...data, [section]: items } as CVDraft['data'];
+    });
+  };
+
+  const ReorderButtons = ({ section, id }: { section: keyof CVDraft['data']; id: string }) => {
+    const items = draft.data[section] as any[];
+    const index = items.findIndex((item) => item.id === id);
+    return (
+      <div className="flex items-center gap-1">
+        <Button type="button" variant="ghost" size="icon" className="size-11" disabled={index <= 0} aria-label={c('Move up')} onClick={() => moveItem(section, id, -1)}>
+          <ArrowUp className="size-4" />
+        </Button>
+        <Button type="button" variant="ghost" size="icon" className="size-11" disabled={index < 0 || index >= items.length - 1} aria-label={c('Move down')} onClick={() => moveItem(section, id, 1)}>
+          <ArrowDown className="size-4" />
+        </Button>
+      </div>
+    );
+  };
+
   const handleImage = async (file?: File) => {
     if (!file) return;
     setImageBusy(true);
@@ -220,7 +246,7 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
               </div>
               <div className="mt-3"><MonthRange startLabel={c('Start')} endLabel={c('End')} currentLabel={c('Currently here')} prefix={`exp-${item.id}`} startDate={item.startDate} endDate={item.endDate} isCurrent={item.isCurrent} onStart={(v) => updateItem('experience', item.id, { startDate: v })} onEnd={(v) => updateItem('experience', item.id, { endDate: v })} onCurrent={(v) => updateItem('experience', item.id, { isCurrent: v, endDate: v ? '' : item.endDate })} /></div>
               <div className="mt-3"><TextField id={`exp-desc-${item.id}`} label={c('Achievements and responsibilities')} value={item.description} onChange={(v) => updateItem('experience', item.id, { description: v })} placeholder="• Built…\n• Improved…\n• Led…" hint={c('Prefer achievement-focused bullets: action + task + measurable result when possible.')} /></div>
-              <div className="mt-3 flex justify-end"><Button type="button" variant="ghost" className="min-h-11 text-destructive" onClick={() => removeItem('experience', item.id, 'Experience')}><Trash2 className="size-4" /> {c('Remove')}</Button></div>
+              <div className="mt-3 flex items-center justify-between gap-2"><ReorderButtons section="experience" id={item.id} /><Button type="button" variant="ghost" className="min-h-11 text-destructive" onClick={() => removeItem('experience', item.id, 'Experience')}><Trash2 className="size-4" /> {c('Remove')}</Button></div>
             </div>
           ))}
           <Button type="button" variant="outline" onClick={() => addItem('experience', { id: makeId('exp'), role: '', company: '', location: '', startDate: '', endDate: '', isCurrent: false, description: '' })}><Plus className="size-4" /> {c('Add experience')}</Button>
@@ -238,7 +264,7 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
               </div>
               <div className="mt-3"><MonthRange startLabel={c('Start')} endLabel={c('End')} currentLabel={c('Currently here')} prefix={`edu-${item.id}`} startDate={item.startDate} endDate={item.endDate} isCurrent={item.isCurrent} onStart={(v) => updateItem('education', item.id, { startDate: v })} onEnd={(v) => updateItem('education', item.id, { endDate: v })} onCurrent={(v) => updateItem('education', item.id, { isCurrent: v, endDate: v ? '' : item.endDate })} /></div>
               <div className="mt-3"><TextField id={`edu-desc-${item.id}`} label={c('Details')} value={item.description} onChange={(v) => updateItem('education', item.id, { description: v })} placeholder={c('Relevant coursework, thesis, distinctions, GPA (if useful)…')} /></div>
-              <div className="mt-3 flex justify-end"><Button type="button" variant="ghost" className="min-h-11 text-destructive" onClick={() => removeItem('education', item.id, 'Education')}><Trash2 className="size-4" /> {c('Remove')}</Button></div>
+              <div className="mt-3 flex items-center justify-between gap-2"><ReorderButtons section="education" id={item.id} /><Button type="button" variant="ghost" className="min-h-11 text-destructive" onClick={() => removeItem('education', item.id, 'Education')}><Trash2 className="size-4" /> {c('Remove')}</Button></div>
             </div>
           ))}
           <Button type="button" variant="outline" onClick={() => addItem('education', { id: makeId('edu'), degree: '', institution: '', location: '', startDate: '', endDate: '', isCurrent: false, description: '' })}><Plus className="size-4" /> {c('Add education')}</Button>
@@ -258,7 +284,7 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
                 <Field id={`project-end-${item.id}`} label="End" type="month" value={item.endDate} onChange={(v) => updateItem('projects', item.id, { endDate: v })} />
               </div>
               <div className="mt-3"><TextField id={`project-desc-${item.id}`} label={c('What you built / achieved')} value={item.description} onChange={(v) => updateItem('projects', item.id, { description: v })} /></div>
-              <div className="mt-3 flex justify-end"><Button type="button" variant="ghost" className="min-h-11 text-destructive" onClick={() => removeItem('projects', item.id, 'Project')}><Trash2 className="size-4" /> {c('Remove')}</Button></div>
+              <div className="mt-3 flex items-center justify-between gap-2"><ReorderButtons section="projects" id={item.id} /><Button type="button" variant="ghost" className="min-h-11 text-destructive" onClick={() => removeItem('projects', item.id, 'Project')}><Trash2 className="size-4" /> {c('Remove')}</Button></div>
             </div>
           ))}
           <Button type="button" variant="outline" onClick={() => addItem('projects', { id: makeId('project'), name: '', role: '', technologies: '', startDate: '', endDate: '', description: '', link: '' })}><Plus className="size-4" /> {c('Add project')}</Button>
@@ -273,7 +299,7 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
               <select aria-label={`Level for ${item.name || 'skill'}`} className="h-9 rounded-md border bg-background px-3 text-sm" value={item.level} onChange={(e) => updateItem('skills', item.id, { level: e.target.value })}>
                 <option value="beginner">{c('Beginner')}</option><option value="intermediate">{c('Intermediate')}</option><option value="expert">{c('Expert')}</option>
               </select>
-              <Button type="button" variant="ghost" size="icon" className="size-11" aria-label={`Remove ${item.name || 'skill'}`} onClick={() => removeItem('skills', item.id, 'Skill')}><Trash2 className="size-4" /></Button>
+              <div className="flex items-center"><ReorderButtons section="skills" id={item.id} /><Button type="button" variant="ghost" size="icon" className="size-11" aria-label={`Remove ${item.name || 'skill'}`} onClick={() => removeItem('skills', item.id, 'Skill')}><Trash2 className="size-4" /></Button></div>
             </div>
           ))}
           <Button type="button" variant="outline" size="sm" onClick={() => addItem('skills', { id: makeId('skill'), name: '', level: 'intermediate' })}><Plus className="size-4" /> {c('Add skill')}</Button>
@@ -288,7 +314,7 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
               <select aria-label={`Proficiency for ${item.name || 'language'}`} className="h-9 rounded-md border bg-background px-3 text-sm" value={item.proficiency} onChange={(e) => updateItem('languages', item.id, { proficiency: e.target.value })}>
                 <option value="basic">{c('Basic')}</option><option value="intermediate">{c('Intermediate')}</option><option value="fluent">{c('Fluent')}</option><option value="native">{c('Native')}</option>
               </select>
-              <Button type="button" variant="ghost" size="icon" className="size-11" aria-label={`Remove ${item.name || 'language'}`} onClick={() => removeItem('languages', item.id, 'Language')}><Trash2 className="size-4" /></Button>
+              <div className="flex items-center"><ReorderButtons section="languages" id={item.id} /><Button type="button" variant="ghost" size="icon" className="size-11" aria-label={`Remove ${item.name || 'language'}`} onClick={() => removeItem('languages', item.id, 'Language')}><Trash2 className="size-4" /></Button></div>
             </div>
           ))}
           <Button type="button" variant="outline" size="sm" onClick={() => addItem('languages', { id: makeId('language'), name: '', proficiency: 'fluent' })}><Plus className="size-4" /> {c('Add language')}</Button>
@@ -320,7 +346,7 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
                 <Field id={`award-date-${item.id}`} label={c('Date')} type="month" value={item.date} onChange={(v) => updateItem('awards', item.id, { date: v })} />
               </div>
               <div className="mt-3"><TextField id={`award-desc-${item.id}`} label={c('Why it matters')} value={item.description} onChange={(v) => updateItem('awards', item.id, { description: v })} /></div>
-              <div className="mt-3 flex justify-end"><Button type="button" variant="ghost" className="min-h-11 text-destructive" onClick={() => removeItem('awards', item.id, 'Award')}><Trash2 className="size-4" /> {c('Remove')}</Button></div>
+              <div className="mt-3 flex items-center justify-between gap-2"><ReorderButtons section="awards" id={item.id} /><Button type="button" variant="ghost" className="min-h-11 text-destructive" onClick={() => removeItem('awards', item.id, 'Award')}><Trash2 className="size-4" /> {c('Remove')}</Button></div>
             </div>
           ))}
           <Button type="button" variant="outline" onClick={() => addItem('awards', { id: makeId('award'), title: '', issuer: '', date: '', description: '' })}><Plus className="size-4" /> {c('Add award')}</Button>
@@ -337,7 +363,7 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
               </div>
               <div className="mt-3"><MonthRange startLabel={c('Start')} endLabel={c('End')} currentLabel={c('Currently here')} prefix={`vol-${item.id}`} startDate={item.startDate} endDate={item.endDate} isCurrent={item.isCurrent} onStart={(v) => updateItem('volunteering', item.id, { startDate: v })} onEnd={(v) => updateItem('volunteering', item.id, { endDate: v })} onCurrent={(v) => updateItem('volunteering', item.id, { isCurrent: v, endDate: v ? '' : item.endDate })} /></div>
               <div className="mt-3"><TextField id={`vol-desc-${item.id}`} label={c('Contribution / impact')} value={item.description} onChange={(v) => updateItem('volunteering', item.id, { description: v })} /></div>
-              <div className="mt-3 flex justify-end"><Button type="button" variant="ghost" className="min-h-11 text-destructive" onClick={() => removeItem('volunteering', item.id, 'Volunteering entry')}><Trash2 className="size-4" /> {c('Remove')}</Button></div>
+              <div className="mt-3 flex items-center justify-between gap-2"><ReorderButtons section="volunteering" id={item.id} /><Button type="button" variant="ghost" className="min-h-11 text-destructive" onClick={() => removeItem('volunteering', item.id, 'Volunteering entry')}><Trash2 className="size-4" /> {c('Remove')}</Button></div>
             </div>
           ))}
           <Button type="button" variant="outline" onClick={() => addItem('volunteering', { id: makeId('vol'), role: '', organization: '', startDate: '', endDate: '', isCurrent: false, description: '' })}><Plus className="size-4" /> {c('Add volunteering')}</Button>
@@ -355,7 +381,7 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
               </div>
               <div className="mt-3"><MonthRange startLabel={c('Start')} endLabel={c('End')} currentLabel={c('Currently here')} prefix={`research-${item.id}`} startDate={item.startDate} endDate={item.endDate} isCurrent={item.isCurrent} onStart={(v) => updateItem('research', item.id, { startDate: v })} onEnd={(v) => updateItem('research', item.id, { endDate: v })} onCurrent={(v) => updateItem('research', item.id, { isCurrent: v, endDate: v ? '' : item.endDate })} /></div>
               <div className="mt-3"><TextField id={`research-desc-${item.id}`} label={c('Research summary')} value={item.description} onChange={(v) => updateItem('research', item.id, { description: v })} /></div>
-              <div className="mt-3 flex justify-end"><Button type="button" variant="ghost" className="min-h-11 text-destructive" onClick={() => removeItem('research', item.id, 'Research entry')}><Trash2 className="size-4" /> {c('Remove')}</Button></div>
+              <div className="mt-3 flex items-center justify-between gap-2"><ReorderButtons section="research" id={item.id} /><Button type="button" variant="ghost" className="min-h-11 text-destructive" onClick={() => removeItem('research', item.id, 'Research entry')}><Trash2 className="size-4" /> {c('Remove')}</Button></div>
             </div>
           ))}
           <Button type="button" variant="outline" onClick={() => addItem('research', { id: makeId('research'), title: '', organization: '', startDate: '', endDate: '', isCurrent: false, description: '', link: '' })}><Plus className="size-4" /> {c('Add research')}</Button>
@@ -373,7 +399,7 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
                 <Field id={`pub-link-${item.id}`} label={c('Link / DOI')} type="url" dir="ltr" value={item.link} onChange={(v) => updateItem('publications', item.id, { link: v })} />
               </div>
               <div className="mt-3"><TextField id={`pub-desc-${item.id}`} label={c('Description')} value={item.description} onChange={(v) => updateItem('publications', item.id, { description: v })} /></div>
-              <div className="mt-3 flex justify-end"><Button type="button" variant="ghost" className="min-h-11 text-destructive" onClick={() => removeItem('publications', item.id, 'Publication')}><Trash2 className="size-4" /> {c('Remove')}</Button></div>
+              <div className="mt-3 flex items-center justify-between gap-2"><ReorderButtons section="publications" id={item.id} /><Button type="button" variant="ghost" className="min-h-11 text-destructive" onClick={() => removeItem('publications', item.id, 'Publication')}><Trash2 className="size-4" /> {c('Remove')}</Button></div>
             </div>
           ))}
           <Button type="button" variant="outline" onClick={() => addItem('publications', { id: makeId('publication'), title: '', publisher: '', date: '', description: '', link: '' })}><Plus className="size-4" /> {c('Add publication')}</Button>
