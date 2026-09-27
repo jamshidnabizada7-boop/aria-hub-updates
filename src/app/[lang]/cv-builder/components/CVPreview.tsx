@@ -1,10 +1,11 @@
 'use client';
 
 import type { CVDraft } from '../types';
+import type { CVBuilderAdminConfig } from '../lib/cv-admin-config';
 import { cvRendererCss, renderCvBody } from '../lib/cv-renderer';
 import { cvText } from '../lib/cv-copy';
 
-export function CVPreview({ draft }: { draft: CVDraft }) {
+export function CVPreview({ draft, config }: { draft: CVDraft; config: CVBuilderAdminConfig }) {
   const isEmpty =
     !draft.data.personal.fullName &&
     !draft.data.personal.email &&
@@ -38,7 +39,7 @@ export function CVPreview({ draft }: { draft: CVDraft }) {
       ) : null}
       <div
         className="p-8 sm:p-10"
-        dangerouslySetInnerHTML={{ __html: renderCvBody(draft) }}
+        dangerouslySetInnerHTML={{ __html: renderCvBody(draft, config) }}
       />
     </div>
   );
