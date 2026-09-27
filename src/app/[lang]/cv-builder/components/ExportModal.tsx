@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle
 } from '@/components/ui/dialog';
-import type { CVDraft, CVReadiness } from '../types';
+import type { CVDraft, CVOutputLang, CVReadiness } from '../types';
+import { cvText } from '../lib/cv-copy';
 
 interface Props {
   isOpen: boolean;
@@ -14,9 +15,11 @@ interface Props {
   readiness: CVReadiness;
   onConfirm: () => void;
   onNavigateToIssue?: (section: string) => void;
+  uiLang: CVOutputLang;
 }
 
-export function ExportModal({ isOpen, onOpenChange, draft, readiness, onConfirm, onNavigateToIssue }: Props) {
+export function ExportModal({ isOpen, onOpenChange, draft, readiness, onConfirm, onNavigateToIssue, uiLang }: Props) {
+  const c = (text: string) => cvText(uiLang, text);
   const errors = readiness.issues.filter((issue) => issue.severity === 'error');
   const warnings = readiness.issues.filter((issue) => issue.severity === 'warning');
   const info = readiness.issues.filter((issue) => issue.severity === 'info');
@@ -45,22 +48,22 @@ export function ExportModal({ isOpen, onOpenChange, draft, readiness, onConfirm,
           <div className="mb-1 grid size-11 place-items-center rounded-full bg-primary/10 text-primary">
             <FileText className="size-5" />
           </div>
-          <DialogTitle>Review and export your CV</DialogTitle>
+          <DialogTitle>{c('Review and export your CV')}</DialogTitle>
           <DialogDescription>
-            Your CV stays on this device. ARIA HUB uses the browser print dialog for PDF export, so choose “Save as PDF” after continuing.
+            {c('Your CV stays on this device. ARIA HUB uses the browser print dialog for PDF export, so choose “Save as PDF” after continuing.')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="grid grid-cols-3 gap-2 rounded-xl border bg-muted/30 p-3 text-center text-sm">
-            <div><div className="font-bold">{readiness.completion}%</div><div className="text-xs text-muted-foreground">Complete</div></div>
-            <div><div className="font-bold uppercase">{draft.paperSize}</div><div className="text-xs text-muted-foreground">Paper</div></div>
+            <div><div className="font-bold">{readiness.completion}%</div><div className="text-xs text-muted-foreground">{c('Complete')}</div></div>
+            <div><div className="font-bold uppercase">{draft.paperSize}</div><div className="text-xs text-muted-foreground">{c('Paper')}</div></div>
             <div><div className="font-bold">{draft.template === 'ats' ? 'ATS Simple' : draft.template === 'modern' ? 'Modern' : 'Academic'}</div><div className="text-xs text-muted-foreground">Template</div></div>
           </div>
 
           {errors.length ? (
             <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3">
-              <div className="mb-2 flex items-center gap-2 font-semibold text-destructive"><AlertCircle className="size-4" /> Fix before export</div>
+              <div className="mb-2 flex items-center gap-2 font-semibold text-destructive"><AlertCircle className="size-4" /> {c('Fix before export')}</div>
               <ul className="space-y-2 text-sm">
                 {errors.map((issue) => (
                   <li key={issue.id}>
@@ -74,20 +77,20 @@ export function ExportModal({ isOpen, onOpenChange, draft, readiness, onConfirm,
           ) : (
             <div className="flex items-start gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm">
               <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" />
-              <div><strong>Ready to export.</strong> No blocking validation errors were found.</div>
+              <div><strong>{c('Ready to export.')}</strong> {c('No blocking validation errors were found.')}</div>
             </div>
           )}
 
           {warnings.length ? (
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
-              <div className="mb-2 flex items-center gap-2 font-semibold"><TriangleAlert className="size-4 text-amber-600" /> Quality suggestions</div>
+              <div className="mb-2 flex items-center gap-2 font-semibold"><TriangleAlert className="size-4 text-amber-600" /> {c('Quality suggestions')}</div>
               <ul className="space-y-1.5 text-sm">{warnings.map((issue) => <li key={issue.id}>• {message(issue.messageKey)}</li>)}</ul>
             </div>
           ) : null}
 
           {info.length ? (
             <div className="rounded-xl border p-3">
-              <div className="mb-2 flex items-center gap-2 font-semibold"><Info className="size-4 text-primary" /> ATS notes</div>
+              <div className="mb-2 flex items-center gap-2 font-semibold"><Info className="size-4 text-primary" /> {c('ATS notes')}</div>
               <ul className="space-y-1.5 text-sm">{info.map((issue) => <li key={issue.id}>• {message(issue.messageKey)}</li>)}</ul>
             </div>
           ) : null}
@@ -98,8 +101,8 @@ export function ExportModal({ isOpen, onOpenChange, draft, readiness, onConfirm,
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Back to editing</Button>
-          <Button type="button" onClick={onConfirm} disabled={!readiness.canExport}>Continue to PDF</Button>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>{c('Back to editing')}</Button>
+          <Button type="button" onClick={onConfirm} disabled={!readiness.canExport}>{c('Continue to PDF')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
