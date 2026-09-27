@@ -111,3 +111,14 @@ SELECT md5(random()::text || clock_timestamp()::text || id || part),
 FROM canon
 WHERE part <> ''
 ON CONFLICT DO NOTHING;
+
+
+-- Existing provenance URLs must never remain public application destinations.
+-- Clear only exact provenance matches; genuine same-site /apply endpoints survive.
+UPDATE "Opportunity"
+SET "applyUrl" = NULL
+WHERE "applyUrl" IS NOT NULL
+  AND (
+    "applyUrl" = "sourceUrl"
+    OR "applyUrl" = "originalUrl"
+  );
