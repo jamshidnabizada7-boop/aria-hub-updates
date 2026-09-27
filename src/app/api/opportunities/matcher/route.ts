@@ -136,6 +136,13 @@ async function fetchCandidates(profile: MatcherProfile) {
   });
 }
 
+function explanationUsesRequestedScript(text: string, lang: MatcherProfile['lang']): boolean {
+  const latin = (text.match(/[A-Za-z]/g) || []).length;
+  const arabic = (text.match(/[\u0600-\u06FF]/g) || []).length;
+  if (lang === 'en') return latin > 0 && latin >= arabic;
+  return arabic > 0 && arabic >= latin;
+}
+
 async function addGroundedAiExplanations(
   results: ReturnType<typeof publicResult>[],
   ranked: RankedOpportunity[],
@@ -147,23 +154,16 @@ async function addGroundedAiExplanations(
     const providers = await getProviderSlots();
     if (providers.length === 0) return { results, ai: false };
 
-    const evidencePackage = ranked.slice(0, results.length).map((item) => {
-      const row = item.opportunity as unknown as MatcherDbRow;
-      return {
-        id: row.id,
-        title: row.title,
-        category: row.category?.slug || row.jobType || null,
-        country: row.country,
-        organization: row.organization,
-        matchStrength: item.matchStrength,
-        eligibilityStatus: item.eligibilityStatus,
-        dataConfidence: item.dataConfidence,
-        reasons: item.evidence.reasons,
-        verified: item.evidence.verified,
-        unknowns: item.evidence.unknowns,
-        conflicts: item.evidence.conflicts,
-      };
-    });
+    const evidencePackage = ranked.slice(0, results.length).map((item) => ({
+      id: item.opportunity.id,
+      matchStrength: item.matchStrength,
+      eligibilityStatus: item.eligibilityStatus,
+      dataConfidence: item.dataConfidence,
+      reasons: item.evidence.reasons,
+      verified: item.evidence.verified,
+      unknowns: item.evidence.unknowns,
+      conflicts: item.evidence.conflicts,
+    }));
 
     const prompt = [
       `Write one concise explanation per candidate in ${LANG_NAME[profile.lang]}.`,
@@ -201,6 +201,7 @@ async function addGroundedAiExplanations(
     const byId = new Map<string, string>();
     for (const item of validated.data) {
       if (!allowed.has(item.id) || seen.has(item.id)) continue;
+      if (!explanationUsesRequestedScript(item.explanation, profile.lang)) continue;
       seen.add(item.id);
       byId.set(item.id, item.explanation);
     }
