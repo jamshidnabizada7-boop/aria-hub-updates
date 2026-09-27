@@ -206,6 +206,19 @@ model Visa {
 }
 
 // ─── Opportunities (jobs, scholarships, etc.) ────────────────────────────────
+model MatcherFeedback {
+  id            String      @id @default(cuid())
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  signal        String
+  intent        String?
+  lang          String?
+  createdAt     DateTime    @default(now())
+
+  @@index([opportunityId, createdAt])
+  @@index([signal, createdAt])
+}
+
 model OpportunityMatchProfile {
   id                 String      @id @default(cuid())
   opportunityId      String      @unique
@@ -271,6 +284,7 @@ model Opportunity {
   categoryId      String?
   category        OpportunityCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   matchProfile    OpportunityMatchProfile?
+  matcherFeedback MatcherFeedback[]
   monetizationOrders MonetizationOrder[]
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
