@@ -193,6 +193,7 @@ export class JobsAfScraper extends BaseScraper {
           extendable: job.isExtendable == null ? null : job.isExtendable ? 'Yes' : 'No',
           submission: this.humanize(job.submissionThroughout),
           functionalAreas: areas,
+          detailLevel: 'list',
           slug,
         },
       });
