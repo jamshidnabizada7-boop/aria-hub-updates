@@ -1,6 +1,8 @@
 -- Structured opportunity geography + resilient per-language translation state.
 -- Additive migration: existing Opportunity.country remains untouched for compatibility.
 
+ALTER TABLE "Opportunity" ADD COLUMN "qualityReport" JSONB;
+
 CREATE TABLE "OpportunityLocation" (
   "id" TEXT NOT NULL,
   "opportunityId" TEXT NOT NULL,
