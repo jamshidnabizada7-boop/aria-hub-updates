@@ -208,11 +208,11 @@ function extractNationalityRestriction(extractedData: unknown, eligibilityText: 
   function walk(value: unknown, key = ''): void {
     if (value == null) return;
     const normalizedKey = normalize(key);
+    const compactKey = normalizedKey.replace(/\s+/g, '');
     const relevantKey =
-      normalizedKey.includes('nationality') ||
-      normalizedKey.includes('citizenship') ||
-      normalizedKey.includes('eligible countries') ||
-      normalizedKey.includes('eligible nationalities');
+      compactKey.includes('nationalit') ||
+      compactKey.includes('citizenship') ||
+      compactKey.includes('eligiblecountr');
 
     if (relevantKey) {
       if (Array.isArray(value)) {
