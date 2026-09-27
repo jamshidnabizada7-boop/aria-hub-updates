@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 interface ContentHealth {
   opportunities: { total: number; published: number; expired: number; draft: number };
   translation: { trilingual: number; partial: number; englishOnly: number; publishedTotal: number };
+  matchability: { publishedTotal: number; coreReady: number; eligibilityRich: number; weakData: number; freshVerified: number };
   deadlines: { expiring7: number; expiring30: number; noApplyLink: number };
   submissions: { pending: number };
   alerts: { pending: number; active: number; unsubscribed: number };
@@ -93,7 +94,7 @@ export function ContentHealthPanel() {
     );
   }
 
-  const { opportunities: opp, translation, deadlines, submissions, alerts } = data;
+  const { opportunities: opp, translation, matchability, deadlines, submissions, alerts } = data;
   const coveragePct = translation.publishedTotal
     ? Math.round((translation.trilingual / translation.publishedTotal) * 100)
     : 0;
@@ -117,7 +118,46 @@ export function ContentHealthPanel() {
         />
         <StatCard label="Expiring ≤ 7 days" value={deadlines.expiring7} sub={`${deadlines.expiring30} within 30 days`} icon={CalendarClock} accent={deadlines.expiring7 > 0 ? 'rose' : 'emerald'} />
         <StatCard label="Missing apply link" value={deadlines.noApplyLink} sub="published records" icon={ExternalLink} accent={deadlines.noApplyLink > 0 ? 'amber' : 'emerald'} />
+        <StatCard
+          label="Matcher core-ready"
+          value={matchability.coreReady}
+          sub={`${matchability.eligibilityRich} eligibility-rich · ${matchability.weakData} weak-data`}
+          icon={CheckCircle2}
+          accent={matchability.weakData > 0 ? 'amber' : 'emerald'}
+        />
       </div>
+
+      {/* Matcher data quality */}
+      <Card>
+        <CardHeader className="flex-row items-center justify-between py-4">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <CheckCircle2 className="h-4 w-4 text-primary" />
+            Opportunity Matcher data quality
+          </CardTitle>
+          <Badge variant="secondary">
+            {matchability.coreReady}/{matchability.publishedTotal} core-ready
+          </Badge>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-lg border bg-muted/20 p-3">
+              <p className="text-xs font-medium text-muted-foreground">Eligibility-rich</p>
+              <p className="mt-1 text-xl font-black tabular-nums">{matchability.eligibilityRich}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">3+ structured/free-text eligibility signals</p>
+            </div>
+            <div className="rounded-lg border bg-muted/20 p-3">
+              <p className="text-xs font-medium text-muted-foreground">Fresh source checks</p>
+              <p className="mt-1 text-xl font-black tabular-nums">{matchability.freshVerified}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">source recorded and checked within 30 days</p>
+            </div>
+            <div className="rounded-lg border bg-muted/20 p-3">
+              <p className="text-xs font-medium text-muted-foreground">Weak match data</p>
+              <p className="mt-1 text-xl font-black tabular-nums text-amber-600 dark:text-amber-400">{matchability.weakData}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">missing core taxonomy/geography or eligibility evidence</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Translation coverage */}
       <Card>
