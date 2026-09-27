@@ -6,6 +6,7 @@ import path from 'node:path';
 import { normalizeDraft, displayDraftName } from '@/app/[lang]/cv-builder/lib/cv-utils';
 import { validateDraft } from '@/app/[lang]/cv-builder/lib/cv-validation';
 import { renderCvStandaloneHtml } from '@/app/[lang]/cv-builder/lib/cv-renderer';
+import { getCVBuilderConfig } from '@/lib/cv-builder-config.server';
 
 export const runtime='nodejs';
 export const maxDuration=30;
@@ -51,7 +52,9 @@ export async function POST(request:Request){
   try{parsed=JSON.parse(text);}catch{return NextResponse.json({error:'Invalid request.'},{status:400,headers:{'Cache-Control':'no-store'}});}
   const draft=normalizeDraft(parsed?.draft);
   if(!draft) return NextResponse.json({error:'Invalid CV draft.'},{status:400,headers:{'Cache-Control':'no-store'}});
-  const readiness=validateDraft(draft);
+  const config=await getCVBuilderConfig();
+  if(!config.enabled||!config.features.pdfDownload) return NextResponse.json({error:'PDF download is currently unavailable.'},{status:403,headers:{'Cache-Control':'no-store'}});
+  const readiness=validateDraft(draft,config);
   if(!readiness.canExport) return NextResponse.json({error:'Fix blocking CV errors before export.',issues:readiness.issues.filter(x=>x.severity==='error')},{status:422,headers:{'Cache-Control':'no-store'}});
 
   let browser;
@@ -62,7 +65,7 @@ export async function POST(request:Request){
       headless:true,
     });
     const page=await browser.newPage({viewport:{width:1200,height:1600}});
-    await page.setContent(renderCvStandaloneHtml(draft,await fontCss()),{waitUntil:'load'});
+    await page.setContent(renderCvStandaloneHtml(draft,await fontCss(),config),{waitUntil:'load'});
     const pdf=await page.pdf({
       format:draft.paperSize==='letter'?'Letter':'A4',
       printBackground:true,
