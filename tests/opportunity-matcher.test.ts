@@ -13,7 +13,7 @@ const baseProfile: MatcherProfile = {
   nationality: 'Afghanistan',
   residence: 'Pakistan',
   destinations: ['Germany'],
-  field: 'Computer Science',
+  fieldArea: 'technology',
   lang: 'en',
 };
 
