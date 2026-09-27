@@ -103,6 +103,7 @@ function localizeEvidence(value: string, lang: 'fa' | 'ps' | 'en'): string {
     'Deadline is very close; review application requirements immediately.': 'مهلت بسیار نزدیک است؛ شرایط درخواست را فوراً بررسی کنید.',
     'No structured deadline is available; confirm the current closing date.': 'مهلت ساختاریافته‌ای موجود نیست؛ تاریخ بسته‌شدن را تأیید کنید.',
     'ARIA HUB has limited structured eligibility data for this listing.': 'ARIA HUB برای این فرصت اطلاعات ساختاریافته واجد شرایط بودن محدودی دارد.',
+    'Some eligibility requirements are not structured yet; review the full requirements before applying.': 'بعضی شرایط واجد شرایط بودن هنوز ساختاریافته نیست؛ پیش از درخواست، شرایط کامل را بررسی کنید.',
   };
   const ps: Record<string, string> = {
     'Canonical opportunity category matches your selected type.': 'د فرصت اصلي کټګوري ستاسو له ټاکل شوي ډول سره سمون لري.',
@@ -127,6 +128,7 @@ function localizeEvidence(value: string, lang: 'fa' | 'ps' | 'en'): string {
     'Deadline is very close; review application requirements immediately.': 'وروستۍ نېټه ډېره نږدې ده؛ د غوښتنلیک شرطونه ژر وګورئ.',
     'No structured deadline is available; confirm the current closing date.': 'جوړښتي وروستۍ نېټه نشته؛ د پای اوسنی تاریخ تایید کړئ.',
     'ARIA HUB has limited structured eligibility data for this listing.': 'ARIA HUB د دې فرصت لپاره محدود جوړښتي د وړتیا معلومات لري.',
+    'Some eligibility requirements are not structured yet; review the full requirements before applying.': 'د وړتیا ځینې شرطونه لا جوړښتي شوي نه دي؛ د غوښتنلیک تر مخه بشپړ شرایط وګورئ.',
   };
 
   const experienceMatch = value.match(/^This opportunity appears to require at least (\d+) years of experience\.$/);

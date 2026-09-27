@@ -888,9 +888,12 @@ function EvidenceBlock({
   );
 }
 
-function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+function GlassCard({ children, className = '', ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={`rounded-3xl border border-white/40 bg-white/45 p-5 shadow-[0_8px_32px_rgba(31,38,135,0.08)] backdrop-blur-xl dark:border-slate-700/60 dark:bg-slate-900/50 sm:p-8 ${className}`}>
+    <div
+      {...props}
+      className={`rounded-3xl border border-white/40 bg-white/45 p-5 shadow-[0_8px_32px_rgba(31,38,135,0.08)] backdrop-blur-xl dark:border-slate-700/60 dark:bg-slate-900/50 sm:p-8 ${className}`}
+    >
       {children}
     </div>
   );
