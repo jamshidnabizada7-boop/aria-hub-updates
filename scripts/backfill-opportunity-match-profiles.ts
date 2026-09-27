@@ -124,7 +124,7 @@ async function main() {
       }
     }
 
-    const education = findExplicit(data, [/educationlevel/, /studylevel/, /degreelevel/, /targetdegree/]);
+    const education = findExplicit(data, [/studylevel/, /targetdegree/, /programlevel/, /degreeoffered/]);
     if (education) {
       const values = mapCanonical(asStringArray(education.value), EDUCATION_MAP);
       if (values.length) {
