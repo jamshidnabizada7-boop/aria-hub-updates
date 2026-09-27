@@ -5,20 +5,13 @@
  * processes ONE row per call so the pipeline tick can drain the backlog in
  * small, quota-friendly batches ("1 hour, 1 day, 2 days — as long as it takes").
  *
- * Priority order: Opportunity (newest first) → News → then other tables.
- * On 429 the caller records a backoff window in AutomationState and skips.
+ * Opportunity translations use a durable Persian-first queue. Free-model
+ * outages and rate limits checkpoint partial work and retry later.
  */
 import { createHash } from 'node:crypto';
 import { db } from '@/lib/db';
 import { getProviderSlots, chatWithFailover } from '@/lib/ai/failover';
 import { Prisma } from '@prisma/client';
-type JsonValue = Prisma.JsonValue;
-
-const PrismaAnyNull = Prisma.DbNull;
-
-const SYMBOL_RE = /^[\s\d.,+%~×x°–—\-/$€£#&*'"()[\]]+$/u;
-const isSymbol = (s: string) => s.length <= 12 && SYMBOL_RE.test(s) && /[\d+%+]/.test(s);
-
 const LANG_SYSTEM: Record<'fa' | 'ps', string> = {
   fa:
     'You are the Persian translation engine for ARIA HUB. Translate all supplied opportunity content fully into natural professional Persian. ' +
@@ -293,10 +286,7 @@ export interface TranslateBatchResult {
   rateLimited: boolean;
 }
 
-/**
- * Process up to `batch` rows starting from the highest-priority untranslated
- * content. Returns whether a 429 was hit (caller sets backoff).
- */
+/** Count opportunities that still need the requested language. */
 async function pendingCount(lang: TargetLang): Promise<number> {
   if (lang === 'fa') {
     return db.opportunity.count({
