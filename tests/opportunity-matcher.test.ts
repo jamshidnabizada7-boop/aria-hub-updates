@@ -9,7 +9,8 @@ import {
 
 const baseProfile: MatcherProfile = {
   intents: ['scholarship'],
-  education: 'masters',
+  education: 'bachelors',
+  targetEducation: 'masters',
   nationality: 'Afghanistan',
   residence: 'Pakistan',
   destinations: ['Germany'],
