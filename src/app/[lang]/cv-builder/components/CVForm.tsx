@@ -85,8 +85,11 @@ function SectionCard({ title, icon: Icon, children, recommended, complete, uiLan
 }) {
   const c = (text: string) => cvText(uiLang, text);
   return (
-    <section className="rounded-2xl border bg-card p-4 sm:p-5">
-      <div className="mb-4 flex items-start justify-between gap-3">
+    <details
+      className="group rounded-2xl border bg-card p-4 sm:p-5"
+      defaultOpen={title === c('Personal information')}
+    >
+      <summary className="flex cursor-pointer list-none items-start justify-between gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
         <div className="flex items-center gap-2">
           <div className="grid size-9 place-items-center rounded-xl bg-primary/10 text-primary"><Icon className="size-4" /></div>
           <div>
@@ -94,10 +97,13 @@ function SectionCard({ title, icon: Icon, children, recommended, complete, uiLan
             {recommended ? <p className="text-xs text-muted-foreground">{c('Recommended for this CV purpose')}</p> : null}
           </div>
         </div>
-        {complete ? <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600"><Check className="size-3.5" /> Added</span> : null}
-      </div>
-      {children}
-    </section>
+        <div className="flex items-center gap-2">
+          {complete ? <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600"><Check className="size-3.5" /> {c('Added')}</span> : null}
+          <span aria-hidden="true" className="text-muted-foreground transition-transform group-open:rotate-180">⌄</span>
+        </div>
+      </summary>
+      <div className="mt-4">{children}</div>
+    </details>
   );
 }
 
