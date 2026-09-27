@@ -34,6 +34,18 @@ export function normalizeAfghanistanProvince(value: string | null | undefined): 
   return AFGHAN_PROVINCE_ALIASES[cleanPart(value).toLowerCase()] || null;
 }
 
+export function inferOpportunityCountry(
+  explicitCountry: string | null | undefined,
+  rawLocation: string | null | undefined,
+): string | null {
+  if (explicitCountry?.trim()) return explicitCountry.trim();
+  const raw = cleanPart(rawLocation || '');
+  if (!raw) return null;
+  if (raw.toLowerCase().includes('afghanistan')) return 'Afghanistan';
+  const parts = raw.split(/[,;/|]+/).map(cleanPart).filter(Boolean);
+  if (parts.some((part) => normalizeAfghanistanProvince(part))) return 'Afghanistan';
+  return null;
+}
 export interface NormalizedOpportunityLocation {
   country: string | null;
   countryCode: string | null;
@@ -52,7 +64,7 @@ export function parseOpportunityLocations(
 ): NormalizedOpportunityLocation[] {
   const raw = cleanPart(rawLocation || '');
   if (!raw) return [];
-  const country = explicitCountry?.trim() || (/\bafghanistan\b/i.test(raw) ? 'Afghanistan' : null);
+  const country = inferOpportunityCountry(explicitCountry, raw);
   const isAfghanistan = (country || '').toLowerCase() === 'afghanistan';
   const parts = raw.replace(/\bafghanistan\b/gi, '').split(/[,;/|]+/).map(cleanPart).filter(Boolean);
 
