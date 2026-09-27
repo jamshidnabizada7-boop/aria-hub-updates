@@ -270,6 +270,14 @@ const COPY: CopyTable = {
   'ATS templates keep conservative neutral styling.': { fa: 'قالب‌های ATS سبک بصری محافظه‌کارانه و خنثی را حفظ می‌کنند.', ps: 'د ATS قالبونه محافظه کاره او خنثی بڼه ساتي.' },
   'Start adding your details to preview your CV.': { fa: 'برای دیدن پیش‌نمایش، اطلاعات سی‌وی خود را وارد کنید.', ps: 'د سي وي د مخکتنې لپاره خپل معلومات ولیکئ.' },
 
+  'words recommended': { fa: 'کلمه پیشنهادی', ps: 'سپارښتل شوې کلمې' },
+  'Recommended range': { fa: 'محدوده پیشنهادی', ps: 'سپارښتل شوی حد' },
+  'Recommended maximum': { fa: 'حداکثر پیشنهادی', ps: 'سپارښتل شوی اعظمي' },
+  'skills': { fa: 'مهارت', ps: 'مهارتونه' },
+  'Your summary is outside the recommended range.': { fa: 'خلاصه شما خارج از محدوده پیشنهادی است.', ps: 'ستاسو لنډیز له سپارښتل شوي حد څخه بهر دی.' },
+  'Admin disabled': { fa: 'غیرفعال توسط مدیر', ps: 'د مدیر لخوا بند' },
+  'Disabled by ARIA HUB admin.': { fa: 'توسط مدیر آریا هاب غیرفعال شده است.', ps: 'د آریا هاب د مدیر لخوا بند شوی.' },
+
 };
 
 export function cvText(lang: CVOutputLang, english: string): string {
