@@ -290,6 +290,7 @@ model Opportunity {
   publishedDate        String?
   extractedData        Json? // store extra dynamic metadata scraped from the source
   extractedDataI18n    Json? // localized dynamic metadata scraped from the source
+  qualityReport        Json? // extraction/apply/location completeness + provenance; admin/internal
 
   @@index([categoryId])
   @@index([featured])
