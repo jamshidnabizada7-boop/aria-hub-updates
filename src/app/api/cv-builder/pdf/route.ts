@@ -70,11 +70,12 @@ export async function POST(request:Request){
       margin:{top:'0',right:'0',bottom:'0',left:'0'},
     });
     const base=safeFilename(displayDraftName(draft,'CV'));
+    const asciiBase=(base.replace(/[^\x20-\x7E]/g,'_').replace(/"/g,'').trim()||'CV').slice(0,90);
     return new Response(new Uint8Array(pdf),{
       status:200,
       headers:{
         'Content-Type':'application/pdf',
-        'Content-Disposition':`attachment; filename="${base.replace(/"/g,'')}.pdf"; filename*=UTF-8''${encodeURIComponent(base)}.pdf`,
+        'Content-Disposition':`attachment; filename="${asciiBase}.pdf"; filename*=UTF-8''${encodeURIComponent(base)}.pdf`,
         'Cache-Control':'no-store, max-age=0',
         'X-Content-Type-Options':'nosniff',
       },
