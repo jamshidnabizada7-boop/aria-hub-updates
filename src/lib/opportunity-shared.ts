@@ -139,6 +139,7 @@ export function cleanSummary(raw: string, max = 220): string {
 const CATEGORY_LABEL_KEYS: Record<string, string> = {
   jobs: 'opportunities.jobs',
   scholarships: 'opportunities.scholarships',
+  fellowships: 'opportunities.fellowships',
   internships: 'opportunities.internships',
   competitions: 'opportunities.competitions',
   conferences: 'opportunities.conferences',
