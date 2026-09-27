@@ -9,7 +9,11 @@ import type { AIProvider, RewriteResult, SEOResult } from '../provider';
 import { REWRITE_SYSTEM, translateSystem, seoSystem, categorizeSystem } from '../prompts';
 import { parseJSON, retry } from './helpers';
 
-// "openrouter/free" lets OpenRouter route across currently available free\n// models. Owners can pin a specific free model with OPENROUTER_MODEL.\nconst MODEL = process.env.OPENROUTER_MODEL || 'openrouter/free';\nconst REQUEST_TIMEOUT_MS = Math.max(15000, Number(process.env.OPENROUTER_TIMEOUT_MS) || 60000);\nconst MAX_TOKENS = Math.max(512, Math.min(8000, Number(process.env.OPENROUTER_MAX_TOKENS) || 4000));
+// "openrouter/free" lets OpenRouter route across currently available free
+// models. Owners can pin a specific free model with OPENROUTER_MODEL.
+const MODEL = process.env.OPENROUTER_MODEL || 'openrouter/free';
+const REQUEST_TIMEOUT_MS = Math.max(15000, Number(process.env.OPENROUTER_TIMEOUT_MS) || 60000);
+const MAX_TOKENS = Math.max(512, Math.min(8000, Number(process.env.OPENROUTER_MAX_TOKENS) || 4000));
 const API_BASE = 'https://openrouter.ai/api/v1';
 
 export class OpenRouterProvider implements AIProvider {
