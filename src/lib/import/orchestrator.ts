@@ -443,7 +443,7 @@ async function processListing(
     deadline: safeDate(listing.deadline),
     organization: listing.organization || null,
     website: listing.website || null,
-    applyUrl: listing.applyUrl || null,
+    applyUrl: typeof pipeline.data.applyUrl === 'string' ? pipeline.data.applyUrl : null,
     image: featured.path,
     logoUrl: logo.path || null,
     publishedDate: listing.publishedDate || null,  // String field in schema, no conversion needed
