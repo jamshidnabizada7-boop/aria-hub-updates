@@ -93,7 +93,7 @@ export default async function OpportunitiesPage({
   const q = (firstParam(sp.q) || '').trim();
   const legacyLocation = firstParam(sp.location) || 'all';
   const country = firstParam(sp.country) || (legacyLocation !== 'all' ? legacyLocation : 'all');
-  const province = firstParam(sp.province) || 'all';
+  const province = country === 'Afghanistan' ? (firstParam(sp.province) || 'all') : 'all';
   const deadlineParam = firstParam(sp.deadline);
   const deadlineDays = ['7', '30', '90'].includes(deadlineParam || '')
     ? Number(deadlineParam)
@@ -411,7 +411,7 @@ export default async function OpportunitiesPage({
                   aria-label={t('opportunities.country')}
                   className={selectClasses}
                 >
-                  <option value="all">{t('opportunities.allLocations')}</option>
+                  <option value="all">{t('opportunities.allCountries')}</option>
                   {facets.countries.map((loc) => (
                     <option key={loc.name} value={loc.name}>
                       {loc.name} · {loc.count}
@@ -428,12 +428,12 @@ export default async function OpportunitiesPage({
                 <select
                   name="province"
                   defaultValue={province}
-                  aria-label={t('opportunities.location')}
+                  aria-label={t('opportunities.province')}
                   className={selectClasses}
                   disabled={country !== 'Afghanistan'}
                 >
                   <option value="all">
-                    {country === 'Afghanistan' ? 'All provinces' : 'Province'}
+                    {country === 'Afghanistan' ? t('opportunities.allProvinces') : t('opportunities.province')}
                   </option>
                   {country === 'Afghanistan' && facets.provinces.map((loc) => (
                     <option key={loc.name} value={loc.name}>
