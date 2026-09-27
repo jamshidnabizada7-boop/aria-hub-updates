@@ -127,24 +127,16 @@ export function extractApplyLink(listing: RawListing): string | null {
 
 interface Enrichment {
   summary_en: string;
-  title_fa: string;
-  summary_fa: string;
-  title_ps: string;
-  summary_ps: string;
   category?: string;
 }
 
-const ENRICH_SYSTEM = `You are an editor and translator for ARIA HUB, an Afghan opportunities portal (jobs, scholarships, internships).
+const ENRICH_SYSTEM = `You are an editor for ARIA HUB, an opportunities portal.
 Given a scraped job/scholarship posting, respond ONLY with strict JSON:
 {
-  "summary_en": "<120-180 word summary in English: what the role/program is, the organization, location, top 3 requirements, salary if stated, and how to apply. Skip company boilerplate and legal disclaimers. Plain text, no markdown headings.>",
-  "title_fa": "<Farsi/Persian translation of the title, natural and fluent, RTL script. Keep org names like UNICEF/WHO transliterated or as-is>",
-  "summary_fa": "<Farsi/Persian translation of summary_en, natural fluent professional tone, ~120 words, RTL script. Keep URLs, emails, dates, org names, and technical terms (TOEFL, IELTS) as-is>",
-  "title_ps": "<Pashto translation of the title, natural and fluent, RTL script>",
-  "summary_ps": "<Pashto translation of summary_en, natural fluent professional tone, ~120 words, RTL script. Keep URLs, emails, dates, org names, technical terms as-is>",
+  "summary_en": "<120-180 word faithful English summary: what the role/program is, organization, location, top requirements, salary if stated, and how to apply. Never invent or omit material eligibility/deadline facts.>",
   "category": "<one of: jobs, scholarships, internships, competitions, conferences, volunteer, exchange-programs, training>"
 }
-Rules: never invent facts not present in the posting; if salary/deadline missing, omit them; if the posting is a scholarship use scholarship wording, if a job use job wording.`;
+Rules: never invent facts not present in the posting; if salary/deadline is missing, omit it. Translation is handled separately by the resilient Persian-first translation queue.`;
 
 function buildEnrichUserPrompt(listing: RawListing): string {
   const parts: string[] = [];
@@ -256,21 +248,13 @@ export async function runAIPipeline(
           summaryI18n.en = parsed.summary_en;
           if (originalLang !== 'en') summaryI18n[originalLang] = parsed.summary_en;
         }
-        // Farsi/Persian
-        if (parsed.title_fa) titleI18n.fa = parsed.title_fa;
-        if (parsed.summary_fa) summaryI18n.fa = parsed.summary_fa;
-        // Pashto
-        if (parsed.title_ps) titleI18n.ps = parsed.title_ps;
-        if (parsed.summary_ps) summaryI18n.ps = parsed.summary_ps;
-
         // Category suggestion
         if (parsed.category) {
           const suggested = slugify(parsed.category);
           if (ctx.knownCategorySlugs.includes(suggested)) categorySlugs.push(suggested);
         }
 
-        translationStatus =
-          titleI18n.fa && summaryI18n.fa && titleI18n.ps && summaryI18n.ps ? 'complete' : 'partial';
+        translationStatus = 'pending';
       }
     } catch (e) {
       console.warn('[ai-pipeline] enrichment failed, storing original language only:', (e as Error).message);
@@ -316,40 +300,9 @@ export async function runAIPipeline(
     }
   }
 
-  // ── Full trilingual bodies — one extra LLM call per NEW listing ─────────
-  // Translates description + all sections into Farsi/Pashto so users of every
-  // language see complete content (not an English body under a localized UI).
-  if (provider) {
-    try {
-      const chat = (system: string, user: string): Promise<string> =>
-        typeof (provider as unknown as Record<string, unknown>).chat === 'function'
-          ? (provider as unknown as { chat(s: string, u: string): Promise<string> }).chat(system, user)
-          : Promise.reject(new Error('no chat'));
-      const sections = await translateSections(
-        {
-          title: listing.title,
-          description: cleanedDescription,
-          eligibility: listing.eligibility ?? null,
-          benefits: listing.benefits ?? null,
-          responsibilities: listing.responsibilities ?? null,
-          requirements: (listing.requirements || listing.requiredDocuments) ?? null,
-          guidelines: listing.guidelines ?? null,
-          jobType: listing.jobType ?? null,
-          salary: listing.salary ?? null,
-          educationReq: listing.educationReq ?? null,
-          experience: listing.experience ?? null,
-        },
-        chat,
-      );
-      if (sections) {
-        mergeSectionTranslations(data, originalLang, sections);
-        const descI18n = data.descriptionI18n as Record<string, string>;
-        if (descI18n.fa && descI18n.ps) translationStatus = 'complete';
-      }
-    } catch (e) {
-      console.warn('[ai-pipeline] section translation failed (kept original language):', (e as Error).message);
-    }
-  }
+  // Full opportunity translations are intentionally deferred to translate-core.
+  // That worker completes Persian atomically first, then Pashto, and never
+  // exposes partial chunks if an OpenRouter/free-model call is interrupted.
 
   if (listing.extractedData && typeof listing.extractedData === 'object') {
     data.extractedDataI18n = { [originalLang]: { ...listing.extractedData } };
