@@ -21,6 +21,7 @@ import {
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { getSavedSlugs, toggleSavedSlug } from '@/components/site/save-button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -75,7 +76,6 @@ interface MatcherResponse {
 type ViewState = 'form' | 'loading' | 'results' | 'no_match' | 'error';
 
 const STORAGE_KEY = 'aria-opportunity-matcher-profile-v2';
-const SAVED_KEY = 'aria-saved-jobs';
 
 const COUNTRIES = [
   ['ANY', 'Anywhere', 'هرجا', 'هر ځای'],
@@ -408,11 +408,7 @@ export function OpportunityMatcherClient() {
     try {
       const raw = sessionStorage.getItem(STORAGE_KEY);
       if (raw) setProfile((prev) => ({ ...prev, ...JSON.parse(raw) }));
-      const savedRaw = localStorage.getItem(SAVED_KEY);
-      if (savedRaw) {
-        const parsed = JSON.parse(savedRaw);
-        if (Array.isArray(parsed)) setSaved(new Set(parsed.filter((v): v is string => typeof v === 'string')));
-      }
+      setSaved(new Set(getSavedSlugs()));
     } catch {
       // Invalid browser storage should never break the matcher.
     }
@@ -490,17 +486,7 @@ export function OpportunityMatcherClient() {
   }
 
   function toggleSave(slug: string) {
-    setSaved((current) => {
-      const next = new Set(current);
-      if (next.has(slug)) next.delete(slug);
-      else next.add(slug);
-      try {
-        localStorage.setItem(SAVED_KEY, JSON.stringify([...next]));
-      } catch {
-        // Saving is best-effort.
-      }
-      return next;
-    });
+    setSaved(new Set(toggleSavedSlug(slug)));
   }
 
   function restart() {
