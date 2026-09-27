@@ -29,7 +29,6 @@ export interface OpportunityCardData {
   jobType: string | null;
   deadline: Date | null;
   applyUrl: string | null;
-  sourceName: string | null;
   categorySlug: string | null;
   categoryLabel: string;
   /** Promoted listing (admin-managed) — surfaces first + wears a badge. */
