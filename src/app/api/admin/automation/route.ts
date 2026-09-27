@@ -145,6 +145,12 @@ export async function GET() {
     })),
     runs,
     untranslated: counts,
+    translationProgress: {
+      ...translationProgress,
+      faPending: Math.max(0, translationProgress.active - translationProgress.faComplete),
+      psWaitingForPersian: Math.max(0, translationProgress.active - translationProgress.faComplete),
+      psPending: Math.max(0, translationProgress.faComplete - translationProgress.psComplete),
+    },
     aiProviders: getProviderHealth(),
   });
 }
