@@ -24,7 +24,7 @@ export function ExportModal({ isOpen, onOpenChange, draft, readiness, onConfirm,
   const warnings = readiness.issues.filter((issue) => issue.severity === 'warning');
   const info = readiness.issues.filter((issue) => issue.severity === 'info');
 
-  const message = (key: string) => ({
+  const message = (key: string) => c(({
     'issues.fullNameRequired': 'Add your full name.',
     'issues.contactRequired': 'Add at least one contact method: email or phone.',
     'issues.emailInvalid': 'Enter a valid email address.',
@@ -39,7 +39,7 @@ export function ExportModal({ isOpen, onOpenChange, draft, readiness, onConfirm,
     'issues.duplicateSkills': 'Your skills list contains duplicates.',
     'issues.visualTemplateAts': 'This visual template is less conservative than the ATS Simple template.',
     'issues.atsPhoto': 'Some ATS-focused applications prefer a CV without a photo.',
-  } as Record<string, string>)[key] || key;
+  } as Record<string, string>)[key] || key);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -58,7 +58,7 @@ export function ExportModal({ isOpen, onOpenChange, draft, readiness, onConfirm,
           <div className="grid grid-cols-3 gap-2 rounded-xl border bg-muted/30 p-3 text-center text-sm">
             <div><div className="font-bold">{readiness.completion}%</div><div className="text-xs text-muted-foreground">{c('Complete')}</div></div>
             <div><div className="font-bold uppercase">{draft.paperSize}</div><div className="text-xs text-muted-foreground">{c('Paper')}</div></div>
-            <div><div className="font-bold">{draft.template === 'ats' ? 'ATS Simple' : draft.template === 'modern' ? 'Modern' : 'Academic'}</div><div className="text-xs text-muted-foreground">Template</div></div>
+            <div><div className="font-bold">{c(draft.template === 'ats' ? 'ATS Simple' : draft.template === 'modern' ? 'Modern' : 'Academic')}</div><div className="text-xs text-muted-foreground">{c('Template')}</div></div>
           </div>
 
           {errors.length ? (
