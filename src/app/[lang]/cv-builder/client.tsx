@@ -14,11 +14,13 @@ import { displayDraftName } from './lib/cv-utils';
 import { validateDraft } from './lib/cv-validation';
 import { CV_TEMPLATE_BY_ID } from './lib/cv-templates';
 import { cvText } from './lib/cv-copy';
+import { getCVBuilderIntro, getEnabledPurposeIds, getEnabledTemplateIds, type CVBuilderAdminConfig } from './lib/cv-admin-config';
 import type { CVIssue, CVOutputLang, CVPurpose, CVSourceContext, PaperSize, TemplateType } from './types';
 
 interface Props {
   initialLang: CVOutputLang;
   initialPurpose?: CVPurpose;
+  config: CVBuilderAdminConfig;
   source?: CVSourceContext;
 }
 
@@ -33,14 +35,20 @@ function cleanFilename(value:string){
   return (value.trim()||'CV').replace(/[\\/:*?"<>|\x00-\x1F]/g,'-').replace(/\s+/g,' ').slice(0,90);
 }
 
-export function CVBuilderClient({ initialLang, initialPurpose='professional', source }:Props){
-  const {drafts,activeDraft,status,updateActive,createNewDraft,duplicateActive,switchDraft,removeDraft}=useCVDrafts({purpose:initialPurpose,outputLang:initialLang,source});
+export function CVBuilderClient({ initialLang, initialPurpose='professional', config, source }:Props){
+  const initialTemplate=config.defaultTemplates[initialPurpose];
+  const {drafts,activeDraft,status,updateActive,createNewDraft,duplicateActive,switchDraft,removeDraft}=useCVDrafts({
+    purpose:initialPurpose,outputLang:initialLang,source,template:initialTemplate,paperSize:config.defaultPaperSize,
+  });
   const { toast }=useToast();
   const [exportOpen,setExportOpen]=useState(false);
   const [templatesOpen,setTemplatesOpen]=useState(false);
   const [mobileTab,setMobileTab]=useState('edit');
   const [generating,setGenerating]=useState(false);
-  const readiness=useMemo(()=>activeDraft?validateDraft(activeDraft):null,[activeDraft]);
+  const readiness=useMemo(()=>activeDraft?validateDraft(activeDraft,config):null,[activeDraft,config]);
+  const enabledPurposes=getEnabledPurposeIds(config);
+  const enabledTemplateIds=getEnabledTemplateIds(config);
+  const intro=getCVBuilderIntro(config,initialLang);
 
   if(!activeDraft||!readiness){
     return <div className="mx-auto max-w-7xl px-4 py-16 text-center text-muted-foreground">{cvText(initialLang,'Loading your CV drafts…')}</div>;
@@ -107,17 +115,20 @@ export function CVBuilderClient({ initialLang, initialPurpose='professional', so
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <FileText className="size-5 text-primary" />
-              <h1 className="text-xl font-bold sm:text-2xl">{cvText(initialLang,'ARIA HUB CV Builder')}</h1>
+              <h1 className="text-xl font-bold sm:text-2xl">{intro.title}</h1>
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-700">
                 <Save className="size-3.5" /> {saveLabel(status,initialLang)}
               </span>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">{cvText(initialLang,'Build a professional CV with purpose-aware guidance, local autosave, multilingual output, ATS checks, and direct PDF download.')}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{intro.description}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" onClick={()=>createNewDraft(activeDraft.purpose,activeDraft.outputLang)}><FilePlus2 className="size-4" />{cvText(initialLang,'New CV')}</Button>
+            <Button type="button" variant="outline" onClick={()=>{
+              const purpose=config.purposes[activeDraft.purpose].enabled?activeDraft.purpose:config.defaultPurpose;
+              createNewDraft(purpose,activeDraft.outputLang,undefined,{template:config.defaultTemplates[purpose],paperSize:config.defaultPaperSize});
+            }}><FilePlus2 className="size-4" />{cvText(initialLang,'New CV')}</Button>
             <Button type="button" variant="outline" onClick={()=>duplicateActive()}><Copy className="size-4" />{cvText(initialLang,'Duplicate')}</Button>
-            <Button type="button" onClick={()=>setExportOpen(true)}><Download className="size-4" />{cvText(initialLang,'Review & download')}</Button>
+            {config.features.pdfDownload ? <Button type="button" onClick={()=>setExportOpen(true)}><Download className="size-4" />{cvText(initialLang,'Review & download')}</Button> : null}
           </div>
         </div>
 
@@ -135,9 +146,9 @@ export function CVBuilderClient({ initialLang, initialPurpose='professional', so
           <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground" htmlFor="cv-purpose">{cvText(initialLang,'Purpose')}</label>
             <select id="cv-purpose" className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={activeDraft.purpose} onChange={e=>updateMeta('purpose',e.target.value as CVPurpose)}>
-              <option value="professional">{cvText(initialLang,'Job / Professional')}</option>
-              <option value="student">{cvText(initialLang,'Student / Internship')}</option>
-              <option value="scholarship">{cvText(initialLang,'Scholarship / Academic')}</option>
+              {(enabledPurposes.includes('professional') || activeDraft.purpose === 'professional') ? <option value="professional">{cvText(initialLang,'Job / Professional')}</option> : null}
+              {(enabledPurposes.includes('student') || activeDraft.purpose === 'student') ? <option value="student">{cvText(initialLang,'Student / Internship')}</option> : null}
+              {(enabledPurposes.includes('scholarship') || activeDraft.purpose === 'scholarship') ? <option value="scholarship">{cvText(initialLang,'Scholarship / Academic')}</option> : null}
             </select>
           </div>
           <div className="space-y-1">
@@ -177,17 +188,17 @@ export function CVBuilderClient({ initialLang, initialPurpose='professional', so
 
       <Tabs value={mobileTab} onValueChange={setMobileTab} className="lg:hidden">
         <TabsList className="mb-4 grid h-11 w-full grid-cols-2"><TabsTrigger value="edit">{cvText(initialLang,'Edit')}</TabsTrigger><TabsTrigger value="preview">{cvText(initialLang,'Preview')}</TabsTrigger></TabsList>
-        <TabsContent value="edit"><CVForm draft={activeDraft} onChange={updateActive} uiLang={initialLang} /></TabsContent>
-        <TabsContent value="preview"><div className="overflow-x-auto rounded-xl bg-slate-200/70 p-2 dark:bg-slate-950/50"><div className="min-w-[700px]"><CVPreview draft={activeDraft} /></div></div></TabsContent>
+        <TabsContent value="edit"><CVForm draft={activeDraft} onChange={updateActive} uiLang={initialLang} config={config} /></TabsContent>
+        <TabsContent value="preview"><div className="overflow-x-auto rounded-xl bg-slate-200/70 p-2 dark:bg-slate-950/50"><div className="min-w-[700px]"><CVPreview draft={activeDraft} config={config} /></div></div></TabsContent>
       </Tabs>
 
       <div className="hidden gap-6 lg:grid lg:grid-cols-[minmax(0,0.95fr)_minmax(620px,1.05fr)]">
-        <div className="min-w-0"><CVForm draft={activeDraft} onChange={updateActive} uiLang={initialLang} /></div>
-        <div className="min-w-0"><div className="sticky top-4"><div className="mb-2 flex items-center justify-between text-xs text-muted-foreground"><span>{cvText(initialLang,'Live preview')}</span><span>{readiness.errorCount} {cvText(initialLang,'blocking issues')}</span></div><CVPreview draft={activeDraft} /></div></div>
+        <div className="min-w-0"><CVForm draft={activeDraft} onChange={updateActive} uiLang={initialLang} config={config} /></div>
+        <div className="min-w-0"><div className="sticky top-4"><div className="mb-2 flex items-center justify-between text-xs text-muted-foreground"><span>{cvText(initialLang,'Live preview')}</span><span>{readiness.errorCount} {cvText(initialLang,'blocking issues')}</span></div><CVPreview draft={activeDraft} config={config} /></div></div>
       </div>
 
       <div className="mt-5 flex flex-wrap justify-between gap-3 rounded-2xl border bg-card p-4">
-        <div className="text-sm text-muted-foreground">{cvText(initialLang,'Drafts are saved locally in your browser. PDF generation sends the validated draft only to the ARIA HUB renderer and does not store it.')}</div>
+        <div className="text-sm text-muted-foreground">{config.features.pdfDownload ? cvText(initialLang,'Drafts are saved locally in your browser. PDF generation sends the validated draft only to the ARIA HUB renderer and does not store it.') : cvText(initialLang,'Draft data is stored locally in your browser. Cloud sync is not enabled until ARIA HUB has end-user authentication wired to these drafts.')}</div>
         <Button type="button" variant="destructive" onClick={()=>removeDraft(activeDraft.id)} disabled={drafts.length===1&&!activeDraft.data.personal.fullName}><Trash2 className="size-4" />{cvText(initialLang,'Delete this CV')}</Button>
       </div>
 
@@ -198,6 +209,10 @@ export function CVBuilderClient({ initialLang, initialPurpose='professional', so
         purpose={activeDraft.purpose}
         appearance={activeDraft.appearance}
         uiLang={initialLang}
+        enabledTemplateIds={enabledTemplateIds}
+        allowPhoto={config.features.allowPhoto}
+        allowAccentCustomization={config.features.allowAccentCustomization}
+        allowDensityCustomization={config.features.allowDensityCustomization}
         onSelect={(templateId:TemplateType)=>updateActive(draft=>({...draft,template:templateId}))}
         onAppearanceChange={appearance=>updateActive(draft=>({...draft,appearance}))}
       />
