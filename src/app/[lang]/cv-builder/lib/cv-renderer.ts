@@ -56,7 +56,7 @@ export function renderCvBody(draft:CVDraft):string{
     case 'ats-simple':
       body=header(draft,'plain')+`<main class="cv-main cv-main-single">${orderedMain(draft,p)}${p.skills}${p.languages}${p.certifications}${p.references}</main>`; break;
     case 'ats-compact':
-      body=header(draft,'plain')+`<main class="cv-main cv-main-compact">${orderedMain(draft,p)}<div class="cv-inline-grid">${p.skills}${p.languages}${p.certifications}</div>${p.references}</main>`; break;
+      body=header(draft,'plain')+`<main class="cv-main cv-main-compact">${orderedMain(draft,p)}${p.skills}${p.languages}${p.certifications}${p.references}</main>`; break;
     case 'modern-sidebar':
       body=header(draft,'dark')+`<div class="cv-layout-sidebar"><main>${orderedMain(draft,p)}</main><aside>${p.skills}${p.languages}${p.certifications}${p.references}</aside></div>`; break;
     case 'executive':
