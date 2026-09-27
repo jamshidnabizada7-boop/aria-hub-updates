@@ -153,32 +153,138 @@ function retryDelay(attempts: number, rateLimited: boolean): number {
   return Math.min(6 * 60 * 60_000, base * Math.pow(2, Math.min(6, Math.max(0, attempts - 1))));
 }
 
-const OPP_SELECT = {
-  id: true, title: true, description: true, slug: true,
-  titleI18n: true, descriptionI18n: true,
-} as const;
+const FIELD_DEFS = [
+  ['title', 'titleI18n'],
+  ['description', 'descriptionI18n'],
+  ['eligibility', 'eligibilityI18n'],
+  ['benefits', 'benefitsI18n'],
+  ['responsibilities', 'responsibilitiesI18n'],
+  ['requirements', 'requirementsI18n'],
+  ['guidelines', 'guidelinesI18n'],
+  ['jobType', 'jobTypeI18n'],
+  ['salary', 'salaryI18n'],
+  ['educationReq', 'educationReqI18n'],
+  ['experience', 'experienceI18n'],
+  ['aiSummary', 'aiSummaryI18n'],
+] as const;
 
-type OppRow = {
-  id: string; title: string; description: string; slug: string;
-  titleI18n: unknown; descriptionI18n: unknown;
-};
-
-function enOf(json: unknown, base: string): string {
-  if (json && typeof json === 'object') {
-    const en = (json as Record<string, unknown>).en;
-    if (typeof en === 'string' && en.trim()) return en;
+function sourceFields(row: Record<string, unknown>): Record<string, string> {
+  const fields: Record<string, string> = {};
+  for (const [base] of FIELD_DEFS) {
+    const raw = row[base];
+    if (typeof raw !== 'string' || !raw.trim()) continue;
+    const cleaned = stripHtmlPreservingBreaks(raw);
+    if (cleaned) fields[base] = cleaned;
   }
-  return base || '';
+  return fields;
 }
 
-function hasFa(json: unknown): boolean {
-  if (!json || typeof json !== 'object') return false;
-  const fa = (json as Record<string, unknown>).fa;
-  return typeof fa === 'string' && fa.trim().length > 0;
+async function saveStage(
+  opportunityId: string,
+  lang: TargetLang,
+  hash: string,
+  stage: TranslationStage,
+  status: 'processing' | 'failed',
+  attempts: number,
+  lastError: string | null,
+  nextAttemptAt: Date | null,
+): Promise<void> {
+  await db.opportunityTranslationProgress.upsert({
+    where: { opportunityId_lang: { opportunityId, lang } },
+    create: {
+      opportunityId,
+      lang,
+      status,
+      sourceHash: hash,
+      fieldProgress: stage as unknown as Prisma.InputJsonValue,
+      attempts,
+      lastError,
+      nextAttemptAt,
+    },
+    update: {
+      status,
+      sourceHash: hash,
+      fieldProgress: stage as unknown as Prisma.InputJsonValue,
+      attempts,
+      lastError,
+      nextAttemptAt,
+      completedAt: null,
+    },
+  });
 }
-void hasFa; // reserved for stricter completeness checks
-function asJsonObject(v: JsonValue | null | undefined): Record<string, unknown> | null {
-  return v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
+
+function mergeLang(existing: unknown, en: string, lang: TargetLang, translated: string): Prisma.InputJsonValue {
+  const current =
+    existing && typeof existing === 'object' && !Array.isArray(existing)
+      ? { ...(existing as Record<string, unknown>) }
+      : {};
+  if (!current.en && en) current.en = en;
+  current[lang] = translated;
+  return current as Prisma.InputJsonValue;
+}
+
+async function commitLanguage(
+  row: Record<string, any>,
+  lang: TargetLang,
+  fields: Record<string, string>,
+  stage: TranslationStage,
+  hash: string,
+): Promise<void> {
+  const update: Record<string, unknown> = {};
+  for (const [base, i18nField] of FIELD_DEFS) {
+    if (!fields[base]) continue;
+    const translated = stage.fields[base];
+    if (!translated) throw new Error('translation stage incomplete for ' + base);
+    update[i18nField] = mergeLang(row[i18nField], fields[base], lang, translated);
+  }
+
+  const translatedTitle = stage.fields.title;
+  const translatedSummary = stage.fields.aiSummary || stage.fields.description;
+  if (translatedTitle) {
+    update.seoTitleI18n = mergeLang(row.seoTitleI18n, fields.title || row.title || '', lang, translatedTitle);
+    update.ogTitleI18n = mergeLang(row.ogTitleI18n, fields.title || row.title || '', lang, translatedTitle);
+  }
+  if (translatedSummary) {
+    const seoDesc = translatedSummary.length > 158
+      ? translatedSummary.slice(0, 155).trimEnd() + '…'
+      : translatedSummary;
+    const en = fields.aiSummary || fields.description || '';
+    update.seoDescriptionI18n = mergeLang(row.seoDescriptionI18n, en, lang, seoDesc);
+    update.ogDescriptionI18n = mergeLang(row.ogDescriptionI18n, en, lang, seoDesc);
+  }
+
+  await db.$transaction(async (tx) => {
+    await tx.opportunity.update({
+      where: { id: row.id },
+      data: {
+        ...(update as Prisma.OpportunityUpdateInput),
+        translationStatus: lang === 'fa' ? 'persian_complete' : 'complete',
+      },
+    });
+    await tx.opportunityTranslationProgress.upsert({
+      where: { opportunityId_lang: { opportunityId: row.id, lang } },
+      create: {
+        opportunityId: row.id,
+        lang,
+        status: 'complete',
+        sourceHash: hash,
+        fieldProgress: stage as unknown as Prisma.InputJsonValue,
+        attempts: 0,
+        nextAttemptAt: null,
+        lastError: null,
+        completedAt: new Date(),
+      },
+      update: {
+        status: 'complete',
+        sourceHash: hash,
+        fieldProgress: stage as unknown as Prisma.InputJsonValue,
+        attempts: 0,
+        nextAttemptAt: null,
+        lastError: null,
+        completedAt: new Date(),
+      },
+    });
+  });
 }
 
 export interface TranslateBatchResult {
