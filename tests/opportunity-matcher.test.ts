@@ -157,8 +157,9 @@ describe('Opportunity Matcher canonical contract', () => {
       })
     );
     expect(result).not.toBeNull();
-    expect(result?.evidence.verified).toContain('education');
+    expect(result?.evidence.verified).not.toContain('education');
     expect(result?.evidence.verified).toContain('nationality');
+    expect(result?.evidence.reasons).toContain('target_level');
     expect(result?.evidence.reasons).toContain('field');
   });
 
