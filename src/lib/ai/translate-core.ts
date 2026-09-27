@@ -153,8 +153,14 @@ async function candidate(lang:TargetLang):Promise<Opp|null>{
   for(const status of ['published','expired'] as const){
     const rows=await db.opportunity.findMany({where:{status},include:INCLUDE,orderBy:status==='published'?[{deadline:{sort:'asc',nulls:'last'}},{createdAt:'desc'}]:[{createdAt:'desc'}],take:100});
     for(const row of rows as unknown as Opp[]){
-      const st=row.translationStates.find((x)=>x.lang===lang); if(st?.nextAttemptAt&&st.nextAttemptAt>now) continue; if(st?.status==='complete') continue;
-      if(lang==='ps'){ const fa=row.translationStates.find((x)=>x.lang==='fa'); if(!fa||fa.status!=='complete') continue; }
+      const currentHash=overallHash(sources(row));
+      const st=row.translationStates.find((x)=>x.lang===lang);
+      if(st?.nextAttemptAt&&st.nextAttemptAt>now) continue;
+      if(st?.status==='complete'&&st.sourceHash===currentHash) continue;
+      if(lang==='ps'){
+        const fa=row.translationStates.find((x)=>x.lang==='fa');
+        if(!fa||fa.status!=='complete'||fa.sourceHash!==currentHash) continue;
+      }
       return row;
     }
   }
