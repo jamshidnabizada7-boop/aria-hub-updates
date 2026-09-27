@@ -6,6 +6,10 @@ import { getRecommendedSections, validateDraft } from '../src/app/[lang]/cv-buil
 import { cvText } from '../src/app/[lang]/cv-builder/lib/cv-copy';
 import { CV_TEMPLATES } from '../src/app/[lang]/cv-builder/lib/cv-templates';
 import { cvRendererCss, renderCvBody, renderCvStandaloneHtml } from '../src/app/[lang]/cv-builder/lib/cv-renderer';
+import {
+  DEFAULT_CV_BUILDER_ADMIN_CONFIG,
+  normalizeCVBuilderAdminConfig,
+} from '../src/app/[lang]/cv-builder/lib/cv-admin-config';
 
 describe('CV Builder draft model', () => {
   test('creates a versioned purpose-aware draft', () => {
@@ -133,6 +137,118 @@ describe('CV Builder templates and preview/PDF parity', () => {
     const body = renderCvBody(draft);
     expect(body).not.toContain('<script>alert(1)</script>');
     expect(body).toContain('&lt;script&gt;');
+  });
+});
+
+
+describe('CV Builder admin linkage', () => {
+  test('admin config normalizes safely and always preserves a usable builder', () => {
+    const config = normalizeCVBuilderAdminConfig({
+      enabled: true,
+      defaultPurpose: 'scholarship',
+      purposes: {
+        professional: { enabled: false },
+        student: { enabled: false },
+        scholarship: { enabled: false },
+      },
+      templates: Object.fromEntries(CV_TEMPLATES.map((template) => [template.id, { enabled: false, order: 0 }])),
+      sections: { personal: { enabled: false } },
+      guidance: { summaryMinWords: 70, summaryMaxWords: 30, maxSkills: 200 },
+    });
+
+    expect(config.purposes.professional.enabled).toBe(true);
+    expect(config.templates['ats-simple'].enabled).toBe(true);
+    expect(config.sections.personal.enabled).toBe(true);
+    expect(config.defaultPurpose).toBe('professional');
+    expect(config.guidance.summaryMinWords).toBe(70);
+    expect(config.guidance.summaryMaxWords).toBeGreaterThanOrEqual(70);
+    expect(config.guidance.maxSkills).toBe(50);
+  });
+
+  test('configured template and paper defaults apply to newly created drafts', () => {
+    const draft = createDraft('student', 'fa', undefined, {
+      template: 'minimal-elegant',
+      paperSize: 'letter',
+    });
+    expect(draft.template).toBe('minimal-elegant');
+    expect(draft.paperSize).toBe('letter');
+    expect(draft.outputLang).toBe('fa');
+  });
+
+  test('disabled sections disappear from output and their hidden errors do not block export', () => {
+    const config = normalizeCVBuilderAdminConfig({
+      ...DEFAULT_CV_BUILDER_ADMIN_CONFIG,
+      sections: {
+        ...DEFAULT_CV_BUILDER_ADMIN_CONFIG.sections,
+        projects: { enabled: false },
+      },
+    });
+    const draft = createDraft('professional', 'en');
+    draft.data.personal.fullName = 'Candidate';
+    draft.data.personal.email = 'candidate@example.com';
+    draft.data.experience.push({
+      id: 'e1', role: 'Developer', company: 'Example', location: '',
+      startDate: '2025-01', endDate: '', isCurrent: true, description: 'Built products.',
+    });
+    draft.data.projects.push({
+      id: 'hidden-project', name: 'Hidden Admin Project', role: '', startDate: '2026-12',
+      endDate: '2025-01', description: '', link: 'javascript:alert(1)', technologies: '',
+    });
+
+    const body = renderCvBody(draft, config);
+    const readiness = validateDraft(draft, config);
+
+    expect(body).not.toContain('Hidden Admin Project');
+    expect(readiness.issues.some((issue) => issue.id === 'project-url-hidden-project')).toBe(false);
+    expect(readiness.issues.some((issue) => issue.id === 'project-date-hidden-project')).toBe(false);
+    expect(readiness.canExport).toBe(true);
+  });
+
+  test('photo and quality guidance policies are enforced by shared validation and renderer', () => {
+    const config = normalizeCVBuilderAdminConfig({
+      ...DEFAULT_CV_BUILDER_ADMIN_CONFIG,
+      features: { ...DEFAULT_CV_BUILDER_ADMIN_CONFIG.features, allowPhoto: false },
+      guidance: { summaryMinWords: 10, summaryMaxWords: 12, maxSkills: 2 },
+    });
+    const draft = createDraft('professional', 'en', undefined, { template: 'modern-sidebar' });
+    draft.data.personal.fullName = 'Candidate';
+    draft.data.personal.email = 'candidate@example.com';
+    draft.data.personal.picture = 'data:image/png;base64,AAAA';
+    draft.data.personal.summary = 'one two three four five six seven eight nine ten eleven twelve thirteen';
+    draft.data.experience.push({
+      id: 'e1', role: 'Developer', company: 'Example', location: '',
+      startDate: '', endDate: '', isCurrent: true, description: 'Built products.',
+    });
+    draft.data.skills = [
+      { id: 's1', name: 'TypeScript', level: 'expert' },
+      { id: 's2', name: 'React', level: 'expert' },
+      { id: 's3', name: 'PostgreSQL', level: 'intermediate' },
+    ];
+
+    const body = renderCvBody(draft, config);
+    const readiness = validateDraft(draft, config);
+
+    expect(body).not.toContain('cv-photo');
+    expect(readiness.issues.some((issue) => issue.id === 'summary-long')).toBe(true);
+    expect(readiness.issues.some((issue) => issue.id === 'too-many-skills')).toBe(true);
+  });
+
+  test('dedicated admin panel, CMS storage, public page, and PDF route share one configuration path', () => {
+    const admin = readFileSync(join(process.cwd(), 'src/app/admin/admin-app.tsx'), 'utf8');
+    const adminRoute = readFileSync(join(process.cwd(), 'src/app/api/admin/cv-builder/route.ts'), 'utf8');
+    const publicPage = readFileSync(join(process.cwd(), 'src/app/[lang]/cv-builder/page.tsx'), 'utf8');
+    const pdfRoute = readFileSync(join(process.cwd(), 'src/app/api/cv-builder/pdf/route.ts'), 'utf8');
+    const loader = readFileSync(join(process.cwd(), 'src/lib/cv-builder-config.server.ts'), 'utf8');
+
+    expect(admin).toContain('CVBuilderAdminPanel');
+    expect(admin).toContain("key: 'cvBuilder'");
+    expect(adminRoute).toContain('db.section.upsert');
+    expect(adminRoute).toContain('CV_BUILDER_SECTION_KEY');
+    expect(loader).toContain('db.section.findUnique');
+    expect(publicPage).toContain('getCVBuilderConfig');
+    expect(publicPage).toContain('config={cvConfig}');
+    expect(pdfRoute).toContain('getCVBuilderConfig');
+    expect(pdfRoute).toContain('config.features.pdfDownload');
   });
 });
 
