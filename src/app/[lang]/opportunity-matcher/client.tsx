@@ -35,6 +35,7 @@ type ResultState = 'idle' | 'loading' | 'results' | 'no_match' | 'error' | 'rate
 interface Profile {
   intents: MatcherIntent[];
   education: EducationLevel;
+  targetEducation?: EducationLevel;
   nationality: string;
   residence: string;
   destinations: string[];
@@ -82,7 +83,7 @@ const COPY = {
     destinationTitle: 'Where would you like to go?', destinationSub: 'Choose Anywhere if destination is flexible. Add a field or role to improve relevance.',
     nationality: 'Nationality', residence: 'Current country of residence', destination: 'Preferred destination', field: 'Field or discipline',
     fieldPlaceholder: 'Any field',
-    experience: 'Years of relevant experience', experienceUnknown: 'Not sure / prefer not to say',
+    experience: 'Years of relevant experience', experienceUnknown: 'Not sure / prefer not to say', targetEducation: 'Target degree or study level',
     anywhere: 'Anywhere', find: 'Find matches', edit: 'Edit preferences', startOver: 'Start over',
     loadingTitle: 'Checking active opportunities', loadingSub: 'Comparing type, destination, known requirements and data confidence.',
     resultsTitle: 'Your opportunity matches', resultsSub: 'These are recommendations, not acceptance predictions.',
@@ -113,7 +114,7 @@ const COPY = {
     destinationTitle: 'ترجیح می‌دهید به کجا بروید؟', destinationSub: 'اگر مقصد برایتان مهم نیست «هرجا» را انتخاب کنید. رشته یا نقش را هم می‌توانید اضافه کنید.',
     nationality: 'تابعیت', residence: 'کشور محل اقامت فعلی', destination: 'مقصد ترجیحی', field: 'رشته یا حوزه',
     fieldPlaceholder: 'هر رشته',
-    experience: 'سال‌های تجربه مرتبط', experienceUnknown: 'مطمئن نیستم / ترجیح می‌دهم نگویم',
+    experience: 'سال‌های تجربه مرتبط', experienceUnknown: 'مطمئن نیستم / ترجیح می‌دهم نگویم', targetEducation: 'مقطع یا سطح تحصیلی مورد نظر',
     anywhere: 'هرجا', find: 'یافتن فرصت‌ها', edit: 'ویرایش ترجیحات', startOver: 'شروع دوباره',
     loadingTitle: 'در حال بررسی فرصت‌های فعال', loadingSub: 'نوع فرصت، مقصد، شرایط شناخته‌شده و کیفیت داده مقایسه می‌شود.',
     resultsTitle: 'فرصت‌های مناسب برای شما', resultsSub: 'این‌ها پیشنهاد هستند، نه پیش‌بینی شانس قبولی.',
@@ -144,7 +145,7 @@ const COPY = {
     destinationTitle: 'کوم ځای ته تلل غواړئ؟', destinationSub: 'که ځای مهم نه وي، هرځای وټاکئ. د لا ښه تړاو لپاره رشته یا رول هم ولیکئ.',
     nationality: 'تابعیت', residence: 'اوسنی د اوسېدو هېواد', destination: 'غوره ځای', field: 'رشته یا حوزه',
     fieldPlaceholder: 'هره رشته',
-    experience: 'د اړوندې تجربې کلونه', experienceUnknown: 'ډاډه نه یم / نه وایم',
+    experience: 'د اړوندې تجربې کلونه', experienceUnknown: 'ډاډه نه یم / نه وایم', targetEducation: 'هدف تعلیمي درجه یا کچه',
     anywhere: 'هرځای', find: 'فرصتونه ومومئ', edit: 'غوره توبونه سمول', startOver: 'له سره پیل',
     loadingTitle: 'فعال فرصتونه کتل کېږي', loadingSub: 'ډول، ځای، پېژندل شوي شرطونه او د معلوماتو باور پرتله کېږي.',
     resultsTitle: 'ستاسو مناسب فرصتونه', resultsSub: 'دا سپارښتنې دي، د منل کېدو وړاندوینې نه دي.',
@@ -237,9 +238,9 @@ function getCountryOptions(lang: Lang) {
 }
 
 const REASON_COPY: Record<Lang, Record<string, string>> = {
-  en: { opportunity_type: 'Opportunity type matches', destination: 'Destination matches', education: 'Education level appears compatible', field: 'Field/role appears relevant', deadline_practicality: 'There is still practical time before the deadline', open_deadline: 'Deadline is currently open', nationality: 'Nationality appears explicitly supported', experience: 'Experience requirement appears satisfied' },
-  fa: { opportunity_type: 'نوع فرصت با انتخاب شما تطبیق دارد', destination: 'مقصد تطبیق دارد', education: 'سطح تحصیل سازگار به نظر می‌رسد', field: 'رشته یا نقش مرتبط است', deadline_practicality: 'برای مهلت درخواست هنوز زمان عملی وجود دارد', open_deadline: 'مهلت فعلاً باز است', nationality: 'تابعیت به‌صورت صریح پشتیبانی می‌شود', experience: 'شرط تجربه برآورده به نظر می‌رسد' },
-  ps: { opportunity_type: 'د فرصت ډول ستاسو له انتخاب سره برابر دی', destination: 'ځای برابر دی', education: 'تعلیمي کچه مناسبه ښکاري', field: 'رشته یا رول اړوند دی', deadline_practicality: 'تر وروستۍ نېټې عملي وخت شته', open_deadline: 'وروستۍ نېټه لا خلاصه ده', nationality: 'تابعیت په څرګند ډول ملاتړ کېږي', experience: 'د تجربې شرط پوره ښکاري' },
+  en: { opportunity_type: 'Opportunity type matches', destination: 'Destination matches', target_level: 'Target study level matches', education: 'Current education appears compatible', field: 'Field/role appears relevant', deadline_practicality: 'There is still practical time before the deadline', open_deadline: 'Deadline is currently open', nationality: 'Nationality appears explicitly supported', experience: 'Experience requirement appears satisfied' },
+  fa: { opportunity_type: 'نوع فرصت با انتخاب شما تطبیق دارد', destination: 'مقصد تطبیق دارد', target_level: 'مقطع تحصیلی مورد نظر تطبیق دارد', education: 'تحصیلات فعلی سازگار به نظر می‌رسد', field: 'رشته یا نقش مرتبط است', deadline_practicality: 'برای مهلت درخواست هنوز زمان عملی وجود دارد', open_deadline: 'مهلت فعلاً باز است', nationality: 'تابعیت به‌صورت صریح پشتیبانی می‌شود', experience: 'شرط تجربه برآورده به نظر می‌رسد' },
+  ps: { opportunity_type: 'د فرصت ډول ستاسو له انتخاب سره برابر دی', destination: 'ځای برابر دی', target_level: 'هدف تعلیمي کچه برابره ده', education: 'اوسنۍ زده کړه مناسبه ښکاري', field: 'رشته یا رول اړوند دی', deadline_practicality: 'تر وروستۍ نېټې عملي وخت شته', open_deadline: 'وروستۍ نېټه لا خلاصه ده', nationality: 'تابعیت په څرګند ډول ملاتړ کېږي', experience: 'د تجربې شرط پوره ښکاري' },
 };
 
 const UNKNOWN_COPY: Record<Lang, Record<string, string>> = {
@@ -553,6 +554,24 @@ export function OpportunityMatcherClient() {
                     </SelectContent>
                   </Select>
                 </div>
+                {(profile.intents.includes('scholarship') || profile.intents.includes('fellowship') || profile.intents.includes('exchange_program')) && (
+                  <div>
+                    <Label className="mb-2 block">{c.targetEducation}</Label>
+                    <Select
+                      value={profile.targetEducation || profile.education}
+                      onValueChange={(value) => setProfile((p) => ({ ...p, targetEducation: value as EducationLevel }))}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {(Object.keys(EDUCATION_LABELS[lang]) as EducationLevel[])
+                          .filter((level) => level !== 'other')
+                          .map((level) => (
+                            <SelectItem key={level} value={level}>{EDUCATION_LABELS[lang][level]}</SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 {(profile.intents.includes('job') || profile.intents.includes('internship')) && (
                   <div>
                     <Label className="mb-2 block">{c.experience}</Label>
