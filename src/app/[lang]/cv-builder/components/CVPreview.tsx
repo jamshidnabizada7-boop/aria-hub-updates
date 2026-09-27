@@ -248,7 +248,7 @@ function ModernTemplate({ draft }: { draft: CVDraft }) {
   const d = draft.data;
   return (
     <div>
-      <div className="rounded-xl bg-slate-900 p-6 text-white print:rounded-none">
+      <div className="rounded-xl bg-slate-900 p-6 text-white print:rounded-none [&_h1]:text-white [&_p]:text-slate-200 [&_span]:text-slate-200 [&_a]:text-white">
         <Header draft={draft} showPhoto />
       </div>
       <div className="mt-5 grid gap-5 md:grid-cols-[minmax(0,1fr)_180px] print:grid-cols-[minmax(0,1fr)_170px]">
