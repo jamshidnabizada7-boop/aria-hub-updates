@@ -168,12 +168,36 @@ function categoryMatches(profile: MatcherProfile, opportunity: MatcherOpportunit
   });
 }
 
+const COUNTRY_ALIASES: Record<string, string> = {
+  'usa': 'united states',
+  'u s a': 'united states',
+  'united states of america': 'united states',
+  'uk': 'united kingdom',
+  'u k': 'united kingdom',
+  'great britain': 'united kingdom',
+  'uae': 'united arab emirates',
+  'u a e': 'united arab emirates',
+  'turkey': 'türkiye',
+  'republic of korea': 'south korea',
+  'korea republic of': 'south korea',
+  'russian federation': 'russia',
+  'viet nam': 'vietnam',
+};
+
+function normalizeCountry(value: unknown): string {
+  const normalized = normalize(value);
+  return COUNTRY_ALIASES[normalized] || normalized;
+}
+
 function countryMatches(profile: MatcherProfile, opportunity: MatcherOpportunity): boolean {
   if (profile.destinations.some((d) => normalize(d) === 'anywhere')) return true;
-  const country = normalize(opportunity.country);
+  const country = normalizeCountry(opportunity.country);
   if (!country) return false;
+  if (['global', 'worldwide', 'international', 'remote', 'multiple countries'].some((term) => country.includes(term))) {
+    return true;
+  }
   return profile.destinations.some((destination) => {
-    const d = normalize(destination);
+    const d = normalizeCountry(destination);
     return d === country || country.includes(d) || d.includes(country);
   });
 }
