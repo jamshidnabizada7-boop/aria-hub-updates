@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import { getToolPageData } from '@/lib/get-site';
 import { Navbar } from '@/components/site/navbar';
 import { Footer } from '@/components/site/footer';
@@ -6,6 +7,7 @@ import { CVBuilderClient } from './client';
 import { isLang, type Lang } from '@/lib/lang-route';
 import { getPageSeo } from '@/lib/seo-metadata';
 import type { CVOutputLang, CVPurpose } from './types';
+import { getCVBuilderConfig } from '@/lib/cv-builder-config.server';
 
 export const revalidate = 1800;
 
@@ -52,11 +54,15 @@ export default async function CVBuilderPage({
   params: Promise<{ lang: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [{ lang: rawLang }, query, data] = await Promise.all([params, searchParams, getToolPageData()]);
+  const [{ lang: rawLang }, query, data, cvConfig] = await Promise.all([params, searchParams, getToolPageData(), getCVBuilderConfig()]);
   const lang: Lang = isLang(rawLang) ? rawLang : 'fa';
+  if (!cvConfig.enabled) notFound();
 
   const rawPurpose = typeof query.purpose === 'string' ? query.purpose : undefined;
-  const initialPurpose: CVPurpose = rawPurpose === 'student' || rawPurpose === 'scholarship' ? rawPurpose : 'professional';
+  const requestedPurpose: CVPurpose | undefined =
+    rawPurpose === 'professional' || rawPurpose === 'student' || rawPurpose === 'scholarship' ? rawPurpose : undefined;
+  const initialPurpose: CVPurpose =
+    requestedPurpose && cvConfig.purposes[requestedPurpose].enabled ? requestedPurpose : cvConfig.defaultPurpose;
   const outputLang: CVOutputLang = lang;
   const opportunitySlug = typeof query.opportunity === 'string' ? query.opportunity : undefined;
   const opportunityTitle = typeof query.title === 'string' ? query.title.slice(0, 180) : undefined;
@@ -83,6 +89,7 @@ export default async function CVBuilderPage({
           <CVBuilderClient
             initialLang={outputLang}
             initialPurpose={initialPurpose}
+            config={cvConfig}
             source={opportunitySlug || opportunityTitle || returnTo ? { opportunitySlug, opportunityTitle, returnTo } : undefined}
           />
         </div>
