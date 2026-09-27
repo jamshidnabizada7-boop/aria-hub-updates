@@ -1,6 +1,6 @@
 import type {
   Award, CVDraft, CVData, CVOutputLang, CVPurpose, Education, Experience, Project, Publication,
-  Research, TemplateType, Volunteering, CVAccent, CVDensity
+  Research, TemplateType, Volunteering, CVAccent, CVDensity, PaperSize
 } from '../types';
 import { CV_SCHEMA_VERSION } from '../types';
 import { DEFAULT_TEMPLATE_BY_PURPOSE } from './cv-templates';
@@ -20,15 +20,20 @@ export function createEmptyData(): CVData {
   };
 }
 
-export function createDraft(purpose: CVPurpose = 'professional', outputLang: CVOutputLang = 'en', source?: CVDraft['source']): CVDraft {
+export function createDraft(
+  purpose: CVPurpose = 'professional',
+  outputLang: CVOutputLang = 'en',
+  source?: CVDraft['source'],
+  options?: { template?: TemplateType; paperSize?: PaperSize },
+): CVDraft {
   const now = new Date().toISOString();
   return {
     schemaVersion: CV_SCHEMA_VERSION,
     id: makeId('cv'),
     name: '',
     purpose,
-    template: DEFAULT_TEMPLATE_BY_PURPOSE[purpose],
-    paperSize: 'a4',
+    template: options?.template || DEFAULT_TEMPLATE_BY_PURPOSE[purpose],
+    paperSize: options?.paperSize || 'a4',
     outputLang,
     appearance: { accent: 'navy', density: 'comfortable', showPhoto: true },
     data: createEmptyData(),
