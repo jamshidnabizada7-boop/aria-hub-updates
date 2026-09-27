@@ -84,10 +84,12 @@ function SectionCard({ title, icon: Icon, children, recommended, complete, uiLan
   title: string; icon: React.ElementType; children: React.ReactNode; recommended?: boolean; complete?: boolean; uiLang: CVDraft['outputLang'];
 }) {
   const c = (text: string) => cvText(uiLang, text);
+  const [open, setOpen] = useState(title === c('Personal information'));
   return (
     <details
       className="group rounded-2xl border bg-card p-4 sm:p-5"
-      defaultOpen={title === c('Personal information')}
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
     >
       <summary className="flex cursor-pointer list-none items-start justify-between gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
         <div className="flex items-center gap-2">
