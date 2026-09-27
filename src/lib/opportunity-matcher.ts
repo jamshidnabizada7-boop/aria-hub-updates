@@ -149,12 +149,44 @@ function countryMatches(profile: MatcherProfile, opportunity: MatcherOpportunity
   });
 }
 
-function extractNationalityRule(extractedData: unknown, eligibilityText: string): string {
-  const extracted = normalize(flattenJson(extractedData));
-  const text = `${extracted} ${normalize(eligibilityText)}`;
+function extractNationalityRestriction(extractedData: unknown, eligibilityText: string): { present: boolean; values: string[]; text: string } {
+  const values: string[] = [];
+
+  function walk(value: unknown, key = ''): void {
+    if (value == null) return;
+    const normalizedKey = normalize(key);
+    const relevantKey =
+      normalizedKey.includes('nationality') ||
+      normalizedKey.includes('citizenship') ||
+      normalizedKey.includes('eligible countries') ||
+      normalizedKey.includes('eligible nationalities');
+
+    if (relevantKey) {
+      if (Array.isArray(value)) {
+        for (const item of value) values.push(normalize(item));
+      } else if (typeof value === 'string') {
+        values.push(...value.split(/[,;|]/).map(normalize).filter(Boolean));
+      } else {
+        values.push(normalize(flattenJson(value)));
+      }
+    }
+
+    if (typeof value === 'object' && !Array.isArray(value)) {
+      for (const [childKey, childValue] of Object.entries(value as Record<string, unknown>)) {
+        walk(childValue, childKey);
+      }
+    }
+  }
+
+  walk(extractedData);
+  const text = normalize(`${flattenJson(extractedData)} ${eligibilityText}`);
   const markers = ['nationality', 'citizen', 'citizenship', 'eligible countries', 'eligible nationalities'];
-  if (!markers.some((marker) => text.includes(marker))) return '';
-  return text;
+  const present = values.length > 0 || markers.some((marker) => text.includes(marker));
+  return {
+    present,
+    values: Array.from(new Set(values.filter(Boolean))),
+    text,
+  };
 }
 
 function educationEvidence(profile: MatcherProfile, text: string): 'match' | 'unknown' {
@@ -225,12 +257,24 @@ export function rankOpportunity(profile: MatcherProfile, opportunity: MatcherOpp
     }
   }
 
-  const nationalityRule = extractNationalityRule(opportunity.extractedData, opportunity.eligibility ?? '');
-  if (nationalityRule) {
+  const nationalityRestriction = extractNationalityRestriction(
+    opportunity.extractedData,
+    opportunity.eligibility ?? ''
+  );
+  if (nationalityRestriction.present) {
     const nationality = normalize(profile.nationality);
-    if (nationality && nationalityRule.includes(nationality)) {
+    const openToAll = ['all nationalities', 'any nationality', 'all countries', 'international', 'worldwide', 'global']
+      .some((marker) => nationalityRestriction.text.includes(marker));
+
+    if (
+      openToAll ||
+      (nationality && nationalityRestriction.values.some((value) => value.includes(nationality) || nationality.includes(value))) ||
+      (nationality && nationalityRestriction.text.includes(nationality))
+    ) {
       verified.push('nationality');
       score += 5;
+    } else if (nationalityRestriction.values.length > 0) {
+      conflicts.push('nationality');
     } else {
       unknowns.push('nationality');
     }
@@ -260,7 +304,7 @@ export function rankOpportunity(profile: MatcherProfile, opportunity: MatcherOpp
   const eligibilityStatus: EligibilityStatus =
     conflicts.length > 0
       ? 'potential_conflict'
-      : verified.includes('education') && (verified.includes('nationality') || !nationalityRule)
+      : verified.includes('education') && verified.includes('nationality') && confidence !== 'low'
         ? 'likely_eligible'
         : confidence === 'low'
           ? 'incomplete'
