@@ -380,7 +380,19 @@ export function OpportunityMatcherClient() {
                 lang={lang}
                 copy={c}
                 hrefFn={hrefFn}
-                onFeedback={(kind) => track(kind === 'helpful' ? 'matcher_helpful' : 'matcher_not_relevant', { opportunity: result.slug })}
+                onFeedback={(kind) => {
+                  track(kind === 'helpful' ? 'matcher_helpful' : 'matcher_not_relevant', { opportunity: result.slug });
+                  void fetch('/api/opportunities/matcher/feedback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      opportunityId: result.id,
+                      signal: kind,
+                      intent: profile.intents[0],
+                      lang,
+                    }),
+                  });
+                }}
               />
             </motion.div>
           ))}
@@ -592,6 +604,7 @@ function ResultCard({
   hrefFn: (path: string) => string;
   onFeedback: (kind: 'helpful' | 'not_relevant') => void;
 }) {
+  const [feedback, setFeedback] = useState<'helpful' | 'not_relevant' | null>(null);
   const deadline = result.deadline
     ? new Intl.DateTimeFormat(lang === 'fa' ? 'fa-AF' : lang === 'ps' ? 'ps-AF' : 'en-GB', { dateStyle: 'medium' }).format(new Date(result.deadline))
     : copy.noDeadline;
@@ -653,8 +666,24 @@ function ResultCard({
             </Link>
           </Button>
           <div className="ms-auto flex gap-1" aria-label={copy.helpful}>
-            <Button variant="ghost" size="sm" onClick={() => onFeedback('helpful')}><ThumbsUp className="me-1 h-4 w-4" />{copy.helpful}</Button>
-            <Button variant="ghost" size="sm" onClick={() => onFeedback('not_relevant')}><ThumbsDown className="me-1 h-4 w-4" />{copy.notRelevant}</Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-pressed={feedback === 'helpful'}
+              disabled={feedback !== null}
+              onClick={() => { setFeedback('helpful'); onFeedback('helpful'); }}
+            >
+              <ThumbsUp className="me-1 h-4 w-4" />{copy.helpful}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-pressed={feedback === 'not_relevant'}
+              disabled={feedback !== null}
+              onClick={() => { setFeedback('not_relevant'); onFeedback('not_relevant'); }}
+            >
+              <ThumbsDown className="me-1 h-4 w-4" />{copy.notRelevant}
+            </Button>
           </div>
         </div>
       </div>
