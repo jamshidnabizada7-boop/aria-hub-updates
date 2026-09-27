@@ -24,6 +24,8 @@ export interface OpportunityCardData {
   title: string;
   organization: string | null;
   country: string | null;
+  locationLabel: string | null;
+  provinces: string[];
   jobType: string | null;
   deadline: Date | null;
   applyUrl: string | null;
