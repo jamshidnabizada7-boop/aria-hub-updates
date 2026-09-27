@@ -98,9 +98,10 @@ export function TemplateGallery({
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-1.5">
               <label className="text-xs font-medium">{c('Accent')}</label>
-              <select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={appearance.accent} onChange={e=>onAppearanceChange({...appearance,accent:e.target.value as CVAppearance['accent']})}>
+              <select className="h-10 w-full rounded-md border bg-background px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50" disabled={current.atsFocused} value={appearance.accent} onChange={e=>onAppearanceChange({...appearance,accent:e.target.value as CVAppearance['accent']})}>
                 <option value="navy">{c('Navy')}</option><option value="blue">{c('Blue')}</option><option value="emerald">{c('Emerald')}</option><option value="burgundy">{c('Burgundy')}</option><option value="neutral">{c('Neutral')}</option>
               </select>
+              {current.atsFocused ? <p className="text-[11px] text-muted-foreground">{c('ATS templates keep conservative neutral styling.')}</p> : null}
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium">{c('Density')}</label>
