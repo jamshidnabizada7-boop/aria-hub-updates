@@ -163,18 +163,27 @@ export function CVForm({ draft, onChange, uiLang, config }: Props) {
   const { toast } = useToast();
   const [imageBusy, setImageBusy] = useState(false);
   const readiness = validateDraft(draft, config);
-  const recommended = new Set(getRecommendedSections(draft));
-  const issueMessage = (key: string) => c(({
+  const recommended = new Set(getRecommendedSections(draft, config));
+  const issueMessage = (key: string) => {
+    if (key === 'issues.summaryLong' || key === 'issues.summaryShort') {
+      return `${c('Recommended range')}: ${config.guidance.summaryMinWords}–${config.guidance.summaryMaxWords} ${c('words')}`;
+    }
+    if (key === 'issues.tooManySkills') {
+      return `${c('Recommended maximum')}: ${config.guidance.maxSkills} ${c('skills')}`;
+    }
+    return c(({
     'issues.fullNameRequired': 'Add your full name.',
     'issues.contactRequired': 'Add at least one contact method: email or phone.',
     'issues.emailInvalid': 'Enter a valid email address.',
     'issues.headlineMissing': 'A professional headline helps readers understand your profile quickly.',
     'issues.summaryMissing': 'A short summary can make the CV easier to scan.',
-    'issues.summaryLong': 'Your summary is long; aim for roughly 40–100 focused words.',
+    'issues.summaryLong': 'Your summary is outside the recommended range.',
+    'issues.summaryShort': 'Your summary is outside the recommended range.',
     'issues.urlInvalid': 'Enter a complete http:// or https:// URL.',
     'issues.dateOrderInvalid': 'End date cannot be earlier than start date.',
     'issues.achievementMissing': 'Add achievements or responsibilities to strengthen this experience.',
   } as Record<string, string>)[key] || key);
+  };
   const issueFor = (anchorId: string) => readiness.issues.find((item) => item.anchorId === anchorId && (item.severity === 'error' || item.severity === 'warning'));
   const issueProps = (anchorId: string) => {
     const issue = issueFor(anchorId);
