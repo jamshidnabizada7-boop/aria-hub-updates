@@ -463,7 +463,7 @@ async function processListing(
     if (existing && slugify(listing.title) !== slugify(existing.title)) {
       newSlug = await ensureUniqueSlug(db, slugBase, dedupe.existing.id);
     }
-    await db.opportunity.update({
+    const updatedOpportunity = await db.opportunity.update({
       where: { id: dedupe.existing.id },
       data: {
         ...pipeline.data,
