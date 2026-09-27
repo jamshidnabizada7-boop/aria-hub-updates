@@ -87,7 +87,7 @@ const COPY = {
     nationality: 'Nationality', residence: 'Current country of residence', destination: 'Preferred destinations', field: 'Field or discipline', searchCountry: 'Search countries…', noCountry: 'No country found',
     fieldPlaceholder: 'Any field',
     experience: 'Years of relevant experience', experienceUnknown: 'Not sure / prefer not to say', targetEducation: 'Target degree or study level',
-    anywhere: 'Anywhere', find: 'Find matches', edit: 'Edit preferences', startOver: 'Start over',
+    anywhere: 'Anywhere', tryAnywhere: 'Try any destination', find: 'Find matches', edit: 'Edit preferences', startOver: 'Start over',
     loadingTitle: 'Checking active opportunities', loadingSub: 'Comparing type, destination, known requirements and data confidence.',
     resultsTitle: 'Your opportunity matches', resultsSub: 'These are recommendations, not acceptance predictions.',
     noMatchTitle: 'No strong match right now', noMatch: 'We did not find an active opportunity with enough supporting signals. Broaden the destination, change the type, or browse all opportunities.',
@@ -118,7 +118,7 @@ const COPY = {
     nationality: 'تابعیت', residence: 'کشور محل اقامت فعلی', destination: 'مقصدهای ترجیحی', field: 'رشته یا حوزه', searchCountry: 'جستجوی کشور…', noCountry: 'کشوری پیدا نشد',
     fieldPlaceholder: 'هر رشته',
     experience: 'سال‌های تجربه مرتبط', experienceUnknown: 'مطمئن نیستم / ترجیح می‌دهم نگویم', targetEducation: 'مقطع یا سطح تحصیلی مورد نظر',
-    anywhere: 'هرجا', find: 'یافتن فرصت‌ها', edit: 'ویرایش ترجیحات', startOver: 'شروع دوباره',
+    anywhere: 'هرجا', tryAnywhere: 'جستجو در همه مقصدها', find: 'یافتن فرصت‌ها', edit: 'ویرایش ترجیحات', startOver: 'شروع دوباره',
     loadingTitle: 'در حال بررسی فرصت‌های فعال', loadingSub: 'نوع فرصت، مقصد، شرایط شناخته‌شده و کیفیت داده مقایسه می‌شود.',
     resultsTitle: 'فرصت‌های مناسب برای شما', resultsSub: 'این‌ها پیشنهاد هستند، نه پیش‌بینی شانس قبولی.',
     noMatchTitle: 'فعلاً تطبیق قوی پیدا نشد', noMatch: 'فرصت فعالی با شواهد کافی پیدا نشد. مقصد را گسترده‌تر کنید، نوع فرصت را تغییر دهید یا همه فرصت‌ها را ببینید.',
@@ -149,7 +149,7 @@ const COPY = {
     nationality: 'تابعیت', residence: 'اوسنی د اوسېدو هېواد', destination: 'غوره ځایونه', field: 'رشته یا حوزه', searchCountry: 'هېواد ولټوئ…', noCountry: 'هېواد ونه موندل شو',
     fieldPlaceholder: 'هره رشته',
     experience: 'د اړوندې تجربې کلونه', experienceUnknown: 'ډاډه نه یم / نه وایم', targetEducation: 'هدف تعلیمي درجه یا کچه',
-    anywhere: 'هرځای', find: 'فرصتونه ومومئ', edit: 'غوره توبونه سمول', startOver: 'له سره پیل',
+    anywhere: 'هرځای', tryAnywhere: 'هر ځای کې ولټوئ', find: 'فرصتونه ومومئ', edit: 'غوره توبونه سمول', startOver: 'له سره پیل',
     loadingTitle: 'فعال فرصتونه کتل کېږي', loadingSub: 'ډول، ځای، پېژندل شوي شرطونه او د معلوماتو باور پرتله کېږي.',
     resultsTitle: 'ستاسو مناسب فرصتونه', resultsSub: 'دا سپارښتنې دي، د منل کېدو وړاندوینې نه دي.',
     noMatchTitle: 'اوس مهال قوي برابرښت ونه موندل شو', noMatch: 'د کافي شواهدو لرونکی فعال فرصت ونه موندل شو. ځای پراخ کړئ، ډول بدل کړئ یا ټول فرصتونه وګورئ.',
@@ -311,15 +311,16 @@ export function OpportunityMatcherClient() {
     else void submit();
   };
 
-  const submit = async () => {
+  const submit = async (overrideProfile?: Profile) => {
+    const activeProfile = overrideProfile ?? profile;
     setState('loading');
     setResults([]);
-    track('matcher_submitted', { intent: profile.intents[0] });
+    track('matcher_submitted', { intent: activeProfile.intents[0] });
     try {
       const res = await fetch('/api/opportunities/matcher', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...profile, lang }),
+        body: JSON.stringify({ ...activeProfile, lang }),
       });
       if (res.status === 429) {
         setState('rate_limited');
@@ -437,6 +438,18 @@ export function OpportunityMatcherClient() {
           <p className="mx-auto mt-3 max-w-xl text-muted-foreground">{body}</p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Button variant="outline" onClick={() => { setState('idle'); setStep(isNoMatch ? 4 : step); }}>{c.edit}</Button>
+            {isNoMatch && !profile.destinations.includes('anywhere') && (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  const relaxed = { ...profile, destinations: ['anywhere'] };
+                  setProfile(relaxed);
+                  void submit(relaxed);
+                }}
+              >
+                {c.tryAnywhere}
+              </Button>
+            )}
             <Button asChild><Link href={hrefFn('/opportunities')}>{c.browse}</Link></Button>
           </div>
           {isNoMatch && (
