@@ -107,6 +107,24 @@ async function fetchCandidates(profile: MatcherProfile) {
       benefits: true,
       tags: true,
       extractedData: true,
+      matchProfile: {
+        select: {
+          eligibleNationalities: true,
+          eligibleCountries: true,
+          educationLevels: true,
+          fieldAreas: true,
+          minAge: true,
+          maxAge: true,
+          minExperienceYears: true,
+          languages: true,
+          fundingType: true,
+          locationType: true,
+          visaSponsorship: true,
+          provenance: true,
+          confidence: true,
+          reviewed: true,
+        },
+      },
       sourceName: true,
       lastChecked: true,
       updatedAt: true,
@@ -223,6 +241,7 @@ export async function POST(req: NextRequest) {
 
     const matcherRows = rows.map((row) => ({
       ...row,
+      structuredFacts: row.matchProfile,
       categorySlug: row.category?.slug ?? null,
       categoryName: row.category?.name ?? null,
       educationReq: localizedText(row.educationReq, row.educationReqI18n, 'en'),
