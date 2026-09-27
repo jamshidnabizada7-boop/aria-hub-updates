@@ -10,6 +10,7 @@ import { getLocalizedContent } from '@/lib/i18n-content';
 import { translate } from '@/lib/i18n';
 import type { Lang } from '@/lib/lang-route';
 import type { Prisma } from '@prisma/client';
+import { displayOpportunityLocation } from '@/lib/opportunity-location';
 import {
   categoryLabel,
   cleanSummary,
@@ -27,7 +28,7 @@ import {
 export * from '@/lib/opportunity-shared';
 
 export type OpportunityDetail = Prisma.OpportunityGetPayload<{
-  include: { category: true };
+  include: { category: true; locations: true };
 }>;
 
 // ---------------------------------------------------------------------------
@@ -61,6 +62,7 @@ const CARD_SELECT = {
   titleI18n: true,
   organization: true,
   country: true,
+  locations: { select: { province: true, city: true, rawLabel: true } },
   jobType: true,
   jobTypeI18n: true,
   deadline: true,
@@ -83,6 +85,8 @@ function toCardData(row: CardRow, lang: Lang): OpportunityCardData {
     title: getLocalizedContent(row.title, row.titleI18n as Record<string, string> | null, lang),
     organization: row.organization,
     country: row.country,
+    locationLabel: displayOpportunityLocation(row.country, row.locations),
+    provinces: [...new Set(row.locations.map((l) => l.province).filter(Boolean))],
     jobType: getLocalizedContent(row.jobType, row.jobTypeI18n as Record<string, string> | null, lang),
     deadline: row.deadline,
     applyUrl: row.applyUrl,
@@ -110,6 +114,8 @@ export async function listOpportunities(
     category = 'all',
     q = '',
     location = 'all',
+    country = 'all',
+    province = 'all',
     deadlineDays,
     source = 'all',
     sort = 'newest',
@@ -132,8 +138,12 @@ export async function listOpportunities(
   if (category && category !== 'all') {
     where.category = { slug: category };
   }
-  if (location && location !== 'all') {
-    where.country = location;
+  const selectedCountry = country !== 'all' ? country : location;
+  if (selectedCountry && selectedCountry !== 'all') {
+    where.country = selectedCountry;
+  }
+  if (province && province !== 'all') {
+    where.locations = { some: { province } };
   }
   // Deadline horizon: only rows that HAVE a deadline closing within N days.
   if (deadlineDays && [7, 30, 90].includes(deadlineDays)) {
@@ -298,7 +308,7 @@ export async function listByDeadline(
 export async function getOpportunityBySlug(slug: string): Promise<OpportunityDetail | null> {
   return db.opportunity.findFirst({
     where: { slug, status: { not: 'draft' } },
-    include: { category: true },
+    include: { category: true, locations: { orderBy: [{ province: 'asc' }, { city: 'asc' }] } },
   });
 }
 
@@ -383,7 +393,7 @@ export async function getFacets(lang?: Lang): Promise<Facets> {
     OR: [{ deadline: null }, { deadline: { gte: today } }],
   };
 
-  const [categories, byCategory, byCountry, totalActive] = await Promise.all([
+  const [categories, byCategory, byCountry, activeProvinceRows, totalActive] = await Promise.all([
     db.opportunityCategory.findMany({
       orderBy: { order: 'asc' },
       select: { id: true, slug: true, name: true, nameI18n: true },
@@ -398,7 +408,14 @@ export async function getFacets(lang?: Lang): Promise<Facets> {
       where: { ...where, country: { not: null } },
       _count: { country: true },
       orderBy: { _count: { country: 'desc' } },
-      take: 15,
+      take: 50,
+    }),
+    db.opportunityLocation.findMany({
+      where: {
+        province: { not: '' },
+        opportunity: where,
+      },
+      select: { province: true, opportunityId: true },
     }),
     db.opportunity.count({ where }),
   ]);
@@ -407,20 +424,32 @@ export async function getFacets(lang?: Lang): Promise<Facets> {
     byCategory.map((g) => [g.categoryId ?? '', g._count?._all ?? 0])
   );
 
+  const provinceSets = new Map<string, Set<string>>();
+  for (const row of activeProvinceRows) {
+    if (!row.province) continue;
+    const set = provinceSets.get(row.province) ?? new Set<string>();
+    set.add(row.opportunityId);
+    provinceSets.set(row.province, set);
+  }
+  const countries = byCountry.map((g) => ({
+    name: g.country as string,
+    count: g._count?.country ?? 0,
+  }));
+  const provinces = [...provinceSets.entries()]
+    .map(([name, ids]) => ({ name, count: ids.size }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+
   return {
     categories: categories.map((c) => ({
       slug: c.slug,
-      // Localized when the caller passes a lang and admin-entered
-      // nameI18n exists; falls back to the raw name otherwise.
       name: lang
         ? (getLocalizedContent(c.name, c.nameI18n, lang) || c.name)
         : c.name,
       count: countByCategory.get(c.id) ?? 0,
     })),
-    locations: byCountry.map((g) => ({
-      name: g.country as string,
-      count: g._count?.country ?? 0,
-    })),
+    countries,
+    provinces,
+    locations: countries,
     totalActive,
   };
 }
