@@ -275,7 +275,10 @@ export class WpApiScraper extends BaseScraper {
       title,
       sourceUrl: link,
       originalUrl: link,
-      applyUrl: link,
+      // Do not expose the scraped article as an Apply destination.
+      // An exact email/form/application URL may be discovered later by the
+      // deterministic application-link extractor.
+      applyUrl: null,
       sourceName: this.source.name,
       sourceLanguage: 'en',
       jobType,
