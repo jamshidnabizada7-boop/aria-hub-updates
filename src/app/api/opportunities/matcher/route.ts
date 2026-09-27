@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { getLocalizedContent } from '@/lib/i18n-content';
-import { getAIProvider } from '@/lib/ai/provider';
+import { chatWithFailover, getProviderSlots } from '@/lib/ai/failover';
 import { parseJSON } from '@/lib/ai/providers/helpers';
 import { getClientIp, rateLimit } from '@/lib/admin-auth';
 import { startOfTodayUtc } from '@/lib/opportunity-shared';
@@ -20,9 +20,6 @@ const AiExplanationSchema = z.array(
   })
 ).max(6);
 
-interface ChatProvider {
-  chat(system: string, user: string): Promise<string>;
-}
 
 const LANG_NAME: Record<MatcherProfile['lang'], string> = {
   fa: 'Persian (Farsi, Arabic script)',
@@ -127,8 +124,8 @@ async function addGroundedAiExplanations(
   if (results.length === 0) return { results, ai: false };
 
   try {
-    const provider = await getAIProvider();
-    if (!provider) return { results, ai: false };
+    const providers = await getProviderSlots();
+    if (providers.length === 0) return { results, ai: false };
 
     const evidencePackage = ranked.slice(0, results.length).map((item) => {
       const row = item.opportunity as unknown as MatcherDbRow;
@@ -161,9 +158,8 @@ async function addGroundedAiExplanations(
       }, candidates: evidencePackage }),
     ].join('\n');
 
-    const chat = (provider as unknown as ChatProvider).chat.bind(provider);
     const raw = await Promise.race([
-      chat(MATCHER_SYSTEM, prompt),
+      chatWithFailover(providers, MATCHER_SYSTEM, prompt).then((result) => result.text),
       new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('matcher_ai_timeout')), 4500)
       ),
