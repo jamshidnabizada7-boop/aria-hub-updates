@@ -50,6 +50,8 @@ interface MatchResult {
   location: string;
   organization: string | null;
   deadline: string | null;
+  sourceName: string | null;
+  lastChecked: string | null;
   matchStrength: 'strong' | 'good' | 'possible';
   eligibilityStatus: 'likely_eligible' | 'needs_check' | 'potential_conflict' | 'incomplete';
   dataConfidence: 'high' | 'medium' | 'low';
@@ -95,7 +97,7 @@ const COPY = {
     aiDisclosure: 'AI may help explain already-selected evidence. It does not decide eligibility and does not estimate acceptance probability.',
     saveHint: 'Save this opportunity', cv: 'Prepare CV for this opportunity',
     helpful: 'Helpful', notRelevant: 'Not relevant',
-    deadline: 'Deadline', noDeadline: 'No deadline listed',
+    deadline: 'Deadline', noDeadline: 'No deadline listed', source: 'Source', checked: 'Last checked',
     categoryAlert: 'Notify me about strong matches', alertHint: 'Save these Matcher preferences by email. After confirmation, ARIA HUB will notify you only when a new strong match appears.',
     alertEmail: 'Email address', alertDaily: 'Daily', alertWeekly: 'Weekly', alertButton: 'Save match alert', alertSending: 'Saving…', alertSuccess: 'Check your inbox to confirm this match alert.', alertError: 'Could not save the alert. Please try again.',
     viewDetails: 'View details',
@@ -126,7 +128,7 @@ const COPY = {
     aiDisclosure: 'AI فقط می‌تواند شواهد از قبل انتخاب‌شده را توضیح دهد. درباره واجد شرایط بودن تصمیم نمی‌گیرد و شانس قبولی را تخمین نمی‌زند.',
     saveHint: 'ذخیره این فرصت', cv: 'آماده‌سازی CV برای این فرصت',
     helpful: 'مفید بود', notRelevant: 'مرتبط نبود',
-    deadline: 'آخرین مهلت', noDeadline: 'مهلت ثبت نشده',
+    deadline: 'آخرین مهلت', noDeadline: 'مهلت ثبت نشده', source: 'منبع', checked: 'آخرین بررسی',
     categoryAlert: 'اطلاع‌رسانی تطبیق‌های قوی', alertHint: 'این ترجیحات Matcher را با ایمیل ذخیره کنید. پس از تأیید، آریا هاب فقط وقتی یک تطبیق قوی جدید پیدا شود به شما اطلاع می‌دهد.',
     alertEmail: 'آدرس ایمیل', alertDaily: 'روزانه', alertWeekly: 'هفتگی', alertButton: 'ذخیره اطلاع‌رسانی تطبیق', alertSending: 'در حال ذخیره…', alertSuccess: 'برای تأیید اطلاع‌رسانی، ایمیل خود را بررسی کنید.', alertError: 'ذخیره اطلاع‌رسانی ممکن نشد. دوباره تلاش کنید.',
     viewDetails: 'مشاهده جزئیات',
@@ -157,7 +159,7 @@ const COPY = {
     aiDisclosure: 'AI یوازې مخکې ټاکل شوي شواهد تشریح کوي. د وړتیا پرېکړه نه کوي او د منل کېدو چانس نه اټکلوي.',
     saveHint: 'فرصت خوندي کړئ', cv: 'د دې فرصت لپاره CV چمتو کړئ',
     helpful: 'ګټور و', notRelevant: 'اړوند نه و',
-    deadline: 'وروستۍ نېټه', noDeadline: 'نېټه نه ده ثبت شوې',
+    deadline: 'وروستۍ نېټه', noDeadline: 'نېټه نه ده ثبت شوې', source: 'سرچینه', checked: 'وروستی کتل',
     categoryAlert: 'د قوي برابرښت خبرتیا راکړئ', alertHint: 'دا Matcher غوره توبونه د ایمیل له لارې خوندي کړئ. له تایید وروسته آریا هاب یوازې د نوي قوي برابرښت پر مهال خبر درکوي.',
     alertEmail: 'بریښنالیک', alertDaily: 'ورځنی', alertWeekly: 'اونیز', alertButton: 'د برابرښت خبرتیا خوندي کړئ', alertSending: 'خوندي کېږي…', alertSuccess: 'د خبرتیا د تایید لپاره خپل ایمیل وګورئ.', alertError: 'خبرتیا ونه خوندي شوه. بیا هڅه وکړئ.',
     viewDetails: 'تفصیل وګورئ',
@@ -235,9 +237,9 @@ function getCountryOptions(lang: Lang) {
 }
 
 const REASON_COPY: Record<Lang, Record<string, string>> = {
-  en: { opportunity_type: 'Opportunity type matches', destination: 'Destination matches', education: 'Education level appears compatible', field: 'Field/role appears relevant', deadline_practicality: 'There is still practical time before the deadline', open_deadline: 'Deadline is currently open', nationality: 'Nationality appears explicitly supported' },
-  fa: { opportunity_type: 'نوع فرصت با انتخاب شما تطبیق دارد', destination: 'مقصد تطبیق دارد', education: 'سطح تحصیل سازگار به نظر می‌رسد', field: 'رشته یا نقش مرتبط است', deadline_practicality: 'برای مهلت درخواست هنوز زمان عملی وجود دارد', open_deadline: 'مهلت فعلاً باز است', nationality: 'تابعیت به‌صورت صریح پشتیبانی می‌شود' },
-  ps: { opportunity_type: 'د فرصت ډول ستاسو له انتخاب سره برابر دی', destination: 'ځای برابر دی', education: 'تعلیمي کچه مناسبه ښکاري', field: 'رشته یا رول اړوند دی', deadline_practicality: 'تر وروستۍ نېټې عملي وخت شته', open_deadline: 'وروستۍ نېټه لا خلاصه ده', nationality: 'تابعیت په څرګند ډول ملاتړ کېږي' },
+  en: { opportunity_type: 'Opportunity type matches', destination: 'Destination matches', education: 'Education level appears compatible', field: 'Field/role appears relevant', deadline_practicality: 'There is still practical time before the deadline', open_deadline: 'Deadline is currently open', nationality: 'Nationality appears explicitly supported', experience: 'Experience requirement appears satisfied' },
+  fa: { opportunity_type: 'نوع فرصت با انتخاب شما تطبیق دارد', destination: 'مقصد تطبیق دارد', education: 'سطح تحصیل سازگار به نظر می‌رسد', field: 'رشته یا نقش مرتبط است', deadline_practicality: 'برای مهلت درخواست هنوز زمان عملی وجود دارد', open_deadline: 'مهلت فعلاً باز است', nationality: 'تابعیت به‌صورت صریح پشتیبانی می‌شود', experience: 'شرط تجربه برآورده به نظر می‌رسد' },
+  ps: { opportunity_type: 'د فرصت ډول ستاسو له انتخاب سره برابر دی', destination: 'ځای برابر دی', education: 'تعلیمي کچه مناسبه ښکاري', field: 'رشته یا رول اړوند دی', deadline_practicality: 'تر وروستۍ نېټې عملي وخت شته', open_deadline: 'وروستۍ نېټه لا خلاصه ده', nationality: 'تابعیت په څرګند ډول ملاتړ کېږي', experience: 'د تجربې شرط پوره ښکاري' },
 };
 
 const UNKNOWN_COPY: Record<Lang, Record<string, string>> = {
@@ -660,7 +662,13 @@ function ResultCard({
           <Status label={copy.confidence} value={copy[result.dataConfidence]} />
         </div>
 
-        <p className="mt-4 text-sm"><strong>{copy.deadline}:</strong> {deadline}</p>
+        <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-sm">
+          <p><strong>{copy.deadline}:</strong> {deadline}</p>
+          {result.sourceName && <p><strong>{copy.source}:</strong> {result.sourceName}</p>}
+          {result.lastChecked && (
+            <p><strong>{copy.checked}:</strong> {new Intl.DateTimeFormat(lang === 'fa' ? 'fa-AF' : lang === 'ps' ? 'ps-AF' : 'en-GB', { dateStyle: 'medium' }).format(new Date(result.lastChecked))}</p>
+          )}
+        </div>
 
         {result.reasons.length > 0 && (
           <EvidenceBlock title={copy.why} items={result.reasons.map((key) => REASON_COPY[lang][key] || key)} tone="positive" />
