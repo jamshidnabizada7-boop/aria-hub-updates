@@ -226,6 +226,7 @@ export function CVBuilderClient({ initialLang, initialPurpose='professional', co
         onNavigateToIssue={focusIssue}
         uiLang={initialLang}
         generating={generating}
+        config={config}
       />
     </div>
   );
