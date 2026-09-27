@@ -133,8 +133,8 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
       toast({
         title: `${label} removed`,
         action: (
-          <ToastAction altText={`Undo removing ${label}`} onClick={() => addItem(section, existing)}>
-            Undo
+          <ToastAction altText={`${c('Undo')}: ${label}`} onClick={() => addItem(section, existing)}>
+            {c('Undo')}
           </ToastAction>
         ),
       });
@@ -228,8 +228,8 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
           </div>
           {draft.data.socialLinks.map((link) => (
             <div key={link.id} className="grid gap-2 sm:grid-cols-[1fr_2fr_auto]">
-              <Input aria-label="Link platform" placeholder={c('LinkedIn, GitHub, Portfolio…')} value={link.platform} onChange={(e) => updateItem('socialLinks', link.id, { platform: e.target.value })} />
-              <Input aria-label="Link URL" dir="ltr" type="url" placeholder="https://…" value={link.url} onChange={(e) => updateItem('socialLinks', link.id, { url: e.target.value })} />
+              <Input aria-label={c('Link platform')} placeholder={c('LinkedIn, GitHub, Portfolio…')} value={link.platform} onChange={(e) => updateItem('socialLinks', link.id, { platform: e.target.value })} />
+              <Input aria-label={c('Link URL')} dir="ltr" type="url" placeholder="https://…" value={link.url} onChange={(e) => updateItem('socialLinks', link.id, { url: e.target.value })} />
               <Button type="button" variant="ghost" size="icon" className="size-11" aria-label={`Remove ${link.platform || 'link'}`} onClick={() => removeItem('socialLinks', link.id, 'Link')}><Trash2 className="size-4" /></Button>
             </div>
           ))}
@@ -301,7 +301,7 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
         <div className="space-y-2">
           {draft.data.skills.map((item) => (
             <div key={item.id} className="grid gap-2 sm:grid-cols-[1fr_180px_auto]">
-              <Input aria-label="Skill name" value={item.name} placeholder="Python" onChange={(e) => updateItem('skills', item.id, { name: e.target.value })} />
+              <Input aria-label={c('Skill name')} value={item.name} placeholder="Python" onChange={(e) => updateItem('skills', item.id, { name: e.target.value })} />
               <select aria-label={`Level for ${item.name || 'skill'}`} className="h-9 rounded-md border bg-background px-3 text-sm" value={item.level} onChange={(e) => updateItem('skills', item.id, { level: e.target.value })}>
                 <option value="beginner">{c('Beginner')}</option><option value="intermediate">{c('Intermediate')}</option><option value="expert">{c('Expert')}</option>
               </select>
@@ -316,7 +316,7 @@ export function CVForm({ draft, onChange, uiLang }: Props) {
         <div className="space-y-2">
           {draft.data.languages.map((item) => (
             <div key={item.id} className="grid gap-2 sm:grid-cols-[1fr_180px_auto]">
-              <Input aria-label="Language name" value={item.name} placeholder="English" onChange={(e) => updateItem('languages', item.id, { name: e.target.value })} />
+              <Input aria-label={c('Language name')} value={item.name} placeholder="English" onChange={(e) => updateItem('languages', item.id, { name: e.target.value })} />
               <select aria-label={`Proficiency for ${item.name || 'language'}`} className="h-9 rounded-md border bg-background px-3 text-sm" value={item.proficiency} onChange={(e) => updateItem('languages', item.id, { proficiency: e.target.value })}>
                 <option value="basic">{c('Basic')}</option><option value="intermediate">{c('Intermediate')}</option><option value="fluent">{c('Fluent')}</option><option value="native">{c('Native')}</option>
               </select>
