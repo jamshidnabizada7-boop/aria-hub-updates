@@ -55,7 +55,7 @@ export function CVBuilderClient({ settings }: { settings: any }) {
       ? { label: 'فرصت هدف برای CV', view: 'مشاهده فرصت هدف' }
       : lang === 'ps'
         ? { label: 'د CV هدف فرصت', view: 'هدف فرصت وګورئ' }
-        : { label: '{opportunityContextCopy.label}', view: 'View target opportunity' };
+        : { label: 'CV target opportunity', view: 'View target opportunity' };
   const [opportunity, setOpportunity] = useState<OpportunityContext | null>(null);
   const [data, setData] = useState<CVData>(initialData);
   const [template, setTemplate] = useState<TemplateType>('professional');
@@ -119,7 +119,7 @@ export function CVBuilderClient({ settings }: { settings: any }) {
                     <BriefcaseBusiness className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" aria-hidden="true" />
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">
-                        CV target opportunity
+                        {opportunityContextCopy.label}
                       </p>
                       <p className="mt-1 font-semibold">{opportunity.title}</p>
                       <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
