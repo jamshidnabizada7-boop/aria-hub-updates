@@ -1,422 +1,395 @@
-import React from 'react';
-import { CVData, Education, Experience, Skill, Language, Certification, Project, Reference } from '../types';
-import { v4 as uuidv4 } from 'uuid';
-import { Plus, Trash2, Upload } from 'lucide-react';
-import { useT } from '@/hooks/use-t';
-import { RichTextEditor } from '@/components/ui/rich-text-editor';
+'use client';
 
-interface CVFormProps {
-  data: CVData;
-  setData: React.Dispatch<React.SetStateAction<CVData>>;
+import React, { useState } from 'react';
+import {
+  Award, BookOpen, Briefcase, Check, FlaskConical, GraduationCap, Languages as LanguagesIcon,
+  Plus, Trash2, Upload, UserRound, Wrench, FolderGit2, HeartHandshake, FileText, UsersRound
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Progress } from '@/components/ui/progress';
+import { useToast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
+import type { CVDraft, CVSectionKey } from '../types';
+import { getRecommendedSections, validateDraft } from '../lib/cv-validation';
+import { makeId, prepareProfileImage } from '../lib/cv-utils';
+
+interface Props {
+  draft: CVDraft;
+  onChange: (updater: (draft: CVDraft) => CVDraft) => void;
 }
 
-export function CVForm({ data, setData }: CVFormProps) {
-  const t = useT();
+const sectionMeta: Record<CVSectionKey, { icon: React.ElementType; label: string }> = {
+  personal: { icon: UserRound, label: 'Personal information' },
+  summary: { icon: FileText, label: 'Professional summary' },
+  experience: { icon: Briefcase, label: 'Experience' },
+  education: { icon: GraduationCap, label: 'Education' },
+  projects: { icon: FolderGit2, label: 'Projects' },
+  skills: { icon: Wrench, label: 'Skills' },
+  languages: { icon: LanguagesIcon, label: 'Languages' },
+  certifications: { icon: Award, label: 'Certifications' },
+  awards: { icon: Award, label: 'Awards & honors' },
+  volunteering: { icon: HeartHandshake, label: 'Volunteering & leadership' },
+  research: { icon: FlaskConical, label: 'Research' },
+  publications: { icon: BookOpen, label: 'Publications' },
+  references: { icon: UsersRound, label: 'References' },
+};
 
-  const updatePersonal = (field: keyof CVData['personal'], value: string) => {
-    setData(prev => ({
-      ...prev,
-      personal: { ...prev.personal, [field]: value }
-    }));
+function Field({ id, label, value, onChange, type = 'text', placeholder, dir, required }: {
+  id: string; label: string; value: string; onChange: (value: string) => void; type?: string; placeholder?: string; dir?: 'ltr'|'rtl'|'auto'; required?: boolean;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id}>{label}{required ? <span className="text-destructive"> *</span> : null}</Label>
+      <Input id={id} type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} dir={dir} />
+    </div>
+  );
+}
+
+function TextField({ id, label, value, onChange, placeholder, hint }: {
+  id: string; label: string; value: string; onChange: (value: string) => void; placeholder?: string; hint?: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <Textarea id={id} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} rows={4} />
+      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+    </div>
+  );
+}
+
+function MonthRange({ prefix, startDate, endDate, isCurrent, onStart, onEnd, onCurrent }: {
+  prefix: string; startDate: string; endDate: string; isCurrent: boolean;
+  onStart: (value: string) => void; onEnd: (value: string) => void; onCurrent: (value: boolean) => void;
+}) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <Field id={`${prefix}-start`} label="Start" type="month" value={startDate} onChange={onStart} />
+      <Field id={`${prefix}-end`} label="End" type="month" value={isCurrent ? '' : endDate} onChange={onEnd} />
+      <label className="sm:col-span-2 flex items-center gap-2 text-sm">
+        <Checkbox checked={isCurrent} onCheckedChange={(checked) => onCurrent(Boolean(checked))} />
+        Currently here
+      </label>
+    </div>
+  );
+}
+
+function SectionCard({ title, icon: Icon, children, recommended, complete }: {
+  title: string; icon: React.ElementType; children: React.ReactNode; recommended?: boolean; complete?: boolean;
+}) {
+  return (
+    <section className="rounded-2xl border bg-card p-4 sm:p-5">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <div className="grid size-9 place-items-center rounded-xl bg-primary/10 text-primary"><Icon className="size-4" /></div>
+          <div>
+            <h3 className="font-semibold">{title}</h3>
+            {recommended ? <p className="text-xs text-muted-foreground">Recommended for this CV purpose</p> : null}
+          </div>
+        </div>
+        {complete ? <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600"><Check className="size-3.5" /> Added</span> : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+export function CVForm({ draft, onChange }: Props) {
+  const { toast } = useToast();
+  const [imageBusy, setImageBusy] = useState(false);
+  const readiness = validateDraft(draft);
+  const recommended = new Set(getRecommendedSections(draft));
+
+  const setData = (updater: (data: CVDraft['data']) => CVDraft['data']) =>
+    onChange((current) => ({ ...current, data: updater(current.data) }));
+
+  const setPersonal = (field: keyof CVDraft['data']['personal'], value: string) =>
+    setData((data) => ({ ...data, personal: { ...data.personal, [field]: value } }));
+
+  const addItem = (section: keyof CVDraft['data'], item: any) =>
+    setData((data) => ({ ...data, [section]: [...(data[section] as any[]), item] } as CVDraft['data']));
+
+  const updateItem = (section: keyof CVDraft['data'], id: string, patch: Record<string, unknown>) =>
+    setData((data) => ({ ...data, [section]: (data[section] as any[]).map((item) => item.id === id ? { ...item, ...patch } : item) } as CVDraft['data']));
+
+  const removeItem = (section: keyof CVDraft['data'], id: string, label: string) => {
+    const existing = (draft.data[section] as any[]).find((item) => item.id === id);
+    setData((data) => ({ ...data, [section]: (data[section] as any[]).filter((item) => item.id !== id) } as CVDraft['data']));
+    if (existing) {
+      toast({
+        title: `${label} removed`,
+        action: (
+          <ToastAction altText={`Undo removing ${label}`} onClick={() => addItem(section, existing)}>
+            Undo
+          </ToastAction>
+        ),
+      });
+    }
   };
 
-  const addEducation = () => {
-    setData(prev => ({
-      ...prev,
-      education: [...prev.education, { id: uuidv4(), degree: '', institution: '', location: '', startDate: '', endDate: '', description: '' }]
-    }));
-  };
-
-  const updateEducation = (id: string, field: keyof Education, value: string) => {
-    setData(prev => ({
-      ...prev,
-      education: prev.education.map(ed => ed.id === id ? { ...ed, [field]: value } : ed)
-    }));
-  };
-
-  const removeEducation = (id: string) => {
-    setData(prev => ({
-      ...prev,
-      education: prev.education.filter(ed => ed.id !== id)
-    }));
-  };
-
-  const addExperience = () => {
-    setData(prev => ({
-      ...prev,
-      experience: [...prev.experience, { id: uuidv4(), role: '', company: '', location: '', startDate: '', endDate: '', description: '' }]
-    }));
-  };
-
-  const updateExperience = (id: string, field: keyof Experience, value: string) => {
-    setData(prev => ({
-      ...prev,
-      experience: prev.experience.map(exp => exp.id === id ? { ...exp, [field]: value } : exp)
-    }));
-  };
-
-  const removeExperience = (id: string) => {
-    setData(prev => ({
-      ...prev,
-      experience: prev.experience.filter(exp => exp.id !== id)
-    }));
-  };
-
-  const addSkill = () => {
-    setData(prev => ({
-      ...prev,
-      skills: [...prev.skills, { id: uuidv4(), name: '', level: 'Intermediate' }]
-    }));
-  };
-
-  const updateSkill = (id: string, field: keyof Skill, value: string) => {
-    setData(prev => ({
-      ...prev,
-      skills: prev.skills.map(skill => skill.id === id ? { ...skill, [field]: value } : skill)
-    }));
-  };
-
-  const removeSkill = (id: string) => {
-    setData(prev => ({
-      ...prev,
-      skills: prev.skills.filter(skill => skill.id !== id)
-    }));
-  };
-
-  // Languages
-  const addLanguage = () => {
-    setData(prev => ({
-      ...prev,
-      languages: [...prev.languages, { id: uuidv4(), name: '', proficiency: 'Fluent' }]
-    }));
-  };
-
-  const updateLanguage = (id: string, field: keyof Language, value: string) => {
-    setData(prev => ({
-      ...prev,
-      languages: prev.languages.map(lang => lang.id === id ? { ...lang, [field]: value } : lang)
-    }));
-  };
-
-  const removeLanguage = (id: string) => {
-    setData(prev => ({
-      ...prev,
-      languages: prev.languages.filter(lang => lang.id !== id)
-    }));
-  };
-
-  // Certifications
-  const addCertification = () => {
-    setData(prev => ({
-      ...prev,
-      certifications: [...prev.certifications, { id: uuidv4(), name: '', issuer: '', date: '' }]
-    }));
-  };
-
-  const updateCertification = (id: string, field: keyof Certification, value: string) => {
-    setData(prev => ({
-      ...prev,
-      certifications: prev.certifications.map(cert => cert.id === id ? { ...cert, [field]: value } : cert)
-    }));
-  };
-
-  const removeCertification = (id: string) => {
-    setData(prev => ({
-      ...prev,
-      certifications: prev.certifications.filter(cert => cert.id !== id)
-    }));
-  };
-
-  // Projects
-  const addProject = () => {
-    setData(prev => ({
-      ...prev,
-      projects: [...prev.projects, { id: uuidv4(), name: '', description: '', link: '' }]
-    }));
-  };
-
-  const updateProject = (id: string, field: keyof Project, value: string) => {
-    setData(prev => ({
-      ...prev,
-      projects: prev.projects.map(proj => proj.id === id ? { ...proj, [field]: value } : proj)
-    }));
-  };
-
-  const removeProject = (id: string) => {
-    setData(prev => ({
-      ...prev,
-      projects: prev.projects.filter(proj => proj.id !== id)
-    }));
-  };
-
-  // References
-  const addReference = () => {
-    setData(prev => ({
-      ...prev,
-      references: [...prev.references, { id: uuidv4(), name: '', company: '', contact: '' }]
-    }));
-  };
-
-  const updateReference = (id: string, field: keyof Reference, value: string) => {
-    setData(prev => ({
-      ...prev,
-      references: prev.references.map(ref => ref.id === id ? { ...ref, [field]: value } : ref)
-    }));
-  };
-
-  const removeReference = (id: string) => {
-    setData(prev => ({
-      ...prev,
-      references: prev.references.filter(ref => ref.id !== id)
-    }));
-  };
-
-  // Social Links
-  const addSocialLink = () => {
-    setData(prev => ({
-      ...prev,
-      socialLinks: [...prev.socialLinks, { id: uuidv4(), platform: '', url: '' }]
-    }));
-  };
-
-  const updateSocialLink = (id: string, field: 'platform' | 'url', value: string) => {
-    setData(prev => ({
-      ...prev,
-      socialLinks: prev.socialLinks.map(link => link.id === id ? { ...link, [field]: value } : link)
-    }));
-  };
-
-  const removeSocialLink = (id: string) => {
-    setData(prev => ({
-      ...prev,
-      socialLinks: prev.socialLinks.filter(link => link.id !== id)
-    }));
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        updatePersonal('picture', reader.result as string);
-      };
-      reader.readAsDataURL(file);
+  const handleImage = async (file?: File) => {
+    if (!file) return;
+    setImageBusy(true);
+    try {
+      const image = await prepareProfileImage(file);
+      setPersonal('picture', image);
+    } catch (error) {
+      toast({ title: 'Could not use this image', description: error instanceof Error && error.message === 'image-too-large' ? 'Choose an image smaller than 8 MB.' : 'Choose a valid image file.' });
+    } finally {
+      setImageBusy(false);
     }
   };
 
   return (
-    <div className="space-y-8 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
-      {/* Personal Info */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-medium text-slate-800 dark:text-slate-200 border-b pb-2">{t('tools.cvBuilder.personal.title')}</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input type="text" placeholder={t('tools.cvBuilder.personal.fullName')} value={data.personal.fullName} onChange={e => updatePersonal('fullName', e.target.value)} className="form-input" />
-          <input type="email" placeholder={t('tools.cvBuilder.personal.email')} value={data.personal.email} onChange={e => updatePersonal('email', e.target.value)} className="form-input" />
-          <input type="tel" placeholder={t('tools.cvBuilder.personal.phone')} value={data.personal.phone} onChange={e => updatePersonal('phone', e.target.value)} className="form-input" />
-          <input type="text" placeholder={t('tools.cvBuilder.personal.location')} value={data.personal.location} onChange={e => updatePersonal('location', e.target.value)} className="form-input" />
-          <select value={data.personal.gender || ''} onChange={e => updatePersonal('gender', e.target.value)} className="form-input">
-            <option value="" disabled>{t('tools.cvBuilder.personal.gender') || 'Select Gender'}</option>
-            <option value="Male">{t('tools.cvBuilder.personal.male') || 'Male'}</option>
-            <option value="Female">{t('tools.cvBuilder.personal.female') || 'Female'}</option>
-            <option value="Other">{t('tools.cvBuilder.personal.other') || 'Other'}</option>
-          </select>
-          <div className="flex items-center space-x-2 rtl:space-x-reverse relative">
-            <label className="flex-1 form-input text-slate-400 cursor-pointer flex items-center overflow-hidden whitespace-nowrap">
-              <Upload className="w-4 h-4 mr-2 rtl:ml-2 rtl:mr-0 shrink-0" />
-              {data.personal.picture ? (t('tools.cvBuilder.personal.pictureSelected') || 'Picture selected') : (t('tools.cvBuilder.personal.picture') || 'Upload Picture')}
-              <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-            </label>
-            {data.personal.picture && (
-              <button onClick={() => updatePersonal('picture', '')} className="p-2 text-red-500 hover:bg-red-50 rounded-md">
-                <Trash2 className="w-4 h-4" />
-              </button>
-            )}
-          </div>
+    <div className="space-y-4">
+      <div className="rounded-2xl border bg-card p-4">
+        <div className="mb-2 flex items-center justify-between text-sm">
+          <span className="font-medium">CV completion</span>
+          <span>{readiness.completion}%</span>
         </div>
-        
-        {/* Dynamic Social Links inside Personal */}
-        <div className="pt-2">
-          <div className="flex justify-between items-center mb-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('tools.cvBuilder.personal.socials') || 'Social Media Links'}</label>
-            <button onClick={addSocialLink} className="text-sm text-blue-600 dark:text-blue-400 flex items-center hover:underline gap-1">
-              <Plus className="w-4 h-4"/> {t('admin.form.add') || 'Add'}
-            </button>
-          </div>
-          <div className="space-y-2">
-            {data.socialLinks?.map(link => (
-              <div key={link.id} className="flex space-x-2 rtl:space-x-reverse items-center">
-                <input type="text" placeholder="Platform (e.g. LinkedIn)" value={link.platform} onChange={e => updateSocialLink(link.id, 'platform', e.target.value)} className="form-input w-1/3" />
-                <input type="url" placeholder="URL" value={link.url} onChange={e => updateSocialLink(link.id, 'url', e.target.value)} className="form-input flex-1" />
-                <button onClick={() => removeSocialLink(link.id)} className="text-slate-400 hover:text-red-500 p-2"><Trash2 className="w-4 h-4"/></button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <RichTextEditor placeholder={t('tools.cvBuilder.personal.summary')} value={data.personal.summary} onChange={val => updatePersonal('summary', val)} />
+        <Progress value={readiness.completion} />
+        <p className="mt-2 text-xs text-muted-foreground">Your draft saves automatically on this device.</p>
       </div>
 
-      {/* Experience */}
-      <div className="space-y-4">
-        <div className="flex justify-between items-center border-b pb-2">
-          <h3 className="text-lg font-medium text-slate-800 dark:text-slate-200">{t('tools.cvBuilder.experience.title')}</h3>
-          <button onClick={addExperience} className="text-sm text-blue-600 dark:text-blue-400 flex items-center hover:underline"><Plus className="w-4 h-4 mr-1"/> {t('admin.form.add')}</button>
-        </div>
-        {data.experience.map(exp => (
-          <div key={exp.id} className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg space-y-3 relative group">
-            <button onClick={() => removeExperience(exp.id)} className="absolute top-2 right-2 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-4 h-4"/></button>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <input type="text" placeholder={t('tools.cvBuilder.experience.role')} value={exp.role} onChange={e => updateExperience(exp.id, 'role', e.target.value)} className="form-input" />
-              <input type="text" placeholder={t('tools.cvBuilder.experience.company')} value={exp.company} onChange={e => updateExperience(exp.id, 'company', e.target.value)} className="form-input" />
-              <input type="text" placeholder={t('tools.cvBuilder.experience.location')} value={exp.location} onChange={e => updateExperience(exp.id, 'location', e.target.value)} className="form-input" />
-              <div className="flex space-x-2 rtl:space-x-reverse">
-                <input type="text" placeholder={t('tools.cvBuilder.experience.startDate')} value={exp.startDate} onChange={e => updateExperience(exp.id, 'startDate', e.target.value)} className="form-input w-1/2" />
-                <input type="text" placeholder={t('tools.cvBuilder.experience.endDate')} value={exp.endDate} onChange={e => updateExperience(exp.id, 'endDate', e.target.value)} className="form-input w-1/2" />
-              </div>
+      <SectionCard title="Personal information" icon={UserRound} recommended complete={Boolean(draft.data.personal.fullName)}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field id="cv-full-name" label="Full name" required value={draft.data.personal.fullName} onChange={(v) => setPersonal('fullName', v)} />
+          <Field id="cv-headline" label="Professional headline" value={draft.data.personal.headline} onChange={(v) => setPersonal('headline', v)} placeholder="Software Engineering Student | Python & Web Development" />
+          <Field id="cv-email" label="Email" type="email" dir="ltr" value={draft.data.personal.email} onChange={(v) => setPersonal('email', v)} />
+          <Field id="cv-phone" label="Phone" type="tel" dir="ltr" value={draft.data.personal.phone} onChange={(v) => setPersonal('phone', v)} />
+          <Field id="cv-location" label="Location" value={draft.data.personal.location} onChange={(v) => setPersonal('location', v)} />
+          <div className="space-y-1.5">
+            <Label htmlFor="cv-gender">Gender <span className="text-muted-foreground">(optional)</span></Label>
+            <select id="cv-gender" className="h-9 w-full rounded-md border bg-background px-3 text-sm" value={draft.data.personal.gender} onChange={(e) => setPersonal('gender', e.target.value)}>
+              <option value="">Prefer not to include</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div className="sm:col-span-2">
+            <Label htmlFor="cv-photo">Profile photo <span className="text-muted-foreground">(optional)</span></Label>
+            <div className="mt-1.5 flex flex-wrap items-center gap-3">
+              {draft.data.personal.picture ? <img src={draft.data.personal.picture} alt="Current profile preview" className="size-14 rounded-full object-cover" /> : null}
+              <label htmlFor="cv-photo" className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-md border px-3 text-sm font-medium hover:bg-accent">
+                <Upload className="size-4" /> {imageBusy ? 'Processing…' : draft.data.personal.picture ? 'Replace photo' : 'Choose photo'}
+              </label>
+              <input id="cv-photo" className="sr-only" type="file" accept="image/*" onChange={(e) => handleImage(e.target.files?.[0])} />
+              {draft.data.personal.picture ? <Button type="button" variant="ghost" className="min-h-11" onClick={() => setPersonal('picture', '')}>Remove photo</Button> : null}
             </div>
-            <RichTextEditor placeholder={t('tools.cvBuilder.experience.description')} value={exp.description} onChange={val => updateExperience(exp.id, 'description', val)} />
+            <p className="mt-2 text-xs text-muted-foreground">Photos are optional. Some employers and scholarship applications prefer CVs without one.</p>
           </div>
-        ))}
-      </div>
-
-      {/* Education */}
-      <div className="space-y-4">
-        <div className="flex justify-between items-center border-b pb-2">
-          <h3 className="text-lg font-medium text-slate-800 dark:text-slate-200">{t('tools.cvBuilder.education.title')}</h3>
-          <button onClick={addEducation} className="text-sm text-blue-600 dark:text-blue-400 flex items-center hover:underline"><Plus className="w-4 h-4 mr-1"/> {t('admin.form.add')}</button>
         </div>
-        {data.education.map(ed => (
-          <div key={ed.id} className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg space-y-3 relative group">
-            <button onClick={() => removeEducation(ed.id)} className="absolute top-2 right-2 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-4 h-4"/></button>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <input type="text" placeholder={t('tools.cvBuilder.education.degree')} value={ed.degree} onChange={e => updateEducation(ed.id, 'degree', e.target.value)} className="form-input" />
-              <input type="text" placeholder={t('tools.cvBuilder.education.institution')} value={ed.institution} onChange={e => updateEducation(ed.id, 'institution', e.target.value)} className="form-input" />
-              <input type="text" placeholder={t('tools.cvBuilder.education.location')} value={ed.location} onChange={e => updateEducation(ed.id, 'location', e.target.value)} className="form-input" />
-              <div className="flex space-x-2 rtl:space-x-reverse">
-                <input type="text" placeholder={t('tools.cvBuilder.education.startDate')} value={ed.startDate} onChange={e => updateEducation(ed.id, 'startDate', e.target.value)} className="form-input w-1/2" />
-                <input type="text" placeholder={t('tools.cvBuilder.education.endDate')} value={ed.endDate} onChange={e => updateEducation(ed.id, 'endDate', e.target.value)} className="form-input w-1/2" />
-              </div>
-            </div>
-            <RichTextEditor placeholder={t('tools.cvBuilder.education.description')} value={ed.description} onChange={val => updateEducation(ed.id, 'description', val)} />
+
+        <div className="mt-5 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <Label>Professional and social links</Label>
+            <Button type="button" variant="outline" size="sm" onClick={() => addItem('socialLinks', { id: makeId('social'), platform: '', url: '' })}><Plus className="size-4" /> Add link</Button>
           </div>
-        ))}
-      </div>
-
-      {/* Skills */}
-      <div className="space-y-4">
-        <div className="flex justify-between items-center border-b pb-2">
-          <h3 className="text-lg font-medium text-slate-800 dark:text-slate-200">{t('tools.cvBuilder.skills.title')}</h3>
-          <button onClick={addSkill} className="text-sm text-blue-600 dark:text-blue-400 flex items-center hover:underline"><Plus className="w-4 h-4 mr-1"/> {t('admin.form.add')}</button>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {data.skills.map(skill => (
-            <div key={skill.id} className="flex space-x-2 items-center">
-              <input type="text" placeholder={t('tools.cvBuilder.skills.name')} value={skill.name} onChange={e => updateSkill(skill.id, 'name', e.target.value)} className="form-input flex-1" />
-              <select value={skill.level} onChange={e => updateSkill(skill.id, 'level', e.target.value)} className="form-input w-32">
-                <option value="Beginner">{t('tools.cvBuilder.skills.beginner')}</option>
-                <option value="Intermediate">{t('tools.cvBuilder.skills.intermediate')}</option>
-                <option value="Expert">{t('tools.cvBuilder.skills.expert')}</option>
-              </select>
-              <button onClick={() => removeSkill(skill.id)} className="text-slate-400 hover:text-red-500 p-2"><Trash2 className="w-4 h-4"/></button>
+          {draft.data.socialLinks.map((link) => (
+            <div key={link.id} className="grid gap-2 sm:grid-cols-[1fr_2fr_auto]">
+              <Input aria-label="Link platform" placeholder="LinkedIn, GitHub, Portfolio…" value={link.platform} onChange={(e) => updateItem('socialLinks', link.id, { platform: e.target.value })} />
+              <Input aria-label="Link URL" dir="ltr" type="url" placeholder="https://…" value={link.url} onChange={(e) => updateItem('socialLinks', link.id, { url: e.target.value })} />
+              <Button type="button" variant="ghost" size="icon" className="size-11" aria-label={`Remove ${link.platform || 'link'}`} onClick={() => removeItem('socialLinks', link.id, 'Link')}><Trash2 className="size-4" /></Button>
             </div>
           ))}
         </div>
-      </div>
+      </SectionCard>
 
-      {/* Languages */}
-      <div className="space-y-4">
-        <div className="flex justify-between items-center border-b pb-2">
-          <h3 className="text-lg font-medium text-slate-800 dark:text-slate-200">{t('tools.cvBuilder.languages.title')}</h3>
-          <button onClick={addLanguage} className="text-sm text-blue-600 dark:text-blue-400 flex items-center hover:underline"><Plus className="w-4 h-4 mr-1"/> {t('admin.form.add')}</button>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {data.languages.map(lang => (
-            <div key={lang.id} className="flex space-x-2 items-center">
-              <input type="text" placeholder={t('tools.cvBuilder.languages.name')} value={lang.name} onChange={e => updateLanguage(lang.id, 'name', e.target.value)} className="form-input flex-1" />
-              <select value={lang.proficiency} onChange={e => updateLanguage(lang.id, 'proficiency', e.target.value)} className="form-input w-32">
-                <option value="Native">{t('tools.cvBuilder.languages.native')}</option>
-                <option value="Fluent">{t('tools.cvBuilder.languages.fluent')}</option>
-                <option value="Intermediate">{t('tools.cvBuilder.languages.intermediate')}</option>
-                <option value="Basic">{t('tools.cvBuilder.languages.basic')}</option>
-              </select>
-              <button onClick={() => removeLanguage(lang.id)} className="text-slate-400 hover:text-red-500 p-2"><Trash2 className="w-4 h-4"/></button>
+      <SectionCard title="Professional summary" icon={FileText} recommended={recommended.has('summary')} complete={Boolean(draft.data.personal.summary)}>
+        <TextField id="cv-summary" label="Summary" value={draft.data.personal.summary} onChange={(v) => setPersonal('summary', v)} placeholder="In 3–5 lines, explain who you are, your strongest skills, and the value you bring." hint="Focus on strengths, goals, and evidence. Avoid generic statements that could describe anyone." />
+      </SectionCard>
+
+      <SectionCard title="Experience" icon={Briefcase} recommended={recommended.has('experience')} complete={draft.data.experience.length > 0}>
+        <div className="space-y-3">
+          {draft.data.experience.map((item) => (
+            <div key={item.id} className="rounded-xl border bg-muted/20 p-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field id={`exp-role-${item.id}`} label="Role / position" value={item.role} onChange={(v) => updateItem('experience', item.id, { role: v })} />
+                <Field id={`exp-company-${item.id}`} label="Organization" value={item.company} onChange={(v) => updateItem('experience', item.id, { company: v })} />
+                <Field id={`exp-location-${item.id}`} label="Location" value={item.location} onChange={(v) => updateItem('experience', item.id, { location: v })} />
+                <div />
+              </div>
+              <div className="mt-3"><MonthRange prefix={`exp-${item.id}`} startDate={item.startDate} endDate={item.endDate} isCurrent={item.isCurrent} onStart={(v) => updateItem('experience', item.id, { startDate: v })} onEnd={(v) => updateItem('experience', item.id, { endDate: v })} onCurrent={(v) => updateItem('experience', item.id, { isCurrent: v, endDate: v ? '' : item.endDate })} /></div>
+              <div className="mt-3"><TextField id={`exp-desc-${item.id}`} label="Achievements and responsibilities" value={item.description} onChange={(v) => updateItem('experience', item.id, { description: v })} placeholder="• Built…\n• Improved…\n• Led…" hint="Prefer achievement-focused bullets: action + task + measurable result when possible." /></div>
+              <div className="mt-3 flex justify-end"><Button type="button" variant="ghost" className="min-h-11 text-destructive" onClick={() => removeItem('experience', item.id, 'Experience')}><Trash2 className="size-4" /> Remove</Button></div>
             </div>
           ))}
+          <Button type="button" variant="outline" onClick={() => addItem('experience', { id: makeId('exp'), role: '', company: '', location: '', startDate: '', endDate: '', isCurrent: false, description: '' })}><Plus className="size-4" /> Add experience</Button>
         </div>
-      </div>
+      </SectionCard>
 
-      {/* Certifications */}
-      <div className="space-y-4">
-        <div className="flex justify-between items-center border-b pb-2">
-          <h3 className="text-lg font-medium text-slate-800 dark:text-slate-200">{t('tools.cvBuilder.certifications.title')}</h3>
-          <button onClick={addCertification} className="text-sm text-blue-600 dark:text-blue-400 flex items-center hover:underline"><Plus className="w-4 h-4 mr-1"/> {t('admin.form.add')}</button>
-        </div>
-        {data.certifications.map(cert => (
-          <div key={cert.id} className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg space-y-3 relative group">
-            <button onClick={() => removeCertification(cert.id)} className="absolute top-2 right-2 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-4 h-4"/></button>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <input type="text" placeholder={t('tools.cvBuilder.certifications.name')} value={cert.name} onChange={e => updateCertification(cert.id, 'name', e.target.value)} className="form-input" />
-              <input type="text" placeholder={t('tools.cvBuilder.certifications.issuer')} value={cert.issuer} onChange={e => updateCertification(cert.id, 'issuer', e.target.value)} className="form-input" />
-              <input type="text" placeholder={t('tools.cvBuilder.certifications.date')} value={cert.date} onChange={e => updateCertification(cert.id, 'date', e.target.value)} className="form-input" />
+      <SectionCard title="Education" icon={GraduationCap} recommended={recommended.has('education')} complete={draft.data.education.length > 0}>
+        <div className="space-y-3">
+          {draft.data.education.map((item) => (
+            <div key={item.id} className="rounded-xl border bg-muted/20 p-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field id={`edu-degree-${item.id}`} label="Degree / certificate" value={item.degree} onChange={(v) => updateItem('education', item.id, { degree: v })} />
+                <Field id={`edu-school-${item.id}`} label="Institution" value={item.institution} onChange={(v) => updateItem('education', item.id, { institution: v })} />
+                <Field id={`edu-location-${item.id}`} label="Location" value={item.location} onChange={(v) => updateItem('education', item.id, { location: v })} />
+              </div>
+              <div className="mt-3"><MonthRange prefix={`edu-${item.id}`} startDate={item.startDate} endDate={item.endDate} isCurrent={item.isCurrent} onStart={(v) => updateItem('education', item.id, { startDate: v })} onEnd={(v) => updateItem('education', item.id, { endDate: v })} onCurrent={(v) => updateItem('education', item.id, { isCurrent: v, endDate: v ? '' : item.endDate })} /></div>
+              <div className="mt-3"><TextField id={`edu-desc-${item.id}`} label="Details" value={item.description} onChange={(v) => updateItem('education', item.id, { description: v })} placeholder="Relevant coursework, thesis, distinctions, GPA (if useful)…" /></div>
+              <div className="mt-3 flex justify-end"><Button type="button" variant="ghost" className="min-h-11 text-destructive" onClick={() => removeItem('education', item.id, 'Education')}><Trash2 className="size-4" /> Remove</Button></div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+          <Button type="button" variant="outline" onClick={() => addItem('education', { id: makeId('edu'), degree: '', institution: '', location: '', startDate: '', endDate: '', isCurrent: false, description: '' })}><Plus className="size-4" /> Add education</Button>
+        </div>
+      </SectionCard>
 
-      {/* Projects */}
-      <div className="space-y-4">
-        <div className="flex justify-between items-center border-b pb-2">
-          <h3 className="text-lg font-medium text-slate-800 dark:text-slate-200">{t('tools.cvBuilder.projects.title')}</h3>
-          <button onClick={addProject} className="text-sm text-blue-600 dark:text-blue-400 flex items-center hover:underline"><Plus className="w-4 h-4 mr-1"/> {t('admin.form.add')}</button>
-        </div>
-        {data.projects.map(proj => (
-          <div key={proj.id} className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg space-y-3 relative group">
-            <button onClick={() => removeProject(proj.id)} className="absolute top-2 right-2 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-4 h-4"/></button>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <input type="text" placeholder={t('tools.cvBuilder.projects.name')} value={proj.name} onChange={e => updateProject(proj.id, 'name', e.target.value)} className="form-input" />
-              <input type="url" placeholder={t('tools.cvBuilder.projects.link')} value={proj.link} onChange={e => updateProject(proj.id, 'link', e.target.value)} className="form-input" />
+      <SectionCard title="Projects" icon={FolderGit2} recommended={recommended.has('projects')} complete={draft.data.projects.length > 0}>
+        <div className="space-y-3">
+          {draft.data.projects.map((item) => (
+            <div key={item.id} className="rounded-xl border bg-muted/20 p-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field id={`project-name-${item.id}`} label="Project name" value={item.name} onChange={(v) => updateItem('projects', item.id, { name: v })} />
+                <Field id={`project-role-${item.id}`} label="Your role" value={item.role} onChange={(v) => updateItem('projects', item.id, { role: v })} />
+                <Field id={`project-tech-${item.id}`} label="Technologies / methods" value={item.technologies} onChange={(v) => updateItem('projects', item.id, { technologies: v })} />
+                <Field id={`project-link-${item.id}`} label="Project link" dir="ltr" type="url" value={item.link} onChange={(v) => updateItem('projects', item.id, { link: v })} />
+                <Field id={`project-start-${item.id}`} label="Start" type="month" value={item.startDate} onChange={(v) => updateItem('projects', item.id, { startDate: v })} />
+                <Field id={`project-end-${item.id}`} label="End" type="month" value={item.endDate} onChange={(v) => updateItem('projects', item.id, { endDate: v })} />
+              </div>
+              <div className="mt-3"><TextField id={`project-desc-${item.id}`} label="What you built / achieved" value={item.description} onChange={(v) => updateItem('projects', item.id, { description: v })} /></div>
+              <div className="mt-3 flex justify-end"><Button type="button" variant="ghost" className="min-h-11 text-destructive" onClick={() => removeItem('projects', item.id, 'Project')}><Trash2 className="size-4" /> Remove</Button></div>
             </div>
-            <RichTextEditor placeholder={t('tools.cvBuilder.projects.description')} value={proj.description} onChange={val => updateProject(proj.id, 'description', val)} />
-          </div>
-        ))}
-      </div>
+          ))}
+          <Button type="button" variant="outline" onClick={() => addItem('projects', { id: makeId('project'), name: '', role: '', technologies: '', startDate: '', endDate: '', description: '', link: '' })}><Plus className="size-4" /> Add project</Button>
+        </div>
+      </SectionCard>
 
-      {/* References */}
-      <div className="space-y-4">
-        <div className="flex justify-between items-center border-b pb-2">
-          <h3 className="text-lg font-medium text-slate-800 dark:text-slate-200">{t('tools.cvBuilder.references.title')}</h3>
-          <button onClick={addReference} className="text-sm text-blue-600 dark:text-blue-400 flex items-center hover:underline"><Plus className="w-4 h-4 mr-1"/> {t('admin.form.add')}</button>
-        </div>
-        {data.references.map(ref => (
-          <div key={ref.id} className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg space-y-3 relative group">
-            <button onClick={() => removeReference(ref.id)} className="absolute top-2 right-2 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-4 h-4"/></button>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <input type="text" placeholder={t('tools.cvBuilder.references.name')} value={ref.name} onChange={e => updateReference(ref.id, 'name', e.target.value)} className="form-input" />
-              <input type="text" placeholder={t('tools.cvBuilder.references.company')} value={ref.company} onChange={e => updateReference(ref.id, 'company', e.target.value)} className="form-input" />
-              <input type="text" placeholder={t('tools.cvBuilder.references.contact')} value={ref.contact} onChange={e => updateReference(ref.id, 'contact', e.target.value)} className="form-input" />
+      <SectionCard title="Skills" icon={Wrench} recommended={recommended.has('skills')} complete={draft.data.skills.length > 0}>
+        <div className="space-y-2">
+          {draft.data.skills.map((item) => (
+            <div key={item.id} className="grid gap-2 sm:grid-cols-[1fr_180px_auto]">
+              <Input aria-label="Skill name" value={item.name} placeholder="Python" onChange={(e) => updateItem('skills', item.id, { name: e.target.value })} />
+              <select aria-label={`Level for ${item.name || 'skill'}`} className="h-9 rounded-md border bg-background px-3 text-sm" value={item.level} onChange={(e) => updateItem('skills', item.id, { level: e.target.value })}>
+                <option value="beginner">Beginner</option><option value="intermediate">Intermediate</option><option value="expert">Expert</option>
+              </select>
+              <Button type="button" variant="ghost" size="icon" className="size-11" aria-label={`Remove ${item.name || 'skill'}`} onClick={() => removeItem('skills', item.id, 'Skill')}><Trash2 className="size-4" /></Button>
             </div>
-          </div>
-        ))}
-      </div>
-      
-      <style dangerouslySetInnerHTML={{__html: `
-        .form-input {
-          @apply w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-slate-900 dark:text-slate-100 transition-colors;
-        }
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background-color: #cbd5e1;
-          border-radius: 10px;
-        }
-        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-          background-color: #334155;
-        }
-      `}} />
+          ))}
+          <Button type="button" variant="outline" size="sm" onClick={() => addItem('skills', { id: makeId('skill'), name: '', level: 'intermediate' })}><Plus className="size-4" /> Add skill</Button>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Languages" icon={LanguagesIcon} recommended={recommended.has('languages')} complete={draft.data.languages.length > 0}>
+        <div className="space-y-2">
+          {draft.data.languages.map((item) => (
+            <div key={item.id} className="grid gap-2 sm:grid-cols-[1fr_180px_auto]">
+              <Input aria-label="Language name" value={item.name} placeholder="English" onChange={(e) => updateItem('languages', item.id, { name: e.target.value })} />
+              <select aria-label={`Proficiency for ${item.name || 'language'}`} className="h-9 rounded-md border bg-background px-3 text-sm" value={item.proficiency} onChange={(e) => updateItem('languages', item.id, { proficiency: e.target.value })}>
+                <option value="basic">Basic</option><option value="intermediate">Intermediate</option><option value="fluent">Fluent</option><option value="native">Native</option>
+              </select>
+              <Button type="button" variant="ghost" size="icon" className="size-11" aria-label={`Remove ${item.name || 'language'}`} onClick={() => removeItem('languages', item.id, 'Language')}><Trash2 className="size-4" /></Button>
+            </div>
+          ))}
+          <Button type="button" variant="outline" size="sm" onClick={() => addItem('languages', { id: makeId('language'), name: '', proficiency: 'fluent' })}><Plus className="size-4" /> Add language</Button>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Certifications" icon={Award} recommended={recommended.has('certifications')} complete={draft.data.certifications.length > 0}>
+        <div className="space-y-3">
+          {draft.data.certifications.map((item) => (
+            <div key={item.id} className="grid gap-3 rounded-xl border bg-muted/20 p-4 sm:grid-cols-2">
+              <Field id={`cert-name-${item.id}`} label="Certification" value={item.name} onChange={(v) => updateItem('certifications', item.id, { name: v })} />
+              <Field id={`cert-issuer-${item.id}`} label="Issuer" value={item.issuer} onChange={(v) => updateItem('certifications', item.id, { issuer: v })} />
+              <Field id={`cert-date-${item.id}`} label="Date" type="month" value={item.date} onChange={(v) => updateItem('certifications', item.id, { date: v })} />
+              <Field id={`cert-url-${item.id}`} label="Credential URL" type="url" dir="ltr" value={item.credentialUrl} onChange={(v) => updateItem('certifications', item.id, { credentialUrl: v })} />
+              <div className="sm:col-span-2 flex justify-end"><Button type="button" variant="ghost" className="min-h-11 text-destructive" onClick={() => removeItem('certifications', item.id, 'Certification')}><Trash2 className="size-4" /> Remove</Button></div>
+            </div>
+          ))}
+          <Button type="button" variant="outline" onClick={() => addItem('certifications', { id: makeId('cert'), name: '', issuer: '', date: '', credentialUrl: '' })}><Plus className="size-4" /> Add certification</Button>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Awards & honors" icon={Award} recommended={recommended.has('awards')} complete={draft.data.awards.length > 0}>
+        <div className="space-y-3">
+          {draft.data.awards.map((item) => (
+            <div key={item.id} className="rounded-xl border bg-muted/20 p-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field id={`award-title-${item.id}`} label="Award" value={item.title} onChange={(v) => updateItem('awards', item.id, { title: v })} />
+                <Field id={`award-issuer-${item.id}`} label="Issuer" value={item.issuer} onChange={(v) => updateItem('awards', item.id, { issuer: v })} />
+                <Field id={`award-date-${item.id}`} label="Date" type="month" value={item.date} onChange={(v) => updateItem('awards', item.id, { date: v })} />
+              </div>
+              <div className="mt-3"><TextField id={`award-desc-${item.id}`} label="Why it matters" value={item.description} onChange={(v) => updateItem('awards', item.id, { description: v })} /></div>
+              <div className="mt-3 flex justify-end"><Button type="button" variant="ghost" className="min-h-11 text-destructive" onClick={() => removeItem('awards', item.id, 'Award')}><Trash2 className="size-4" /> Remove</Button></div>
+            </div>
+          ))}
+          <Button type="button" variant="outline" onClick={() => addItem('awards', { id: makeId('award'), title: '', issuer: '', date: '', description: '' })}><Plus className="size-4" /> Add award</Button>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Volunteering & leadership" icon={HeartHandshake} recommended={recommended.has('volunteering')} complete={draft.data.volunteering.length > 0}>
+        <div className="space-y-3">
+          {draft.data.volunteering.map((item) => (
+            <div key={item.id} className="rounded-xl border bg-muted/20 p-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field id={`vol-role-${item.id}`} label="Role" value={item.role} onChange={(v) => updateItem('volunteering', item.id, { role: v })} />
+                <Field id={`vol-org-${item.id}`} label="Organization" value={item.organization} onChange={(v) => updateItem('volunteering', item.id, { organization: v })} />
+              </div>
+              <div className="mt-3"><MonthRange prefix={`vol-${item.id}`} startDate={item.startDate} endDate={item.endDate} isCurrent={item.isCurrent} onStart={(v) => updateItem('volunteering', item.id, { startDate: v })} onEnd={(v) => updateItem('volunteering', item.id, { endDate: v })} onCurrent={(v) => updateItem('volunteering', item.id, { isCurrent: v, endDate: v ? '' : item.endDate })} /></div>
+              <div className="mt-3"><TextField id={`vol-desc-${item.id}`} label="Contribution / impact" value={item.description} onChange={(v) => updateItem('volunteering', item.id, { description: v })} /></div>
+              <div className="mt-3 flex justify-end"><Button type="button" variant="ghost" className="min-h-11 text-destructive" onClick={() => removeItem('volunteering', item.id, 'Volunteering entry')}><Trash2 className="size-4" /> Remove</Button></div>
+            </div>
+          ))}
+          <Button type="button" variant="outline" onClick={() => addItem('volunteering', { id: makeId('vol'), role: '', organization: '', startDate: '', endDate: '', isCurrent: false, description: '' })}><Plus className="size-4" /> Add volunteering</Button>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Research" icon={FlaskConical} recommended={recommended.has('research')} complete={draft.data.research.length > 0}>
+        <div className="space-y-3">
+          {draft.data.research.map((item) => (
+            <div key={item.id} className="rounded-xl border bg-muted/20 p-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field id={`research-title-${item.id}`} label="Research title" value={item.title} onChange={(v) => updateItem('research', item.id, { title: v })} />
+                <Field id={`research-org-${item.id}`} label="Institution / group" value={item.organization} onChange={(v) => updateItem('research', item.id, { organization: v })} />
+                <Field id={`research-link-${item.id}`} label="Link" type="url" dir="ltr" value={item.link} onChange={(v) => updateItem('research', item.id, { link: v })} />
+              </div>
+              <div className="mt-3"><MonthRange prefix={`research-${item.id}`} startDate={item.startDate} endDate={item.endDate} isCurrent={item.isCurrent} onStart={(v) => updateItem('research', item.id, { startDate: v })} onEnd={(v) => updateItem('research', item.id, { endDate: v })} onCurrent={(v) => updateItem('research', item.id, { isCurrent: v, endDate: v ? '' : item.endDate })} /></div>
+              <div className="mt-3"><TextField id={`research-desc-${item.id}`} label="Research summary" value={item.description} onChange={(v) => updateItem('research', item.id, { description: v })} /></div>
+              <div className="mt-3 flex justify-end"><Button type="button" variant="ghost" className="min-h-11 text-destructive" onClick={() => removeItem('research', item.id, 'Research entry')}><Trash2 className="size-4" /> Remove</Button></div>
+            </div>
+          ))}
+          <Button type="button" variant="outline" onClick={() => addItem('research', { id: makeId('research'), title: '', organization: '', startDate: '', endDate: '', isCurrent: false, description: '', link: '' })}><Plus className="size-4" /> Add research</Button>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Publications" icon={BookOpen} recommended={recommended.has('publications')} complete={draft.data.publications.length > 0}>
+        <div className="space-y-3">
+          {draft.data.publications.map((item) => (
+            <div key={item.id} className="rounded-xl border bg-muted/20 p-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field id={`pub-title-${item.id}`} label="Publication title" value={item.title} onChange={(v) => updateItem('publications', item.id, { title: v })} />
+                <Field id={`pub-publisher-${item.id}`} label="Journal / publisher" value={item.publisher} onChange={(v) => updateItem('publications', item.id, { publisher: v })} />
+                <Field id={`pub-date-${item.id}`} label="Date" type="month" value={item.date} onChange={(v) => updateItem('publications', item.id, { date: v })} />
+                <Field id={`pub-link-${item.id}`} label="Link / DOI" type="url" dir="ltr" value={item.link} onChange={(v) => updateItem('publications', item.id, { link: v })} />
+              </div>
+              <div className="mt-3"><TextField id={`pub-desc-${item.id}`} label="Description" value={item.description} onChange={(v) => updateItem('publications', item.id, { description: v })} /></div>
+              <div className="mt-3 flex justify-end"><Button type="button" variant="ghost" className="min-h-11 text-destructive" onClick={() => removeItem('publications', item.id, 'Publication')}><Trash2 className="size-4" /> Remove</Button></div>
+            </div>
+          ))}
+          <Button type="button" variant="outline" onClick={() => addItem('publications', { id: makeId('publication'), title: '', publisher: '', date: '', description: '', link: '' })}><Plus className="size-4" /> Add publication</Button>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="References" icon={UsersRound} recommended={false} complete={draft.data.references.length > 0}>
+        <div className="space-y-3">
+          {draft.data.references.map((item) => (
+            <div key={item.id} className="grid gap-3 rounded-xl border bg-muted/20 p-4 sm:grid-cols-2">
+              <Field id={`ref-name-${item.id}`} label="Name" value={item.name} onChange={(v) => updateItem('references', item.id, { name: v })} />
+              <Field id={`ref-role-${item.id}`} label="Role / position" value={item.role} onChange={(v) => updateItem('references', item.id, { role: v })} />
+              <Field id={`ref-org-${item.id}`} label="Organization" value={item.organization} onChange={(v) => updateItem('references', item.id, { organization: v })} />
+              <Field id={`ref-email-${item.id}`} label="Email" type="email" dir="ltr" value={item.email} onChange={(v) => updateItem('references', item.id, { email: v })} />
+              <Field id={`ref-phone-${item.id}`} label="Phone" type="tel" dir="ltr" value={item.phone} onChange={(v) => updateItem('references', item.id, { phone: v })} />
+              <div className="flex items-end justify-end"><Button type="button" variant="ghost" className="min-h-11 text-destructive" onClick={() => removeItem('references', item.id, 'Reference')}><Trash2 className="size-4" /> Remove</Button></div>
+            </div>
+          ))}
+          <Button type="button" variant="outline" onClick={() => addItem('references', { id: makeId('reference'), name: '', role: '', organization: '', email: '', phone: '' })}><Plus className="size-4" /> Add reference</Button>
+        </div>
+      </SectionCard>
     </div>
   );
 }
