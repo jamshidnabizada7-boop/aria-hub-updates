@@ -74,7 +74,7 @@ function MonthRange({ prefix, startDate, endDate, isCurrent, onStart, onEnd, onC
       <Field id={`${prefix}-end`} label={endLabel} type="month" value={isCurrent ? '' : endDate} onChange={onEnd} />
       <label className="sm:col-span-2 flex items-center gap-2 text-sm">
         <Checkbox checked={isCurrent} onCheckedChange={(checked) => onCurrent(Boolean(checked))} />
-        Currently here
+        {currentLabel}
       </label>
     </div>
   );
