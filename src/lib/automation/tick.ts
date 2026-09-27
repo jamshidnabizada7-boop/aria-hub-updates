@@ -23,7 +23,7 @@ const MIN_FREE_MB = 350;
 // Headless chrome + a fresh Turbopack route compile together need ~1.5-2GB.
 // A 900MB gate still OOM'd the dev server during boot-compile waves.
 const MIN_FREE_MB_RENDER = 900;
-const TRANSLATE_BACKOFF_MIN = 30;
+const TRANSLATE_BACKOFF_MIN = 5;
 
 export interface TickResult {
   ran: boolean;
