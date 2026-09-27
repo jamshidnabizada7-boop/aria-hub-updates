@@ -3,9 +3,8 @@
  *
  * For each scraped listing it produces (with a single LLM call):
  *   1. A medium-length English summary (120-180 words) — readable in ~30s
- *   2. Natural Farsi/Persian (fa) + Pashto (ps) translations of title & summary
- *   3. A category suggestion from the known category slugs
- *   4. Deterministic (non-AI) extraction of the EXACT application link:
+ *   2. A category suggestion from the known category slugs
+ *   3. Deterministic (non-AI) extraction of the EXACT application link:
  *      emails, Google Forms, survey links, explicit apply URLs
  *
  * Fallback behavior: if the AI provider is unavailable or a call fails, the
@@ -59,7 +58,29 @@ const NON_APPLY_EMAILS = [
 ];
 
 const EXPLICIT_APPLY_URL_RE =
-  /(?:apply|application|submit)[^\n]{0,80}(https?:\/\/[^\s)"'<>]+)/gi;
+  /(?:apply|application|submit|register)[^\n]{0,100}(https?:\/\/[^\s)"'<>]+)/gi;
+
+function isDirectApplyCandidate(candidate: string, sourceUrl: string): boolean {
+  const raw = candidate.trim();
+  if (!raw) return false;
+  if (/^mailto:/i.test(raw)) return true;
+  if (!/^https?:\/\//i.test(raw)) return false;
+
+  try {
+    const target = new URL(raw);
+    const source = new URL(sourceUrl);
+    const normalizedTarget = target.href.replace(/\/$/, '');
+    const normalizedSource = source.href.replace(/\/$/, '');
+    if (normalizedTarget === normalizedSource) return false;
+
+    // External forms/portals are direct destinations. Same-host URLs must
+    // explicitly look like an application endpoint rather than an article.
+    if (target.hostname !== source.hostname) return true;
+    return /\/(apply|application|applications|register|registration|submit)(\/|\?|$)/i.test(target.pathname + target.search);
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Extract the best application link from listing text.
@@ -104,9 +125,12 @@ export function extractApplyLink(listing: RawListing): string | null {
     }
   }
 
-  // 4. A scraped applyUrl (e.g. Wazifaha's own apply page) — keep as final fallback
-  if (listing.applyUrl && !candidates.includes(listing.applyUrl)) {
-    candidates.push(listing.applyUrl);
+  // 4. A scraper-provided URL is accepted only when it is a genuine
+  // application endpoint. The source/article URL itself is NEVER surfaced as
+  // an Apply link: users should see the real email/form/application endpoint,
+  // or no Apply button when the exact destination is unknown.
+  if (listing.applyUrl && isDirectApplyCandidate(listing.applyUrl, listing.sourceUrl)) {
+    if (!candidates.includes(listing.applyUrl)) candidates.push(listing.applyUrl);
   }
 
   return candidates[0] || null;
@@ -116,24 +140,16 @@ export function extractApplyLink(listing: RawListing): string | null {
 
 interface Enrichment {
   summary_en: string;
-  title_fa: string;
-  summary_fa: string;
-  title_ps: string;
-  summary_ps: string;
   category?: string;
 }
 
-const ENRICH_SYSTEM = `You are an editor and translator for ARIA HUB, an Afghan opportunities portal (jobs, scholarships, internships).
+const ENRICH_SYSTEM = `You are an editor for ARIA HUB, an opportunities portal.
 Given a scraped job/scholarship posting, respond ONLY with strict JSON:
 {
-  "summary_en": "<120-180 word summary in English: what the role/program is, the organization, location, top 3 requirements, salary if stated, and how to apply. Skip company boilerplate and legal disclaimers. Plain text, no markdown headings.>",
-  "title_fa": "<Farsi/Persian translation of the title, natural and fluent, RTL script. Keep org names like UNICEF/WHO transliterated or as-is>",
-  "summary_fa": "<Farsi/Persian translation of summary_en, natural fluent professional tone, ~120 words, RTL script. Keep URLs, emails, dates, org names, and technical terms (TOEFL, IELTS) as-is>",
-  "title_ps": "<Pashto translation of the title, natural and fluent, RTL script>",
-  "summary_ps": "<Pashto translation of summary_en, natural fluent professional tone, ~120 words, RTL script. Keep URLs, emails, dates, org names, technical terms as-is>",
+  "summary_en": "<120-180 word English summary: what the role/program is, organization, location, top requirements, funding/salary if explicitly stated, deadline if stated, and the exact application method if present. Do not invent facts.>",
   "category": "<one of: jobs, scholarships, internships, competitions, conferences, volunteer, exchange-programs, training>"
 }
-Rules: never invent facts not present in the posting; if salary/deadline missing, omit them; if the posting is a scholarship use scholarship wording, if a job use job wording.`;
+Do NOT translate. Persian and Pashto are handled by a separate resumable translation worker so free-provider rate limits can never create partial public translations.`;
 
 function buildEnrichUserPrompt(listing: RawListing): string {
   const parts: string[] = [];
@@ -207,7 +223,7 @@ export async function runAIPipeline(
     educationReq: listing.educationReq || null,
     experience: listing.experience || null,
     extractedData: listing.extractedData || null,
-    applyUrl: exactApplyUrl || listing.applyUrl || null,
+    applyUrl: exactApplyUrl || null,
 
     seoTitle: listing.title,
     seoDescription: shortDesc,
@@ -245,21 +261,13 @@ export async function runAIPipeline(
           summaryI18n.en = parsed.summary_en;
           if (originalLang !== 'en') summaryI18n[originalLang] = parsed.summary_en;
         }
-        // Farsi/Persian
-        if (parsed.title_fa) titleI18n.fa = parsed.title_fa;
-        if (parsed.summary_fa) summaryI18n.fa = parsed.summary_fa;
-        // Pashto
-        if (parsed.title_ps) titleI18n.ps = parsed.title_ps;
-        if (parsed.summary_ps) summaryI18n.ps = parsed.summary_ps;
-
         // Category suggestion
         if (parsed.category) {
           const suggested = slugify(parsed.category);
           if (ctx.knownCategorySlugs.includes(suggested)) categorySlugs.push(suggested);
         }
 
-        translationStatus =
-          titleI18n.fa && summaryI18n.fa && titleI18n.ps && summaryI18n.ps ? 'complete' : 'partial';
+        translationStatus = 'pending';
       }
     } catch (e) {
       console.warn('[ai-pipeline] enrichment failed, storing original language only:', (e as Error).message);
@@ -305,40 +313,10 @@ export async function runAIPipeline(
     }
   }
 
-  // ── Full trilingual bodies — one extra LLM call per NEW listing ─────────
-  // Translates description + all sections into Farsi/Pashto so users of every
-  // language see complete content (not an English body under a localized UI).
-  if (provider) {
-    try {
-      const chat = (system: string, user: string): Promise<string> =>
-        typeof (provider as unknown as Record<string, unknown>).chat === 'function'
-          ? (provider as unknown as { chat(s: string, u: string): Promise<string> }).chat(system, user)
-          : Promise.reject(new Error('no chat'));
-      const sections = await translateSections(
-        {
-          title: listing.title,
-          description: cleanedDescription,
-          eligibility: listing.eligibility ?? null,
-          benefits: listing.benefits ?? null,
-          responsibilities: listing.responsibilities ?? null,
-          requirements: (listing.requirements || listing.requiredDocuments) ?? null,
-          guidelines: listing.guidelines ?? null,
-          jobType: listing.jobType ?? null,
-          salary: listing.salary ?? null,
-          educationReq: listing.educationReq ?? null,
-          experience: listing.experience ?? null,
-        },
-        chat,
-      );
-      if (sections) {
-        mergeSectionTranslations(data, originalLang, sections);
-        const descI18n = data.descriptionI18n as Record<string, string>;
-        if (descI18n.fa && descI18n.ps) translationStatus = 'complete';
-      }
-    } catch (e) {
-      console.warn('[ai-pipeline] section translation failed (kept original language):', (e as Error).message);
-    }
-  }
+  // Translation is intentionally NOT performed during import. Free OpenRouter
+  // models may rate-limit or disappear temporarily; translation-core stages
+  // Persian first, validates every chunk, commits it atomically, and only then
+  // permits Pashto. Imports therefore never publish a truncated translation.
 
   if (listing.extractedData && typeof listing.extractedData === 'object') {
     data.extractedDataI18n = { [originalLang]: { ...listing.extractedData } };
