@@ -222,7 +222,6 @@ const COPY: CopyTable = {
   'Emerald': { fa: 'سبز زمردی', ps: 'زمردي شین' },
   'Burgundy': { fa: 'زرشکی', ps: 'برګنډي' },
   'Neutral': { fa: 'خنثی', ps: 'خنثی' },
-  'ATS Simple': { fa: 'ساده ATS', ps: 'ساده ATS' },
   'ATS Compact': { fa: 'فشرده ATS', ps: 'لنډ ATS' },
   'Modern Sidebar': { fa: 'مدرن با نوار کناری', ps: 'عصري اړخیز پینل' },
   'Executive': { fa: 'اجرایی', ps: 'اجرائیوي' },
