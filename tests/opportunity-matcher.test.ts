@@ -119,6 +119,83 @@ describe('Opportunity Matcher canonical contract', () => {
     expect(result?.evidence.conflicts).toContain('nationality');
   });
 
+  test('normalized nationality facts take precedence and detect conflict', () => {
+    const result = rankOpportunity(
+      baseProfile,
+      opportunity({
+        eligibility: null,
+        extractedData: null,
+        structuredFacts: {
+          eligibleNationalities: ['Pakistan', 'India'],
+          educationLevels: ['masters'],
+          fieldAreas: ['technology'],
+          reviewed: true,
+        },
+      })
+    );
+    expect(result).not.toBeNull();
+    expect(result?.eligibilityStatus).toBe('potential_conflict');
+    expect(result?.evidence.conflicts).toContain('nationality');
+  });
+
+  test('normalized education and field facts are used as evidence', () => {
+    const result = rankOpportunity(
+      baseProfile,
+      opportunity({
+        title: 'International Scholarship Programme',
+        educationReq: null,
+        requirements: null,
+        tags: null,
+        structuredFacts: {
+          eligibleNationalities: ['Afghanistan'],
+          educationLevels: ['masters'],
+          fieldAreas: ['technology'],
+          reviewed: true,
+        },
+      })
+    );
+    expect(result).not.toBeNull();
+    expect(result?.evidence.verified).toContain('education');
+    expect(result?.evidence.verified).toContain('nationality');
+    expect(result?.evidence.reasons).toContain('field');
+  });
+
+  test('common geography aliases match canonically', () => {
+    const result = rankOpportunity(
+      { ...baseProfile, destinations: ['Türkiye'] },
+      opportunity({ country: 'Turkey' })
+    );
+    expect(result).not.toBeNull();
+    expect(result?.evidence.reasons).toContain('destination');
+  });
+
+  test('any selected destination may satisfy a multi-destination profile', () => {
+    const result = rankOpportunity(
+      { ...baseProfile, destinations: ['France', 'Germany'] },
+      opportunity({ country: 'Germany' })
+    );
+    expect(result).not.toBeNull();
+    expect(result?.evidence.reasons).toContain('destination');
+  });
+
+  test('known minimum experience can produce an explicit conflict', () => {
+    const result = rankOpportunity(
+      { ...baseProfile, experienceYears: 1 },
+      opportunity({
+        structuredFacts: {
+          eligibleNationalities: ['Afghanistan'],
+          educationLevels: ['masters'],
+          fieldAreas: ['technology'],
+          minExperienceYears: 3,
+          reviewed: true,
+        },
+      })
+    );
+    expect(result).not.toBeNull();
+    expect(result?.eligibilityStatus).toBe('potential_conflict');
+    expect(result?.evidence.conflicts).toContain('experience');
+  });
+
   test('same-day active opportunity is not rejected by ranking', () => {
     const today = new Date();
     today.setUTCHours(23, 59, 59, 999);
