@@ -110,7 +110,7 @@ const EDUCATION_TERMS: Record<EducationLevel, string[]> = {
 };
 
 function normalize(value: unknown): string {
-  return String(value ?? '').toLowerCase().replace(/[_–—/-]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return String(value ?? '').toLowerCase().replace(/[_–—\\/-]+/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 function flattenJson(value: unknown): string {
