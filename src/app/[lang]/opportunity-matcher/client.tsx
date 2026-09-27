@@ -20,14 +20,13 @@ import Link from 'next/link';
 import { track } from '@vercel/analytics';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SaveButton } from '@/components/site/save-button';
 import { useLangHref } from '@/hooks/use-lang-href';
 import { useLangStore } from '@/lib/lang-store';
-import type { EducationLevel, MatcherIntent } from '@/lib/opportunity-matcher';
+import type { EducationLevel, FieldArea, MatcherIntent } from '@/lib/opportunity-matcher';
 
 type Lang = 'en' | 'fa' | 'ps';
 type ResultState = 'idle' | 'loading' | 'results' | 'no_match' | 'error' | 'rate_limited';
@@ -38,7 +37,7 @@ interface Profile {
   nationality: string;
   residence: string;
   destinations: string[];
-  field: string;
+  fieldArea: FieldArea;
 }
 
 interface MatchResult {
@@ -65,7 +64,7 @@ const EMPTY_PROFILE: Profile = {
   nationality: 'Afghanistan',
   residence: 'Afghanistan',
   destinations: ['anywhere'],
-  field: '',
+  fieldArea: 'any',
 };
 
 const COPY = {
@@ -77,8 +76,8 @@ const COPY = {
     educationTitle: 'What is your current education level?', educationSub: 'This is stored as a language-neutral value so every language receives the same matching logic.',
     profileTitle: 'Tell us where you are applying from', profileSub: 'Nationality and residence are different and can affect international eligibility.',
     destinationTitle: 'Where would you like to go?', destinationSub: 'Choose Anywhere if destination is flexible. Add a field or role to improve relevance.',
-    nationality: 'Nationality', residence: 'Current country of residence', destination: 'Preferred destination', field: 'Field, discipline or role (optional)',
-    fieldPlaceholder: 'e.g. Computer Science, Public Health, Software Engineering',
+    nationality: 'Nationality', residence: 'Current country of residence', destination: 'Preferred destination', field: 'Field or discipline',
+    fieldPlaceholder: 'Any field',
     anywhere: 'Anywhere', find: 'Find matches', edit: 'Edit preferences', startOver: 'Start over',
     loadingTitle: 'Checking active opportunities', loadingSub: 'Comparing type, destination, known requirements and data confidence.',
     resultsTitle: 'Your opportunity matches', resultsSub: 'These are recommendations, not acceptance predictions.',
@@ -105,8 +104,8 @@ const COPY = {
     educationTitle: 'سطح فعلی تحصیل شما چیست؟', educationSub: 'این مقدار به‌صورت ثابت و مستقل از زبان ذخیره می‌شود تا منطق تطبیق در همه زبان‌ها یکسان باشد.',
     profileTitle: 'از کجا درخواست می‌دهید؟', profileSub: 'تابعیت و محل اقامت متفاوت‌اند و ممکن است بر شرایط بین‌المللی اثر بگذارند.',
     destinationTitle: 'ترجیح می‌دهید به کجا بروید؟', destinationSub: 'اگر مقصد برایتان مهم نیست «هرجا» را انتخاب کنید. رشته یا نقش را هم می‌توانید اضافه کنید.',
-    nationality: 'تابعیت', residence: 'کشور محل اقامت فعلی', destination: 'مقصد ترجیحی', field: 'رشته، تخصص یا نقش (اختیاری)',
-    fieldPlaceholder: 'مثلاً علوم کامپیوتر، صحت عامه، مهندسی نرم‌افزار',
+    nationality: 'تابعیت', residence: 'کشور محل اقامت فعلی', destination: 'مقصد ترجیحی', field: 'رشته یا حوزه',
+    fieldPlaceholder: 'هر رشته',
     anywhere: 'هرجا', find: 'یافتن فرصت‌ها', edit: 'ویرایش ترجیحات', startOver: 'شروع دوباره',
     loadingTitle: 'در حال بررسی فرصت‌های فعال', loadingSub: 'نوع فرصت، مقصد، شرایط شناخته‌شده و کیفیت داده مقایسه می‌شود.',
     resultsTitle: 'فرصت‌های مناسب برای شما', resultsSub: 'این‌ها پیشنهاد هستند، نه پیش‌بینی شانس قبولی.',
@@ -133,8 +132,8 @@ const COPY = {
     educationTitle: 'ستاسو اوسنی تعلیمي کچه څه ده؟', educationSub: 'دا ارزښت له ژبې خپلواک ساتل کېږي څو د ټولو ژبو د برابرولو منطق یو شان وي.',
     profileTitle: 'له کوم ځایه غوښتنلیک ورکوئ؟', profileSub: 'تابعیت او اوسېدنه جلا معلومات دي او د نړیوالو شرایطو اغېزمنولای شي.',
     destinationTitle: 'کوم ځای ته تلل غواړئ؟', destinationSub: 'که ځای مهم نه وي، هرځای وټاکئ. د لا ښه تړاو لپاره رشته یا رول هم ولیکئ.',
-    nationality: 'تابعیت', residence: 'اوسنی د اوسېدو هېواد', destination: 'غوره ځای', field: 'رشته، تخصص یا رول (اختیاري)',
-    fieldPlaceholder: 'لکه کمپیوټر ساینس، عامه روغتیا، سافټویر انجینري',
+    nationality: 'تابعیت', residence: 'اوسنی د اوسېدو هېواد', destination: 'غوره ځای', field: 'رشته یا حوزه',
+    fieldPlaceholder: 'هره رشته',
     anywhere: 'هرځای', find: 'فرصتونه ومومئ', edit: 'غوره توبونه سمول', startOver: 'له سره پیل',
     loadingTitle: 'فعال فرصتونه کتل کېږي', loadingSub: 'ډول، ځای، پېژندل شوي شرطونه او د معلوماتو باور پرتله کېږي.',
     resultsTitle: 'ستاسو مناسب فرصتونه', resultsSub: 'دا سپارښتنې دي، د منل کېدو وړاندوینې نه دي.',
@@ -165,6 +164,48 @@ const EDUCATION_LABELS: Record<Lang, Record<EducationLevel, string>> = {
   en: { high_school: 'High school', bachelors: "Bachelor's", masters: "Master's", phd: 'PhD / Doctorate', other: 'Other' },
   fa: { high_school: 'دبیرستان', bachelors: 'لیسانس', masters: 'فوق لیسانس', phd: 'دکترا', other: 'سایر' },
   ps: { high_school: 'لېسه', bachelors: 'لیسانس', masters: 'ماسټري', phd: 'دوکتورا', other: 'نور' },
+};
+
+const FIELD_LABELS: Record<Lang, Record<FieldArea, string>> = {
+  en: {
+    any: 'Any field',
+    technology: 'Technology & Computer Science',
+    engineering: 'Engineering',
+    business: 'Business, Economics & Finance',
+    health: 'Health & Medicine',
+    education: 'Education',
+    social_sciences: 'Social Sciences',
+    law_policy: 'Law, Policy & Governance',
+    natural_sciences: 'Natural Sciences & Mathematics',
+    environment_agriculture: 'Environment & Agriculture',
+    arts_humanities: 'Arts, Media & Humanities',
+  },
+  fa: {
+    any: 'هر رشته',
+    technology: 'فناوری و علوم کامپیوتر',
+    engineering: 'مهندسی',
+    business: 'تجارت، اقتصاد و مالی',
+    health: 'صحت و پزشکی',
+    education: 'آموزش',
+    social_sciences: 'علوم اجتماعی',
+    law_policy: 'حقوق، پالیسی و حکومت‌داری',
+    natural_sciences: 'علوم طبیعی و ریاضی',
+    environment_agriculture: 'محیط زیست و زراعت',
+    arts_humanities: 'هنر، رسانه و علوم انسانی',
+  },
+  ps: {
+    any: 'هره رشته',
+    technology: 'ټکنالوژي او کمپیوټر ساینس',
+    engineering: 'انجینري',
+    business: 'سوداګري، اقتصاد او مالي چارې',
+    health: 'روغتیا او طب',
+    education: 'زده کړه',
+    social_sciences: 'ټولنیز علوم',
+    law_policy: 'حقوق، پالیسي او حکومتولي',
+    natural_sciences: 'طبیعي علوم او ریاضي',
+    environment_agriculture: 'چاپېریال او کرنه',
+    arts_humanities: 'هنر، رسنۍ او بشري علوم',
+  },
 };
 
 const COUNTRIES = [
@@ -453,17 +494,47 @@ export function OpportunityMatcherClient() {
               <div className="space-y-5">
                 <div>
                   <Label className="mb-2 block">{c.destination}</Label>
-                  <Select value={profile.destinations[0]} onValueChange={(value) => setProfile((p) => ({ ...p, destinations: [value] }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="anywhere">{c.anywhere}</SelectItem>
-                      {COUNTRIES.map((country) => <SelectItem key={country.value} value={country.value}>{country[lang]}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex max-h-56 flex-wrap gap-2 overflow-y-auto rounded-xl border bg-background/40 p-3" role="group" aria-label={c.destination}>
+                    <button
+                      type="button"
+                      aria-pressed={profile.destinations.includes('anywhere')}
+                      onClick={() => setProfile((p) => ({ ...p, destinations: ['anywhere'] }))}
+                      className={`rounded-full border px-3 py-2 text-sm transition-colors ${profile.destinations.includes('anywhere') ? 'border-amber-500 bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200' : 'bg-background hover:bg-accent'}`}
+                    >
+                      {c.anywhere}
+                    </button>
+                    {COUNTRIES.map((country) => {
+                      const selected = profile.destinations.includes(country.value);
+                      return (
+                        <button
+                          key={country.value}
+                          type="button"
+                          aria-pressed={selected}
+                          onClick={() => setProfile((p) => {
+                            const current = p.destinations.filter((d) => d !== 'anywhere');
+                            const next = selected
+                              ? current.filter((d) => d !== country.value)
+                              : [...current, country.value].slice(0, 8);
+                            return { ...p, destinations: next.length ? next : ['anywhere'] };
+                          })}
+                          className={`rounded-full border px-3 py-2 text-sm transition-colors ${selected ? 'border-amber-500 bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200' : 'bg-background hover:bg-accent'}`}
+                        >
+                          {country[lang]}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
                 <div>
-                  <Label htmlFor="matcher-field" className="mb-2 block">{c.field}</Label>
-                  <Input id="matcher-field" value={profile.field} maxLength={80} placeholder={c.fieldPlaceholder} onChange={(e) => setProfile((p) => ({ ...p, field: e.target.value }))} />
+                  <Label className="mb-2 block">{c.field}</Label>
+                  <Select value={profile.fieldArea} onValueChange={(value) => setProfile((p) => ({ ...p, fieldArea: value as FieldArea }))}>
+                    <SelectTrigger><SelectValue placeholder={c.fieldPlaceholder} /></SelectTrigger>
+                    <SelectContent>
+                      {(Object.keys(FIELD_LABELS[lang]) as FieldArea[]).map((area) => (
+                        <SelectItem key={area} value={area}>{FIELD_LABELS[lang][area]}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <p className="rounded-xl bg-muted/60 p-3 text-xs leading-5 text-muted-foreground">{c.privacy}</p>
               </div>
