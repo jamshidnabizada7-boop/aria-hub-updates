@@ -62,6 +62,8 @@ function publicResult(item: RankedOpportunity, lang: MatcherProfile['lang']) {
     location: row.country || 'Global',
     organization: row.organization,
     deadline: deadlineIso(row.deadline),
+    sourceName: row.sourceName,
+    lastChecked: deadlineIso(row.lastChecked),
     matchStrength: item.matchStrength,
     eligibilityStatus: item.eligibilityStatus,
     dataConfidence: item.dataConfidence,
