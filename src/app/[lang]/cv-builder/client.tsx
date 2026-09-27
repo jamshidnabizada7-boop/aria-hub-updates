@@ -50,6 +50,12 @@ export function CVBuilderClient({ settings }: { settings: any }) {
   const searchParams = useSearchParams();
   const hrefFn = useLangHref();
   const lang = useLangStore((s) => s.code);
+  const opportunityContextCopy =
+    lang === 'fa'
+      ? { label: 'فرصت هدف برای CV', view: 'مشاهده فرصت هدف' }
+      : lang === 'ps'
+        ? { label: 'د CV هدف فرصت', view: 'هدف فرصت وګورئ' }
+        : { label: '{opportunityContextCopy.label}', view: 'View target opportunity' };
   const [opportunity, setOpportunity] = useState<OpportunityContext | null>(null);
   const [data, setData] = useState<CVData>(initialData);
   const [template, setTemplate] = useState<TemplateType>('professional');
@@ -127,7 +133,7 @@ export function CVBuilderClient({ settings }: { settings: any }) {
                     </div>
                     <Link
                       href={hrefFn(`/opportunities/${opportunity.slug}`)}
-                      aria-label="View target opportunity"
+                      aria-label={opportunityContextCopy.view}
                       className="rounded-lg p-2 text-blue-700 hover:bg-blue-100 dark:text-blue-300 dark:hover:bg-blue-900/40"
                     >
                       <ExternalLink className="h-4 w-4" aria-hidden="true" />
