@@ -4,189 +4,267 @@ import { db } from '@/lib/db';
 import { getLocalizedContent } from '@/lib/i18n-content';
 import { getAIProvider } from '@/lib/ai/provider';
 import { parseJSON } from '@/lib/ai/providers/helpers';
+import { getClientIp, rateLimit } from '@/lib/admin-auth';
+import { startOfTodayUtc } from '@/lib/opportunity-shared';
+import {
+  MatcherProfileSchema,
+  rankOpportunities,
+  type MatcherProfile,
+  type RankedOpportunity,
+} from '@/lib/opportunity-matcher';
 
-/**
- * POST /api/opportunities/matcher
- *
- * Replaces the old Server Action (`opportunity-matcher/actions.ts`) which
- * failed with "Invalid Server Actions request" when the site is accessed
- * through a proxy/gateway whose forwarded host differs from the origin.
- *
- * Body: { age, targetCountry, education, goal, lang }
- * Returns { results: MatchResult[], ai: boolean }
- */
-
-const BodySchema = z.object({
-  age: z.string().trim().min(1).max(3),
-  targetCountry: z.string().trim().min(1).max(80),
-  education: z.string().trim().min(1).max(120),
-  goal: z.enum(['Scholarship', 'Internship', 'Work Visa']),
-  lang: z.enum(['fa', 'ps', 'en']).default('en'),
-});
-
-export interface MatchResult {
-  id: string;
-  slug: string;
-  title: string;
-  type: string;
-  location: string;
-  match: number;
-  chanceOfAcceptance: 'High' | 'Medium' | 'Low';
-  rationale: string;
-}
+const AiExplanationSchema = z.array(
+  z.object({
+    id: z.string().min(1),
+    explanation: z.string().trim().min(1).max(320),
+  })
+).max(6);
 
 interface ChatProvider {
   chat(system: string, user: string): Promise<string>;
 }
 
-const LANG_NAME: Record<string, string> = {
+const LANG_NAME: Record<MatcherProfile['lang'], string> = {
   fa: 'Persian (Farsi, Arabic script)',
   ps: 'Pashto (Arabic script)',
   en: 'English',
 };
 
 const MATCHER_SYSTEM =
-  'You are an expert career and education counselor for ARIA HUB, an opportunities portal for Afghanistan. ' +
-  'You receive a user profile and 5 candidate opportunities. Select the top 3 best matches and score them. ' +
-  'Respond ONLY with a valid JSON array — no markdown, no commentary.';
+  'You explain ARIA HUB opportunity recommendations. You MUST use only the evidence supplied for each candidate. ' +
+  'Never claim acceptance probability. Never claim eligibility that is not explicitly supported. ' +
+  'If eligibility is unknown, say what still needs checking. Respond only with valid JSON.';
+
+function localizedText(
+  base: string | null | undefined,
+  i18n: unknown,
+  lang: MatcherProfile['lang']
+): string {
+  return getLocalizedContent(
+    base ?? '',
+    (i18n ?? null) as Record<string, string> | null,
+    lang
+  );
+}
+
+function deadlineIso(deadline: Date | null): string | null {
+  return deadline ? deadline.toISOString() : null;
+}
+
+function publicResult(item: RankedOpportunity, lang: MatcherProfile['lang']) {
+  const row = item.opportunity as MatcherDbRow;
+  return {
+    id: row.id,
+    slug: row.slug,
+    title: localizedText(row.title, row.titleI18n, lang),
+    type: localizedText(
+      row.jobType || row.category?.name || 'Opportunity',
+      row.jobTypeI18n || row.category?.nameI18n,
+      lang
+    ),
+    location: row.country || 'Global',
+    organization: row.organization,
+    deadline: deadlineIso(row.deadline),
+    matchStrength: item.matchStrength,
+    eligibilityStatus: item.eligibilityStatus,
+    dataConfidence: item.dataConfidence,
+    reasons: item.evidence.reasons,
+    verified: item.evidence.verified,
+    unknowns: item.evidence.unknowns,
+    conflicts: item.evidence.conflicts,
+    explanation: '',
+  };
+}
+
+type MatcherDbRow = Awaited<ReturnType<typeof fetchCandidates>>[number];
+
+async function fetchCandidates(profile: MatcherProfile) {
+  const today = startOfTodayUtc();
+
+  // Relevance is evaluated across the full active corpus instead of truncating
+  // to the newest N rows before matching. At current ARIA HUB scale this is
+  // small; fields selected here deliberately exclude large description blobs.
+  return db.opportunity.findMany({
+    where: {
+      status: 'published',
+      OR: [{ deadline: null }, { deadline: { gte: today } }],
+    },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      titleI18n: true,
+      organization: true,
+      country: true,
+      deadline: true,
+      jobType: true,
+      jobTypeI18n: true,
+      educationReq: true,
+      educationReqI18n: true,
+      experience: true,
+      experienceI18n: true,
+      eligibility: true,
+      eligibilityI18n: true,
+      requirements: true,
+      requirementsI18n: true,
+      benefits: true,
+      tags: true,
+      extractedData: true,
+      sourceName: true,
+      lastChecked: true,
+      updatedAt: true,
+      category: { select: { slug: true, name: true, nameI18n: true } },
+    },
+    orderBy: [{ deadline: { sort: 'asc', nulls: 'last' } }, { updatedAt: 'desc' }],
+  });
+}
+
+async function addGroundedAiExplanations(
+  results: ReturnType<typeof publicResult>[],
+  ranked: RankedOpportunity[],
+  profile: MatcherProfile
+): Promise<{ results: ReturnType<typeof publicResult>[]; ai: boolean }> {
+  if (results.length === 0) return { results, ai: false };
+
+  try {
+    const provider = await getAIProvider();
+    if (!provider) return { results, ai: false };
+
+    const evidencePackage = ranked.slice(0, results.length).map((item) => {
+      const row = item.opportunity as MatcherDbRow;
+      return {
+        id: row.id,
+        title: row.title,
+        category: row.category?.slug || row.jobType || null,
+        country: row.country,
+        organization: row.organization,
+        matchStrength: item.matchStrength,
+        eligibilityStatus: item.eligibilityStatus,
+        dataConfidence: item.dataConfidence,
+        reasons: item.evidence.reasons,
+        verified: item.evidence.verified,
+        unknowns: item.evidence.unknowns,
+        conflicts: item.evidence.conflicts,
+      };
+    });
+
+    const prompt = [
+      `Write one concise explanation per candidate in ${LANG_NAME[profile.lang]}.`,
+      'Use only the evidence package below. Do not add new eligibility facts.',
+      'If unknowns exist, explicitly say they still need checking.',
+      'Return: [{"id":"...","explanation":"..."}]',
+      JSON.stringify({ profile: {
+        intents: profile.intents,
+        education: profile.education,
+        nationality: profile.nationality,
+        residence: profile.residence,
+        destinations: profile.destinations,
+        field: profile.field || '',
+      }, candidates: evidencePackage }),
+    ].join('\n');
+
+    const chat = (provider as unknown as ChatProvider).chat.bind(provider);
+    const raw = await Promise.race([
+      chat(MATCHER_SYSTEM, prompt),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('matcher_ai_timeout')), 4500)
+      ),
+    ]);
+
+    const parsed = parseJSON(raw);
+    const candidateArray = Array.isArray(parsed)
+      ? parsed
+      : Array.isArray((parsed as { results?: unknown[] } | null)?.results)
+        ? (parsed as { results: unknown[] }).results
+        : parsed;
+
+    const validated = AiExplanationSchema.safeParse(candidateArray);
+    if (!validated.success) return { results, ai: false };
+
+    const allowed = new Set(results.map((r) => r.id));
+    const seen = new Set<string>();
+    const byId = new Map<string, string>();
+    for (const item of validated.data) {
+      if (!allowed.has(item.id) || seen.has(item.id)) continue;
+      seen.add(item.id);
+      byId.set(item.id, item.explanation);
+    }
+
+    if (byId.size === 0) return { results, ai: false };
+    return {
+      results: results.map((r) => ({ ...r, explanation: byId.get(r.id) || '' })),
+      ai: true,
+    };
+  } catch (error) {
+    console.warn('[matcher] grounded AI explanation skipped:', (error as Error).message);
+    return { results, ai: false };
+  }
+}
 
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req) || 'unknown';
+  if (!rateLimit(`opportunity-matcher:${ip}`, 10)) {
+    return NextResponse.json(
+      { error: 'rate_limited', message: 'Too many matcher requests. Please try again shortly.' },
+      { status: 429 }
+    );
+  }
+
   try {
     const json = await req.json().catch(() => null);
-    const parsed = BodySchema.safeParse(json);
+    const parsed = MatcherProfileSchema.safeParse(json);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'invalid_request', message: 'Please fill in every step of the form.' },
+        {
+          error: 'invalid_request',
+          message: 'Please review your matcher preferences.',
+          issues: parsed.error.issues.map((issue) => ({ path: issue.path.join('.'), code: issue.code })),
+        },
         { status: 400 }
       );
     }
-    const { age, targetCountry, education, goal, lang } = parsed.data;
 
-    // ── 1. Pull a healthy sample of live, published, unexpired listings ──
-    const now = new Date();
-    const rows = await db.opportunity.findMany({
-      where: {
-        status: 'published',
-        OR: [{ deadline: null }, { deadline: { gt: now } }],
-      },
-      // Transfer-safety: scoring only reads title/type/country/org — never
-      // pull the full 3-language description blobs here.
-      select: {
-        id: true, slug: true, title: true, titleI18n: true,
-        jobType: true, jobTypeI18n: true, country: true, organization: true,
-        category: { select: { name: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 150,
-    });
+    const profile = parsed.data;
+    const rows = await fetchCandidates(profile);
 
-    if (rows.length === 0) {
-      return NextResponse.json({ results: [], ai: false });
+    const matcherRows = rows.map((row) => ({
+      ...row,
+      categorySlug: row.category?.slug ?? null,
+      categoryName: row.category?.name ?? null,
+      educationReq: localizedText(row.educationReq, row.educationReqI18n, 'en'),
+      experience: localizedText(row.experience, row.experienceI18n, 'en'),
+      eligibility: localizedText(row.eligibility, row.eligibilityI18n, 'en'),
+      requirements: localizedText(row.requirements, row.requirementsI18n, 'en'),
+    }));
+
+    const ranked = rankOpportunities(profile, matcherRows, 6);
+    if (ranked.length === 0) {
+      return NextResponse.json({
+        status: 'no_strong_match',
+        results: [],
+        ai: false,
+        meta: { candidatesEvaluated: rows.length },
+      });
     }
 
-    // ── 2. Deterministic scoring to pick the top candidates ──
-    const goalLower = goal.toLowerCase();
-    const countryLower = targetCountry.toLowerCase();
-    const eduLower = education.toLowerCase();
+    const baseResults = ranked.map((item) => publicResult(item, profile.lang));
+    const withAi = await addGroundedAiExplanations(baseResults, ranked, profile);
 
-    const scored = rows.map((opp) => {
-      let score = 20;
-      if (opp.country && countryLower && opp.country.toLowerCase().includes(countryLower)) score += 45;
-      const typeStr = `${opp.jobType || ''} ${opp.category?.name || ''} ${opp.title || ''}`.toLowerCase();
-      if (goalLower && typeStr.includes(goalLower === 'work visa' ? 'job' : goalLower)) score += 25;
-      if (goalLower === 'scholarship' && typeStr.includes('scholar')) score += 25;
-      if (goalLower === 'internship' && typeStr.includes('intern')) score += 25;
-      if (goalLower === 'work visa' && (typeStr.includes('job') || typeStr.includes('work'))) score += 25;
-      if (eduLower.includes('master') && typeStr.includes('master')) score += 10;
-      if (eduLower.includes('bachelor') && typeStr.includes('bachelor')) score += 10;
-      return { row: opp, baseScore: Math.min(99, score) };
+    return NextResponse.json({
+      status: 'ok',
+      ...withAi,
+      meta: {
+        candidatesEvaluated: rows.length,
+        returned: withAi.results.length,
+      },
     });
-
-    scored.sort((a, b) => b.baseScore - a.baseScore);
-    const topCandidates = scored.slice(0, 5);
-
-    const toResult = (c: { row: (typeof rows)[number]; baseScore: number }): MatchResult => ({
-      id: c.row.id,
-      slug: c.row.slug,
-      title: getLocalizedContent(c.row.title, c.row.titleI18n as Record<string, string> | null, lang),
-      type: getLocalizedContent(
-        c.row.jobType || c.row.category?.name || 'Opportunity',
-        (c.row.jobTypeI18n ?? null) as Record<string, string> | null,
-        lang
-      ),
-      location: getLocalizedContent(c.row.country || 'Global', null, lang),
-      match: c.baseScore,
-      chanceOfAcceptance: c.baseScore > 50 ? 'High' : 'Medium',
-      rationale: '', // filled by LLM below, or localized client-side fallback
-    });
-
-    // ── 3. Optional LLM re-ranking with personalized rationale ──
-    let aiUsed = false;
-    let results: MatchResult[] = topCandidates.slice(0, 3).map(toResult);
-
-    try {
-      const provider = await getAIProvider();
-      if (provider) {
-        const chat = (provider as unknown as ChatProvider).chat.bind(provider);
-        const user = `User profile:
-- Age: ${age}
-- Education: ${education}
-- Target country: ${targetCountry}
-- Goal: ${goal}
-
-Candidate opportunities:
-${topCandidates
-  .map(
-    (c) =>
-      `ID: ${c.row.id} | Title: ${c.row.title} | Type: ${c.row.jobType || c.row.category?.name} | Location: ${c.row.country || 'Global'} | Organization: ${c.row.organization || 'N/A'}`
-  )
-  .join('\n')}
-
-Pick the top 3 best matches for this user. Write every "rationale" value in ${LANG_NAME[lang]} (1-2 sentences, explain exactly why it fits THIS profile). Keys stay in English.
-Output ONLY a JSON array:
-[{"id":"<opp id>","match":95,"chanceOfAcceptance":"High|Medium|Low","rationale":"..."}]`;
-
-        const raw = await chat(MATCHER_SYSTEM, user);
-        const arr = parseJSON(raw);
-        const aiResults = Array.isArray(arr) ? arr : Array.isArray((arr as Record<string, unknown>)?.results) ? (arr as Record<string, unknown>).results : null;
-
-        if (aiResults && Array.isArray(aiResults) && aiResults.length > 0) {
-          const mapped = (aiResults as Record<string, unknown>[])
-            .map((aiObj) => {
-              const cand = topCandidates.find((c) => c.row.id === aiObj.id);
-              if (!cand) return null;
-              const base = toResult(cand);
-              const chanceRaw = String(aiObj.chanceOfAcceptance ?? '');
-              const chance = (['High', 'Medium', 'Low'] as const).includes(chanceRaw as 'High')
-                ? (chanceRaw as MatchResult['chanceOfAcceptance'])
-                : base.chanceOfAcceptance;
-              const out: MatchResult = {
-                ...base,
-                match: Math.max(1, Math.min(99, Number(aiObj.match) || base.match)),
-                chanceOfAcceptance: chance,
-                rationale: String(aiObj.rationale || '').slice(0, 400),
-              };
-              return out;
-            })
-            .filter((r): r is MatchResult => r !== null);
-          if (mapped.length > 0) {
-            results = mapped;
-            aiUsed = true;
-          }
-        }
-      }
-    } catch (aiErr) {
-      // AI is optional — deterministic results are already prepared.
-      console.warn('[matcher] AI re-ranking skipped:', (aiErr as Error).message);
-      results = topCandidates.slice(0, 3).map(toResult);
-    }
-
-    results.sort((a, b) => b.match - a.match);
-    return NextResponse.json({ results, ai: aiUsed });
   } catch (error) {
     console.error('[matcher] error:', error);
     return NextResponse.json(
-      { error: 'server_error', message: 'Something went wrong while matching. Please try again.' },
+      {
+        error: 'server_error',
+        message: 'Something went wrong while matching. Please try again.',
+      },
       { status: 500 }
     );
   }
