@@ -4,11 +4,12 @@ import { AlertCircle, CheckCircle2, Download, Info, Loader2, TriangleAlert } fro
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { CVDraft, CVIssue, CVOutputLang, CVReadiness } from '../types';
+import type { CVBuilderAdminConfig } from '../lib/cv-admin-config';
 import { CV_TEMPLATE_BY_ID } from '../lib/cv-templates';
 import { cvText } from '../lib/cv-copy';
 
 export function ExportModal({
-  isOpen,onOpenChange,draft,readiness,onConfirm,onNavigateToIssue,uiLang,generating,
+  isOpen,onOpenChange,draft,readiness,onConfirm,onNavigateToIssue,uiLang,generating,config,
 }:{
   isOpen:boolean;
   onOpenChange:(open:boolean)=>void;
@@ -18,12 +19,16 @@ export function ExportModal({
   onNavigateToIssue:(issue:CVIssue)=>void;
   uiLang:CVOutputLang;
   generating:boolean;
+  config:CVBuilderAdminConfig;
 }) {
   const c=(text:string)=>cvText(uiLang,text);
   const errors=readiness.issues.filter(x=>x.severity==='error');
   const warnings=readiness.issues.filter(x=>x.severity==='warning');
   const info=readiness.issues.filter(x=>x.severity==='info');
-  const message=(key:string)=>c(({
+  const message=(key:string)=>{
+    if(key==='issues.summaryLong'||key==='issues.summaryShort') return `${c('Recommended range')}: ${config.guidance.summaryMinWords}–${config.guidance.summaryMaxWords} ${c('words')}`;
+    if(key==='issues.tooManySkills') return `${c('Recommended maximum')}: ${config.guidance.maxSkills} ${c('skills')}`;
+    return c(({
     'issues.fullNameRequired':'Add your full name.','issues.contactRequired':'Add at least one contact method: email or phone.',
     'issues.emailInvalid':'Enter a valid email address.','issues.headlineMissing':'A professional headline helps readers understand your profile quickly.',
     'issues.summaryMissing':'A short summary can make the CV easier to scan.','issues.summaryLong':'Your summary is long; aim for roughly 40–100 focused words.',
@@ -33,6 +38,7 @@ export function ExportModal({
     'issues.duplicateSkills':'Your skills list contains duplicates.','issues.visualTemplateAts':'This visual template is less conservative than an ATS-focused template.',
     'issues.atsPhoto':'Some ATS-focused applications prefer a CV without a photo.',
   } as Record<string,string>)[key]||key);
+  };
 
   const sectionName=(section:CVIssue['section'])=>c(({
     document:'CV settings',personal:'Personal information',summary:'Professional summary',experience:'Experience',
