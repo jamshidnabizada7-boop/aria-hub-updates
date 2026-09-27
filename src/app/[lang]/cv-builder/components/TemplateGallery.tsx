@@ -31,7 +31,8 @@ function Miniature({ id }: { id: TemplateType }) {
 }
 
 export function TemplateGallery({
-  open, onOpenChange, selected, purpose, appearance, uiLang, onSelect, onAppearanceChange,
+  open, onOpenChange, selected, purpose, appearance, uiLang, enabledTemplateIds,
+  allowPhoto, allowAccentCustomization, allowDensityCustomization, onSelect, onAppearanceChange,
 }: {
   open:boolean;
   onOpenChange:(open:boolean)=>void;
@@ -39,13 +40,21 @@ export function TemplateGallery({
   purpose:CVPurpose;
   appearance:CVAppearance;
   uiLang:CVOutputLang;
+  enabledTemplateIds:TemplateType[];
+  allowPhoto:boolean;
+  allowAccentCustomization:boolean;
+  allowDensityCustomization:boolean;
   onSelect:(template:TemplateType)=>void;
   onAppearanceChange:(appearance:CVAppearance)=>void;
 }) {
   const c=(text:string)=>cvText(uiLang,text);
   const [filter,setFilter]=useState<'all'|TemplateCategory>('all');
   const recommended=new Set(RECOMMENDED_TEMPLATES_BY_PURPOSE[purpose]);
-  const list=useMemo(()=>filter==='all'?CV_TEMPLATES:CV_TEMPLATES.filter(x=>x.category===filter),[filter]);
+  const list=useMemo(()=>{
+    const allowed=new Set(enabledTemplateIds);
+    const visible=CV_TEMPLATES.filter((template)=>allowed.has(template.id)||template.id===selected);
+    return filter==='all'?visible:visible.filter((template)=>template.category===filter);
+  },[enabledTemplateIds,filter,selected]);
   const current=CV_TEMPLATE_BY_ID[selected];
 
   return (
@@ -67,11 +76,13 @@ export function TemplateGallery({
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {list.map(template=>{
             const isSelected=selected===template.id;
+            const isDisabled=!enabledTemplateIds.includes(template.id);
             return (
               <button
                 key={template.id}
                 type="button"
-                onClick={()=>onSelect(template.id)}
+                onClick={()=>{ if(!isDisabled) onSelect(template.id); }}
+                disabled={isDisabled}
                 className={`group rounded-xl border p-3 text-start transition hover:border-primary hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${isSelected?'border-primary bg-primary/5 ring-1 ring-primary':''}`}
               >
                 <Miniature id={template.id} />
@@ -87,6 +98,7 @@ export function TemplateGallery({
                   {template.atsFocused?<span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-700">ATS</span>:null}
                   {recommended.has(template.id)?<span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">{c('Recommended')}</span>:null}
                   {isSelected?<span className="rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-medium text-white">{c('Selected')}</span>:null}
+                  {isDisabled?<span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700">{c('Admin disabled')}</span>:null}
                 </div>
               </button>
             );
@@ -98,19 +110,19 @@ export function TemplateGallery({
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-1.5">
               <label className="text-xs font-medium">{c('Accent')}</label>
-              <select className="h-10 w-full rounded-md border bg-background px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50" disabled={current.atsFocused} value={appearance.accent} onChange={e=>onAppearanceChange({...appearance,accent:e.target.value as CVAppearance['accent']})}>
+              <select className="h-10 w-full rounded-md border bg-background px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50" disabled={current.atsFocused||!allowAccentCustomization} value={appearance.accent} onChange={e=>onAppearanceChange({...appearance,accent:e.target.value as CVAppearance['accent']})}>
                 <option value="navy">{c('Navy')}</option><option value="blue">{c('Blue')}</option><option value="emerald">{c('Emerald')}</option><option value="burgundy">{c('Burgundy')}</option><option value="neutral">{c('Neutral')}</option>
               </select>
-              {current.atsFocused ? <p className="text-[11px] text-muted-foreground">{c('ATS templates keep conservative neutral styling.')}</p> : null}
+              {current.atsFocused ? <p className="text-[11px] text-muted-foreground">{c('ATS templates keep conservative neutral styling.')}</p> : !allowAccentCustomization ? <p className="text-[11px] text-muted-foreground">{c('Disabled by ARIA HUB admin.')}</p> : null}
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium">{c('Density')}</label>
-              <select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={appearance.density} onChange={e=>onAppearanceChange({...appearance,density:e.target.value as CVAppearance['density']})}>
+              <select className="h-10 w-full rounded-md border bg-background px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50" disabled={!allowDensityCustomization} value={appearance.density} onChange={e=>onAppearanceChange({...appearance,density:e.target.value as CVAppearance['density']})}>
                 <option value="comfortable">{c('Comfortable')}</option><option value="compact">{c('Compact')}</option>
               </select>
             </div>
-            <label className={`flex min-h-10 items-center gap-2 rounded-md border px-3 text-sm ${current.supportsPhoto?'':'opacity-50'}`}>
-              <input type="checkbox" checked={appearance.showPhoto&&current.supportsPhoto} disabled={!current.supportsPhoto} onChange={e=>onAppearanceChange({...appearance,showPhoto:e.target.checked})} />
+            <label className={`flex min-h-10 items-center gap-2 rounded-md border px-3 text-sm ${current.supportsPhoto&&allowPhoto?'':'opacity-50'}`}>
+              <input type="checkbox" checked={appearance.showPhoto&&current.supportsPhoto&&allowPhoto} disabled={!current.supportsPhoto||!allowPhoto} onChange={e=>onAppearanceChange({...appearance,showPhoto:e.target.checked})} />
               {c('Show photo')}
             </label>
           </div>
