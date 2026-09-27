@@ -7,8 +7,10 @@ import {
   ArrowRight,
   Bell,
   BriefcaseBusiness,
+  Check,
   CheckCircle2,
   ChevronRight,
+  ChevronsUpDown,
   CircleHelp,
   Search,
   Sparkles,
@@ -23,6 +25,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { SaveButton } from '@/components/site/save-button';
 import { useLangHref } from '@/hooks/use-lang-href';
 import { useLangStore } from '@/lib/lang-store';
@@ -76,11 +80,11 @@ const COPY = {
     title: 'Find opportunities that actually fit',
     intro: 'ARIA HUB checks your preferences against the opportunity facts we have. Unknown requirements stay unknown — we do not estimate acceptance chances.',
     step: 'Step', of: 'of', next: 'Next', back: 'Back',
-    intentTitle: 'What are you looking for?', intentSub: 'Choose the opportunity type that matters most right now.',
+    intentTitle: 'What are you looking for?', intentSub: 'Choose up to 3 opportunity types. You can combine related goals.',
     educationTitle: 'What is your current education level?', educationSub: 'This is stored as a language-neutral value so every language receives the same matching logic.',
     profileTitle: 'Tell us where you are applying from', profileSub: 'Nationality and residence are different and can affect international eligibility.',
     destinationTitle: 'Where would you like to go?', destinationSub: 'Choose Anywhere if destination is flexible. Add a field or role to improve relevance.',
-    nationality: 'Nationality', residence: 'Current country of residence', destination: 'Preferred destination', field: 'Field or discipline',
+    nationality: 'Nationality', residence: 'Current country of residence', destination: 'Preferred destinations', field: 'Field or discipline', searchCountry: 'Search countries…', noCountry: 'No country found',
     fieldPlaceholder: 'Any field',
     experience: 'Years of relevant experience', experienceUnknown: 'Not sure / prefer not to say', targetEducation: 'Target degree or study level',
     anywhere: 'Anywhere', find: 'Find matches', edit: 'Edit preferences', startOver: 'Start over',
@@ -107,11 +111,11 @@ const COPY = {
     title: 'فرصت‌هایی را پیدا کنید که واقعاً با شما سازگارند',
     intro: 'آریا هاب ترجیحات شما را با اطلاعات موجود فرصت‌ها مقایسه می‌کند. موارد نامعلوم را نامعلوم نگه می‌داریم و شانس قبولی را حدس نمی‌زنیم.',
     step: 'مرحله', of: 'از', next: 'بعدی', back: 'قبلی',
-    intentTitle: 'دنبال چه نوع فرصتی هستید؟', intentSub: 'نوع فرصتی را انتخاب کنید که اکنون برای شما مهم‌تر است.',
+    intentTitle: 'دنبال چه نوع فرصتی هستید؟', intentSub: 'حداکثر ۳ نوع فرصت را انتخاب کنید. می‌توانید هدف‌های مرتبط را با هم انتخاب کنید.',
     educationTitle: 'سطح فعلی تحصیل شما چیست؟', educationSub: 'این مقدار به‌صورت ثابت و مستقل از زبان ذخیره می‌شود تا منطق تطبیق در همه زبان‌ها یکسان باشد.',
     profileTitle: 'از کجا درخواست می‌دهید؟', profileSub: 'تابعیت و محل اقامت متفاوت‌اند و ممکن است بر شرایط بین‌المللی اثر بگذارند.',
     destinationTitle: 'ترجیح می‌دهید به کجا بروید؟', destinationSub: 'اگر مقصد برایتان مهم نیست «هرجا» را انتخاب کنید. رشته یا نقش را هم می‌توانید اضافه کنید.',
-    nationality: 'تابعیت', residence: 'کشور محل اقامت فعلی', destination: 'مقصد ترجیحی', field: 'رشته یا حوزه',
+    nationality: 'تابعیت', residence: 'کشور محل اقامت فعلی', destination: 'مقصدهای ترجیحی', field: 'رشته یا حوزه', searchCountry: 'جستجوی کشور…', noCountry: 'کشوری پیدا نشد',
     fieldPlaceholder: 'هر رشته',
     experience: 'سال‌های تجربه مرتبط', experienceUnknown: 'مطمئن نیستم / ترجیح می‌دهم نگویم', targetEducation: 'مقطع یا سطح تحصیلی مورد نظر',
     anywhere: 'هرجا', find: 'یافتن فرصت‌ها', edit: 'ویرایش ترجیحات', startOver: 'شروع دوباره',
@@ -138,11 +142,11 @@ const COPY = {
     title: 'هغه فرصتونه ومومئ چې رښتیا درسره برابر وي',
     intro: 'آریا هاب ستاسو غوره توبونه له هغو معلوماتو سره پرتله کوي چې د فرصتونو په اړه یې لرو. ناپېژندل شوي شرطونه ناپېژندل شوي پاتې کېږي او د منل کېدو چانس نه اټکلوو.',
     step: 'ګام', of: 'له', next: 'بل', back: 'شاته',
-    intentTitle: 'د څه ډول فرصت په لټه کې یاست؟', intentSub: 'هغه ډول غوره کړئ چې اوس درته تر ټولو مهم دی.',
+    intentTitle: 'د څه ډول فرصت په لټه کې یاست؟', intentSub: 'تر ۳ پورې د فرصت ډولونه وټاکئ. اړوند هدفونه یوځای ټاکلای شئ.',
     educationTitle: 'ستاسو اوسنی تعلیمي کچه څه ده؟', educationSub: 'دا ارزښت له ژبې خپلواک ساتل کېږي څو د ټولو ژبو د برابرولو منطق یو شان وي.',
     profileTitle: 'له کوم ځایه غوښتنلیک ورکوئ؟', profileSub: 'تابعیت او اوسېدنه جلا معلومات دي او د نړیوالو شرایطو اغېزمنولای شي.',
     destinationTitle: 'کوم ځای ته تلل غواړئ؟', destinationSub: 'که ځای مهم نه وي، هرځای وټاکئ. د لا ښه تړاو لپاره رشته یا رول هم ولیکئ.',
-    nationality: 'تابعیت', residence: 'اوسنی د اوسېدو هېواد', destination: 'غوره ځای', field: 'رشته یا حوزه',
+    nationality: 'تابعیت', residence: 'اوسنی د اوسېدو هېواد', destination: 'غوره ځایونه', field: 'رشته یا حوزه', searchCountry: 'هېواد ولټوئ…', noCountry: 'هېواد ونه موندل شو',
     fieldPlaceholder: 'هره رشته',
     experience: 'د اړوندې تجربې کلونه', experienceUnknown: 'ډاډه نه یم / نه وایم', targetEducation: 'هدف تعلیمي درجه یا کچه',
     anywhere: 'هرځای', find: 'فرصتونه ومومئ', edit: 'غوره توبونه سمول', startOver: 'له سره پیل',
@@ -469,19 +473,29 @@ export function OpportunityMatcherClient() {
             </div>
 
             {step === 1 && (
-              <RadioGroup
-                value={profile.intents[0] || ''}
-                onValueChange={(value) => setProfile((p) => ({ ...p, intents: [value as MatcherIntent] }))}
-                className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
-                aria-label={c.intentTitle}
-              >
-                {(Object.keys(INTENT_LABELS[lang]) as MatcherIntent[]).map((intent) => (
-                  <Label key={intent} htmlFor={`intent-${intent}`} className="flex min-h-20 cursor-pointer items-center gap-3 rounded-2xl border bg-background/60 p-4 hover:bg-accent">
-                    <RadioGroupItem id={`intent-${intent}`} value={intent} />
-                    <span className="font-semibold">{INTENT_LABELS[lang][intent]}</span>
-                  </Label>
-                ))}
-              </RadioGroup>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" role="group" aria-label={c.intentTitle}>
+                {(Object.keys(INTENT_LABELS[lang]) as MatcherIntent[]).map((intent) => {
+                  const selected = profile.intents.includes(intent);
+                  return (
+                    <button
+                      key={intent}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => setProfile((p) => {
+                        if (selected) return { ...p, intents: p.intents.filter((item) => item !== intent) };
+                        if (p.intents.length >= 3) return p;
+                        return { ...p, intents: [...p.intents, intent] };
+                      })}
+                      className={`flex min-h-20 items-center gap-3 rounded-2xl border p-4 text-start transition-colors ${selected ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/30' : 'bg-background/60 hover:bg-accent'}`}
+                    >
+                      <span className={`grid h-5 w-5 shrink-0 place-items-center rounded border ${selected ? 'border-amber-600 bg-amber-600 text-white' : 'border-muted-foreground/40'}`}>
+                        {selected && <Check className="h-3.5 w-3.5" aria-hidden="true" />}
+                      </span>
+                      <span className="font-semibold">{INTENT_LABELS[lang][intent]}</span>
+                    </button>
+                  );
+                })}
+              </div>
             )}
 
             {step === 2 && (
@@ -502,8 +516,8 @@ export function OpportunityMatcherClient() {
 
             {step === 3 && (
               <div className="grid gap-5 sm:grid-cols-2">
-                <CountrySelect label={c.nationality} value={profile.nationality} options={countryOptions} onChange={(value) => setProfile((p) => ({ ...p, nationality: value }))} />
-                <CountrySelect label={c.residence} value={profile.residence} options={countryOptions} onChange={(value) => setProfile((p) => ({ ...p, residence: value }))} />
+                <CountrySelect label={c.nationality} value={profile.nationality} options={countryOptions} searchLabel={c.searchCountry} emptyLabel={c.noCountry} onChange={(value) => setProfile((p) => ({ ...p, nationality: value }))} />
+                <CountrySelect label={c.residence} value={profile.residence} options={countryOptions} searchLabel={c.searchCountry} emptyLabel={c.noCountry} onChange={(value) => setProfile((p) => ({ ...p, residence: value }))} />
               </div>
             )}
 
@@ -511,36 +525,15 @@ export function OpportunityMatcherClient() {
               <div className="space-y-5">
                 <div>
                   <Label className="mb-2 block">{c.destination}</Label>
-                  <div className="flex max-h-56 flex-wrap gap-2 overflow-y-auto rounded-xl border bg-background/40 p-3" role="group" aria-label={c.destination}>
-                    <button
-                      type="button"
-                      aria-pressed={profile.destinations.includes('anywhere')}
-                      onClick={() => setProfile((p) => ({ ...p, destinations: ['anywhere'] }))}
-                      className={`rounded-full border px-3 py-2 text-sm transition-colors ${profile.destinations.includes('anywhere') ? 'border-amber-500 bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200' : 'bg-background hover:bg-accent'}`}
-                    >
-                      {c.anywhere}
-                    </button>
-                    {countryOptions.map((country) => {
-                      const selected = profile.destinations.includes(country.value);
-                      return (
-                        <button
-                          key={country.value}
-                          type="button"
-                          aria-pressed={selected}
-                          onClick={() => setProfile((p) => {
-                            const current = p.destinations.filter((d) => d !== 'anywhere');
-                            const next = selected
-                              ? current.filter((d) => d !== country.value)
-                              : [...current, country.value].slice(0, 8);
-                            return { ...p, destinations: next.length ? next : ['anywhere'] };
-                          })}
-                          className={`rounded-full border px-3 py-2 text-sm transition-colors ${selected ? 'border-amber-500 bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200' : 'bg-background hover:bg-accent'}`}
-                        >
-                          {country.label}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <CountryMultiSelect
+                    values={profile.destinations}
+                    options={countryOptions}
+                    anywhereLabel={c.anywhere}
+                    searchLabel={c.searchCountry}
+                    emptyLabel={c.noCountry}
+                    ariaLabel={c.destination}
+                    onChange={(values) => setProfile((p) => ({ ...p, destinations: values }))}
+                  />
                 </div>
                 <div>
                   <Label className="mb-2 block">{c.field}</Label>
@@ -615,24 +608,128 @@ function CountrySelect({
   label,
   value,
   options,
+  searchLabel,
+  emptyLabel,
   onChange,
 }: {
   label: string;
   value: string;
   options: { value: string; label: string }[];
+  searchLabel: string;
+  emptyLabel: string;
   onChange: (value: string) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const selected = options.find((option) => option.value === value);
   return (
     <div>
       <Label className="mb-2 block">{label}</Label>
-      <Select value={value} onValueChange={onChange}>
-        <SelectTrigger><SelectValue /></SelectTrigger>
-        <SelectContent className="max-h-72">
-          {options.map((country) => (
-            <SelectItem key={country.value} value={country.value}>{country.label}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button type="button" variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between font-normal">
+            <span className="truncate">{selected?.label || value}</span>
+            <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" aria-hidden="true" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+          <Command>
+            <CommandInput placeholder={searchLabel} />
+            <CommandList>
+              <CommandEmpty>{emptyLabel}</CommandEmpty>
+              {options.map((option) => (
+                <CommandItem
+                  key={option.value}
+                  value={`${option.label} ${option.value}`}
+                  onSelect={() => {
+                    onChange(option.value);
+                    setOpen(false);
+                  }}
+                >
+                  <Check className={`me-2 h-4 w-4 ${option.value === value ? 'opacity-100' : 'opacity-0'}`} aria-hidden="true" />
+                  {option.label}
+                </CommandItem>
+              ))}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+function CountryMultiSelect({
+  values,
+  options,
+  anywhereLabel,
+  searchLabel,
+  emptyLabel,
+  ariaLabel,
+  onChange,
+}: {
+  values: string[];
+  options: { value: string; label: string }[];
+  anywhereLabel: string;
+  searchLabel: string;
+  emptyLabel: string;
+  ariaLabel: string;
+  onChange: (values: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const anywhere = values.includes('anywhere');
+  const selectedLabels = values
+    .filter((value) => value !== 'anywhere')
+    .map((value) => options.find((option) => option.value === value)?.label || value);
+
+  const toggle = (value: string) => {
+    const current = values.filter((item) => item !== 'anywhere');
+    const selected = current.includes(value);
+    const next = selected
+      ? current.filter((item) => item !== value)
+      : [...current, value].slice(0, 8);
+    onChange(next.length ? next : ['anywhere']);
+  };
+
+  return (
+    <div role="group" aria-label={ariaLabel}>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant={anywhere ? 'default' : 'outline'}
+          size="sm"
+          aria-pressed={anywhere}
+          onClick={() => onChange(['anywhere'])}
+        >
+          {anywhereLabel}
+        </Button>
+        {!anywhere && selectedLabels.map((label) => (
+          <span key={label} className="rounded-full border bg-amber-50 px-3 py-1.5 text-sm dark:bg-amber-950/30">{label}</span>
+        ))}
+      </div>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button type="button" variant="outline" className="mt-3 w-full justify-between font-normal">
+            <span className="truncate">{anywhere ? anywhereLabel : selectedLabels.join(', ')}</span>
+            <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" aria-hidden="true" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+          <Command>
+            <CommandInput placeholder={searchLabel} />
+            <CommandList>
+              <CommandEmpty>{emptyLabel}</CommandEmpty>
+              {options.map((option) => {
+                const selected = values.includes(option.value);
+                return (
+                  <CommandItem key={option.value} value={`${option.label} ${option.value}`} onSelect={() => toggle(option.value)}>
+                    <Check className={`me-2 h-4 w-4 ${selected ? 'opacity-100' : 'opacity-0'}`} aria-hidden="true" />
+                    {option.label}
+                  </CommandItem>
+                );
+              })}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }
