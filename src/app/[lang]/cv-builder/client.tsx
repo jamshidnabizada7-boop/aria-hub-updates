@@ -59,7 +59,9 @@ export function CVBuilderClient({ initialLang, initialPurpose = 'professional', 
 
   const doPrint = () => {
     setExportOpen(false);
+    const previousTitle = document.title;
     document.title = `${displayDraftName(activeDraft, 'CV')} - ARIA HUB`;
+    window.addEventListener('afterprint', () => { document.title = previousTitle; }, { once: true });
     requestAnimationFrame(() => window.print());
   };
 
@@ -80,13 +82,13 @@ export function CVBuilderClient({ initialLang, initialPurpose = 'professional', 
 
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" onClick={() => createNewDraft(activeDraft.purpose, activeDraft.outputLang)}>
-              <FilePlus2 className="size-4" /> New CV
+              <FilePlus2 className="size-4" /> {cvText(initialLang, 'New CV')}
             </Button>
             <Button type="button" variant="outline" onClick={() => duplicateActive()}>
-              <Copy className="size-4" /> Duplicate
+              <Copy className="size-4" /> {cvText(initialLang, 'Duplicate')}
             </Button>
             <Button type="button" onClick={() => setExportOpen(true)}>
-              <Printer className="size-4" /> Review & export
+              <Printer className="size-4" /> {cvText(initialLang, 'Review & export')}
             </Button>
           </div>
         </div>
@@ -174,7 +176,7 @@ export function CVBuilderClient({ initialLang, initialPurpose = 'professional', 
           {cvText(initialLang, 'Draft data is stored locally in your browser. Cloud sync is not enabled until ARIA HUB has end-user authentication wired to these drafts.')}
         </div>
         <Button type="button" variant="destructive" onClick={() => removeDraft(activeDraft.id)} disabled={drafts.length === 1 && !activeDraft.data.personal.fullName}>
-          <Trash2 className="size-4" /> Delete this CV
+          <Trash2 className="size-4" /> {cvText(initialLang, 'Delete this CV')}
         </Button>
       </div>
 
