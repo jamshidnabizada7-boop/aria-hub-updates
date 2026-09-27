@@ -11,14 +11,14 @@ CREATE TABLE "OpportunityLocation" (
   "source" TEXT NOT NULL DEFAULT 'unknown',
   "confidence" DOUBLE PRECISION NOT NULL DEFAULT 1,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
   CONSTRAINT "OpportunityLocation_pkey" PRIMARY KEY ("id"),
   CONSTRAINT "OpportunityLocation_opportunityId_fkey"
     FOREIGN KEY ("opportunityId") REFERENCES "Opportunity"("id")
     ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE UNIQUE INDEX "OpportunityLocation_opportunityId_country_province_city_rawLabel_key"
+CREATE UNIQUE INDEX "OpportunityLocation_opportunityId_country_province_city_raw_key"
 ON "OpportunityLocation"("opportunityId","country","province","city","rawLabel");
 CREATE INDEX "OpportunityLocation_opportunityId_idx" ON "OpportunityLocation"("opportunityId");
 CREATE INDEX "OpportunityLocation_country_idx" ON "OpportunityLocation"("country");
@@ -73,9 +73,9 @@ WITH raw AS (
   FROM raw
 )
 INSERT INTO "OpportunityLocation"
-  ("id","opportunityId","country","countryCode","province","city","rawLabel","source","confidence")
+  ("id","opportunityId","country","countryCode","province","city","rawLabel","source","confidence","updatedAt")
 SELECT md5(random()::text || clock_timestamp()::text || id || part),
-       id,'Afghanistan','AF',province,'',part,'extractedData.Location',1
+       id,'Afghanistan','AF',province,'',part,'extractedData.Location',1,CURRENT_TIMESTAMP
 FROM canon
 WHERE part <> ''
 ON CONFLICT DO NOTHING;
@@ -105,9 +105,9 @@ WITH raw AS (
   FROM parts
 )
 INSERT INTO "OpportunityLocation"
-  ("id","opportunityId","country","countryCode","province","city","rawLabel","source","confidence")
+  ("id","opportunityId","country","countryCode","province","city","rawLabel","source","confidence","updatedAt")
 SELECT md5(random()::text || clock_timestamp()::text || id || part),
-       id,'Afghanistan','AF',province,'',part,'backfill-description',0.98
+       id,'Afghanistan','AF',province,'',part,'backfill-description',0.98,CURRENT_TIMESTAMP
 FROM canon
 WHERE part <> ''
 ON CONFLICT DO NOTHING;
