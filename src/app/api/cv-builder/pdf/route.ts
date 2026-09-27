@@ -11,6 +11,23 @@ export const runtime='nodejs';
 export const maxDuration=30;
 export const dynamic='force-dynamic';
 
+const pdfBuckets=new Map<string,{count:number;reset:number}>();
+function allowPdfRequest(request:Request){
+  const now=Date.now();
+  const ip=(request.headers.get('x-forwarded-for')||'unknown').split(',')[0].trim();
+  const current=pdfBuckets.get(ip);
+  if(!current||current.reset<=now){ pdfBuckets.set(ip,{count:1,reset:now+60_000}); return true; }
+  if(current.count>=6) return false;
+  current.count+=1;
+  return true;
+}
+function isSameOrigin(request:Request){
+  const origin=request.headers.get('origin');
+  const host=request.headers.get('host');
+  if(!origin||!host) return true;
+  try{return new URL(origin).host===host;}catch{return false;}
+}
+
 function safeFilename(value:string){
   return value.trim().replace(/[\\/:*?"<>|\x00-\x1F]/g,'-').replace(/\s+/g,' ').slice(0,90)||'CV';
 }
@@ -26,6 +43,8 @@ async function fontCss(){
 }
 
 export async function POST(request:Request){
+  if(!isSameOrigin(request)) return NextResponse.json({error:'Cross-site PDF requests are not allowed.'},{status:403,headers:{'Cache-Control':'no-store'}});
+  if(!allowPdfRequest(request)) return NextResponse.json({error:'Too many PDF requests. Please wait a minute and try again.'},{status:429,headers:{'Cache-Control':'no-store','Retry-After':'60'}});
   const text=await request.text();
   if(text.length>4_500_000) return NextResponse.json({error:'Draft is too large to render.'},{status:413,headers:{'Cache-Control':'no-store'}});
   let parsed:any;
