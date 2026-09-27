@@ -27,6 +27,7 @@ import { ReliefWebPendingError } from './scrapers/reliefweb';
 import { sanitizeError, slugify } from './utils';
 import type { RawListing, SourceHandle } from './types';
 import { resolveImportedOpportunityStatus } from './publication-policy';
+import { inferCountryFromLocation, syncOpportunityLocations } from '@/lib/opportunity-location';
 
 /** Safely convert a date string (ISO or parseable) to a Date object, or null. */
 function safeDate(input: string | null | undefined): Date | null {
@@ -435,11 +436,15 @@ async function processListing(
     salary: listing.salary || null,
     educationReq: listing.educationReq || null,
     experience: listing.experience || null,
-    country: listing.country || listing.location || null,
+    // Country remains a country. Province/city are persisted separately in
+    // OpportunityLocation; never collapse "Kabul" into Opportunity.country.
+    country: listing.country || inferCountryFromLocation(listing.location) || null,
     deadline: safeDate(listing.deadline),
     organization: listing.organization || null,
     website: listing.website || null,
-    applyUrl: listing.applyUrl || null,
+    // runAIPipeline validates the exact application destination. Never
+    // overwrite it with the scraper/source article URL.
+    applyUrl: (pipeline.data.applyUrl as string | null | undefined) ?? null,
     image: featured.path,
     logoUrl: logo.path || null,
     publishedDate: listing.publishedDate || null,  // String field in schema, no conversion needed
@@ -472,11 +477,12 @@ async function processListing(
         importStatus: 'updated',
       },
     });
+    await syncOpportunityLocations(db, dedupe.existing.id, listing);
     counters.updated++;
   } else {
     // Create new
     const slug = await ensureUniqueSlug(db, slugBase);
-    await db.opportunity.create({
+    const created = await db.opportunity.create({
       data: {
         ...pipeline.data,
         ...importFields,
@@ -489,6 +495,7 @@ async function processListing(
         categoryId,
       } as unknown as Prisma.OpportunityUncheckedCreateInput,
     });
+    await syncOpportunityLocations(db, created.id, listing);
     counters.imported++;
   }
 }
