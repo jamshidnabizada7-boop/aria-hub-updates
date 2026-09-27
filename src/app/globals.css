@@ -493,3 +493,66 @@
 }
 .prose-listing th { background: hsl(var(--muted) / 0.6); font-weight: 700; }
 .prose-listing mark { background: hsl(var(--primary) / 0.15); color: inherit; border-radius: 0.25rem; padding: 0 0.2em; }
+
+
+/* ── CV Builder paper preview + dedicated PDF print surface ──────────────── */
+.cv-paper-a4 {
+  width: min(100%, 210mm);
+  min-height: 297mm;
+}
+.cv-paper-letter {
+  width: min(100%, 215.9mm);
+  min-height: 279.4mm;
+}
+.cv-print-sheet {
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.cv-print-sheet a {
+  overflow-wrap: anywhere;
+}
+.cv-print-sheet .cv-section {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+@page cv-a4 {
+  size: A4;
+  margin: 12mm;
+}
+@page cv-letter {
+  size: Letter;
+  margin: 12mm;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+  body {
+    font-size: 10pt;
+    line-height: 1.35;
+  }
+  .cv-paper-a4 {
+    page: cv-a4;
+    width: auto !important;
+    min-height: 0 !important;
+  }
+  .cv-paper-letter {
+    page: cv-letter;
+    width: auto !important;
+    min-height: 0 !important;
+  }
+  .cv-print-sheet {
+    margin: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+  .cv-print-sheet a {
+    text-decoration: none !important;
+  }
+  .cv-print-sheet .cv-section {
+    break-inside: avoid-page;
+  }
+}
