@@ -49,6 +49,7 @@ const COPY: CopyTable = {
   'Personal information': { fa: 'اطلاعات شخصی', ps: 'شخصي معلومات' },
   'Full name': { fa: 'نام کامل', ps: 'بشپړ نوم' },
   'Professional headline': { fa: 'عنوان حرفه‌ای', ps: 'مسلکي سرلیک' },
+  'Software Engineering Student | Python & Web Development': { fa: 'دانشجوی مهندسی نرم‌افزار | Python و توسعه وب', ps: 'د سافټویر انجینرۍ زده‌کوونکی | Python او وېب پراختیا' },
   'Email': { fa: 'ایمیل', ps: 'برېښنالیک' },
   'Phone': { fa: 'تلفن', ps: 'تلیفون' },
   'Location': { fa: 'موقعیت', ps: 'موقعیت' },
@@ -147,7 +148,6 @@ const COPY: CopyTable = {
   'Add publication': { fa: 'افزودن انتشار', ps: 'خپرونه زیاته کړئ' },
   'References': { fa: 'معرف‌ها', ps: 'مراجع' },
   'Name': { fa: 'نام', ps: 'نوم' },
-  'Role / position': { fa: 'نقش / سمت', ps: 'رول / دنده' },
   'Add reference': { fa: 'افزودن معرف', ps: 'مرجع زیات کړئ' },
 
   'Review and export your CV': { fa: 'سی‌وی خود را بررسی و خروجی بگیرید', ps: 'خپله سي وي وکتئ او صادره یې کړئ' },
