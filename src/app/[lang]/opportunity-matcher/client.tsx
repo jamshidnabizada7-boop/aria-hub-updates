@@ -215,26 +215,20 @@ const FIELD_LABELS: Record<Lang, Record<FieldArea, string>> = {
   },
 };
 
-const COUNTRIES = [
-  { value: 'Afghanistan', en: 'Afghanistan', fa: 'افغانستان', ps: 'افغانستان' },
-  { value: 'Pakistan', en: 'Pakistan', fa: 'پاکستان', ps: 'پاکستان' },
-  { value: 'Iran', en: 'Iran', fa: 'ایران', ps: 'ایران' },
-  { value: 'Türkiye', en: 'Türkiye', fa: 'ترکیه', ps: 'ترکیه' },
-  { value: 'United Arab Emirates', en: 'United Arab Emirates', fa: 'امارات متحده عربی', ps: 'متحده عربي امارات' },
-  { value: 'Qatar', en: 'Qatar', fa: 'قطر', ps: 'قطر' },
-  { value: 'India', en: 'India', fa: 'هند', ps: 'هند' },
-  { value: 'Germany', en: 'Germany', fa: 'آلمان', ps: 'جرمني' },
-  { value: 'Canada', en: 'Canada', fa: 'کانادا', ps: 'کاناډا' },
-  { value: 'United States', en: 'United States', fa: 'ایالات متحده', ps: 'متحده ایالات' },
-  { value: 'United Kingdom', en: 'United Kingdom', fa: 'بریتانیا', ps: 'بریتانیا' },
-  { value: 'Australia', en: 'Australia', fa: 'استرالیا', ps: 'اسټرالیا' },
-  { value: 'France', en: 'France', fa: 'فرانسه', ps: 'فرانسه' },
-  { value: 'Netherlands', en: 'Netherlands', fa: 'هالند', ps: 'هالنډ' },
-  { value: 'Sweden', en: 'Sweden', fa: 'سویدن', ps: 'سویډن' },
-  { value: 'Italy', en: 'Italy', fa: 'ایتالیا', ps: 'ایټالیا' },
-  { value: 'Spain', en: 'Spain', fa: 'اسپانیا', ps: 'هسپانیا' },
-  { value: 'Japan', en: 'Japan', fa: 'جاپان', ps: 'جاپان' },
-] as const;
+const COUNTRY_CODES = (
+  'AF AL DZ AS AD AO AI AQ AG AR AM AW AU AT AZ BS BH BD BB BY BE BZ BJ BM BT BO BQ BA BW BV BR IO BN BG BF BI CV KH CM CA KY CF TD CL CN CX CC CO KM CG CD CK CR CI HR CU CW CY CZ DK DJ DM DO EC EG SV GQ ER EE SZ ET FK FO FJ FI FR GF PF TF GA GM GE DE GH GI GR GL GD GP GU GT GG GN GW GY HT HM VA HN HK HU IS IN ID IR IQ IE IM IL IT JM JP JE JO KZ KE KI KP KR KW KG LA LV LB LS LR LY LI LT LU MO MG MW MY MV ML MT MH MQ MR MU YT MX FM MD MC MN ME MS MA MZ MM NA NR NP NL NC NZ NI NE NG NU NF MK MP NO OM PK PW PS PA PG PY PE PH PN PL PT PR QA RE RO RU RW BL SH KN LC MF PM VC WS SM ST SA SN RS SC SL SG SX SK SI SB SO ZA GS SS ES LK SD SR SJ SE CH SY TW TJ TZ TH TL TG TK TO TT TN TR TM TC TV UG UA AE GB US UM UY UZ VU VE VN VG VI WF EH YE ZM ZW'
+).split(' ');
+
+function getCountryOptions(lang: Lang) {
+  const locale = lang === 'fa' ? 'fa-AF' : lang === 'ps' ? 'ps-AF' : 'en';
+  const englishNames = new Intl.DisplayNames(['en'], { type: 'region' });
+  const localizedNames = new Intl.DisplayNames([locale, 'en'], { type: 'region' });
+
+  return COUNTRY_CODES.map((code) => ({
+    value: englishNames.of(code) || code,
+    label: localizedNames.of(code) || englishNames.of(code) || code,
+  })).sort((a, b) => a.label.localeCompare(b.label, locale));
+}
 
 const REASON_COPY: Record<Lang, Record<string, string>> = {
   en: { opportunity_type: 'Opportunity type matches', destination: 'Destination matches', education: 'Education level appears compatible', field: 'Field/role appears relevant', deadline_practicality: 'There is still practical time before the deadline', open_deadline: 'Deadline is currently open', nationality: 'Nationality appears explicitly supported' },
@@ -265,6 +259,7 @@ export function OpportunityMatcherClient() {
   const [aiUsed, setAiUsed] = useState(false);
 
   const rtl = lang === 'fa' || lang === 'ps';
+  const countryOptions = useMemo(() => getCountryOptions(lang), [lang]);
 
   useEffect(() => {
     try {
@@ -489,8 +484,8 @@ export function OpportunityMatcherClient() {
 
             {step === 3 && (
               <div className="grid gap-5 sm:grid-cols-2">
-                <CountrySelect label={c.nationality} value={profile.nationality} lang={lang} onChange={(value) => setProfile((p) => ({ ...p, nationality: value }))} />
-                <CountrySelect label={c.residence} value={profile.residence} lang={lang} onChange={(value) => setProfile((p) => ({ ...p, residence: value }))} />
+                <CountrySelect label={c.nationality} value={profile.nationality} options={countryOptions} onChange={(value) => setProfile((p) => ({ ...p, nationality: value }))} />
+                <CountrySelect label={c.residence} value={profile.residence} options={countryOptions} onChange={(value) => setProfile((p) => ({ ...p, residence: value }))} />
               </div>
             )}
 
@@ -507,7 +502,7 @@ export function OpportunityMatcherClient() {
                     >
                       {c.anywhere}
                     </button>
-                    {COUNTRIES.map((country) => {
+                    {countryOptions.map((country) => {
                       const selected = profile.destinations.includes(country.value);
                       return (
                         <button
@@ -523,7 +518,7 @@ export function OpportunityMatcherClient() {
                           })}
                           className={`rounded-full border px-3 py-2 text-sm transition-colors ${selected ? 'border-amber-500 bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200' : 'bg-background hover:bg-accent'}`}
                         >
-                          {country[lang]}
+                          {country.label}
                         </button>
                       );
                     })}
@@ -558,14 +553,26 @@ export function OpportunityMatcherClient() {
   );
 }
 
-function CountrySelect({ label, value, lang, onChange }: { label: string; value: string; lang: Lang; onChange: (value: string) => void }) {
+function CountrySelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (value: string) => void;
+}) {
   return (
     <div>
       <Label className="mb-2 block">{label}</Label>
       <Select value={value} onValueChange={onChange}>
         <SelectTrigger><SelectValue /></SelectTrigger>
-        <SelectContent>
-          {COUNTRIES.map((country) => <SelectItem key={country.value} value={country.value}>{country[lang]}</SelectItem>)}
+        <SelectContent className="max-h-72">
+          {options.map((country) => (
+            <SelectItem key={country.value} value={country.value}>{country.label}</SelectItem>
+          ))}
         </SelectContent>
       </Select>
     </div>
