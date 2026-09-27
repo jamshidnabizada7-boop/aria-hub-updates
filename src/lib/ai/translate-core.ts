@@ -297,102 +297,145 @@ export interface TranslateBatchResult {
  * Process up to `batch` rows starting from the highest-priority untranslated
  * content. Returns whether a 429 was hit (caller sets backoff).
  */
-export async function translateNextBatch(batch = 3): Promise<TranslateBatchResult> {
-  let processed = 0;
-  let failed = 0;
-  let rateLimited = false;
-
-  // 1. Opportunities first — newest published with missing fa title.
-  const opps = await db.opportunity.findMany({
+async function pendingCount(lang: TargetLang): Promise<number> {
+  if (lang === 'fa') {
+    return db.opportunity.count({
+      where: {
+        status: { not: 'archived' },
+        translationProgress: { none: { lang: 'fa', status: 'complete' } },
+      },
+    });
+  }
+  return db.opportunity.count({
     where: {
-      status: 'published',
-      OR: [
-        { titleI18n: { equals: PrismaAnyNull } },
-        { titleI18n: { path: ['fa'], equals: PrismaAnyNull } },
-        { NOT: { titleI18n: { path: ['fa'], string_contains: '' } } },
+      status: { not: 'archived' },
+      AND: [
+        { translationProgress: { some: { lang: 'fa', status: 'complete' } } },
+        { translationProgress: { none: { lang: 'ps', status: 'complete' } } },
       ],
     },
-    orderBy: { createdAt: 'desc' },
-    take: batch,
-    select: OPP_SELECT,
+  });
+}
+
+async function findCandidate(lang: TargetLang): Promise<Record<string, any> | null> {
+  const now = new Date();
+  const rows = await db.opportunity.findMany({
+    where:
+      lang === 'fa'
+        ? {
+            status: { not: 'archived' },
+            translationProgress: { none: { lang: 'fa', status: 'complete' } },
+          }
+        : {
+            status: { not: 'archived' },
+            AND: [
+              { translationProgress: { some: { lang: 'fa', status: 'complete' } } },
+              { translationProgress: { none: { lang: 'ps', status: 'complete' } } },
+            ],
+          },
+    orderBy: [
+      { deadline: { sort: 'asc', nulls: 'last' } },
+      { createdAt: 'desc' },
+    ],
+    take: 50,
+    include: {
+      translationProgress: { where: { lang }, take: 1 },
+    },
   });
 
-  for (const opp of opps as OppRow[]) {
-    if (processed >= batch) break;
-    const title = enOf(opp.titleI18n, opp.title);
-    const desc = enOf(opp.descriptionI18n, opp.description).slice(0, 900);
-    if (!title) continue;
-    const fields: Record<string, string> = { title };
-    if (desc && !isSymbol(desc)) fields.description = desc;
-    try {
-      const got = await translateFields(fields);
-      if (got) {
-        const titleI18n = { ...(typeof opp.titleI18n === 'object' && opp.titleI18n ? opp.titleI18n as object : { en: opp.title }), ...(got.title ? { fa: got.title.fa, ps: got.title.ps } : {}) };
-        const descriptionI18n = got.description
-          ? { ...(typeof opp.descriptionI18n === 'object' && opp.descriptionI18n ? opp.descriptionI18n as object : { en: opp.description }), fa: got.description.fa, ps: got.description.ps }
-          : (typeof opp.descriptionI18n === 'object' && opp.descriptionI18n ? opp.descriptionI18n as object : undefined);
-        await db.opportunity.update({
-          where: { id: opp.id },
-          data: { titleI18n, ...(descriptionI18n ? { descriptionI18n } : {}) },
-        });
-        processed++;
-      } else {
-        failed++;
-      }
-    } catch (e) {
-      const msg = (e instanceof Error ? e.message : String(e));
-      if (msg.includes('429') || msg.toLowerCase().includes('too many')) {
-        rateLimited = true;
-        break;
-      }
-      failed++;
-    }
+  for (const row of rows) {
+    const progress = row.translationProgress[0];
+    if (progress?.nextAttemptAt && progress.nextAttemptAt > now) continue;
+    return row as unknown as Record<string, any>;
   }
+  return null;
+}
 
-  // 2. News (title + excerpt only; long content stays with the offline script).
-  if (processed < batch && !rateLimited) {
-    const newsRows = await db.news.findMany({
-      where: {
-        status: 'published',
-        OR: [
-          { titleI18n: { equals: PrismaAnyNull } },
-          { NOT: { titleI18n: { path: ['fa'], string_contains: '' } } },
-        ],
-      },
-      orderBy: { publishedAt: 'desc' },
-      take: batch - processed,
-      select: { id: true, title: true, excerpt: true, titleI18n: true, excerptI18n: true },
-    });
-    for (const n of newsRows) {
-      const title = enOf(n.titleI18n, n.title);
-      if (!title) continue;
-      const fields: Record<string, string> = { title };
-      const excerpt = enOf(n.excerptI18n, n.excerpt ?? '');
-      if (excerpt) fields.excerpt = excerpt.slice(0, 400);
-      try {
-        const got = await translateFields(fields);
-        if (got) {
-          await db.news.update({
-            where: { id: n.id },
-            data: {
-              titleI18n: { ...(typeof n.titleI18n === 'object' && n.titleI18n ? n.titleI18n as object : { en: n.title }), ...(got.title ?? {}) },
-              ...(got.excerpt
-                ? { excerptI18n: { ...(typeof n.excerptI18n === 'object' && n.excerptI18n ? n.excerptI18n as object : { en: excerpt }), fa: got.excerpt.fa, ps: got.excerpt.ps } }
-                : {}),
-            },
-          });
-          processed++;
-        } else failed++;
-      } catch (e) {
-        const msg = (e instanceof Error ? e.message : String(e));
-        if (msg.includes('429') || msg.toLowerCase().includes('too many')) {
-          rateLimited = true;
-          break;
-        }
-        failed++;
+async function workOnOpportunity(
+  row: Record<string, any>,
+  lang: TargetLang,
+): Promise<{ completed: boolean; failed: boolean; rateLimited: boolean }> {
+  const fields = sourceFields(row);
+  const hash = sourceHash(fields);
+  const progress = row.translationProgress[0];
+  const attempts = progress?.attempts ?? 0;
+  const stage = parseStage(progress?.fieldProgress, hash);
+  let calls = 0;
+
+  try {
+    for (const [field] of FIELD_DEFS) {
+      const source = fields[field];
+      if (!source || stage.fields[field]) continue;
+
+      const chunks = chunkText(source);
+      const chunkHash = createHash('sha256').update(source).digest('hex');
+      const previous = stage.chunks[field];
+      const checkpoint =
+        previous && previous.sourceHash === chunkHash
+          ? previous
+          : { sourceHash: chunkHash, parts: [] as string[] };
+
+      while (checkpoint.parts.length < chunks.length && calls < MAX_CALLS_PER_TICK) {
+        const index = checkpoint.parts.length;
+        checkpoint.parts.push(await translateChunk(chunks[index], lang));
+        calls++;
+        stage.chunks[field] = checkpoint;
+        await saveStage(row.id, lang, hash, stage, 'processing', attempts, null, null);
+      }
+
+      if (checkpoint.parts.length === chunks.length) {
+        const joined = checkpoint.parts.join('\n\n').trim();
+        if (!joined) throw new Error('translated field assembled empty: ' + field);
+        stage.fields[field] = joined;
+        delete stage.chunks[field];
+        await saveStage(row.id, lang, hash, stage, 'processing', attempts, null, null);
+      }
+
+      if (calls >= MAX_CALLS_PER_TICK) {
+        return { completed: false, failed: false, rateLimited: false };
       }
     }
-  }
 
-  return { processed, failed, rateLimited };
+    const missing = Object.keys(fields).filter((field) => !stage.fields[field]);
+    if (missing.length) return { completed: false, failed: false, rateLimited: false };
+
+    await commitLanguage(row, lang, fields, stage, hash);
+    return { completed: true, failed: false, rateLimited: false };
+  } catch (error) {
+    const message = (error instanceof Error ? error.message : String(error)).slice(0, 500);
+    const rateLimited =
+      Boolean((error as Error & { rateLimited?: boolean })?.rateLimited) ||
+      isRateLimitError(message);
+    const nextAttempts = attempts + 1;
+    await saveStage(
+      row.id,
+      lang,
+      hash,
+      stage,
+      'failed',
+      nextAttempts,
+      message,
+      new Date(Date.now() + retryDelay(nextAttempts, rateLimited)),
+    );
+    return { completed: false, failed: true, rateLimited };
+  }
+}
+
+/**
+ * Do one bounded, resumable unit of opportunity translation work.
+ * Persian has global priority; Pashto cannot start until every non-archived
+ * opportunity has a complete Persian progress row.
+ */
+export async function translateNextBatch(_batch = 3): Promise<TranslateBatchResult> {
+  const faRemaining = await pendingCount('fa');
+  const lang: TargetLang = faRemaining > 0 ? 'fa' : 'ps';
+  const candidate = await findCandidate(lang);
+  if (!candidate) return { processed: 0, failed: 0, rateLimited: false };
+
+  const result = await workOnOpportunity(candidate, lang);
+  return {
+    processed: result.completed || !result.failed ? 1 : 0,
+    failed: result.failed ? 1 : 0,
+    rateLimited: result.rateLimited,
+  };
 }
