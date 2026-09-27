@@ -39,6 +39,7 @@ interface Profile {
   residence: string;
   destinations: string[];
   fieldArea: FieldArea;
+  experienceYears?: number;
 }
 
 interface MatchResult {
@@ -79,6 +80,7 @@ const COPY = {
     destinationTitle: 'Where would you like to go?', destinationSub: 'Choose Anywhere if destination is flexible. Add a field or role to improve relevance.',
     nationality: 'Nationality', residence: 'Current country of residence', destination: 'Preferred destination', field: 'Field or discipline',
     fieldPlaceholder: 'Any field',
+    experience: 'Years of relevant experience', experienceUnknown: 'Not sure / prefer not to say',
     anywhere: 'Anywhere', find: 'Find matches', edit: 'Edit preferences', startOver: 'Start over',
     loadingTitle: 'Checking active opportunities', loadingSub: 'Comparing type, destination, known requirements and data confidence.',
     resultsTitle: 'Your opportunity matches', resultsSub: 'These are recommendations, not acceptance predictions.',
@@ -109,6 +111,7 @@ const COPY = {
     destinationTitle: 'ترجیح می‌دهید به کجا بروید؟', destinationSub: 'اگر مقصد برایتان مهم نیست «هرجا» را انتخاب کنید. رشته یا نقش را هم می‌توانید اضافه کنید.',
     nationality: 'تابعیت', residence: 'کشور محل اقامت فعلی', destination: 'مقصد ترجیحی', field: 'رشته یا حوزه',
     fieldPlaceholder: 'هر رشته',
+    experience: 'سال‌های تجربه مرتبط', experienceUnknown: 'مطمئن نیستم / ترجیح می‌دهم نگویم',
     anywhere: 'هرجا', find: 'یافتن فرصت‌ها', edit: 'ویرایش ترجیحات', startOver: 'شروع دوباره',
     loadingTitle: 'در حال بررسی فرصت‌های فعال', loadingSub: 'نوع فرصت، مقصد، شرایط شناخته‌شده و کیفیت داده مقایسه می‌شود.',
     resultsTitle: 'فرصت‌های مناسب برای شما', resultsSub: 'این‌ها پیشنهاد هستند، نه پیش‌بینی شانس قبولی.',
@@ -139,6 +142,7 @@ const COPY = {
     destinationTitle: 'کوم ځای ته تلل غواړئ؟', destinationSub: 'که ځای مهم نه وي، هرځای وټاکئ. د لا ښه تړاو لپاره رشته یا رول هم ولیکئ.',
     nationality: 'تابعیت', residence: 'اوسنی د اوسېدو هېواد', destination: 'غوره ځای', field: 'رشته یا حوزه',
     fieldPlaceholder: 'هره رشته',
+    experience: 'د اړوندې تجربې کلونه', experienceUnknown: 'ډاډه نه یم / نه وایم',
     anywhere: 'هرځای', find: 'فرصتونه ومومئ', edit: 'غوره توبونه سمول', startOver: 'له سره پیل',
     loadingTitle: 'فعال فرصتونه کتل کېږي', loadingSub: 'ډول، ځای، پېژندل شوي شرطونه او د معلوماتو باور پرتله کېږي.',
     resultsTitle: 'ستاسو مناسب فرصتونه', resultsSub: 'دا سپارښتنې دي، د منل کېدو وړاندوینې نه دي.',
@@ -547,6 +551,28 @@ export function OpportunityMatcherClient() {
                     </SelectContent>
                   </Select>
                 </div>
+                {(profile.intents.includes('job') || profile.intents.includes('internship')) && (
+                  <div>
+                    <Label className="mb-2 block">{c.experience}</Label>
+                    <Select
+                      value={profile.experienceYears == null ? 'unknown' : String(profile.experienceYears)}
+                      onValueChange={(value) => setProfile((p) => ({
+                        ...p,
+                        experienceYears: value === 'unknown' ? undefined : Number(value),
+                      }))}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unknown">{c.experienceUnknown}</SelectItem>
+                        {[0, 1, 2, 3, 5, 10].map((years) => (
+                          <SelectItem key={years} value={String(years)}>
+                            {years === 10 ? '10+' : years}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <p className="rounded-xl bg-muted/60 p-3 text-xs leading-5 text-muted-foreground">{c.privacy}</p>
               </div>
             )}
