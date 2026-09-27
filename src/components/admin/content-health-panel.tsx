@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils';
 interface ContentHealth {
   opportunities: { total: number; published: number; expired: number; draft: number };
   translation: { trilingual: number; partial: number; englishOnly: number; publishedTotal: number };
-  matchability: { publishedTotal: number; coreReady: number; eligibilityRich: number; weakData: number; freshVerified: number };
+  matchability: { publishedTotal: number; coreReady: number; eligibilityRich: number; weakData: number; freshVerified: number; normalizedProfiles: number; reviewedProfiles: number };
   deadlines: { expiring7: number; expiring30: number; noApplyLink: number };
   submissions: { pending: number };
   alerts: { pending: number; active: number; unsubscribed: number };
@@ -139,7 +139,7 @@ export function ContentHealthPanel() {
           </Badge>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <div className="rounded-lg border bg-muted/20 p-3">
               <p className="text-xs font-medium text-muted-foreground">Eligibility-rich</p>
               <p className="mt-1 text-xl font-black tabular-nums">{matchability.eligibilityRich}</p>
@@ -149,6 +149,16 @@ export function ContentHealthPanel() {
               <p className="text-xs font-medium text-muted-foreground">Fresh source checks</p>
               <p className="mt-1 text-xl font-black tabular-nums">{matchability.freshVerified}</p>
               <p className="mt-1 text-[11px] text-muted-foreground">source recorded and checked within 30 days</p>
+            </div>
+            <div className="rounded-lg border bg-muted/20 p-3">
+              <p className="text-xs font-medium text-muted-foreground">Normalized profiles</p>
+              <p className="mt-1 text-xl font-black tabular-nums">{matchability.normalizedProfiles}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">opportunities with first-class match facts</p>
+            </div>
+            <div className="rounded-lg border bg-muted/20 p-3">
+              <p className="text-xs font-medium text-muted-foreground">Human-reviewed</p>
+              <p className="mt-1 text-xl font-black tabular-nums">{matchability.reviewedProfiles}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">normalized profiles explicitly reviewed</p>
             </div>
             <div className="rounded-lg border bg-muted/20 p-3">
               <p className="text-xs font-medium text-muted-foreground">Weak match data</p>
