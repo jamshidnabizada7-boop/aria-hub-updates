@@ -47,7 +47,8 @@ describe('Opportunity Matcher canonical contract', () => {
   test('accepts canonical education values independently of display language', () => {
     for (const lang of ['en', 'fa', 'ps'] as const) {
       const parsed = MatcherProfileSchema.parse({ ...baseProfile, lang });
-      expect(parsed.education).toBe('masters');
+      expect(parsed.education).toBe('bachelors');
+      expect(parsed.targetEducation).toBe('masters');
       expect(parsed.intents).toEqual(['scholarship']);
     }
   });
