@@ -15,7 +15,7 @@ CREATE TABLE "OpportunityLocation" (
   "provenance" TEXT NOT NULL DEFAULT 'source',
   "confidence" DOUBLE PRECISION NOT NULL DEFAULT 1,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
   CONSTRAINT "OpportunityLocation_pkey" PRIMARY KEY ("id")
 );
 
