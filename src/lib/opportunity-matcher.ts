@@ -44,6 +44,7 @@ export type DataConfidence = 'high' | 'medium' | 'low';
 export const MatcherProfileSchema = z.object({
   intents: z.array(z.enum(MATCHER_INTENTS)).min(1).max(3),
   education: z.enum(EDUCATION_LEVELS),
+  targetEducation: z.enum(EDUCATION_LEVELS).optional(),
   nationality: z.string().trim().min(2).max(80),
   residence: z.string().trim().min(2).max(80),
   destinations: z.array(z.string().trim().min(2).max(80)).min(1).max(8),
@@ -326,12 +327,23 @@ export function rankOpportunity(profile: MatcherProfile, opportunity: MatcherOpp
     `${opportunity.eligibility ?? ''} ${opportunity.requirements ?? ''} ${opportunity.educationReq ?? ''} ${flattenJson(opportunity.extractedData)}`
   );
 
+  const targetEducation = profile.targetEducation ?? profile.education;
   const structuredEducation = normalizedStringArray(opportunity.structuredFacts?.educationLevels);
+  const targetText = normalize(
+    `${opportunity.title} ${opportunity.categoryName ?? ''} ${opportunity.jobType ?? ''} ${opportunity.eligibility ?? ''}`
+  );
   if (
-    structuredEducation.includes(normalize(profile.education)) ||
-    educationEvidence(profile, eligibilityText) === 'match'
+    structuredEducation.includes(normalize(targetEducation)) ||
+    includesAny(targetText, EDUCATION_TERMS[targetEducation])
   ) {
     score += 10;
+    reasons.push('target_level');
+  } else if (profile.targetEducation) {
+    unknowns.push('target_level');
+  }
+
+  if (educationEvidence(profile, eligibilityText) === 'match') {
+    score += 4;
     verified.push('education');
     reasons.push('education');
   } else {
