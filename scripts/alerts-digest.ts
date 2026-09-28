@@ -27,6 +27,8 @@
  */
 import { PrismaClient } from '@prisma/client';
 import { writeFileSync, mkdirSync } from 'node:fs';
+import { MatcherProfileSchema, rankOpportunities } from '../src/lib/opportunity-matcher';
+import { getLocalizedContent } from '../src/lib/i18n-content';
 
 const db = new PrismaClient();
 
@@ -196,7 +198,6 @@ async function main() {
 
     const lang: Lang = sub.lang === 'en' ? 'en' : sub.lang === 'ps' ? 'ps' : 'fa';
     // Localize titles when a translation exists (fall back to base title).
-    const { getLocalizedContent } = await import('../src/lib/i18n-content');
     const localized = items.map((it) => ({
       title:
         getLocalizedContent(it.title, it.titleI18n as Record<string, string> | null, lang) ||
@@ -244,8 +245,151 @@ async function main() {
     emailed++;
   }
 
+  // Personalized Opportunity Matcher alerts use a separate table and
+  // the same deterministic ranking engine as the web Matcher. They never
+  // reuse the category-subscription profile or acceptance-probability logic.
+  const matcherSubscribers = await db.matcherAlertSubscriber.findMany({
+    where: {
+      status: 'active',
+      ...(FREQ_FILTER ? { frequency: FREQ_FILTER } : {}),
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  let matcherEmailed = 0;
+  let matcherSkipped = 0;
+
+  for (const sub of matcherSubscribers) {
+    const parsedProfile = MatcherProfileSchema.safeParse(sub.profile);
+    if (!parsedProfile.success) {
+      console.warn(`  → matcher alert ${sub.email}: invalid saved profile, skipped`);
+      matcherSkipped++;
+      continue;
+    }
+
+    const profile = parsedProfile.data;
+    const days = sub.frequency === 'weekly' ? 7 : 1;
+    const frequencyFloor = new Date(now.getTime() - days * 24 * 3600 * 1000);
+    const since = sub.lastDigestAt && sub.lastDigestAt > frequencyFloor ? sub.lastDigestAt : frequencyFloor;
+    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+
+    const candidates = await db.opportunity.findMany({
+      where: {
+        status: 'published',
+        createdAt: { gt: since },
+        OR: [{ deadline: null }, { deadline: { gte: today } }],
+      },
+      orderBy: [{ deadline: { sort: 'asc', nulls: 'last' } }, { createdAt: 'desc' }],
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        titleI18n: true,
+        organization: true,
+        country: true,
+        deadline: true,
+        jobType: true,
+        educationReq: true,
+        experience: true,
+        eligibility: true,
+        requirements: true,
+        benefits: true,
+        tags: true,
+        extractedData: true,
+        matchProfile: {
+          select: {
+            eligibleNationalities: true,
+            eligibleCountries: true,
+            educationLevels: true,
+            fieldAreas: true,
+            minAge: true,
+            maxAge: true,
+            minExperienceYears: true,
+            languages: true,
+            fundingType: true,
+            locationType: true,
+            visaSponsorship: true,
+            provenance: true,
+            confidence: true,
+            reviewed: true,
+          },
+        },
+        sourceName: true,
+        lastChecked: true,
+        updatedAt: true,
+        category: { select: { slug: true, name: true } },
+      },
+    });
+
+    const ranked = rankOpportunities(
+      profile,
+      candidates.map((row) => ({
+        ...row,
+        structuredFacts: row.matchProfile,
+        categorySlug: row.category?.slug ?? null,
+        categoryName: row.category?.name ?? null,
+      })),
+      MAX_ITEMS
+    ).filter((item) => item.matchStrength === 'strong' && item.eligibilityStatus !== 'potential_conflict');
+
+    if (ranked.length === 0) {
+      matcherSkipped++;
+      continue;
+    }
+
+    const lang: Lang = sub.lang === 'en' ? 'en' : sub.lang === 'ps' ? 'ps' : 'fa';
+    const localized = ranked.map(({ opportunity }) => {
+      const source = candidates.find((item) => item.id === opportunity.id)!;
+      return {
+        title:
+          getLocalizedContent(source.title, source.titleI18n as Record<string, string> | null, lang) ||
+          source.title,
+        organization: source.organization,
+        deadline: source.deadline,
+        slug: source.slug,
+      };
+    });
+
+    const unsubBase = `${BASE_URL}/api/matcher-alerts/unsubscribe?email=${encodeURIComponent(sub.email)}&lang=${lang}`;
+    const { subject, html } = renderEmail(lang, localized, unsubBase);
+
+    if (SEND) {
+      const host = process.env.SMTP_HOST;
+      const user = process.env.SMTP_USER;
+      const pass = process.env.SMTP_PASS;
+      if (!host || !user || !pass) {
+        console.error('SEND requested but SMTP_HOST/SMTP_USER/SMTP_PASS are missing — aborting before any send.');
+        process.exit(1);
+      }
+      const nodemailer = await import('nodemailer');
+      const transport = nodemailer.createTransport({
+        host,
+        port: Number(process.env.SMTP_PORT || 587),
+        secure: Number(process.env.SMTP_PORT || 587) === 465,
+        auth: { user, pass },
+      });
+      await transport.sendMail({
+        from: process.env.SMTP_FROM || `ARIA HUB <${user}>`,
+        to: sub.email,
+        subject,
+        html,
+      });
+      console.log(`  → matcher alert sent to ${sub.email} (${localized.length} strong matches, ${lang})`);
+    } else {
+      const safeName = `matcher_${sub.email.replace(/[^a-z0-9._-]/gi, '_')}`;
+      writeFileSync(`logs/alerts-digest/${safeName}.html`, html);
+      console.log(`  → matcher preview for ${sub.email}: ${localized.length} strong matches, ${lang}`);
+    }
+
+    await db.matcherAlertSubscriber.update({
+      where: { id: sub.id },
+      data: { lastDigestAt: now },
+    });
+    matcherEmailed++;
+  }
+
   console.log(
-    `alerts-digest done: emailed=${emailed} skipped(no match)=${skippedNoMatch} window=${FREQ_FILTER || 'daily+weekly'}`
+    `alerts-digest done: category emailed=${emailed} skipped=${skippedNoMatch}; matcher emailed=${matcherEmailed} skipped=${matcherSkipped}; window=${FREQ_FILTER || 'daily+weekly'}`
   );
 }
 
