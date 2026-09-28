@@ -119,6 +119,7 @@ export async function runAIPipeline(
   listing: RawListing,
   ctx: { db: PrismaClient; knownCategorySlugs: string[] },
   originalLang: Lang = 'en',
+  opts?: { skipEnrichment?: boolean },
 ): Promise<PipelineOutput> {
   // Clean title once — everything downstream (slugs, i18n, SEO) uses it.
   listing.title = cleanTitleJunk(listing.title) || listing.title;
@@ -171,7 +172,7 @@ export async function runAIPipeline(
   let translationStatus: PipelineOutput['translationStatus'] = 'pending';
   let categorySlugs: string[] = [];
 
-  const provider = await getAIProvider();
+  const provider = opts?.skipEnrichment ? null : await getAIProvider();
   if (provider) {
     try {
       const raw = await enrichWithRetry(provider, listing);

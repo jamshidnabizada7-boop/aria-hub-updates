@@ -8,6 +8,10 @@
       "memory": 1024,
       "maxDuration": 60
     },
+    "src/app/api/admin/pipeline/import/route.ts": {
+      "memory": 1024,
+      "maxDuration": 60
+    },
     "src/app/api/admin/pipeline/social/route.ts": {
       "memory": 2048,
       "maxDuration": 60

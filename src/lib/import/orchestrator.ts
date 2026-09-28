@@ -70,6 +70,8 @@ export interface RunImportOptions {
   type?: string | null;
   triggeredBy?: string;
   force?: boolean;
+  /** One source, one list page, at most three listings, no inline AI calls. */
+  bounded?: boolean;
 }
 
 export interface RunSummary {
@@ -117,7 +119,7 @@ function toHandle(s: { id: string; name: string; type: string; scraperKey: strin
  * source).
  */
 export async function runImport(opts: RunImportOptions = {}): Promise<RunSummary> {
-  const { sourceId = null, type = null, triggeredBy = 'manual', force = false } = opts;
+  const { sourceId = null, type = null, triggeredBy = 'manual', force = false, bounded = false } = opts;
   const startedAt = Date.now();
 
   let source: any;
@@ -158,7 +160,7 @@ export async function runImport(opts: RunImportOptions = {}): Promise<RunSummary
       const { runNewsImport } = await import('./news-import');
       return await runNewsImport({ sourceId: source.id, triggeredBy });
     }
-    return await runOneSource(db, source, triggeredBy, force);
+    return await runOneSource(db, source, triggeredBy, force, bounded);
   } finally {
     inFlight.delete(source.id);
   }
@@ -170,9 +172,11 @@ async function runOneSource(
   source: { id: string; name: string; type: string; scraperKey: string; baseUrl: string; config: string | null; defaultCategory: string | null; autoPublish: boolean },
   triggeredBy: string,
   force: boolean,
+  bounded: boolean,
 ): Promise<RunSummary> {
   const startedAt = Date.now();
   const handle = toHandle(source);
+  if (bounded) handle.config.maxPages = 1;
   const scraper = getScraper(handle);
   const run = await db.importRun.create({
     data: { sourceId: source.id, status: 'running', triggeredBy },
@@ -190,11 +194,11 @@ async function runOneSource(
 
     // Deadline so serverless hosts (Vercel ~60s) don't kill the function mid-run.
     // Long-running hosts (sandbox / cron workers) set IMPORT_GLOBAL_TIMEOUT_MS.
-    const GLOBAL_TIMEOUT = parseInt(process.env.IMPORT_GLOBAL_TIMEOUT_MS || '45000', 10);
+    const GLOBAL_TIMEOUT = bounded ? 25_000 : parseInt(process.env.IMPORT_GLOBAL_TIMEOUT_MS || '45000', 10);
     scraper.deadline = startedAt + GLOBAL_TIMEOUT;
 
     // 1. Scrape
-    const listings = await scraper.scrapeAll();
+    const listings = (await scraper.scrapeAll()).slice(0, bounded ? 3 : undefined);
     counters.found = listings.length;
 
     // 2. Process each listing
@@ -204,7 +208,7 @@ async function runOneSource(
         break;
       }
       try {
-        await processListing(db, scraper, listing, source, categories, knownSlugs, counters, force, errors);
+        await processListing(db, scraper, listing, source, categories, knownSlugs, counters, force, errors, bounded);
       } catch (e) {
         counters.failed++;
         errors.push({ url: listing.sourceUrl, message: sanitizeError(e), ts: new Date().toISOString() });
@@ -316,6 +320,7 @@ async function processListing(
   counters: { found: number; imported: number; updated: number; skipped: number; duplicates: number; failed: number },
   force: boolean,
   errors: Array<{ url: string; message: string; ts: string }>,
+  bounded: boolean,
 ): Promise<void> {
   // Bot-challenge guard: when a source is behind Cloudflare, the "detail
   // page" sometimes IS the challenge page and the scraper stores its title
@@ -439,7 +444,7 @@ async function processListing(
   const logo = await downloadLogo(listing.logoUrl, source.scraperKey, `${slugBase}-logo`);
 
   // AI pipeline (rewrite → SEO → categorize → translate)
-  const pipeline = await runAIPipeline(listing, { db, knownCategorySlugs: knownSlugs }, (listing.sourceLanguage as 'en' | 'fa' | 'ps') || 'en');
+  const pipeline = await runAIPipeline(listing, { db, knownCategorySlugs: knownSlugs }, (listing.sourceLanguage as 'en' | 'fa' | 'ps') || 'en', { skipEnrichment: bounded });
 
   // Resolve category
   const categoryId = resolveCategory(pipeline.categorySlugs, listing.category, listing.jobType, source.defaultCategory, categories);
@@ -535,7 +540,7 @@ async function processListing(
   // Whatever the budget does not finish stays queued for the background tick;
   // public fa/ps fields are only ever written by an atomic 100% commit.
   const targetId = dedupe.action === 'update' ? dedupe.existing.id : createdId;
-  if (targetId) {
+  if (targetId && !bounded) {
     try {
       const { processOpportunityNow } = await import('@/lib/ai/translate-engine');
       await processOpportunityNow(targetId, 90_000);

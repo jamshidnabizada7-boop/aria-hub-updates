@@ -38,3 +38,26 @@ select cron.unschedule('aria-opportunity-translate');
 
 The feature branch stays available until the rollout has been stable for
 several days.
+
+## New-listing refresh
+
+`aria-opportunity-import` calls `/api/admin/pipeline/import` once daily through
+the same Supabase Cron and Vault pattern. Its credential is separately stored
+as `aria_opportunity_import_cron` / Vercel Production `IMPORT_CRON_SECRET`.
+It chooses the least recently run enabled job or scholarship source. Each run
+reads at most **one list page**, processes at most **three listings**, and has
+a **25-second scrape/processing budget**. It skips inline AI enrichment and
+translation; the translation queue processes new published rows at its own
+bounded pace. It also reserves one run per UTC day and stops at 250 MB database
+size. Existing source auto-publish settings still decide whether an imported
+row is published.
+
+Check `lastOpportunityImportDate`, `lastOpportunityImportFinishedAt`,
+`lastOpportunityImportSource`, and `lastOpportunityImportStatus` in
+`AutomationState.state`, plus `ImportRun` counts and source health. Some sites
+may fail or block scraping; a daily run can finish without a new listing. To
+stop this refresh separately:
+
+```sql
+select cron.unschedule('aria-opportunity-import');
+```
