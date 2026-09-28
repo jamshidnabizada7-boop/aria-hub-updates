@@ -206,6 +206,46 @@ model Visa {
 }
 
 // ─── Opportunities (jobs, scholarships, etc.) ────────────────────────────────
+model MatcherFeedback {
+  id            String      @id @default(cuid())
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  signal        String
+  intent        String?
+  lang          String?
+  createdAt     DateTime    @default(now())
+
+  @@index([opportunityId, createdAt])
+  @@index([signal, createdAt])
+}
+
+model OpportunityMatchProfile {
+  id                 String      @id @default(cuid())
+  opportunityId      String      @unique
+  opportunity        Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  eligibleNationalities Json?
+  eligibleCountries  Json?
+  educationLevels    Json?
+  fieldAreas         Json?
+  minAge             Int?
+  maxAge             Int?
+  minExperienceYears Int?
+  languages          Json?
+  fundingType        String?
+  locationType       String?
+  visaSponsorship    Boolean?
+  provenance         Json?
+  confidence         Json?
+  extractionVersion  String      @default("v1")
+  reviewed           Boolean     @default(false)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  @@index([reviewed])
+  @@index([fundingType])
+  @@index([locationType])
+}
+
 model OpportunityCategory {
   id            String        @id @default(cuid())
   name          String
@@ -245,6 +285,8 @@ model Opportunity {
   seoDescription  String?
   categoryId      String?
   category        OpportunityCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  matchProfile    OpportunityMatchProfile?
+  matcherFeedback MatcherFeedback[]
   monetizationOrders MonetizationOrder[]
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
@@ -755,6 +797,25 @@ model AlertSubscriber {
   lastDigestAt DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+
+  @@index([status, createdAt])
+}
+
+/// Separate from category alerts: one opt-in saved Opportunity Matcher profile
+/// per email address. The profile contains canonical non-display identifiers
+/// only and is activated by double opt-in before any personalized digest.
+model MatcherAlertSubscriber {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  lang         String   @default("fa")
+  profile      Json
+  frequency    String   @default("daily")
+  status       String   @default("pending")
+  confirmToken String?
+  sourceIp     String?
+  lastDigestAt DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@index([status, createdAt])
 }

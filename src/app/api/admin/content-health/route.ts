@@ -29,6 +29,8 @@ export async function GET() {
     sources,
     lastRuns,
     alertSubscribers,
+    matcherAlertSubscribers,
+    matcherFeedback,
   ] = await Promise.all([
     db.opportunity.count(),
     db.opportunity.count({ where: { status: 'published' } }),
@@ -64,6 +66,14 @@ export async function GET() {
       by: ['status'],
       _count: true,
     }),
+    db.matcherAlertSubscriber.groupBy({
+      by: ['status'],
+      _count: true,
+    }),
+    db.matcherFeedback.groupBy({
+      by: ['signal'],
+      _count: true,
+    }),
   ]);
 
   // Category distribution counts (published only)
@@ -80,11 +90,31 @@ export async function GET() {
   // from the chunk engine's counters below (faStatus/psStatus + chunks).
   const all = await db.opportunity.findMany({
     where: { status: 'published' },
-    select: { titleI18n: true, aiSummaryI18n: true },
+    select: {
+      titleI18n: true,
+      aiSummaryI18n: true,
+      categoryId: true,
+      country: true,
+      deadline: true,
+      eligibility: true,
+      educationReq: true,
+      experience: true,
+      requirements: true,
+      extractedData: true,
+      sourceName: true,
+      lastChecked: true,
+      matchProfile: { select: { id: true, reviewed: true } },
+    },
   });
   let trilingual = 0;
   let partial = 0;
   let englishOnly = 0;
+  let matchableCore = 0;
+  let eligibilityRich = 0;
+  let weakMatchData = 0;
+  let freshVerified = 0;
+  let normalizedProfiles = 0;
+  let reviewedProfiles = 0;
   for (const o of all) {
     const title = (o.titleI18n ?? {}) as Record<string, unknown>;
     const summary = (o.aiSummaryI18n ?? {}) as Record<string, unknown>;
@@ -94,6 +124,35 @@ export async function GET() {
     if (faOk && psOk) trilingual++;
     else if (faOk || psOk) partial++;
     else englishOnly++;
+
+    const hasText = (v: unknown) => typeof v === 'string' && v.trim().length > 0;
+    const hasExtracted =
+      !!o.extractedData &&
+      typeof o.extractedData === 'object' &&
+      Object.keys(o.extractedData as Record<string, unknown>).length > 0;
+    const core = !!o.categoryId && hasText(o.country);
+    const eligibilitySignals = [
+      hasText(o.eligibility),
+      hasText(o.educationReq),
+      hasText(o.experience),
+      hasText(o.requirements),
+      hasExtracted,
+    ].filter(Boolean).length;
+
+    if (core) matchableCore++;
+    if (eligibilitySignals >= 3) eligibilityRich++;
+    if (!core || eligibilitySignals === 0) weakMatchData++;
+    if (
+      o.sourceName &&
+      o.lastChecked &&
+      Date.now() - o.lastChecked.getTime() <= 30 * 86_400_000
+    ) {
+      freshVerified++;
+    }
+    if (o.matchProfile) {
+      normalizedProfiles++;
+      if (o.matchProfile.reviewed) reviewedProfiles++;
+    }
   }
 
   // Chunk-engine truth: Persian-first progress + staged-chunk health.
@@ -126,12 +185,28 @@ export async function GET() {
   return NextResponse.json({
     opportunities: { total, published, expired, draft },
     translation: { trilingual, partial, englishOnly, publishedTotal: all.length, engine: engineCounters },
+    matchability: {
+      publishedTotal: all.length,
+      coreReady: matchableCore,
+      eligibilityRich,
+      weakData: weakMatchData,
+      freshVerified,
+      normalizedProfiles,
+      reviewedProfiles,
+    },
     deadlines: { expiring7, expiring30, noApplyLink },
     submissions: { pending: pendingSubmissions },
     alerts: {
       pending: alertSubscribers.find((g) => g.status === 'pending')?._count ?? 0,
       active: alertSubscribers.find((g) => g.status === 'active')?._count ?? 0,
       unsubscribed: alertSubscribers.find((g) => g.status === 'unsubscribed')?._count ?? 0,
+    },
+    matcherProduct: {
+      alertPending: matcherAlertSubscribers.find((g) => g.status === 'pending')?._count ?? 0,
+      alertActive: matcherAlertSubscribers.find((g) => g.status === 'active')?._count ?? 0,
+      alertUnsubscribed: matcherAlertSubscribers.find((g) => g.status === 'unsubscribed')?._count ?? 0,
+      helpful: matcherFeedback.find((g) => g.signal === 'helpful')?._count ?? 0,
+      notRelevant: matcherFeedback.find((g) => g.signal === 'not_relevant')?._count ?? 0,
     },
     categories: categories.map((c) => ({
       id: c.id,

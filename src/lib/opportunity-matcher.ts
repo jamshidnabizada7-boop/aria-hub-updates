@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 export const MATCHER_INTENTS = [
   'scholarship',
   'fellowship',
@@ -6,7 +8,7 @@ export const MATCHER_INTENTS = [
   'training',
   'conference',
   'competition',
-  'exchange',
+  'exchange_program',
   'volunteer',
 ] as const;
 
@@ -18,19 +20,56 @@ export const EDUCATION_LEVELS = [
   'other',
 ] as const;
 
+export const FIELD_AREAS = [
+  'any',
+  'technology',
+  'engineering',
+  'business',
+  'health',
+  'education',
+  'social_sciences',
+  'law_policy',
+  'natural_sciences',
+  'environment_agriculture',
+  'arts_humanities',
+] as const;
+
 export type MatcherIntent = (typeof MATCHER_INTENTS)[number];
 export type EducationLevel = (typeof EDUCATION_LEVELS)[number];
+export type FieldArea = (typeof FIELD_AREAS)[number];
 export type MatchStrength = 'strong' | 'good' | 'possible';
 export type EligibilityStatus = 'likely_eligible' | 'needs_check' | 'potential_conflict' | 'incomplete';
 export type DataConfidence = 'high' | 'medium' | 'low';
 
-export interface MatcherProfile {
-  intent: MatcherIntent;
-  education: EducationLevel;
-  nationality?: string | null;
-  residence?: string | null;
-  targetCountry: string;
-  experienceYears?: number | null;
+export const MatcherProfileSchema = z.object({
+  intents: z.array(z.enum(MATCHER_INTENTS)).min(1).max(3),
+  education: z.enum(EDUCATION_LEVELS),
+  targetEducation: z.enum(EDUCATION_LEVELS).optional(),
+  nationality: z.string().trim().min(2).max(80),
+  residence: z.string().trim().min(2).max(80),
+  destinations: z.array(z.string().trim().min(2).max(80)).min(1).max(8),
+  fieldArea: z.enum(FIELD_AREAS).default('any'),
+  experienceYears: z.number().int().min(0).max(50).optional(),
+  lang: z.enum(['fa', 'ps', 'en']).default('en'),
+});
+
+export type MatcherProfile = z.infer<typeof MatcherProfileSchema>;
+
+export interface MatcherStructuredFacts {
+  eligibleNationalities?: unknown;
+  eligibleCountries?: unknown;
+  educationLevels?: unknown;
+  fieldAreas?: unknown;
+  minAge?: number | null;
+  maxAge?: number | null;
+  minExperienceYears?: number | null;
+  languages?: unknown;
+  fundingType?: string | null;
+  locationType?: string | null;
+  visaSponsorship?: boolean | null;
+  provenance?: unknown;
+  confidence?: unknown;
+  reviewed?: boolean;
 }
 
 export interface MatcherOpportunity {
@@ -40,422 +79,411 @@ export interface MatcherOpportunity {
   organization: string | null;
   country: string | null;
   deadline: Date | null;
+  categorySlug: string | null;
+  categoryName: string | null;
   jobType: string | null;
   educationReq: string | null;
   experience: string | null;
   eligibility: string | null;
   requirements: string | null;
+  benefits: string | null;
+  tags: unknown;
+  extractedData: unknown;
+  structuredFacts?: MatcherStructuredFacts | null;
   sourceName: string | null;
   lastChecked: Date | null;
-  extractedData: unknown;
-  category: {
-    slug: string | null;
-    name: string | null;
-  } | null;
+  updatedAt: Date;
+}
+
+export interface MatcherEvidence {
+  reasons: string[];
+  unknowns: string[];
+  conflicts: string[];
+  verified: string[];
 }
 
 export interface RankedOpportunity {
-  row: MatcherOpportunity;
-  score: number;
-  strength: MatchStrength;
+  opportunity: MatcherOpportunity;
+  rankScore: number;
+  matchStrength: MatchStrength;
   eligibilityStatus: EligibilityStatus;
   dataConfidence: DataConfidence;
-  reasons: string[];
-  verified: string[];
-  check: string[];
+  evidence: MatcherEvidence;
 }
 
-const INTENT_CONFIG: Record<MatcherIntent, { slugs: string[]; tokens: string[] }> = {
-  scholarship: { slugs: ['scholarships'], tokens: ['scholarship', 'scholar'] },
-  fellowship: { slugs: ['fellowships'], tokens: ['fellowship', 'fellow'] },
-  internship: { slugs: ['internships'], tokens: ['internship', 'intern'] },
-  job: { slugs: ['jobs'], tokens: ['job', 'vacancy', 'employment', 'career'] },
-  training: { slugs: ['training'], tokens: ['training', 'course', 'workshop'] },
-  conference: { slugs: ['conferences'], tokens: ['conference', 'summit', 'forum'] },
-  competition: { slugs: ['competitions'], tokens: ['competition', 'contest', 'challenge', 'hackathon'] },
-  exchange: { slugs: ['exchange-programs'], tokens: ['exchange', 'exchange program'] },
-  volunteer: { slugs: ['volunteer'], tokens: ['volunteer', 'volunteering'] },
+const INTENT_SLUGS: Record<MatcherIntent, string[]> = {
+  scholarship: ['scholarships', 'scholarship'],
+  fellowship: ['fellowships', 'fellowship'],
+  internship: ['internships', 'internship'],
+  job: ['jobs', 'job'],
+  training: ['training', 'trainings'],
+  conference: ['conferences', 'conference'],
+  competition: ['competitions', 'competition'],
+  exchange_program: ['exchange-programs', 'exchange', 'exchange-program'],
+  volunteer: ['volunteer', 'volunteering'],
 };
 
-export function intentConfig(intent: MatcherIntent) {
-  return INTENT_CONFIG[intent];
-}
-
-const COUNTRY_ALIASES: Record<string, string[]> = {
-  AF: ['afghanistan', 'afghan'],
-  PK: ['pakistan', 'pakistani'],
-  IR: ['iran', 'iranian'],
-  TR: ['turkiye', 'türkiye', 'turkey', 'turkish'],
-  AE: ['united arab emirates', 'uae', 'emirates'],
-  QA: ['qatar', 'qatari'],
-  IN: ['india', 'indian'],
-  DE: ['germany', 'german'],
-  CA: ['canada', 'canadian'],
-  US: ['united states', 'united states of america', 'usa', 'u.s.', 'american'],
-  GB: ['united kingdom', 'uk', 'u.k.', 'britain', 'british', 'england'],
-  AU: ['australia', 'australian'],
-  FR: ['france', 'french'],
-  NL: ['netherlands', 'dutch'],
-  SE: ['sweden', 'swedish'],
-  IT: ['italy', 'italian'],
-  ES: ['spain', 'spanish'],
-  JP: ['japan', 'japanese'],
-  KR: ['south korea', 'korea', 'korean'],
-  CN: ['china', 'chinese'],
-  SA: ['saudi arabia', 'saudi'],
-  MY: ['malaysia', 'malaysian'],
-  ID: ['indonesia', 'indonesian'],
-  SG: ['singapore', 'singaporean'],
-  NZ: ['new zealand'],
-  CH: ['switzerland', 'swiss'],
-  AT: ['austria', 'austrian'],
-  BE: ['belgium', 'belgian'],
-  DK: ['denmark', 'danish'],
-  NO: ['norway', 'norwegian'],
-  FI: ['finland', 'finnish'],
-  IE: ['ireland', 'irish'],
-  PT: ['portugal', 'portuguese'],
-  PL: ['poland', 'polish'],
-  CZ: ['czechia', 'czech republic', 'czech'],
-  HU: ['hungary', 'hungarian'],
-  RO: ['romania', 'romanian'],
-  GR: ['greece', 'greek'],
-  RU: ['russia', 'russian'],
-  KZ: ['kazakhstan', 'kazakh'],
-  UZ: ['uzbekistan', 'uzbek'],
-  TJ: ['tajikistan', 'tajik'],
-  KG: ['kyrgyzstan', 'kyrgyz'],
-  AZ: ['azerbaijan', 'azerbaijani'],
-  GE: ['georgia', 'georgian'],
-  EG: ['egypt', 'egyptian'],
-  JO: ['jordan', 'jordanian'],
-  LB: ['lebanon', 'lebanese'],
-  IQ: ['iraq', 'iraqi'],
-  BD: ['bangladesh', 'bangladeshi'],
-  NP: ['nepal', 'nepali'],
-  LK: ['sri lanka', 'sri lankan'],
+const INTENT_TERMS: Record<MatcherIntent, string[]> = {
+  scholarship: ['scholarship', 'scholarships'],
+  fellowship: ['fellowship', 'fellowships'],
+  internship: ['internship', 'intern'],
+  job: ['job', 'vacancy', 'position', 'career'],
+  training: ['training', 'course', 'bootcamp'],
+  conference: ['conference', 'summit', 'forum'],
+  competition: ['competition', 'contest', 'challenge', 'hackathon'],
+  exchange_program: ['exchange', 'exchange program'],
+  volunteer: ['volunteer', 'volunteering'],
 };
 
-const GLOBAL_TOKENS = [
-  'global',
-  'worldwide',
-  'international',
-  'multiple countries',
-  'various countries',
-  'remote',
-  'online',
-];
+const EDUCATION_TERMS: Record<EducationLevel, string[]> = {
+  high_school: ['high school', 'secondary school', 'grade 12', '12th grade', 'school graduate'],
+  bachelors: ['bachelor', 'undergraduate', 'bsc', 'bs ', 'ba '],
+  masters: ['master', 'postgraduate', 'msc', 'ms ', 'ma '],
+  phd: ['phd', 'doctoral', 'doctorate'],
+  other: [],
+};
 
-function clean(value: string | null | undefined): string {
-  return String(value ?? '')
-    .normalize('NFKD')
-    .replace(/[’‘]/g, "'")
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim();
+const FIELD_TERMS: Record<FieldArea, string[]> = {
+  any: [],
+  technology: ['computer science', 'software', 'technology', 'information technology', 'data', 'cyber', 'ai', 'artificial intelligence'],
+  engineering: ['engineering', 'engineer', 'mechanical', 'electrical', 'civil', 'chemical engineering'],
+  business: ['business', 'management', 'finance', 'economics', 'accounting', 'marketing', 'entrepreneurship'],
+  health: ['health', 'medicine', 'medical', 'nursing', 'public health', 'pharmacy', 'clinical'],
+  education: ['education', 'teaching', 'teacher', 'pedagogy'],
+  social_sciences: ['social science', 'sociology', 'psychology', 'development studies', 'international relations'],
+  law_policy: ['law', 'legal', 'policy', 'governance', 'public administration'],
+  natural_sciences: ['biology', 'chemistry', 'physics', 'mathematics', 'science', 'biotechnology'],
+  environment_agriculture: ['environment', 'climate', 'agriculture', 'agricultural', 'sustainability', 'forestry'],
+  arts_humanities: ['arts', 'humanities', 'history', 'literature', 'language', 'design', 'media', 'journalism'],
+};
+
+function normalize(value: unknown): string {
+  return String(value ?? '').toLowerCase().replace(/[_–—\\/-]+/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-export function countryAliases(code: string): string[] {
-  const normalized = code.toUpperCase();
-  return COUNTRY_ALIASES[normalized] ?? [normalized.toLowerCase()];
+function flattenJson(value: unknown): string {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) return value.map(flattenJson).join(' ');
+  if (typeof value === 'object') {
+    return Object.entries(value as Record<string, unknown>)
+      .map(([key, val]) => `${key} ${flattenJson(val)}`)
+      .join(' ');
+  }
+  return '';
 }
 
-function containsAny(haystack: string, needles: string[]): boolean {
-  return needles.some((needle) => haystack.includes(clean(needle)));
+function includesAny(text: string, terms: string[]): boolean {
+  return terms.some((term) => text.includes(term));
 }
 
-function getExtractedStrings(extractedData: unknown): Record<string, string> {
-  if (!extractedData || typeof extractedData !== 'object' || Array.isArray(extractedData)) return {};
-  const out: Record<string, string> = {};
-  for (const [key, value] of Object.entries(extractedData as Record<string, unknown>)) {
-    if (typeof value === 'string') out[clean(key)] = clean(value);
-    else if (Array.isArray(value)) {
-      const strings = value.filter((v): v is string => typeof v === 'string');
-      if (strings.length) out[clean(key)] = clean(strings.join(', '));
+function normalizedStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(normalize).filter(Boolean);
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed.map(normalize).filter(Boolean);
+    } catch {}
+    return value.split(/[,;|]/).map(normalize).filter(Boolean);
+  }
+  return [];
+}
+
+function categoryMatches(profile: MatcherProfile, opportunity: MatcherOpportunity): boolean {
+  const slug = normalize(opportunity.categorySlug);
+  const haystack = normalize(`${opportunity.categoryName ?? ''} ${opportunity.jobType ?? ''} ${opportunity.title}`);
+  return profile.intents.some((intent) => {
+    if (INTENT_SLUGS[intent].some((candidate) => slug === candidate)) return true;
+    return includesAny(haystack, INTENT_TERMS[intent]);
+  });
+}
+
+const COUNTRY_ALIASES: Record<string, string> = {
+  'usa': 'united states',
+  'u s a': 'united states',
+  'united states of america': 'united states',
+  'uk': 'united kingdom',
+  'u k': 'united kingdom',
+  'great britain': 'united kingdom',
+  'uae': 'united arab emirates',
+  'u a e': 'united arab emirates',
+  'turkey': 'türkiye',
+  'republic of korea': 'south korea',
+  'korea republic of': 'south korea',
+  'russian federation': 'russia',
+  'viet nam': 'vietnam',
+};
+
+function normalizeCountry(value: unknown): string {
+  const normalized = normalize(value);
+  return COUNTRY_ALIASES[normalized] || normalized;
+}
+
+function countryMatches(profile: MatcherProfile, opportunity: MatcherOpportunity): boolean {
+  if (profile.destinations.some((d) => normalize(d) === 'anywhere')) return true;
+  const country = normalizeCountry(opportunity.country);
+  if (!country) return false;
+  if (['global', 'worldwide', 'international', 'remote', 'multiple countries'].some((term) => country.includes(term))) {
+    return true;
+  }
+  return profile.destinations.some((destination) => {
+    const d = normalizeCountry(destination);
+    return d === country || country.includes(d) || d.includes(country);
+  });
+}
+
+function extractNationalityRestriction(extractedData: unknown, eligibilityText: string): { present: boolean; values: string[]; text: string } {
+  const values: string[] = [];
+
+  function walk(value: unknown, key = ''): void {
+    if (value == null) return;
+    const normalizedKey = normalize(key);
+    const compactKey = normalizedKey.replace(/\s+/g, '');
+    const relevantKey =
+      compactKey.includes('nationalit') ||
+      compactKey.includes('citizenship') ||
+      compactKey.includes('eligiblecountr');
+
+    if (relevantKey) {
+      if (Array.isArray(value)) {
+        for (const item of value) values.push(normalize(item));
+      } else if (typeof value === 'string') {
+        values.push(...value.split(/[,;|]/).map(normalize).filter(Boolean));
+      } else {
+        values.push(normalize(flattenJson(value)));
+      }
+    }
+
+    if (typeof value === 'object' && !Array.isArray(value)) {
+      for (const [childKey, childValue] of Object.entries(value as Record<string, unknown>)) {
+        walk(childValue, childKey);
+      }
     }
   }
-  return out;
-}
 
-function educationRank(level: EducationLevel): number | null {
-  if (level === 'high_school') return 0;
-  if (level === 'bachelors') return 1;
-  if (level === 'masters') return 2;
-  if (level === 'phd') return 3;
-  return null;
-}
-
-function explicitMinimumEducation(text: string): EducationLevel | null {
-  if (!text) return null;
-  const t = clean(text);
-  const explicit = /(required|requirement|minimum|at least|must have|must hold|should have|hold a|possess a)/;
-  if (!explicit.test(t)) return null;
-
-  if (/ph\.?d|doctorate|doctoral degree/.test(t)) return 'phd';
-  if (/master'?s degree|master degree|postgraduate degree/.test(t)) return 'masters';
-  if (/bachelor'?s degree|bachelor degree|undergraduate degree/.test(t)) return 'bachelors';
-  if (/high school|secondary school|grade 12/.test(t)) return 'high_school';
-  return null;
-}
-
-function parseExperienceYears(text: string): number | null {
-  const t = clean(text);
-  if (!t) return null;
-  const match = t.match(/(?:minimum|at least|requires?|required)?\s*(\d{1,2})\+?\s*(?:years?|yrs?)\b/);
-  if (!match) return null;
-  const years = Number(match[1]);
-  return Number.isFinite(years) && years >= 0 && years <= 40 ? years : null;
-}
-
-function classifyIntent(row: MatcherOpportunity, intent: MatcherIntent): { matched: boolean; evidence: string | null } {
-  const cfg = INTENT_CONFIG[intent];
-  const slug = clean(row.category?.slug);
-  if (slug && cfg.slugs.includes(slug)) {
-    return { matched: true, evidence: 'Canonical opportunity category matches your selected type.' };
-  }
-
-  const jobType = clean(row.jobType);
-  if (jobType && containsAny(jobType, cfg.tokens)) {
-    return { matched: true, evidence: 'Opportunity type matches your selected type.' };
-  }
-
-  const title = clean(row.title);
-  if (containsAny(title, cfg.tokens)) {
-    return { matched: true, evidence: 'Opportunity title strongly matches your selected type.' };
-  }
-
-  return { matched: false, evidence: null };
-}
-
-function geographyScore(row: MatcherOpportunity, targetCountry: string): { score: number; reason: string } {
-  if (targetCountry === 'ANY') {
-    return { score: 16, reason: 'You selected any destination.' };
-  }
-
-  const country = clean(row.country);
-  if (!country) return { score: 4, reason: 'Location is not fully structured; verify destination details.' };
-
-  if (containsAny(country, countryAliases(targetCountry))) {
-    return { score: 20, reason: 'Destination matches your preference.' };
-  }
-
-  if (containsAny(country, GLOBAL_TOKENS)) {
-    return { score: 14, reason: 'Opportunity appears global, international, online, or remote.' };
-  }
-
-  return { score: 0, reason: 'Destination differs from your preference.' };
-}
-
-function assessNationality(row: MatcherOpportunity, nationality?: string | null): {
-  status: 'pass' | 'unknown' | 'conflict';
-  message?: string;
-} {
-  if (!nationality) return { status: 'unknown' };
-
-  const data = getExtractedStrings(row.extractedData);
-  const nationalityText =
-    data.nationality ||
-    data.nationalities ||
-    data['eligible nationalities'] ||
-    data['eligible nationality'] ||
-    data.citizenship ||
-    '';
-
-  if (!nationalityText) return { status: 'unknown' };
-  if (/all nationalit|any nationalit|open to all|international applicants/.test(nationalityText)) {
-    return { status: 'pass', message: 'Structured data indicates broad/international nationality eligibility.' };
-  }
-
-  if (containsAny(nationalityText, countryAliases(nationality))) {
-    return { status: 'pass', message: 'Structured nationality information includes your nationality.' };
-  }
-
-  if (/(only|exclusively|citizens? of|nationals? of|eligible countries)/.test(nationalityText)) {
-    return { status: 'conflict', message: 'Structured nationality information may exclude your nationality.' };
-  }
-
-  return { status: 'unknown', message: 'Nationality information exists but needs manual verification.' };
-}
-
-function assessResidence(row: MatcherOpportunity, residence?: string | null): {
-  status: 'pass' | 'unknown' | 'conflict';
-  message?: string;
-} {
-  if (!residence) return { status: 'unknown' };
-
-  const data = getExtractedStrings(row.extractedData);
-  const residenceText =
-    data.residence ||
-    data['country of residence'] ||
-    data['eligible residents'] ||
-    data['residency requirement'] ||
-    '';
-
-  if (!residenceText) return { status: 'unknown' };
-  if (/any country|all countries|worldwide|international applicants/.test(residenceText)) {
-    return { status: 'pass', message: 'Structured residence information indicates broad geographic eligibility.' };
-  }
-
-  if (containsAny(residenceText, countryAliases(residence))) {
-    return { status: 'pass', message: 'Structured residence information includes your current country of residence.' };
-  }
-
-  if (/(only|must reside|residents? of|based in|eligible countries)/.test(residenceText)) {
-    return { status: 'conflict', message: 'Structured residence information may exclude your current country of residence.' };
-  }
-
-  return { status: 'unknown', message: 'Residence information exists but needs manual verification.' };
-}
-
-function assessEducation(row: MatcherOpportunity, education: EducationLevel): {
-  status: 'pass' | 'unknown' | 'conflict';
-  message?: string;
-} {
-  const explicit = explicitMinimumEducation(row.educationReq || '');
-  if (!explicit) return { status: 'unknown' };
-
-  const userRank = educationRank(education);
-  const requiredRank = educationRank(explicit);
-  if (userRank === null || requiredRank === null) return { status: 'unknown' };
-
-  if (userRank >= requiredRank) {
-    return { status: 'pass', message: 'Your education level meets the explicitly stated minimum education requirement.' };
-  }
-
+  walk(extractedData);
+  const text = normalize(`${flattenJson(extractedData)} ${eligibilityText}`);
+  const markers = ['nationality', 'citizen', 'citizenship', 'eligible countries', 'eligible nationalities'];
+  const present = values.length > 0 || markers.some((marker) => text.includes(marker));
   return {
-    status: 'conflict',
-    message: 'Your selected education level appears below an explicitly stated minimum requirement.',
+    present,
+    values: Array.from(new Set(values.filter(Boolean))),
+    text,
   };
 }
 
-function assessExperience(row: MatcherOpportunity, experienceYears?: number | null): {
-  status: 'pass' | 'unknown' | 'conflict';
-  message?: string;
-} {
-  const required = parseExperienceYears(row.experience || '');
-  if (required === null || experienceYears === null || experienceYears === undefined) return { status: 'unknown' };
-  if (experienceYears >= required) {
-    return { status: 'pass', message: 'Your experience meets the stated minimum experience requirement.' };
-  }
-  return {
-    status: 'conflict',
-    message: `This opportunity appears to require at least ${required} years of experience.`,
-  };
+function educationEvidence(profile: MatcherProfile, text: string): 'match' | 'unknown' {
+  const terms = EDUCATION_TERMS[profile.education];
+  if (terms.length === 0) return 'unknown';
+  return includesAny(text, terms) ? 'match' : 'unknown';
 }
 
-function confidenceFor(row: MatcherOpportunity): DataConfidence {
-  const fields = [
-    row.category?.slug,
-    row.jobType,
-    row.country,
-    row.deadline,
-    row.educationReq,
-    row.eligibility,
-    row.experience,
-    row.requirements,
-    row.sourceName,
-    row.lastChecked,
-  ];
-  const populated = fields.filter(Boolean).length;
-  if (populated >= 7) return 'high';
-  if (populated >= 4) return 'medium';
+function confidenceFor(opportunity: MatcherOpportunity): DataConfidence {
+  let points = 0;
+  if (opportunity.structuredFacts) {
+    const f = opportunity.structuredFacts;
+    if (normalizedStringArray(f.eligibleNationalities).length) points += 2;
+    if (normalizedStringArray(f.educationLevels).length) points += 2;
+    if (normalizedStringArray(f.fieldAreas).length) points += 1;
+    if (f.reviewed) points += 2;
+  }
+  if (opportunity.eligibility?.trim()) points += 2;
+  if (opportunity.educationReq?.trim()) points += 2;
+  if (opportunity.requirements?.trim()) points += 1;
+  if (opportunity.experience?.trim()) points += 1;
+  if (opportunity.extractedData && flattenJson(opportunity.extractedData).trim()) points += 2;
+  if (opportunity.sourceName?.trim()) points += 1;
+  if (opportunity.lastChecked) points += 1;
+  if (points >= 7) return 'high';
+  if (points >= 4) return 'medium';
   return 'low';
 }
 
-export function rankOpportunity(row: MatcherOpportunity, profile: MatcherProfile, today = new Date()): RankedOpportunity {
-  let score = 0;
+export function categorySlugsForIntents(intents: readonly MatcherIntent[]): string[] {
+  return Array.from(new Set(intents.flatMap((intent) => INTENT_SLUGS[intent])));
+}
+
+export function rankOpportunity(profile: MatcherProfile, opportunity: MatcherOpportunity): RankedOpportunity | null {
   const reasons: string[] = [];
   const verified: string[] = [];
-  const check: string[] = [];
+  const unknowns: string[] = [];
+  const conflicts: string[] = [];
+  let score = 0;
 
-  const intent = classifyIntent(row, profile.intent);
-  if (intent.matched) {
-    score += 48;
-    if (intent.evidence) reasons.push(intent.evidence);
+  if (!categoryMatches(profile, opportunity)) return null;
+  score += 50;
+  reasons.push('opportunity_type');
+
+  const destinationMatch = countryMatches(profile, opportunity);
+  if (destinationMatch) {
+    score += profile.destinations.some((d) => normalize(d) === 'anywhere') ? 5 : 20;
+    reasons.push('destination');
+  } else if (opportunity.country) {
+    unknowns.push('destination');
   }
 
-  const geo = geographyScore(row, profile.targetCountry);
-  score += geo.score;
-  if (geo.score >= 14) reasons.push(geo.reason);
-  else check.push(geo.reason);
+  const eligibilityText = normalize(
+    `${opportunity.eligibility ?? ''} ${opportunity.requirements ?? ''} ${opportunity.educationReq ?? ''} ${flattenJson(opportunity.extractedData)}`
+  );
 
-  const education = assessEducation(row, profile.education);
-  const nationality = assessNationality(row, profile.nationality);
-  const residence = assessResidence(row, profile.residence);
-  const experience = assessExperience(row, profile.experienceYears);
+  const targetEducation = profile.targetEducation ?? profile.education;
+  const structuredEducation = normalizedStringArray(opportunity.structuredFacts?.educationLevels);
+  const targetText = normalize(
+    `${opportunity.title} ${opportunity.categoryName ?? ''} ${opportunity.jobType ?? ''} ${opportunity.eligibility ?? ''}`
+  );
+  if (
+    structuredEducation.includes(normalize(targetEducation)) ||
+    includesAny(targetText, EDUCATION_TERMS[targetEducation])
+  ) {
+    score += 10;
+    reasons.push('target_level');
+  } else if (profile.targetEducation) {
+    unknowns.push('target_level');
+  }
 
-  const assessments = [education, nationality, residence, experience];
-  for (const assessment of assessments) {
-    if (assessment.status === 'pass' && assessment.message) {
-      score += 8;
-      verified.push(assessment.message);
-    } else if (assessment.status === 'conflict' && assessment.message) {
-      score -= 30;
-      check.push(assessment.message);
-    } else if (assessment.message) {
-      check.push(assessment.message);
+  if (educationEvidence(profile, eligibilityText) === 'match') {
+    score += 4;
+    verified.push('education');
+    reasons.push('education');
+  } else {
+    unknowns.push('education');
+  }
+
+  if (profile.fieldArea !== 'any') {
+    const structuredFields = normalizedStringArray(opportunity.structuredFacts?.fieldAreas);
+    const semanticText = normalize(
+      `${opportunity.title} ${opportunity.jobType ?? ''} ${opportunity.requirements ?? ''} ${opportunity.eligibility ?? ''} ${flattenJson(opportunity.tags)}`
+    );
+    if (
+      structuredFields.includes(normalize(profile.fieldArea)) ||
+      includesAny(semanticText, FIELD_TERMS[profile.fieldArea])
+    ) {
+      score += 12;
+      reasons.push('field');
+    } else {
+      unknowns.push('field');
     }
   }
 
-  if (row.deadline) {
-    const todayUtc = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
-    const deadlineUtc = Date.UTC(row.deadline.getUTCFullYear(), row.deadline.getUTCMonth(), row.deadline.getUTCDate());
-    const days = Math.floor((deadlineUtc - todayUtc) / 86_400_000);
-    if (days >= 14) score += 6;
-    else if (days >= 3) score += 3;
-    else if (days >= 0) check.push('Deadline is very close; review application requirements immediately.');
+  const structuredNationalities = normalizedStringArray(opportunity.structuredFacts?.eligibleNationalities);
+  const nationalityRestriction = extractNationalityRestriction(
+    opportunity.extractedData,
+    opportunity.eligibility ?? ''
+  );
+  const nationality = normalizeCountry(profile.nationality);
+
+  if (structuredNationalities.length > 0) {
+    const normalizedAllowed = structuredNationalities.map(normalizeCountry);
+    const openToAll = normalizedAllowed.some((value) =>
+      ['all nationalities', 'any nationality', 'all countries', 'international', 'worldwide', 'global'].some((marker) => value.includes(marker))
+    );
+    if (openToAll || normalizedAllowed.some((value) => value === nationality || value.includes(nationality) || nationality.includes(value))) {
+      verified.push('nationality');
+      score += 5;
+    } else {
+      conflicts.push('nationality');
+    }
+  } else if (nationalityRestriction.present) {
+    const openToAll = ['all nationalities', 'any nationality', 'all countries', 'international', 'worldwide', 'global']
+      .some((marker) => nationalityRestriction.text.includes(marker));
+
+    if (
+      openToAll ||
+      (nationality && nationalityRestriction.values.some((value) => normalizeCountry(value).includes(nationality) || nationality.includes(normalizeCountry(value)))) ||
+      (nationality && nationalityRestriction.text.includes(normalize(profile.nationality)))
+    ) {
+      verified.push('nationality');
+      score += 5;
+    } else if (nationalityRestriction.values.length > 0) {
+      conflicts.push('nationality');
+    } else {
+      unknowns.push('nationality');
+    }
   } else {
-    check.push('No structured deadline is available; confirm the current closing date.');
+    unknowns.push('nationality');
   }
 
-  const confidence = confidenceFor(row);
-  if (confidence === 'high') score += 8;
-  else if (confidence === 'medium') score += 4;
-  else check.push('ARIA HUB has limited structured eligibility data for this listing.');
-
-  const hasConflict = assessments.some((a) => a.status === 'conflict');
-  const knownPasses = assessments.filter((a) => a.status === 'pass').length;
-  const unknowns = assessments.filter((a) => a.status === 'unknown').length;
-
-  let eligibilityStatus: EligibilityStatus;
-  if (hasConflict) eligibilityStatus = 'potential_conflict';
-  else if (knownPasses >= 2) eligibilityStatus = 'likely_eligible';
-  else if (unknowns >= 2) eligibilityStatus = 'incomplete';
-  else eligibilityStatus = 'needs_check';
-
-  if (eligibilityStatus === 'incomplete' && check.length === 0) {
-    check.push('Some eligibility requirements are not structured yet; review the full requirements before applying.');
+  const minimumExperience = opportunity.structuredFacts?.minExperienceYears;
+  if (typeof minimumExperience === 'number' && typeof profile.experienceYears === 'number') {
+    if (profile.experienceYears >= minimumExperience) {
+      verified.push('experience');
+      score += 4;
+    } else {
+      conflicts.push('experience');
+    }
+  } else if (minimumExperience != null || opportunity.experience?.trim()) {
+    unknowns.push('experience');
   }
 
-  score = Math.max(0, Math.min(100, score));
-  const strength: MatchStrength = score >= 76 ? 'strong' : score >= 56 ? 'good' : 'possible';
+  if (opportunity.deadline) {
+    const days = Math.floor((opportunity.deadline.getTime() - Date.now()) / 86_400_000);
+    if (days >= 7) {
+      score += 3;
+      reasons.push('deadline_practicality');
+    }
+    verified.push('open_deadline');
+  } else {
+    unknowns.push('deadline');
+  }
+
+  if (opportunity.lastChecked) {
+    const ageDays = Math.floor((Date.now() - opportunity.lastChecked.getTime()) / 86_400_000);
+    if (ageDays <= 30) score += 3;
+  }
+
+  const confidence = confidenceFor(opportunity);
+  if (confidence === 'high') score += 2;
+
+  const eligibilityStatus: EligibilityStatus =
+    conflicts.length > 0
+      ? 'potential_conflict'
+      : verified.includes('education') && verified.includes('nationality') && confidence !== 'low'
+        ? 'likely_eligible'
+        : confidence === 'low'
+          ? 'incomplete'
+          : 'needs_check';
+
+  const matchStrength: MatchStrength = score >= 75 ? 'strong' : score >= 58 ? 'good' : 'possible';
+
+  // Intent match is mandatory, but a result must also have at least one
+  // meaningful compatibility signal beyond type to be recommended.
+  if (score < 55) return null;
 
   return {
-    row,
-    score,
-    strength,
+    opportunity,
+    rankScore: score,
+    matchStrength,
     eligibilityStatus,
     dataConfidence: confidence,
-    reasons: reasons.slice(0, 4),
-    verified: verified.slice(0, 4),
-    check: check.slice(0, 4),
+    evidence: {
+      reasons: Array.from(new Set(reasons)),
+      unknowns: Array.from(new Set(unknowns)),
+      conflicts: Array.from(new Set(conflicts)),
+      verified: Array.from(new Set(verified)),
+    },
   };
 }
 
-export function rankOpportunities(rows: MatcherOpportunity[], profile: MatcherProfile, today = new Date()) {
-  return rows
-    .map((row) => rankOpportunity(row, profile, today))
+export function rankOpportunities(
+  profile: MatcherProfile,
+  opportunities: MatcherOpportunity[],
+  limit = 6
+): RankedOpportunity[] {
+  return opportunities
+    .map((opportunity) => rankOpportunity(profile, opportunity))
+    .filter((item): item is RankedOpportunity => item !== null)
     .sort((a, b) => {
-      const conflictDelta = Number(a.eligibilityStatus === 'potential_conflict') - Number(b.eligibilityStatus === 'potential_conflict');
-      if (conflictDelta !== 0) return conflictDelta;
-      return b.score - a.score;
-    });
-}
-
-export function isRecommendation(candidate: RankedOpportunity): boolean {
-  return candidate.score >= 56 && candidate.eligibilityStatus !== 'potential_conflict';
-}
-
-export function isNearMatch(candidate: RankedOpportunity): boolean {
-  return candidate.score >= 40;
+      if (a.eligibilityStatus !== b.eligibilityStatus) {
+        const order: Record<EligibilityStatus, number> = {
+          likely_eligible: 0,
+          needs_check: 1,
+          incomplete: 2,
+          potential_conflict: 3,
+        };
+        return order[a.eligibilityStatus] - order[b.eligibilityStatus];
+      }
+      return b.rankScore - a.rankScore;
+    })
+    .slice(0, limit);
 }

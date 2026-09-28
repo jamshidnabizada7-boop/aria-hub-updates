@@ -172,6 +172,38 @@ export const getSiteData = cache(async (): Promise<SiteData> => {
   return getCachedSiteData();
 });
 
+export const getToolPageData = cache(async () => {
+  try {
+    const [settings, languages, menuItems, socialLinks, footerLinks] = await Promise.all([
+      db.siteSetting.findFirst().catch(() => null),
+      db.language.findMany({ where: { enabled: true }, orderBy: { order: 'asc' } }).catch(() => []),
+      db.menuItem.findMany({ where: { visible: true }, orderBy: { order: 'asc' } }).catch(() => []),
+      db.socialLink.findMany({ where: { enabled: true }, orderBy: { order: 'asc' } }).catch(() => []),
+      db.footerLink.findMany({ orderBy: { order: 'asc' } }).catch(() => []),
+    ]);
+
+    const footer: Record<string, any[]> = {};
+    for (const fl of footerLinks) (footer[fl.column] ||= []).push(fl);
+
+    return {
+      settings: (settings as any) || getDefaultSettings(),
+      languages: languages as any,
+      menu: buildMenuTree(menuItems as any) as MenuItem[],
+      socialLinks: socialLinks as any,
+      footer,
+    };
+  } catch (error) {
+    console.error('Error fetching tool page data:', error);
+    return {
+      settings: getDefaultSettings() as any,
+      languages: [],
+      menu: [],
+      socialLinks: [],
+      footer: {},
+    };
+  }
+});
+
 function getDefaultSettings() {
   return {
     id: 'default',

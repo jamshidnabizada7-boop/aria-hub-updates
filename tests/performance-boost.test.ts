@@ -36,7 +36,7 @@ describe('Performance Boost & SSR Optimization Suite', () => {
   });
 
   it('verifies Reveal and RevealStagger do not render opacity: 0 on SSR (initial={false})', () => {
-    const revealContent = fs.readFileSync(path.join(root, 'src/components/site/reveal.tsx'), 'utf8');
+    const revealContent = fs.readFileSync(path.join(root, 'src/components/site/reveal.tsx'), 'utf8').replace(/\r\n/g, '\n');
     expect(revealContent).toContain('<motion.div\n      initial={false}');
     expect(revealContent).toContain('initial={false}');
   });

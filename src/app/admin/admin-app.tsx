@@ -37,6 +37,7 @@ import { OrdersPanel } from '@/components/admin/orders-panel';
 import { BrandStudioPanel } from '@/components/admin/brand-studio-panel';
 import { AutomationPanel } from '@/components/admin/automation-panel';
 import { OpportunityFormPanel } from '@/components/admin/opportunity-form-panel';
+import { CVBuilderAdminPanel } from '@/components/admin/cv-builder-panel';
 interface AdminUser { id: string; email: string; name: string; role: string; }
 
 // All manageable models with their icon and translation key.
@@ -57,6 +58,7 @@ const NAV: NavItem[] = [
   { key: 'socialIdea', labelKey: 'admin.nav.socialIdeas', icon: Lightbulb },
   { key: 'news', labelKey: 'admin.nav.news', icon: Newspaper },
   { key: 'page', labelKey: 'admin.nav.pages', icon: FileText },
+  { key: 'cvBuilder', labelKey: 'admin.nav.cvBuilder', icon: FileText },
   { key: 'successStory', labelKey: 'admin.nav.successStories', icon: Trophy },
   { key: 'service', labelKey: 'admin.nav.services', icon: Briefcase },
   { key: 'visa', labelKey: 'admin.nav.visas', icon: Plane },
@@ -201,7 +203,7 @@ export function AdminApp({ admin }: { admin: AdminUser }) {
           </div>
         </header>
         <main className="flex-1 overflow-x-hidden p-4 lg:p-6">
-          {active === 'dashboard' ? <Dashboard onNavigate={setActive} /> : active === 'settings' ? <SettingsPanel /> : active === 'autoImport' ? <AutoImportPanel /> : active === 'documentTemplate' ? <TemplatesPanel /> : active === 'submissions' ? <SubmissionsPanel /> : active === 'contentHealth' ? <ContentHealthPanel /> : active === 'orders' ? <OrdersPanel /> : active === 'brandStudio' ? <BrandStudioPanel /> : active === 'automation' ? <AutomationPanel /> : active === 'opportunity' ? <OpportunityFormPanel /> : <CrudTable model={active} />}
+          {active === 'dashboard' ? <Dashboard onNavigate={setActive} /> : active === 'settings' ? <SettingsPanel /> : active === 'autoImport' ? <AutoImportPanel /> : active === 'documentTemplate' ? <TemplatesPanel /> : active === 'submissions' ? <SubmissionsPanel /> : active === 'contentHealth' ? <ContentHealthPanel /> : active === 'orders' ? <OrdersPanel /> : active === 'brandStudio' ? <BrandStudioPanel /> : active === 'automation' ? <AutomationPanel /> : active === 'opportunity' ? <OpportunityFormPanel /> : active === 'cvBuilder' ? <CVBuilderAdminPanel /> : <CrudTable model={active} />}
         </main>
       </div>
     </div>
