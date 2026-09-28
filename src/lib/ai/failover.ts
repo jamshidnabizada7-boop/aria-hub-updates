@@ -110,11 +110,17 @@ export async function chatWithFailover(
   slots: ProviderSlot[],
   system: string,
   prompt: string,
+  deadlineAt?: number,
 ): Promise<FailoverResult> {
   const errors: string[] = [];
   const now = Date.now();
 
   for (const { name, provider } of slots) {
+    const remaining = deadlineAt === undefined ? Infinity : deadlineAt - Date.now();
+    if (remaining <= 0) {
+      errors.push('request deadline reached');
+      break;
+    }
     const st = stateOf(name);
     if (st.cooldownUntil > now) {
       errors.push(`${name}: cooling down ${Math.ceil((st.cooldownUntil - now) / 1000)}s`);
@@ -126,7 +132,15 @@ export async function chatWithFailover(
       continue;
     }
     try {
-      const text = await chat(system, prompt);
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const text = await (deadlineAt === undefined
+        ? chat(system, prompt)
+        : Promise.race([
+            chat(system, prompt),
+            new Promise<never>((_, reject) => {
+              timer = setTimeout(() => reject(new Error('request deadline reached')), remaining);
+            }),
+          ]).finally(() => { if (timer) clearTimeout(timer); }));
       st.lastUsedAt = now;
       st.usedCount++;
       st.lastError = null;
@@ -135,6 +149,7 @@ export async function chatWithFailover(
       const msg = (e instanceof Error ? e.message : String(e)).slice(0, 200);
       st.lastError = msg;
       errors.push(`${name}: ${msg}`);
+      if (deadlineAt !== undefined && Date.now() >= deadlineAt) break;
       if (isRateLimitError(msg)) {
         st.cooldownUntil = Date.now() + COOLDOWN_MS;
       }

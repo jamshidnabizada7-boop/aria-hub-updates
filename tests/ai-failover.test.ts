@@ -92,4 +92,15 @@ describe('chatWithFailover', () => {
       expect((e as Error).message).toContain('chain empty');
     }
   });
+
+  test('stops at the caller deadline without starting another provider', async () => {
+    let secondCalls = 0;
+    const slots = [
+      slot('slow', () => new Promise<string>(() => undefined)),
+      slot('second', async () => { secondCalls++; return 'unexpected'; }),
+    ];
+    await expect(chatWithFailover(slots, 'sys', 'prompt', Date.now() + 20))
+      .rejects.toThrow(/deadline/);
+    expect(secondCalls).toBe(0);
+  });
 });

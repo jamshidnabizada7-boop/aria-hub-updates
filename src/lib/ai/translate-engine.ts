@@ -358,7 +358,7 @@ export interface UnitResult {
  * highest-priority incomplete row. Persian rows are always processed before
  * any Pashto work starts.
  */
-export async function processNextUnit(): Promise<UnitResult> {
+export async function processNextUnit(deadlineAt?: number): Promise<UnitResult> {
   // Daily mercy: parked failed chunks get another chance (free models have
   // bad days; the content must never be lost forever).
   await resetStaleFailures();
@@ -436,7 +436,7 @@ export async function processNextUnit(): Promise<UnitResult> {
       ? `This is part ${next.chunkIndex + 1} of ${next.chunkTotal} of the field "${next.fieldKey}" of an opportunity titled "${sourceOf(row, 'title').slice(0, 120)}". Translate it faithfully and completely.`
       : undefined;
     const prompt = `${context ? `${context}\n\n` : ''}${chunk.text}`;
-    const { text: raw } = await chatWithFailover(slots, LANG_SYSTEM[lang], prompt);
+    const { text: raw } = await chatWithFailover(slots, LANG_SYSTEM[lang], prompt, deadlineAt);
     const translated = parseChunkReply(raw);
     if (!translated || !validateTranslation(chunk.text, translated)) {
       throw new Error('translation failed validation (empty/summary/junk)');
@@ -543,12 +543,12 @@ export interface BatchResult {
  * caller records a backoff window. Small units keep each LLM call short,
  * which suits free models with tight output/timeout limits.
  */
-export async function processBatch(maxUnits = 3): Promise<BatchResult> {
+export async function processBatch(maxUnits = 3, deadlineAt?: number): Promise<BatchResult> {
   let processed = 0;
   let committed = 0;
   let rateLimited = false;
   for (let i = 0; i < maxUnits; i++) {
-    const r = await processNextUnit();
+    const r = await processNextUnit(deadlineAt);
     if (r.rateLimited) { rateLimited = true; break; }
     if (r.skipped && !r.processed && !r.committed && i === 0) {
       return { processed, committed, rateLimited, exhausted: true };
