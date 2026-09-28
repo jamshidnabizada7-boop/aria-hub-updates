@@ -82,7 +82,7 @@ export function OpportunitiesSection({
                 <motion.div
                   key={o.id}
                   layout
-                  initial={{ opacity: 0, scale: 0.95 }}
+                  initial={false}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.3, delay: (i % 3) * 0.05 }}

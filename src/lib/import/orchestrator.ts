@@ -17,7 +17,7 @@
  *   - Sanitized errors recorded in ImportRun.errors for the admin log viewer.
  */
 
-import type { PrismaClient, Prisma, OpportunityStatus } from '@prisma/client';
+import type { PrismaClient, Prisma, OpportunityStatus, ImportRunStatus } from '@prisma/client';
 import { db } from '@/lib/db';
 import { getScraper } from './registry';
 import { computeHash, findExisting } from './dedupe';
@@ -25,7 +25,18 @@ import { downloadFeaturedImage, downloadLogo } from './images';
 import { runAIPipeline, ensureUniqueSlug, makeSlug } from '@/lib/ai/pipeline';
 import { ReliefWebPendingError } from './scrapers/reliefweb';
 import { sanitizeError, slugify } from './utils';
+import { buildLocationRows, resolveCountry } from '@/lib/geo/location-rows';
+import { classifyApplyUrl } from '@/lib/apply';
 import type { RawListing, SourceHandle } from './types';
+
+/** True when this source has ever produced imported/updated opportunities. */
+async function hasEverImported(sourceId: string): Promise<boolean> {
+  const marker = await db.importRun.findFirst({
+    where: { sourceId, imported: { gt: 0 } },
+    select: { id: true },
+  });
+  return Boolean(marker);
+}
 
 /** Safely convert a date string (ISO or parseable) to a Date object, or null. */
 function safeDate(input: string | null | undefined): Date | null {
@@ -199,7 +210,20 @@ async function runOneSource(
       }
     }
 
-    const status = counters.failed === 0 ? 'ok' : (counters.imported + counters.updated > 0 ? 'partial' : 'error');
+    // Source-health gate: a historically productive source that suddenly
+    // finds ZERO listings (selector drift, bot-protection challenge, soft
+    // blocks) must never report a clean 'ok' — mark it degraded so the admin
+    // panel and the run history surface the anomaly instead of hiding it.
+    let status: ImportRunStatus =
+      counters.failed === 0 ? 'ok' : (counters.imported + counters.updated > 0 ? 'partial' : 'error');
+    if (counters.found === 0 && status === 'ok' && (await hasEverImported(source.id))) {
+      status = 'error'; // ImportRunStatus has no 'degraded' — error + message below
+      errors.push({
+        url: source.baseUrl,
+        message: 'DEGRADED: 0 listings found for a source that imported rows before — check selectors / bot-protection',
+        ts: new Date().toISOString(),
+      });
+    }
     const processingMs = Date.now() - startedAt;
 
     await db.importRun.update({
@@ -420,6 +444,8 @@ async function processListing(
   const categoryId = resolveCategory(pipeline.categorySlugs, listing.category, listing.jobType, source.defaultCategory, categories);
 
   // Common import-tracking fields
+  const applyUrl = (pipeline.data.applyUrl as string | null) || listing.applyUrl || null;
+  const finalCountry = resolveCountry(listing);
   const importFields = {
     sourceName: source.name,
     sourceUrl: listing.sourceUrl,
@@ -434,11 +460,12 @@ async function processListing(
     salary: listing.salary || null,
     educationReq: listing.educationReq || null,
     experience: listing.experience || null,
-    country: listing.country || listing.location || null,
+    country: finalCountry, // NEVER listing.location — locations go to OpportunityLocation rows
     deadline: safeDate(listing.deadline),
     organization: listing.organization || null,
     website: listing.website || null,
-    applyUrl: listing.applyUrl || null,
+    applyUrl,
+    applyUrlType: classifyApplyUrl(applyUrl, listing.sourceUrl, listing.originalUrl),
     image: featured.path,
     logoUrl: logo.path || null,
     publishedDate: listing.publishedDate || null,  // String field in schema, no conversion needed
@@ -446,6 +473,11 @@ async function processListing(
     status: (source.autoPublish ? 'published' : 'draft') as OpportunityStatus,
     extractedData: listing.extractedData || {},
   };
+
+  // Structured location rows — delete + recreate on every (re)import so
+  // source-side location changes propagate.
+  const locationRows = buildLocationRows(listing);
+  let createdId: string | null = null;
 
   if (dedupe.action === 'update') {
     // Update existing (preserve id, slug unless title changed)
@@ -462,22 +494,43 @@ async function processListing(
         ...(categoryId ? { categoryId } : {}),
         slug: newSlug,
         importStatus: 'updated',
+        locations: {
+          deleteMany: {},
+          create: locationRows,
+        },
       },
     });
     counters.updated++;
   } else {
     // Create new
     const slug = await ensureUniqueSlug(db, slugBase);
-    await db.opportunity.create({
+    const created = await db.opportunity.create({
       data: {
         ...pipeline.data,
         ...importFields,
         slug,
         sort: 0,
         categoryId,
+        locations: { create: locationRows },
       } as unknown as Prisma.OpportunityUncheckedCreateInput,
     });
+    createdId = created.id;
     counters.imported++;
+  }
+
+  // Chunked translation engine — plans every source field into staged chunks
+  // and works Persian (then Pashto) within a small import-time budget.
+  // Whatever the budget does not finish stays queued for the background tick;
+  // public fa/ps fields are only ever written by an atomic 100% commit.
+  const targetId = dedupe.action === 'update' ? dedupe.existing.id : createdId;
+  if (targetId) {
+    try {
+      const { processOpportunityNow } = await import('@/lib/ai/translate-engine');
+      await processOpportunityNow(targetId, 90_000);
+    } catch (e) {
+      // Translation is best-effort at import time — the queue owns the rest.
+      console.warn('[import] translation engine pass failed:', (e as Error).message);
+    }
   }
 }
 

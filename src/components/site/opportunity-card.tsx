@@ -94,7 +94,7 @@ const DEFAULT_CATEGORY_STYLE = {
   label: 'text-primary',
 };
 
-function formatDeadline(deadline: Date, lang: Lang): string {
+function formatDeadline(deadline: Date | string | number | null | undefined, lang: Lang): string {
   // Localized everywhere: "Oct 15, 2026" / «۱۵ اکتوبر ۲۰۲۶» — never raw ISO
   // on fa/ps (users read Gregorian dates with Afghan month names).
   return formatDateShort(deadline, lang);
@@ -121,8 +121,13 @@ export function OpportunityCard({
   const expired = isOpportunityExpired(opportunity.status, opportunity.deadline);
   const daysLeft = opportunity.deadline ? daysUntilDeadline(opportunity.deadline) : null;
   // Recency cue: listings published within the past 7 days wear a "New" badge.
+  const createdMs = opportunity.createdAt
+    ? (opportunity.createdAt instanceof Date
+        ? opportunity.createdAt.getTime()
+        : new Date(opportunity.createdAt).getTime())
+    : 0;
   const isNew =
-    Date.now() - opportunity.createdAt.getTime() < 7 * 86_400_000;
+    !isNaN(createdMs) && createdMs > 0 && Date.now() - createdMs < 7 * 86_400_000;
   // Any badge floating over the category banner — reserve inline-start space
   // so the category label never slides underneath it (badges are absolute).
   const hasTopBadge = !expired && (spotlight || opportunity.featured || isNew);

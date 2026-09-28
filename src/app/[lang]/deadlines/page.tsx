@@ -31,8 +31,8 @@ import { getPageSeo } from '@/lib/seo-metadata';
 
 const PER_PAGE = 12;
 
-// New records land via periodic imports — keep the page at most 60s stale.
-export const revalidate = 60;
+// New records land via periodic imports — keep the page at most 300s stale.
+export const revalidate = 300;
 
 export async function generateMetadata({
   params,

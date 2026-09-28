@@ -59,7 +59,7 @@ export function ServicesSection({
             {services.map((s, i) => (
               <motion.div
                 key={s.id}
-                initial={{ opacity: 0, y: 24 }}
+                initial={false}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: '0px' }}
                 transition={{ duration: 0.4, delay: (i % 3) * 0.06 }}

@@ -94,6 +94,7 @@ export function Hero({ lang, stats }: { lang: Lang; stats: HeroStats }) {
               : 'ARIA HUB — Global Opportunities, Scholarships, and Career Platform'
           }
           priority={true}
+          fetchPriority="high"
           sizes="100vw"
           className="absolute inset-0 h-full w-full opacity-60 dark:opacity-80"
           imgClassName="h-full w-full object-cover"

@@ -7,7 +7,7 @@
 
 import type { AIProvider, RewriteResult, SEOResult } from '../provider';
 import { REWRITE_SYSTEM, translateSystem, seoSystem, categorizeSystem } from '../prompts';
-import { parseJSON, retry } from './helpers';
+import { parseJSON, retry, fetchWithTimeout } from './helpers';
 
 const MODEL = process.env.GROQ_MODEL || 'openai/gpt-oss-120b'; // Groq flagship — highest free-tier output-token limits (qwen3.8-27b OTPM-throttled)
 const API_BASE = 'https://api.groq.com/openai/v1';
@@ -77,7 +77,7 @@ export class GroqProvider implements AIProvider {
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) throw new Error('GROQ_API_KEY not configured');
 
-    const response = await fetch(`${API_BASE}/chat/completions`, {
+    const response = await fetchWithTimeout(`${API_BASE}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

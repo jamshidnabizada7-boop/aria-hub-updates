@@ -493,3 +493,23 @@
 }
 .prose-listing th { background: hsl(var(--muted) / 0.6); font-weight: 700; }
 .prose-listing mark { background: hsl(var(--primary) / 0.15); color: inherit; border-radius: 0.25rem; padding: 0 0.2em; }
+
+/* ── Mobile Friendliness & Touch Optimization (INP & Tap Target Safety) ── */
+@media (max-width: 768px) {
+  /* Prevent iOS automatic zoom when focusing inputs, which breaks mobile layout */
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* Eliminate 300ms tap delay on mobile devices for fast Interaction to Next Paint */
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
+  }
+}
+

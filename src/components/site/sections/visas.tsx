@@ -50,7 +50,7 @@ export function VisasSection({ visas }: { visas: Visa[] }) {
               {visibleVisas.map((v, i) => (
                 <motion.div
                   key={v.id}
-                  initial={{ opacity: 0, y: 30 }}
+                  initial={false}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: '0px' }}
                   transition={{ duration: 0.5, delay: (i % 3) * 0.08 }}

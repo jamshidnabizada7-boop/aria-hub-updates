@@ -10,6 +10,10 @@ import Link from 'next/link';
 
 export const revalidate = 1800;
 
+export function generateStaticParams() {
+  return [{ lang: 'en' }, { lang: 'fa' }, { lang: 'ps' }];
+}
+
 export async function generateMetadata({
   params,
 }: {

@@ -3,12 +3,33 @@ import { PageShell } from '@/components/site/page-shell';
 import { Button } from '@/components/ui/button';
 import { BookOpen, Users, Mic, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { unstable_cache } from 'next/cache';
 import { db as prisma } from '@/lib/db';
 import { getLocalizedContent } from '@/lib/i18n-content';
 import { translate } from '@/lib/i18n';
 import type { Metadata } from 'next';
 import { getPageSeo } from '@/lib/seo-metadata';
 import { isLang, type Lang } from '@/lib/lang-route';
+
+const getCachedInterviewCategories = unstable_cache(
+  async () => {
+    try {
+      return await prisma.interviewCategory.findMany({
+        orderBy: { order: 'asc' },
+        include: {
+          _count: {
+            select: { questions: { where: { status: 'published' } } },
+          },
+        },
+      });
+    } catch (e) {
+      console.error('Failed to get interview categories:', e);
+      return [];
+    }
+  },
+  ['cached-interview-categories'],
+  { revalidate: 3600, tags: ['interviews'] }
+);
 
 const CATEGORY_ICONS: Record<string, typeof BookOpen> = {
   GraduationCap: BookOpen,
@@ -47,14 +68,7 @@ export default async function InterviewPrepPage({ params }: { params: Promise<{ 
   const { lang } = await params;
   const t = (key: string, p?: Record<string, string | number>) => translate(lang, key, p);
 
-  const categories = await prisma.interviewCategory.findMany({
-    orderBy: { order: 'asc' },
-    include: {
-      _count: {
-        select: { questions: { where: { status: 'published' } } },
-      },
-    },
-  });
+  const categories = await getCachedInterviewCategories();
 
   return (
     <PageShell lang={lang} className="pb-16">

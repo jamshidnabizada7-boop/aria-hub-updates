@@ -36,7 +36,7 @@ export function PricingSection({ packages }: { packages: PricingPackage[] }) {
             return (
               <motion.div
                 key={pkg.id}
-                initial={{ opacity: 0, y: 30 }}
+                initial={false}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: '0px' }}
                 transition={{ duration: 0.4, delay: i * 0.1 }}

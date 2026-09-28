@@ -45,15 +45,20 @@ export default async function VisaPrepPage({ params }: { params: Promise<{ lang:
   const lang: Lang = isLang(rawLang) ? rawLang : 'fa';
   const t = (key: string) => translate(lang, key);
   
-  const countries = await prisma.visaCountry.findMany({
-    where: { status: 'published' },
-    orderBy: { order: 'asc' },
-    include: {
-      _count: {
-        select: { questions: true, documents: true }
+  let countries: any[] = [];
+  try {
+    countries = await prisma.visaCountry.findMany({
+      where: { status: 'published' },
+      orderBy: { order: 'asc' },
+      include: {
+        _count: {
+          select: { questions: true, documents: true }
+        }
       }
-    }
-  });
+    });
+  } catch {
+    countries = [];
+  }
 
   return (
     <PageShell lang={lang} className="pb-16">

@@ -17,6 +17,7 @@ import type { PrismaClient } from '@prisma/client';
 import { slugify, stripHtml, stripThemeBoilerplate, cleanTitleJunk } from '../import/utils';
 import { removeLeadingTitle } from '../content-html';
 import { prettifySlug } from '../import/scrapers/scholarships-af';
+import { extractApplyLink } from '../apply-extract';
 import type { RawListing } from '../import/types';
 import { getAIProvider } from './provider';
 
@@ -47,70 +48,7 @@ export interface PipelineOutput {
 }
 
 // ─── Deterministic apply-link extraction ─────────────────────────────────────
-
-/** Addresses that belong to the source site itself, not the employer. */
-const NON_APPLY_EMAILS = [
-  'webinfo@acbar.org',
-  'info@acbar.org',
-  'acbar.org',
-  'wazifaha.org',
-  'scholarships.af',
-  'o4af.com',
-];
-
-const EXPLICIT_APPLY_URL_RE =
-  /(?:apply|application|submit)[^\n]{0,80}(https?:\/\/[^\s)"'<>]+)/gi;
-
-/**
- * Extract the best application link from listing text.
- * Priority: scraped applyUrl > email in guidelines > email in description >
- * Google Form / survey link > explicit "apply at URL" in text.
- */
-export function extractApplyLink(listing: RawListing): string | null {
-  const candidates: string[] = [];
-  const guidelines = listing.guidelines || '';
-  const description = typeof listing.description === 'string' ? listing.description : '';
-  const haystacks = [guidelines, description, listing.requirements || ''];
-
-  // 1. Emails found inside submission guidelines rank first, then anywhere else
-  for (const text of haystacks) {
-    const emailMatches = text.match(/[\w.+-]+@[\w-]+\.[a-z]{2,}/gi) || [];
-    for (const email of emailMatches) {
-      const lower = email.toLowerCase();
-      if (NON_APPLY_EMAILS.some((bad) => lower.includes(bad))) continue;
-      if (!candidates.includes(`mailto:${email}`)) candidates.push(`mailto:${email}`);
-    }
-    if (candidates.length) break; // guidelines emails are enough
-  }
-
-  // 2. Google Forms / survey links
-  for (const text of haystacks) {
-    const formMatches =
-      text.match(/https?:\/\/(?:forms\.|docs\.google\.com\/forms\/|survey)[^\s)"'<>]+/gi) || [];
-    for (const url of formMatches) {
-      if (!candidates.includes(url)) candidates.push(url);
-    }
-  }
-
-  // 3. Explicit "apply at <url>" patterns
-  for (const text of haystacks) {
-    EXPLICIT_APPLY_URL_RE.lastIndex = 0;
-    let m: RegExpExecArray | null;
-    while ((m = EXPLICIT_APPLY_URL_RE.exec(text)) !== null) {
-      const url = m[1];
-      if (!NON_APPLY_EMAILS.some((bad) => url.toLowerCase().includes(bad)) && !candidates.includes(url)) {
-        candidates.push(url);
-      }
-    }
-  }
-
-  // 4. A scraped applyUrl (e.g. Wazifaha's own apply page) — keep as final fallback
-  if (listing.applyUrl && !candidates.includes(listing.applyUrl)) {
-    candidates.push(listing.applyUrl);
-  }
-
-  return candidates[0] || null;
-}
+// (logic lives in src/lib/apply-extract.ts — pure, shared with backfills/tests)
 
 // ─── LLM enrichment ──────────────────────────────────────────────────────────
 
@@ -258,8 +196,9 @@ export async function runAIPipeline(
           if (ctx.knownCategorySlugs.includes(suggested)) categorySlugs.push(suggested);
         }
 
-        translationStatus =
-          titleI18n.fa && summaryI18n.fa && titleI18n.ps && summaryI18n.ps ? 'complete' : 'partial';
+        // NOTE: enrichment only produces title/summary translations. Full
+        // completeness is owned by the chunk engine — the legacy status stays
+        // 'pending' until the engine commits fa/ps atomically.
       }
     } catch (e) {
       console.warn('[ai-pipeline] enrichment failed, storing original language only:', (e as Error).message);
@@ -305,40 +244,13 @@ export async function runAIPipeline(
     }
   }
 
-  // ── Full trilingual bodies — one extra LLM call per NEW listing ─────────
-  // Translates description + all sections into Farsi/Pashto so users of every
-  // language see complete content (not an English body under a localized UI).
-  if (provider) {
-    try {
-      const chat = (system: string, user: string): Promise<string> =>
-        typeof (provider as unknown as Record<string, unknown>).chat === 'function'
-          ? (provider as unknown as { chat(s: string, u: string): Promise<string> }).chat(system, user)
-          : Promise.reject(new Error('no chat'));
-      const sections = await translateSections(
-        {
-          title: listing.title,
-          description: cleanedDescription,
-          eligibility: listing.eligibility ?? null,
-          benefits: listing.benefits ?? null,
-          responsibilities: listing.responsibilities ?? null,
-          requirements: (listing.requirements || listing.requiredDocuments) ?? null,
-          guidelines: listing.guidelines ?? null,
-          jobType: listing.jobType ?? null,
-          salary: listing.salary ?? null,
-          educationReq: listing.educationReq ?? null,
-          experience: listing.experience ?? null,
-        },
-        chat,
-      );
-      if (sections) {
-        mergeSectionTranslations(data, originalLang, sections);
-        const descI18n = data.descriptionI18n as Record<string, string>;
-        if (descI18n.fa && descI18n.ps) translationStatus = 'complete';
-      }
-    } catch (e) {
-      console.warn('[ai-pipeline] section translation failed (kept original language):', (e as Error).message);
-    }
-  }
+  // ── Full trilingual bodies — handled by the chunked translation engine ────
+  // Translation NO LONGER happens inline here: the old single-call approach
+  // truncated long sections and could publish half-failed translations. The
+  // orchestrator enqueues the row into src/lib/ai/translate-engine.ts after
+  // the DB write; that engine chunks every field, stages each chunk, and
+  // commits fa/ps atomically only at 100% completion (Persian first).
+  // Until then the public fields keep English with the legacy status 'pending'.
 
   if (listing.extractedData && typeof listing.extractedData === 'object') {
     data.extractedDataI18n = { [originalLang]: { ...listing.extractedData } };

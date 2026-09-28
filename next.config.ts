@@ -15,10 +15,7 @@ const nextConfig: NextConfig = {
   // (prevents "Cross origin request detected" warnings / aborted requests).
   allowedDevOrigins: ["*.space-z.ai", "http://localhost:3000", "21.0.8.222", "21.0.16.223", "localhost"],
   experimental: {
-    // optimizeCss (critters) + Turbopack HMR crashes repeatedly in dev
-    // ("Cell no longer exists ... AppPageLoaderTree" panic loop). It is a
-    // build-time optimization — keep it for production only.
-    optimizeCss: !isDev,
+    optimizeCss: false,
     // 4GB sandbox OOM-kills the dev server when Turbopack's Rust heap grows
     // past ~2.8GB while holding all warm routes. Cap it so Turbopack GCs
     // aggressively instead of growing until the kernel kills the process.

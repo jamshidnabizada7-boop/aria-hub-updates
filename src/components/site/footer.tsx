@@ -206,19 +206,30 @@ export function Footer({
           <div className="col-span-2 md:col-span-2 lg:col-span-2">
             <h4 className="mb-4 text-sm font-bold uppercase tracking-wider">{t('footer.followUs')}</h4>
             <div className="flex flex-wrap gap-2">
-              {socialLinks.map((s) => (
-                <a
-                  key={s.id}
-                  href={s.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="grid h-10 w-10 place-items-center rounded-xl border border-border/60 bg-card/50 text-muted-foreground transition-all hover:-translate-y-0.5 hover:text-foreground"
-                  style={s.color ? { ['--tw-shadow-color' as any]: s.color } : undefined}
-                  title={s.label}
-                >
-                  <SocialIcon platform={s.platform} />
-                </a>
-              ))}
+              {(() => {
+                const list = [...(socialLinks || [])];
+                const hasP = (p: string) => list.some((l) => l.platform?.toLowerCase() === p);
+                if (!hasP('x') && !hasP('twitter')) {
+                  list.push({ id: 'footer-def-x', platform: 'x', label: 'X (Twitter)', url: 'https://x.com/myariahub', icon: null, color: '#000000', order: 99 });
+                }
+                if (!hasP('youtube')) {
+                  list.push({ id: 'footer-def-yt', platform: 'youtube', label: 'YouTube', url: 'https://www.youtube.com/@myariahub', icon: null, color: '#FF0000', order: 100 });
+                }
+                return list.map((s) => (
+                  <a
+                    key={s.id}
+                    href={s.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="grid h-11 w-11 min-h-[44px] min-w-[44px] place-items-center rounded-xl border border-border/60 bg-card/50 text-muted-foreground transition-all hover:-translate-y-0.5 hover:text-foreground"
+                    style={s.color ? { ['--tw-shadow-color' as any]: s.color } : undefined}
+                    title={s.label || s.platform}
+                    aria-label={`Follow ARIA HUB on ${s.label || s.platform}`}
+                  >
+                    <SocialIcon platform={s.platform} />
+                  </a>
+                ));
+              })()}
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
               {[
@@ -244,7 +255,7 @@ export function Footer({
             {footer['legal'] && footer['legal'].length > 0 ? (
               footer['legal'].map((link, idx, arr) => (
                 <React.Fragment key={link.id}>
-                  <Link href={hrefFn(resolveAnchorUrl(link.url, link.label))} className="p-2 transition-colors hover:text-foreground">
+                  <Link href={hrefFn(resolveAnchorUrl(link.url, link.label))} className="inline-flex min-h-[44px] items-center px-2 py-1 transition-colors hover:text-foreground">
                     {getLocalizedContent(link.label, link.labelI18n, lang)}
                   </Link>
                   {idx < arr.length - 1 && <span className="text-border">·</span>}
@@ -252,23 +263,23 @@ export function Footer({
               ))
             ) : (
               <>
-                <Link href={hrefFn('/privacy-policy')} className="p-2 transition-colors hover:text-foreground">{t('footer.privacy')}</Link>
+                <Link href={hrefFn('/privacy-policy')} className="inline-flex min-h-[44px] items-center px-2 py-1 transition-colors hover:text-foreground">{t('footer.privacy')}</Link>
                 <span className="text-border">·</span>
-                <Link href={hrefFn('/terms-of-service')} className="p-2 transition-colors hover:text-foreground">{t('footer.terms')}</Link>
+                <Link href={hrefFn('/terms-of-service')} className="inline-flex min-h-[44px] items-center px-2 py-1 transition-colors hover:text-foreground">{t('footer.terms')}</Link>
                 <span className="text-border">·</span>
-                <Link href={hrefFn('/about')} className="p-2 transition-colors hover:text-foreground">{t('footer.aboutUs')}</Link>
+                <Link href={hrefFn('/about')} className="inline-flex min-h-[44px] items-center px-2 py-1 transition-colors hover:text-foreground">{t('footer.aboutUs')}</Link>
                 <span className="text-border">·</span>
-                <Link href={hrefFn('/contact')} className="p-2 transition-colors hover:text-foreground">{t('footer.contactUs')}</Link>
+                <Link href={hrefFn('/contact')} className="inline-flex min-h-[44px] items-center px-2 py-1 transition-colors hover:text-foreground">{t('footer.contactUs')}</Link>
                 <span className="text-border">·</span>
-                <Link href={hrefFn('/blog')} className="p-2 transition-colors hover:text-foreground">{t('footer.blog')}</Link>
+                <Link href={hrefFn('/blog')} className="inline-flex min-h-[44px] items-center px-2 py-1 transition-colors hover:text-foreground">{t('footer.blog')}</Link>
                 <span className="text-border">·</span>
-                <Link href={hrefFn('/success-stories')} className="p-2 transition-colors hover:text-foreground">{t('stories.eyebrow')}</Link>
+                <Link href={hrefFn('/success-stories')} className="inline-flex min-h-[44px] items-center px-2 py-1 transition-colors hover:text-foreground">{t('stories.eyebrow')}</Link>
                 <span className="text-border">·</span>
-                <Link href={hrefFn('/employers')} className="p-2 transition-colors hover:text-foreground">{t('employers.eyebrow')}</Link>
+                <Link href={hrefFn('/employers')} className="inline-flex min-h-[44px] items-center px-2 py-1 transition-colors hover:text-foreground">{t('employers.eyebrow')}</Link>
                 <span className="text-border">·</span>
-                <Link href={hrefFn('/advertise')} className="p-2 font-semibold transition-colors hover:text-foreground">{t('footer.advertise')}</Link>
+                <Link href={hrefFn('/advertise')} className="inline-flex min-h-[44px] items-center px-2 py-1 font-semibold transition-colors hover:text-foreground">{t('footer.advertise')}</Link>
                 <span className="text-border">·</span>
-                <Link href={hrefFn('/track')} className="p-2 transition-colors hover:text-foreground">{t('track.title')}</Link>
+                <Link href={hrefFn('/track')} className="inline-flex min-h-[44px] items-center px-2 py-1 transition-colors hover:text-foreground">{t('track.title')}</Link>
               </>
             )}
           </div>
@@ -289,6 +300,13 @@ function SocialIcon({ platform }: { platform: string }) {
     case 'telegram': return <Send className={cls} />;
     case 'linkedin': return <Linkedin className={cls} />;
     case 'youtube': return <Youtube className={cls} />;
+    case 'x':
+    case 'twitter':
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+        </svg>
+      );
     default: return <Send className={cls} />;
   }
 }

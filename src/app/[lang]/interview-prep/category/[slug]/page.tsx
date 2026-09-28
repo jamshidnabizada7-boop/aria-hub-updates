@@ -100,11 +100,16 @@ export default async function InterviewCategoryPage({
   const description = getLocalizedContent(category.description, category.descriptionI18n, lang);
 
   // All sibling categories for cross-navigation
-  const siblings = await prisma.interviewCategory.findMany({
-    where: { id: { not: category.id } },
-    orderBy: { order: 'asc' },
-    select: { slug: true, name: true, nameI18n: true },
-  });
+  let siblings: any[] = [];
+  try {
+    siblings = await prisma.interviewCategory.findMany({
+      where: { id: { not: category.id } },
+      orderBy: { order: 'asc' },
+      select: { slug: true, name: true, nameI18n: true },
+    });
+  } catch {
+    siblings = [];
+  }
 
   return (
     <PageShell lang={lang} className="pb-16">

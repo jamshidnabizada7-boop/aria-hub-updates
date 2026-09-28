@@ -81,7 +81,7 @@ export function TestimonialsSection({ testimonials }: { testimonials: Testimonia
           <AnimatePresence mode="wait">
             <motion.div
               key={active}
-              initial={{ opacity: 0, y: 24 }}
+              initial={false}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -24 }}
               transition={{ duration: 0.4 }}

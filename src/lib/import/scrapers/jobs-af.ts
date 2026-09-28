@@ -163,6 +163,7 @@ export class JobsAfScraper extends BaseScraper {
         .map((f) => f?.area?.name)
         .filter((n): n is string => Boolean(n));
       const organization = job.company?.name?.trim() || null;
+      const salary = this.buildSalary(job);
 
       listings.push({
         title,
@@ -175,18 +176,20 @@ export class JobsAfScraper extends BaseScraper {
         jobType: 'job',
         country: job.country?.name || 'Afghanistan',
         location: provinces.join(', ') || null,
+        provinces: provinces.length ? provinces : null,
         deadline: parseDate(job.expiryDate || ''),
         publishedDate: parseDate(job.publishDate || ''),
         imageUrl: job.company?.profile?.logoUrl || null,
         description: this.synthesizeDescription(job, title, organization, provinces, areas),
         educationReq: this.humanize(job.educationLevel),
+        salary, // promote the structured salary to the main field (was only in extractedData)
         extractedData: {
           reference: job.reference || null,
           vacancies: job.numberOfVacancies ?? null,
           workType: this.humanize(job.workType),
           contractType: this.humanize(job.contractType),
           gender: this.humanize(job.gender),
-          salary: this.buildSalary(job),
+          salary,
           salaryGrade: job.salaryGrade || null,
           probationPeriod: this.humanize(job.probationPeriod),
           extendable: job.isExtendable == null ? null : job.isExtendable ? 'Yes' : 'No',

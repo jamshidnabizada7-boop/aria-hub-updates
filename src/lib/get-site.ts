@@ -1,4 +1,5 @@
 import { cache } from 'react';
+import { unstable_cache } from 'next/cache';
 import { db } from '@/lib/db';
 import type { SiteData, MenuItem } from '@/lib/types';
 
@@ -22,7 +23,7 @@ const NEWS_SELECT = {
   category: { select: { slug: true, name: true, nameI18n: true } },
 } as const;
 
-export const getSiteData = cache(async (): Promise<SiteData> => {
+const fetchSiteData = async (): Promise<SiteData> => {
   try {
     // ── Batch 1: core site config ─────────────────────────────────────────
     const [
@@ -58,7 +59,9 @@ export const getSiteData = cache(async (): Promise<SiteData> => {
       socialLinks,
       footerLinks,
     ] = await Promise.all([
-      db.opportunity.findMany({ where: { status: 'published' }, orderBy: [{ sort: 'asc' }, { createdAt: 'desc' }], take: 60, select: OPP_SELECT }).catch(() => []),
+      // Opportunities are fetched on-demand by dedicated queries (home.latest, /opportunities, etc.)
+      // Omitting the 60-row batch here cuts ~250KB of unused RSC payload from every page shell and home.
+      Promise.resolve([] as any[]),
       db.galleryItem.findMany({ orderBy: { order: 'asc' } }).catch(() => []),
       db.paymentMethod.findMany({ where: { status: 'active' }, orderBy: { order: 'asc' } }).catch(() => []),
       db.testimonial.findMany({ where: { status: 'published' }, orderBy: { order: 'asc' } }).catch(() => []),
@@ -114,7 +117,7 @@ export const getSiteData = cache(async (): Promise<SiteData> => {
       counters: counters as any,
       faqs: faqs as any,
       news: news as any,
-      socialLinks: socialLinks as any,
+      socialLinks: ensureRequiredSocialLinks(socialLinks) as any,
       footer,
       departments: departments as any,
       branches: branches as any,
@@ -145,7 +148,7 @@ export const getSiteData = cache(async (): Promise<SiteData> => {
       counters: [],
       faqs: [],
       news: [],
-      socialLinks: [],
+      socialLinks: DEFAULT_SOCIAL_LINKS as any,
       footer: {},
       departments: [],
       branches: [],
@@ -157,6 +160,16 @@ export const getSiteData = cache(async (): Promise<SiteData> => {
       whyFeatures: [],
     };
   }
+};
+
+const getCachedSiteData = unstable_cache(
+  fetchSiteData,
+  ['site-data-bundle'],
+  { revalidate: 300, tags: ['site-data'] }
+);
+
+export const getSiteData = cache(async (): Promise<SiteData> => {
+  return getCachedSiteData();
 });
 
 function getDefaultSettings() {
@@ -185,3 +198,41 @@ function buildMenuTree(items: { id: string; label: string; url: string | null; p
   }
   return roots;
 }
+
+const DEFAULT_SOCIAL_LINKS = [
+  { id: 'default-facebook', platform: 'facebook', label: 'Facebook', url: 'https://facebook.com/myariahub', color: '#1877F2', enabled: true, order: 1 },
+  { id: 'default-x', platform: 'x', label: 'X (Twitter)', url: 'https://x.com/myariahub', color: '#000000', enabled: true, order: 2 },
+  { id: 'default-youtube', platform: 'youtube', label: 'YouTube', url: 'https://www.youtube.com/@myariahub', color: '#FF0000', enabled: true, order: 3 },
+  { id: 'default-linkedin', platform: 'linkedin', label: 'LinkedIn', url: 'https://linkedin.com/company/myariahub', color: '#0A66C2', enabled: true, order: 4 },
+  { id: 'default-telegram', platform: 'telegram', label: 'Telegram', url: 'https://t.me/myariahub', color: '#229ED9', enabled: true, order: 5 },
+];
+
+function ensureRequiredSocialLinks(links: any[]): any[] {
+  if (!links || links.length === 0) return DEFAULT_SOCIAL_LINKS;
+  const hasPlatform = (p: string) => links.some((l) => l.platform?.toLowerCase() === p);
+  const result = [...links];
+  if (!hasPlatform('x') && !hasPlatform('twitter')) {
+    result.push({
+      id: 'default-x',
+      platform: 'x',
+      label: 'X (Twitter)',
+      url: 'https://x.com/myariahub',
+      color: '#000000',
+      enabled: true,
+      order: 99,
+    });
+  }
+  if (!hasPlatform('youtube')) {
+    result.push({
+      id: 'default-youtube',
+      platform: 'youtube',
+      label: 'YouTube',
+      url: 'https://www.youtube.com/@myariahub',
+      color: '#FF0000',
+      enabled: true,
+      order: 100,
+    });
+  }
+  return result;
+}
+

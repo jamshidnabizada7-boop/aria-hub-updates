@@ -1,14 +1,24 @@
 import type { Metadata } from 'next';
 import { getSiteData } from '@/lib/get-site';
 import { translate } from '@/lib/i18n';
-import { db } from '@/lib/db';
 import { Home } from '@/components/site/home';
 import { JsonLd } from '@/components/site/json-ld';
 import { isLang, type Lang } from '@/lib/lang-route';
-import { getClosingSoon, getDailySpotlight, getFacets, getWeeklyScholarship, listOpportunities } from '@/lib/opportunity-queries';
+import {
+  getClosingSoon,
+  getDailySpotlight,
+  getFacets,
+  getHomeStats,
+  getWeeklyScholarship,
+  listOpportunities,
+} from '@/lib/opportunity-queries';
 import { getFeaturedStoryCard } from '@/lib/success-story-queries';
 
-export const revalidate = 60;
+export const revalidate = 300;
+
+export function generateStaticParams() {
+  return [{ lang: 'en' }, { lang: 'fa' }, { lang: 'ps' }];
+}
 
 export async function generateMetadata({
   params,
@@ -25,9 +35,9 @@ export async function generateMetadata({
   };
 
   const descriptions: Record<Lang, string> = {
-    en: 'Discover verified scholarships, international jobs, fellowships, and training opportunities in Afghanistan with trilingual updates in Dari, Pashto & English.',
-    fa: 'کشف جدیدترین بورسیه‌های تحصیلی، فرصت‌های شغلی بین‌المللی و برنامه‌های آموزشی معتبر برای جوانان افغانستان به همراه ددلاین و راهنمای ثبت‌نام آنلاین.',
-    ps: 'په افغانستان کې باوري تحصیلي بورسونه، نړیوالې دندې او روزنیز پروګرامونه په آریا هاب کې ومومئ. د غوښتنلیک لارښود او تازه معلومات په پښتو او دري ژبو.',
+    en: 'Discover verified scholarships, jobs, fellowships, and opportunities in Afghanistan with updates in English, Dari, and Pashto.',
+    fa: 'مرجع معتبر جدیدترین بورسیه‌های تحصیلی، وظایف و فرصت‌های آموزشی برای افغان‌ها به فارسی، پشتو و انگلیسی در آریا هاب.',
+    ps: 'د افغانانو لپاره باوري تحصیلي بورسونه، کاري فرصتونه، انٹرنشیپونه او دندې په پښتو، دري او انګلیسي په آریا هاب کې ومومئ.',
   };
 
   return {
@@ -45,8 +55,24 @@ export async function generateMetadata({
     openGraph: {
       title: titles[lang] || titles.en,
       description: descriptions[lang] || descriptions.en,
+      url: `https://www.myariahub.com/${lang}`,
+      siteName: 'ARIA HUB',
       locale: lang,
       type: 'website',
+      images: [
+        {
+          url: 'https://www.myariahub.com/og-image.png',
+          width: 1200,
+          height: 630,
+          alt: titles[lang] || titles.en,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: titles[lang] || titles.en,
+      description: descriptions[lang] || descriptions.en,
+      images: ['https://www.myariahub.com/og-image.png'],
     },
   };
 }
@@ -61,36 +87,19 @@ export default async function Page({
 
   const data = await getSiteData();
 
-  // Real homepage numbers: active opportunities, distinct organizations and
-  // the live category facets — replaces the old fake counters.
-  const today = new Date();
-  today.setUTCHours(0, 0, 0, 0);
-  const activeWhere = {
-    status: 'published' as const,
-    OR: [{ deadline: null }, { deadline: { gte: today } }],
-  };
-
-  const [latest, facets, orgRows, closingSoon, spotlight, weeklyScholarship, featuredStory, newsCount, countryRows] = await Promise.all([
+  // Cached homepage numbers: active opportunities, distinct organizations and
+  // the live category facets — eliminates expensive distinct scans on every request.
+  const [latest, facets, homeStats, closingSoon, spotlight, weeklyScholarship, featuredStory] = await Promise.all([
     listOpportunities({ lang, sort: 'newest', perPage: 8 }),
     getFacets(lang),
-    db.opportunity.findMany({
-      where: activeWhere,
-      select: { organization: true },
-      distinct: ['organization'],
-    }),
+    getHomeStats(),
     getClosingSoon(lang, 4),
     getDailySpotlight(lang),
     getWeeklyScholarship(lang),
     getFeaturedStoryCard(lang),
-    db.news.count({ where: { status: 'published' } }),
-    db.opportunity.findMany({
-      where: activeWhere,
-      select: { country: true },
-      distinct: ['country'],
-    }),
   ]);
 
-  const organizations = orgRows.filter((o) => o.organization?.trim()).length;
+  const organizations = homeStats.organizations;
 
   return (
     <>
@@ -120,22 +129,22 @@ export default async function Page({
             },
             {
               id: 'live-orgs',
-              label: translate(lang, 'home.statOrganizations', { count: orgRows.length }),
-              value: orgRows.length,
+              label: translate(lang, 'home.statOrganizations', { count: homeStats.orgCount }),
+              value: homeStats.orgCount,
               suffix: '+',
               icon: 'Building2',
             },
             {
               id: 'live-countries',
-              label: translate(lang, 'home.statCountries', { count: countryRows.filter((r) => r.country).length }),
-              value: countryRows.filter((r) => r.country).length,
+              label: translate(lang, 'home.statCountries', { count: homeStats.countries }),
+              value: homeStats.countries,
               suffix: '',
               icon: 'MapPin',
             },
             {
               id: 'live-news',
-              label: translate(lang, 'home.statNews', { count: newsCount }),
-              value: newsCount,
+              label: translate(lang, 'home.statNews', { count: homeStats.newsCount }),
+              value: homeStats.newsCount,
               suffix: '+',
               icon: 'Newspaper',
             },

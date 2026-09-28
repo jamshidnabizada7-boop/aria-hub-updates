@@ -34,21 +34,23 @@ import { CookieBanner } from './cookie-banner';
 import { VisitTracker } from './visit-tracker';
 import { ReadingProgress } from './reading-progress';
 import { SectionIndicator } from './section-indicator';
+import dynamic from 'next/dynamic';
 import { Hero } from './sections/hero';
 import { ServicesSection } from './sections/services';
 import { CtaBannerSection } from './sections/cta-banner';
 import { CountersSection } from './sections/counters';
-import { VisasSection } from './sections/visas';
-import { PromoteSection } from './sections/promote';
-import { PricingSection } from './sections/pricing';
-import { PaymentsSection } from './sections/payments';
 import { NewsSection } from './sections/news';
-import { GallerySection } from './sections/gallery';
-import { PartnersSection } from './sections/partners';
-import { TeamSection } from './sections/team';
-import { FaqsSection } from './sections/faqs';
-import { ComparisonSection } from './sections/comparison';
-import { WhyChooseUsSection } from './sections/why-choose-us';
+
+const VisasSection = dynamic(() => import('./sections/visas').then((m) => m.VisasSection));
+const PromoteSection = dynamic(() => import('./sections/promote').then((m) => m.PromoteSection));
+const PricingSection = dynamic(() => import('./sections/pricing').then((m) => m.PricingSection));
+const PaymentsSection = dynamic(() => import('./sections/payments').then((m) => m.PaymentsSection));
+const GallerySection = dynamic(() => import('./sections/gallery').then((m) => m.GallerySection));
+const PartnersSection = dynamic(() => import('./sections/partners').then((m) => m.PartnersSection));
+const TeamSection = dynamic(() => import('./sections/team').then((m) => m.TeamSection));
+const FaqsSection = dynamic(() => import('./sections/faqs').then((m) => m.FaqsSection));
+const ComparisonSection = dynamic(() => import('./sections/comparison').then((m) => m.ComparisonSection));
+const WhyChooseUsSection = dynamic(() => import('./sections/why-choose-us').then((m) => m.WhyChooseUsSection));
 import { OpportunityCard } from './opportunity-card';
 import { Reveal } from './reveal';
 import { translate } from '@/lib/i18n';
@@ -593,7 +595,7 @@ function TestimonialCard({ testimonial, lang }: { testimonial: Testimonial; lang
   return (
     <figure className="relative flex h-full flex-col rounded-2xl border border-border/60 bg-card/70 p-5 backdrop-blur-sm">
       <Quote className="absolute end-5 top-5 h-6 w-6 text-primary/20" aria-hidden="true" />
-      <div className="flex items-center gap-1" aria-label={`${rating}/5`}>
+      <div className="flex items-center gap-1" role="img" aria-label={`${rating}/5`}>
         {[...Array(rating)].map((_, i) => (
           <Star key={i} className="h-3.5 w-3.5 fill-chart-4 text-chart-4" aria-hidden="true" />
         ))}

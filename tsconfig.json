@@ -44,6 +44,7 @@
     "node_modules",
     "scripts",
     "_video-studio",
-    "auto-translate.ts"
+    "auto-translate.ts",
+    "release-backups"
   ]
 }

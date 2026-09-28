@@ -14,8 +14,9 @@ export interface RawListing {
   jobType?: string | null;          // job | scholarship | fellowship | ...
   scholarshipType?: string | null;
   // Location / dates
-  location?: string | null;
-  country?: string | null;
+  location?: string | null;          // free-text location from the source
+  provinces?: string[] | null;       // structured province list when the source provides one
+  country?: string | null;           // MUST be a country, never a province/city
   deadline?: string | null;         // ISO date when possible
   publishedDate?: string | null;    // ISO date when possible
   // Content

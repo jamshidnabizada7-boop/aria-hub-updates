@@ -28,7 +28,10 @@ export async function GET(req: NextRequest) {
 
     const category = firstParam(sp.get('category')) || 'all';
     const q = firstParam(sp.get('q')).trim().slice(0, 200);
-    const location = firstParam(sp.get('location')) || 'all';
+    // `country`/`province` are the canonical filters; legacy `location`
+    // (which was always a country filter) still works.
+    const country = firstParam(sp.get('country')) || firstParam(sp.get('location')) || 'all';
+    const province = firstParam(sp.get('province'));
     const deadlineParam = firstParam(sp.get('deadline'));
     const deadlineDays = ['7', '30', '90'].includes(deadlineParam) ? Number(deadlineParam) : undefined;
     const sortParam = firstParam(sp.get('sort'));
@@ -44,7 +47,8 @@ export async function GET(req: NextRequest) {
         lang,
         category,
         q,
-        location,
+        country,
+        province,
         deadlineDays,
         sort,
         page,

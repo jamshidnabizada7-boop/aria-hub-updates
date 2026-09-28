@@ -41,6 +41,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: '/', changeFrequency: 'daily', priority: 1 },
     { path: '/opportunities', changeFrequency: 'daily', priority: 0.9 },
     { path: '/deadlines', changeFrequency: 'daily', priority: 0.8 },
+    { path: '/visas', changeFrequency: 'weekly', priority: 0.8 },
+    { path: '/templates', changeFrequency: 'weekly', priority: 0.8 },
+    { path: '/visa-prep', changeFrequency: 'weekly', priority: 0.8 },
+    { path: '/interview-prep', changeFrequency: 'weekly', priority: 0.8 },
+    { path: '/cv-builder', changeFrequency: 'monthly', priority: 0.7 },
+    { path: '/opportunity-matcher', changeFrequency: 'monthly', priority: 0.7 },
     { path: '/submit-opportunity', changeFrequency: 'monthly', priority: 0.6 },
     { path: '/track', changeFrequency: 'monthly', priority: 0.5 },
     { path: '/employers', changeFrequency: 'weekly', priority: 0.6 },
@@ -149,6 +155,35 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           lastModified: story.updatedAt || now,
           changeFrequency: 'monthly',
           priority: 0.5,
+          alternates: { languages: languageAlternates(path) },
+        });
+      }
+    }
+  } catch {
+    // DB unavailable — static entries above are still emitted
+  }
+
+  // ── Published document templates (trilingual alternates) ──
+  try {
+    const remaining = Math.max(0, MAX_URLS - entries.length);
+    const templateBudget = Math.floor(remaining / LANGS.length);
+
+    const templates = await db.documentTemplate.findMany({
+      where: { status: 'published' },
+      orderBy: { updatedAt: 'desc' },
+      select: { slug: true, updatedAt: true },
+      take: Math.min(templateBudget, 100),
+    });
+
+    for (const item of templates) {
+      const path = `/templates/${item.slug}`;
+      for (const lang of LANGS) {
+        if (entries.length >= MAX_URLS) break;
+        entries.push({
+          url: `${BASE_URL}/${lang}${path}`,
+          lastModified: item.updatedAt || now,
+          changeFrequency: 'weekly',
+          priority: 0.7,
           alternates: { languages: languageAlternates(path) },
         });
       }

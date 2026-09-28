@@ -23,7 +23,7 @@ export function CountersSection({ counters }: { counters: Counter[] }) {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center text-white">
           <motion.span
-            initial={{ opacity: 0, y: 10 }}
+            initial={false}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur-sm"
@@ -38,7 +38,7 @@ export function CountersSection({ counters }: { counters: Counter[] }) {
           {counters.map((c, i) => (
             <motion.div
               key={c.id}
-              initial={{ opacity: 0, y: 30 }}
+              initial={false}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
@@ -47,7 +47,7 @@ export function CountersSection({ counters }: { counters: Counter[] }) {
               <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-white/10 backdrop-blur-sm ring-1 ring-white/20">
                 <Icon name={c.icon} className="h-6 w-6" />
               </div>
-              <div className="text-4xl font-black sm:text-5xl" aria-label={`${c.value}${c.suffix || ''}`}>
+              <div className="text-4xl font-black sm:text-5xl" role="status" aria-label={`${c.value}${c.suffix || ''}`}>
                 {inView && <CountUp value={c.value} />}
                 {c.suffix}
               </div>

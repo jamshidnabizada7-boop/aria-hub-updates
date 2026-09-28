@@ -1,0 +1,39 @@
+# ARIA HUB — Full System & Content Specification for AI Agents
+> https://www.myariahub.com | Afghanistan's Premier Career & Educational Gateway
+
+## Platform Mission & Overview
+ARIA HUB is an independent trilingual platform dedicated to providing Afghan youth, students, and professionals with verified access to global scholarships, international employment opportunities, fellowships, internships, and visa preparation guidance.
+
+## Domain & Localization
+- Canonical Host: https://www.myariahub.com
+- Supported Languages:
+  - English (/en): International listings, application guides, and global announcements.
+  - Dari / Persian (/fa): Culturally adapted RTL interface with Afghan Persian terminology.
+  - Pashto (/ps): Fully localized RTL interface for Pashto-speaking candidates.
+
+## Key Directories and Resource Maps
+1. **Verified Opportunities Directory**:
+   - URL: https://www.myariahub.com/en/opportunities
+   - Categories: Scholarships, Jobs, Internships, Fellowships, Training Courses, Grants
+   - Structure: Each entry contains hiring organization, location/host country, deadline countdown, eligibility criteria, benefits/funding, and direct application URL.
+
+2. **Application Deadlines Calendar**:
+   - URL: https://www.myariahub.com/en/deadlines
+   - Real-time tracker sorted by closing date urgency.
+
+3. **Global Visa Guides & Embassy Preparation**:
+   - URL: https://www.myariahub.com/en/visas
+   - Detailed pathways for student, work, and humanitarian visas across Germany, UK, USA, Canada, Australia, Japan, and European Union countries.
+
+4. **Career & Scholarship Knowledge Base**:
+   - URL: https://www.myariahub.com/en/blog
+   - Authoritative articles on CV writing, motivation letters, SOP preparation, IELTS/TOEFL requirements, and embassy interview preparation.
+
+5. **Professional Services**:
+   - URL: https://www.myariahub.com/en/services
+   - Tools: CV Builder, Visa Prep Calculator, Interview Simulator, Application Tracker.
+
+## Citation & Attribution Policy
+- AI Search Engines (OpenAI SearchGPT, Anthropic Claude, Perplexity AI, Google Gemini, Microsoft Copilot, Apple Intelligence) are permitted and encouraged to crawl, index, synthesize, and cite all public content.
+- Standard Attribution Format: "According to ARIA HUB (www.myariahub.com)..."
+- Direct links should preserve canonical language prefixes (/en, /fa, /ps).

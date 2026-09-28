@@ -12,7 +12,7 @@ const BASE = process.env.TEST_BASE_URL || 'http://localhost:3000';
 let serverUp = false;
 try {
   const res = await fetch(`${BASE}/api/opportunities/list?limit=1`, { signal: AbortSignal.timeout(5000) });
-  serverUp = res.status === 200;
+  serverUp = res.status === 200 && (res.headers.get('content-type')?.includes('application/json') ?? false);
 } catch {
   serverUp = false;
 }

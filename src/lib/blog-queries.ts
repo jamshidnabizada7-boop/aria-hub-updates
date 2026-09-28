@@ -126,26 +126,31 @@ export async function listBlogCategories(
 }
 
 export async function getBlogPost(slug: string, lang: Lang): Promise<BlogPostDetail | null> {
-  const row = await db.news.findFirst({
-    where: { slug, status: 'published' },
-    include: { category: { select: { slug: true, name: true, nameI18n: true } } },
-  });
-  if (!row) return null;
-  const card = toCard(row, lang);
-  return {
-    ...card,
-    content: getLocalizedContent(row.content, row.contentI18n as Record<string, string> | null, lang),
-    tags: (() => {
-      try {
-        const parsed = row.tags ? (JSON.parse(row.tags) as unknown) : [];
-        return Array.isArray(parsed) ? parsed.map(String).slice(0, 8) : [];
-      } catch {
-        return [];
-      }
-    })(),
-    seoTitle: row.seoTitle,
-    seoDescription: row.seoDescription,
-  };
+  try {
+    const row = await db.news.findFirst({
+      where: { slug, status: 'published' },
+      include: { category: { select: { slug: true, name: true, nameI18n: true } } },
+    });
+    if (!row) return null;
+    const card = toCard(row, lang);
+    return {
+      ...card,
+      content: getLocalizedContent(row.content, row.contentI18n as Record<string, string> | null, lang),
+      tags: (() => {
+        try {
+          const parsed = row.tags ? (JSON.parse(row.tags) as unknown) : [];
+          return Array.isArray(parsed) ? parsed.map(String).slice(0, 8) : [];
+        } catch {
+          return [];
+        }
+      })(),
+      seoTitle: row.seoTitle,
+      seoDescription: row.seoDescription,
+    };
+  } catch (err) {
+    console.error('Failed to get blog post by slug:', slug, err);
+    return null;
+  }
 }
 
 /** Related posts in the same category (fallback: latest). */
@@ -155,15 +160,20 @@ export async function listRelatedPosts(
   excludeSlug: string,
   take = 3
 ): Promise<BlogCard[]> {
-  const rows = await db.news.findMany({
-    where: {
-      status: 'published',
-      slug: { not: excludeSlug },
-      ...(categorySlug ? { category: { slug: categorySlug } } : {}),
-    },
-    orderBy: { publishedAt: 'desc' },
-    take,
-    select: CARD_SELECT,
-  });
-  return rows.map((row) => toCard(row, lang));
+  try {
+    const rows = await db.news.findMany({
+      where: {
+        status: 'published',
+        slug: { not: excludeSlug },
+        ...(categorySlug ? { category: { slug: categorySlug } } : {}),
+      },
+      orderBy: { publishedAt: 'desc' },
+      take,
+      select: CARD_SELECT,
+    });
+    return rows.map((row) => toCard(row as unknown as NewsRowForCard, lang));
+  } catch (err) {
+    console.error('Failed to list related blog posts:', err);
+    return [];
+  }
 }

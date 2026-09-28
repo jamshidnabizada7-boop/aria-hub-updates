@@ -53,12 +53,14 @@ export function DeadlineCard({
   const t = (key: string, params?: Record<string, string | number>) =>
     translate(lang, key, params);
 
-  const deadline = opportunity.deadline;
-  if (!deadline) return null;
+  const rawDl = opportunity.deadline;
+  if (!rawDl) return null;
+  const deadline = rawDl instanceof Date ? rawDl : new Date(rawDl);
+  if (isNaN(deadline.getTime())) return null;
 
   const days = daysUntilDeadline(deadline);
   const style = TONE_STYLES[tone];
-  const month = MONTHS[lang][deadline.getUTCMonth()] ?? '';
+  const month = MONTHS[lang]?.[deadline.getUTCMonth()] ?? '';
   const dayOfMonth = deadline.getUTCDate();
   const isoDate = deadline.toISOString().slice(0, 10);
 

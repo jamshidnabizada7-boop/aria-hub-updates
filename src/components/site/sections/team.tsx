@@ -29,7 +29,7 @@ export function TeamSection({ members }: { members: TeamMember[] }) {
           {members.map((m, i) => (
             <motion.div
               key={m.id}
-              initial={{ opacity: 0, y: 30 }}
+              initial={false}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '0px' }}
               transition={{ duration: 0.5, delay: (i % 4) * 0.08 }}

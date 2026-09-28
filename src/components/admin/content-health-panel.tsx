@@ -22,7 +22,13 @@ import { cn } from '@/lib/utils';
 
 interface ContentHealth {
   opportunities: { total: number; published: number; expired: number; draft: number };
-  translation: { trilingual: number; partial: number; englishOnly: number; publishedTotal: number };
+  translation: {
+    trilingual: number; partial: number; englishOnly: number; publishedTotal: number;
+    engine?: {
+      faComplete: number; faActive: number; psComplete: number; psWaiting: number;
+      failedChunks: number; pendingChunks: number;
+    } | null;
+  };
   deadlines: { expiring7: number; expiring30: number; noApplyLink: number };
   submissions: { pending: number };
   alerts: { pending: number; active: number; unsubscribed: number };
@@ -146,6 +152,37 @@ export function ContentHealthPanel() {
               {translation.englishOnly} published records have no Farsi/Pashto content yet — run the
               translation backfill to fill them in.
             </p>
+          )}
+          {translation.engine && (
+            <div className="mt-4 rounded-lg border border-border/60 bg-muted/20 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Persian-first engine (authoritative)
+              </p>
+              <div className="mt-2 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
+                <span>
+                  <strong className="tabular-nums">{translation.engine.faComplete}</strong>
+                  <span className="text-muted-foreground">/{translation.engine.faActive} Persian complete</span>
+                </span>
+                <span>
+                  <strong className="tabular-nums">{translation.engine.psComplete}</strong>
+                  <span className="text-muted-foreground"> Pashto complete</span>
+                </span>
+                <span>
+                  <strong className="tabular-nums">{translation.engine.psWaiting}</strong>
+                  <span className="text-muted-foreground"> Pashto waiting for Persian</span>
+                </span>
+                <span>
+                  <strong className={cn('tabular-nums', translation.engine.failedChunks > 0 && 'text-amber-600 dark:text-amber-400')}>
+                    {translation.engine.failedChunks}
+                  </strong>
+                  <span className="text-muted-foreground"> failed chunks (auto-retry daily)</span>
+                </span>
+                <span>
+                  <strong className="tabular-nums">{translation.engine.pendingChunks}</strong>
+                  <span className="text-muted-foreground"> chunks in queue</span>
+                </span>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

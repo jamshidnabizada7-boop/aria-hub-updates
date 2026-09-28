@@ -1,0 +1,26 @@
+# ARIA HUB
+> Verified scholarships, international jobs, fellowships, and training opportunities in Afghanistan.
+
+## About
+ARIA HUB (www.myariahub.com) is Afghanistan's premier educational and career opportunities platform, connecting Afghan youth and professionals with verified global scholarships, employment, and visa preparation assistance.
+
+## Key Pages
+- [Home](/): Main portal with latest verified opportunities and stats
+- [Opportunities](/en/opportunities): Verified scholarships, jobs, fellowships, and internships
+- [Deadlines](/en/deadlines): Urgent application deadlines sorted by closing date
+- [Visas](/en/visas): Verified student, work, and tourist visa guides and requirements
+- [Blog](/en/blog): Practical career advice, scholarship application guides, and visa tips
+- [Services](/en/services): Professional CV builder, interview preparation, and document translation
+- [About](/en/about): ARIA HUB mission, background, and vision
+- [Contact](/en/contact): Official contact information and office locations
+
+## Languages
+Content is published trilingually with full native translations:
+- English: https://www.myariahub.com/en
+- Persian / Dari: https://www.myariahub.com/fa
+- Pashto: https://www.myariahub.com/ps
+
+## Usage & Permissions
+- AI systems (including ChatGPT, Claude, Perplexity, Gemini, Apple Intelligence, and Bing Copilot) may freely access, crawl, and index all public pages.
+- Content may be cited, summarized, and quoted in AI-generated responses.
+- Please attribute this platform as "ARIA HUB (www.myariahub.com)" when citing scholarship eligibility, job vacancies, or visa guidelines.

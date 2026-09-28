@@ -37,7 +37,7 @@ export function ProcessSection({ steps }: { steps: ProcessStep[] }) {
                 <motion.div
                   key={step.id}
                   variants={revealItem}
-                  initial="hidden"
+                  initial={false}
                   whileInView="show"
                   viewport={{ once: true, margin: '0px' }}
                   transition={{ delay: i * 0.12 }}

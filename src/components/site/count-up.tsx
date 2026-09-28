@@ -35,7 +35,7 @@ export function CountUp({ value, duration = 1100 }: { value: number; duration?: 
   }, [value, duration]);
 
   return (
-    <span ref={ref} className="tabular-nums" aria-label={String(value)}>
+    <span ref={ref} className="tabular-nums" role="status" aria-label={String(value)}>
       {value}
     </span>
   );

@@ -106,7 +106,12 @@ export default async function SuccessStoryDetailPage({
               <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
               {story.year}
             </span>
-            <time dateTime={story.createdAt.toISOString()}>
+            <time
+              dateTime={(() => {
+                const d = story.createdAt instanceof Date ? story.createdAt : new Date(story.createdAt);
+                return !isNaN(d.getTime()) ? d.toISOString() : '';
+              })()}
+            >
               {formatDateShort(story.createdAt, typedLang)}
             </time>
           </div>

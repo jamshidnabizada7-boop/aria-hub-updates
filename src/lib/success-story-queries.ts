@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import { db } from '@/lib/db';
 import { getLocalizedContent } from '@/lib/i18n-content';
 import { translate } from '@/lib/i18n';
@@ -211,18 +212,26 @@ export async function getStoryFacets(lang: Lang): Promise<{
   }
 }
 
-/** Slim featured-story card for the homepage teaser (1 query, never throws). */
+const getCachedFeaturedStoryRow = unstable_cache(
+  async () => {
+    try {
+      return await db.successStory.findFirst({
+        where: { status: 'published' },
+        orderBy: [{ featured: 'desc' }, { createdAt: 'desc' }],
+        select: LIST_SELECT,
+      });
+    } catch {
+      return null;
+    }
+  },
+  ['featured-success-story-card-row'],
+  { revalidate: 600, tags: ['success-stories'] }
+);
+
+/** Slim featured-story card for the homepage teaser (1 cached query, never throws). */
 export async function getFeaturedStoryCard(lang: Lang): Promise<StoryCard | null> {
-  try {
-    const row = await db.successStory.findFirst({
-      where: { status: 'published' },
-      orderBy: [{ featured: 'desc' }, { createdAt: 'desc' }],
-      select: LIST_SELECT,
-    });
-    return row ? toCard(row, lang, 160) : null;
-  } catch {
-    return null;
-  }
+  const row = await getCachedFeaturedStoryRow();
+  return row ? toCard(row, lang, 160) : null;
 }
 
 const TYPE_LABEL_KEYS: Record<string, string> = {

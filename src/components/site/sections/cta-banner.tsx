@@ -25,7 +25,7 @@ export function CtaBannerSection({ banners }: { banners: CtaBannerType[] }) {
     <section id="cta-banner" className="relative py-14 sm:py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
+          initial={false}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '0px' }}
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
@@ -40,7 +40,7 @@ export function CtaBannerSection({ banners }: { banners: CtaBannerType[] }) {
 
           <div className="relative">
             <motion.h2
-              initial={{ opacity: 0, y: 20 }}
+              initial={false}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.1 }}
@@ -51,7 +51,7 @@ export function CtaBannerSection({ banners }: { banners: CtaBannerType[] }) {
 
             {subtitle && (
               <motion.p
-                initial={{ opacity: 0, y: 20 }}
+                initial={false}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: 0.2 }}
@@ -62,7 +62,7 @@ export function CtaBannerSection({ banners }: { banners: CtaBannerType[] }) {
             )}
 
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={false}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.3 }}

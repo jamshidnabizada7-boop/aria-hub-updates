@@ -25,27 +25,46 @@ export function toEasternDigits(value: string, lang: Lang): string {
   return value.replace(/[0-9]/g, (d) => digits[Number(d)]);
 }
 
+export function parseSafeDate(date: Date | string | number | null | undefined): Date | null {
+  if (!date) return null;
+  const d = date instanceof Date ? date : new Date(date);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+export function toSafeIsoString(date: Date | string | number | null | undefined): string {
+  const d = parseSafeDate(date);
+  return d ? d.toISOString() : '';
+}
+
 /** "15 October 2026" → «۱۵ اکتوبر ۲۰۲۶» (fa) / «۱۵ اکتوبر ۲۰۲۶» (ps). */
-export function formatGregorianLong(date: Date, lang: Lang): string {
+export function formatGregorianLong(date: Date | string | number | null | undefined, lang: Lang): string {
+  const d = parseSafeDate(date);
+  if (!d) return '';
   const months = GREGORIAN_MONTHS[lang === 'ps' ? 'ps' : 'fa'];
-  const text = `${date.getUTCDate()} ${months[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
+  const month = months[d.getUTCMonth()];
+  if (!month) return '';
+  const text = `${d.getUTCDate()} ${month} ${d.getUTCFullYear()}`;
   return toEasternDigits(text, lang);
 }
 
 /** Locale-aware long date for detail pages: "October 15, 2026" / «۱۵ اکتوبر ۲۰۲۶». */
-export function formatDateLong(date: Date, lang: Lang): string {
+export function formatDateLong(date: Date | string | number | null | undefined, lang: Lang): string {
   try {
-    return lang === 'en' ? format(date, 'MMMM d, yyyy') : formatGregorianLong(date, lang);
+    const d = parseSafeDate(date);
+    if (!d) return '';
+    return lang === 'en' ? format(d, 'MMMM d, yyyy') : formatGregorianLong(d, lang);
   } catch {
-    return date.toISOString().slice(0, 10);
+    return '';
   }
 }
 
 /** Locale-aware short date for cards/chips: "Oct 15, 2026" / «۱۵ اکتوبر ۲۰۲۶». */
-export function formatDateShort(date: Date, lang: Lang): string {
+export function formatDateShort(date: Date | string | number | null | undefined, lang: Lang): string {
   try {
-    return lang === 'en' ? format(date, 'MMM d, yyyy') : formatGregorianLong(date, lang);
+    const d = parseSafeDate(date);
+    if (!d) return '';
+    return lang === 'en' ? format(d, 'MMM d, yyyy') : formatGregorianLong(d, lang);
   } catch {
-    return date.toISOString().slice(0, 10);
+    return '';
   }
 }

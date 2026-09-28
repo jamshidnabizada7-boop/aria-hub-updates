@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentAdmin } from '@/lib/admin-auth';
+import { getTranslationCounters } from '@/lib/ai/translate-engine';
 
 /**
  * GET /api/admin/content-health
@@ -74,8 +75,9 @@ export async function GET() {
   const countByCategory = new Map(categoryCounts.map((c) => [c.categoryId, c._count.id]));
 
   // ── Translation coverage ──
-  // A record is "fully trilingual" when both title and AI summary exist in
-  // fa AND ps; "partial" when at least one non-English translation exists.
+  // Legacy quick view: a record is "fully trilingual" when both title and AI
+  // summary exist in fa AND ps. Authoritative per-language progress comes
+  // from the chunk engine's counters below (faStatus/psStatus + chunks).
   const all = await db.opportunity.findMany({
     where: { status: 'published' },
     select: { titleI18n: true, aiSummaryI18n: true },
@@ -93,6 +95,9 @@ export async function GET() {
     else if (faOk || psOk) partial++;
     else englishOnly++;
   }
+
+  // Chunk-engine truth: Persian-first progress + staged-chunk health.
+  const engineCounters = await getTranslationCounters().catch(() => null);
 
   const lastRunBySource = new Map<string, (typeof lastRuns)[number]>();
   for (const run of lastRuns) {
@@ -120,7 +125,7 @@ export async function GET() {
 
   return NextResponse.json({
     opportunities: { total, published, expired, draft },
-    translation: { trilingual, partial, englishOnly, publishedTotal: all.length },
+    translation: { trilingual, partial, englishOnly, publishedTotal: all.length, engine: engineCounters },
     deadlines: { expiring7, expiring30, noApplyLink },
     submissions: { pending: pendingSubmissions },
     alerts: {

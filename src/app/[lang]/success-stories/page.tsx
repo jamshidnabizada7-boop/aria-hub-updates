@@ -124,7 +124,7 @@ export default async function SuccessStoriesPage({
 
         {/* Stats band */}
         {facets.total > 0 && (
-          <div className="mb-10 grid grid-cols-3 gap-3 sm:max-w-lg" aria-label={t('stories.eyebrow')}>
+          <div className="mb-10 grid grid-cols-3 gap-3 sm:max-w-lg" role="region" aria-label={t('stories.eyebrow')}>
             <div className="rounded-xl border border-border/60 bg-card p-4 text-center shadow-xs">
               <p className="text-2xl font-black text-primary">{facets.total}</p>
               <p className="mt-0.5 text-xs text-muted-foreground">{t('stories.statStories', { n: facets.total })}</p>
@@ -246,7 +246,13 @@ export default async function SuccessStoriesPage({
                       <TypeIcon className="h-3.5 w-3.5" aria-hidden="true" />
                       {translateStoryType(story.storyType, typedLang)}
                     </span>
-                    <time dateTime={story.createdAt.toISOString()} className="text-xs text-muted-foreground">
+                    <time
+                      dateTime={(() => {
+                        const d = story.createdAt instanceof Date ? story.createdAt : new Date(story.createdAt);
+                        return !isNaN(d.getTime()) ? d.toISOString() : '';
+                      })()}
+                      className="text-xs text-muted-foreground"
+                    >
                       {formatDateShort(story.createdAt, typedLang)}
                     </time>
                   </div>

@@ -57,6 +57,9 @@ import {
 } from '@/lib/opportunity-queries';
 import { cn } from '@/lib/utils';
 import { ensureSeoDescription } from '@/lib/seo-metadata';
+import { parseDate } from '@/lib/import/utils';
+import { classifyApplyUrl, isRealApplyLink } from '@/lib/apply';
+import { buildJobPostingPayload } from '@/lib/seo-job-schema';
 
 const SITE_URL = 'https://www.myariahub.com';
 
@@ -92,6 +95,10 @@ interface ApplyInfo {
 
 function getApplyInfo(opp: OpportunityDetail): ApplyInfo {
   const applyUrl = opp.applyUrl?.trim() || null;
+  // Trust the persisted classification; fall back to render-time detection
+  // for rows imported before applyUrlType existed.
+  const urlType =
+    opp.applyUrlType ?? classifyApplyUrl(applyUrl, opp.sourceUrl, opp.originalUrl);
   const isMailto = !!applyUrl?.toLowerCase().startsWith('mailto:');
   const isHttp = !!applyUrl && /^https?:\/\//i.test(applyUrl);
 
@@ -101,7 +108,48 @@ function getApplyInfo(opp: OpportunityDetail): ApplyInfo {
 
   const email = isMailto ? applyUrl!.replace(/^mailto:/i, '').split('?')[0] : null;
 
-  return { primaryHref: applyUrl, primaryLabelKey, isMailto, email };
+  // Public rule: the Apply button only leads to a REAL application
+  // destination (email / form / direct portal) — never to the site the
+  // listing was scraped from. Fallback-only links render as guidance instead.
+  const primaryHref = isRealApplyLink(urlType) ? applyUrl : null;
+
+  return { primaryHref, primaryLabelKey, isMailto, email };
+}
+
+/**
+ * Compose the public LOCATION value from structured location rows:
+ *   "Kabul, Afghanistan" · "Balkh, Herat & Kabul — Afghanistan" ·
+ *   "Mazar-i-Sharif, Afghanistan" · plain "Afghanistan" when nothing
+ *   more specific is known. A province is never fabricated.
+ */
+function composeLocationValue(
+  locations: OpportunityDetail['locations'],
+  country: string | null,
+): string {
+  const provinces = Array.from(
+    new Set(locations.map((l) => l.province).filter((p): p is string => !!p)),
+  );
+  const cities = Array.from(
+    new Set(
+      locations
+        .map((l) => l.city)
+        .filter((c): c is string => !!c && !provinces.includes(c)),
+    ),
+  );
+  if (provinces.length === 1) {
+    return country ? `${provinces[0]}, ${country}` : provinces[0];
+  }
+  if (provinces.length > 1) {
+    const list =
+      provinces.length === 2
+        ? provinces.join(' & ')
+        : `${provinces.slice(0, -1).join(', ')} & ${provinces[provinces.length - 1]}`;
+    return country ? `${list} — ${country}` : list;
+  }
+  if (cities.length) {
+    return country ? `${cities.join(', ')}, ${country}` : cities.join(', ');
+  }
+  return country || '';
 }
 
 // ---------------------------------------------------------------------------
@@ -153,6 +201,20 @@ export async function generateMetadata({
       siteName: 'ARIA HUB',
       locale: lang,
       type: 'article',
+      images: [
+        {
+          url: opp.image || '/og-image.png',
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: pageTitle,
+      description,
+      images: [opp.image || '/og-image.png'],
     },
   };
 }
@@ -173,7 +235,10 @@ export default async function OpportunityDetailPage({
   const [data, opp] = await Promise.all([getSiteData(), getOpportunity(slug)]);
   if (!opp) notFound();
 
-  const related = await getRelatedOpportunities(opp, lang, 4);
+  const related = await getRelatedOpportunities(opp, lang, 4).catch((err) => {
+    console.error('[getRelatedOpportunities error]', err);
+    return [];
+  });
 
   // ---- localized content ----------------------------------------------------
   const title = localize(opp.title, opp.titleI18n as I18nJson, lang);
@@ -197,44 +262,62 @@ export default async function OpportunityDetailPage({
   const expired = isOpportunityExpired(opp.status, opp.deadline);
   const daysLeft = opp.deadline ? daysUntilDeadline(opp.deadline) : null;
   const apply = getApplyInfo(opp);
+  const locationValue = composeLocationValue(opp.locations, opp.country);
+  const structuredProvinces = Array.from(
+    new Set(opp.locations.map((l) => l.province).filter((p): p is string => !!p)),
+  );
   // ICS download only makes sense for a deadline still ahead of us.
   const showCalendar = !!opp.deadline && !expired;
 
-  const postedDateIso = opp.publishedDate || opp.createdAt.toISOString().slice(0, 10);
-  const postedDate = postedDateIso
-    ? formatDateLong(new Date(`${postedDateIso}T00:00:00Z`), lang)
-    : '';
+  let safePostedDate: Date | null = null;
+  if (opp.publishedDate) {
+    const parsedIso = parseDate(opp.publishedDate);
+    if (parsedIso) {
+      const d = new Date(`${parsedIso}T00:00:00Z`);
+      if (!isNaN(d.getTime())) safePostedDate = d;
+    } else {
+      const d = new Date(opp.publishedDate);
+      if (!isNaN(d.getTime())) safePostedDate = d;
+    }
+  }
+  if (!safePostedDate && opp.createdAt) {
+    const d = new Date(opp.createdAt);
+    if (!isNaN(d.getTime())) safePostedDate = d;
+  }
+
+  const postedDateIso = safePostedDate ? safePostedDate.toISOString().slice(0, 10) : '';
+  const postedDate = safePostedDate ? formatDateLong(safePostedDate, lang) : '';
 
   const pageUrl = `${SITE_URL}/${lang}/opportunities/${opp.slug}`;
 
   // ---- JSON-LD (JobPosting + BreadcrumbList) --------------------------------
-  const jsonLd: Record<string, unknown> = {
-    '@context': 'https://schema.org',
-    '@type': 'JobPosting',
+  const jsonLdDescription =
+    summary ||
+    renderListingContent(rawDescription).replace(/<[^>]+>/g, ' ').slice(0, 300).trim() ||
+    title ||
+    'Opportunity details on ARIA HUB';
+
+  const jsonLd = buildJobPostingPayload({
     title,
-    description: summary || renderListingContent(rawDescription).replace(/<[^>]+>/g, ' ').slice(0, 300),
-    url: pageUrl,
-    identifier: { '@type': 'PropertyValue', name: title, value: opp.slug },
-    directApply: !!apply.primaryHref,
-  };
-  if (organization) jsonLd.hiringOrganization = { '@type': 'Organization', name: organization };
-  if (postedDateIso) jsonLd.datePosted = postedDateIso;
-  if (opp.deadline) jsonLd.validThrough = opp.deadline.toISOString();
-  if (opp.country) {
-    jsonLd.jobLocation = {
-      '@type': 'Place',
-      address: { '@type': 'PostalAddress', addressCountry: opp.country },
-    };
-  }
-  if (opp.jobType) {
-    jsonLd.employmentType = opp.jobType.toUpperCase().includes('FULL')
-      ? 'FULL_TIME'
-      : opp.jobType.toUpperCase().includes('PART')
-        ? 'PART_TIME'
-        : opp.jobType.toUpperCase().includes('INTERNSHIP')
-          ? 'INTERN'
-          : 'CONTRACTOR';
-  }
+    slug: opp.slug,
+    description: jsonLdDescription,
+    organization,
+    country: opp.country,
+    provinces: structuredProvinces,
+    jobType: opp.jobType,
+    salary: salary || opp.salary,
+    deadline: opp.deadline,
+    publishedDate: opp.publishedDate,
+    createdAt: opp.createdAt,
+    website: opp.website,
+    applyUrl: apply.primaryHref,
+    logoUrl: opp.logoUrl,
+    sourceName: opp.sourceName,
+    siteUrl: SITE_URL,
+    lang,
+    extractedData: opp.extractedData as Record<string, unknown> | null,
+    status: opp.status,
+  });
 
   const breadcrumbLd = {
     '@context': 'https://schema.org',
@@ -274,7 +357,7 @@ export default async function OpportunityDetailPage({
         : 'text-primary';
   const keyFacts: { icon: LucideIcon; label: string; value: string; emphasis?: boolean; href?: string }[] = [
     { icon: Building2, label: t('opportunities.organization'), value: organization || '' },
-    { icon: MapPin, label: t('opportunities.location'), value: opp.country || '' },
+    { icon: MapPin, label: t('opportunities.location'), value: locationValue },
     { icon: Briefcase, label: t('detail.jobType'), value: jobType || '' },
     { icon: Banknote, label: t('opportunities.salary'), value: salary || '' },
     { icon: GraduationCap, label: t('opportunities.education'), value: educationReq || '' },
@@ -637,9 +720,13 @@ export default async function OpportunityDetailPage({
                   <ul className="mt-3 space-y-1.5">
                     {related.slice(0, 4).map((item) => {
                       // Urgency chip: days left when ≤14, else localized short date.
+                      const itemDeadline = item.deadline instanceof Date
+                        ? item.deadline
+                        : item.deadline ? new Date(item.deadline) : null;
+                      const hasValidDl = itemDeadline && !isNaN(itemDeadline.getTime());
                       const dl =
-                        item.deadline && item.deadline.getTime() >= Date.now() - 86400000
-                          ? Math.max(0, Math.ceil((item.deadline.getTime() - Date.now()) / 86400000))
+                        hasValidDl && itemDeadline.getTime() >= Date.now() - 86400000
+                          ? Math.max(0, Math.ceil((itemDeadline.getTime() - Date.now()) / 86400000))
                           : null;
                       const urgent = dl !== null && dl <= 7;
                       return (
@@ -662,7 +749,7 @@ export default async function OpportunityDetailPage({
                                     : 'bg-muted text-muted-foreground'
                                 }`}
                               >
-                                {dl <= 14 ? t('opportunities.daysLeft', { count: dl }) : formatDateShort(item.deadline!, lang)}
+                                {dl <= 14 ? t('opportunities.daysLeft', { count: dl }) : formatDateShort(itemDeadline, lang)}
                               </span>
                             )}
                           </Link>

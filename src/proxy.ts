@@ -84,7 +84,7 @@ export function proxy(req: NextRequest) {
     if (heal) {
       const url = req.nextUrl.clone();
       url.pathname = heal;
-      const redirect = NextResponse.redirect(url, 307);
+      const redirect = NextResponse.redirect(url, 308);
       redirect.cookies.set(COOKIE_NAME, heal.split('/')[1], { path: '/', maxAge: ONE_YEAR, sameSite: 'lax' });
       return redirect;
     }
@@ -98,19 +98,22 @@ export function proxy(req: NextRequest) {
 
   // No language prefix: pick one (cookie > Accept-Language > site default fa)
   // and redirect, preserving the query string.
+  // Return 308 Permanent Redirect so search engine bots and crawlers properly
+  // transfer PageRank and don't flag temporary (307) redirects.
   const cookieLang = req.cookies.get(COOKIE_NAME)?.value;
-  const lang = LANGS.includes(cookieLang ?? '')
+  const hasUserCookie = LANGS.includes(cookieLang ?? '');
+  const lang = hasUserCookie
     ? cookieLang
     : (matchAcceptLanguage(req.headers.get('accept-language') ?? '') ?? 'fa');
 
   const url = req.nextUrl.clone();
   url.pathname = `/${lang}${pathname === '/' ? '' : pathname}`;
-  return NextResponse.redirect(url, 307);
+  return NextResponse.redirect(url, 308);
 }
 
 export const config = {
-  // Exclude API routes, Next internals, admin, and well-known static files.
+  // Exclude API routes, Next internals, admin, and well-known static files (llms\.txt, llms-full\.txt).
   matcher: [
-    '/((?!api|_next|admin|robots\\.txt|sitemap\\.xml|ads\\.txt|images|uploads|favicon\\.ico|_rsc|__nextjs).*)',
+    '/((?!api|_next|admin|robots\\.txt|sitemap\\.xml|ads\\.txt|llms\\.txt|llms-full\\.txt|images|uploads|favicon\\.ico|_rsc|__nextjs).*)',
   ],
 };

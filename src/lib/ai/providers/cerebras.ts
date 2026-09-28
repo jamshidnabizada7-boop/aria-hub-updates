@@ -7,7 +7,7 @@
 
 import type { AIProvider, RewriteResult, SEOResult } from '../provider';
 import { REWRITE_SYSTEM, translateSystem, seoSystem, categorizeSystem } from '../prompts';
-import { parseJSON, retry } from './helpers';
+import { parseJSON, retry, fetchWithTimeout } from './helpers';
 
 const MODEL = process.env.CEREBRAS_MODEL || 'qwen-3.8-27b'; // verified in Cerebras's catalog 2026-09-13
 const API_BASE = 'https://api.cerebras.ai/v1';
@@ -75,7 +75,7 @@ export class CerebrasProvider implements AIProvider {
     const apiKey = process.env.CEREBRAS_API_KEY;
     if (!apiKey) throw new Error('CEREBRAS_API_KEY not configured');
 
-    const response = await fetch(`${API_BASE}/chat/completions`, {
+    const response = await fetchWithTimeout(`${API_BASE}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

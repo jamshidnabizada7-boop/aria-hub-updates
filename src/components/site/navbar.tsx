@@ -154,7 +154,7 @@ function MobileMenuItem({ item, depth = 0, onNavigate }: { item: MenuItem; depth
         href={href}
         target={item.openInNewTab ? '_blank' : undefined}
         onClick={() => onNavigate?.()}
-        className="block rounded-xl px-3 py-2.5 text-sm font-medium text-foreground/80 transition-colors hover:bg-accent"
+        className="flex min-h-[44px] items-center rounded-xl px-3 py-2.5 text-sm font-medium text-foreground/80 transition-colors hover:bg-accent"
         style={{ paddingInlineStart: `${depth * 12 + 12}px` }}
       >
         {label}
@@ -165,7 +165,7 @@ function MobileMenuItem({ item, depth = 0, onNavigate }: { item: MenuItem; depth
     <div>
       <button
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-foreground/80 transition-colors hover:bg-accent"
+        className="flex min-h-[44px] w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-foreground/80 transition-colors hover:bg-accent"
         style={{ paddingInlineStart: `${depth * 12 + 12}px` }}
       >
         {label}
@@ -312,7 +312,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-9 gap-2 rounded-xl px-2.5"
+                className="h-10 min-h-[44px] min-w-[44px] gap-2 rounded-xl px-2.5 sm:h-9"
                 onClick={() => setSearchOpen(true)}
                 aria-label="Search"
               >
@@ -325,7 +325,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
               {/* Language switcher */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="h-9 gap-1.5 rounded-xl px-2.5" aria-label={t('lang.switch')}>
+                  <Button variant="ghost" className="h-10 min-h-[44px] min-w-[44px] gap-1.5 rounded-xl px-2.5 sm:h-9" aria-label={t('lang.switch')}>
                     <Globe className="h-4 w-4" />
                     <span className="hidden text-xs font-semibold sm:inline">{(currentLang?.code || 'en').toUpperCase()}</span>
                   </Button>
@@ -336,7 +336,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
                     <DropdownMenuItem
                       key={l.code}
                       onClick={() => handleSwitchLang(l.code)}
-                      className={cn('justify-between', l.code === code && 'bg-accent')}
+                      className={cn('justify-between min-h-[44px]', l.code === code && 'bg-accent')}
                     >
                       <span className="flex items-center gap-2">
                         <span>{l.flag}</span>
@@ -352,7 +352,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 rounded-xl"
+                className="h-10 w-10 min-h-[44px] min-w-[44px] rounded-xl sm:h-9 sm:w-9"
                 onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
                 aria-label={t('theme.toggle')}
               >
@@ -371,7 +371,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
               {/* Mobile menu */}
               <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl lg:hidden" aria-label={t('nav.menu')}>
+                  <Button variant="ghost" size="icon" className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl lg:hidden" aria-label={t('nav.menu')}>
                     <Menu className="h-5 w-5" />
                   </Button>
                 </SheetTrigger>
@@ -379,7 +379,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
                   <SheetTitle className="sr-only">{t('nav.menu')}</SheetTitle>
                   <div className="flex items-center justify-between border-b border-border/60 px-5 py-4">
                     <span className="text-lg font-bold">{siteName}</span>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setMobileOpen(false)}>
+                    <Button variant="ghost" size="icon" className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl" onClick={() => setMobileOpen(false)} aria-label={t('common.close') || 'Close'}>
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
@@ -389,7 +389,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
                     ))}
                   </nav>
                   <div className="p-4">
-                    <Button asChild className="w-full rounded-xl bg-gradient-to-r from-primary to-chart-2">
+                    <Button asChild className="min-h-[44px] w-full rounded-xl bg-gradient-to-r from-primary to-chart-2">
                       <a href={hrefFn('/contact')} onClick={() => setMobileOpen(false)}>{t('nav.getStarted')}</a>
                     </Button>
                   </div>

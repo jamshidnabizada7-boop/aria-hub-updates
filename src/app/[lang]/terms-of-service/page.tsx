@@ -7,6 +7,12 @@ import { PageShell } from '@/components/site/page-shell';
 import { isLang, type Lang } from '@/lib/lang-route';
 import { getPageSeo } from '@/lib/seo-metadata';
 
+export const revalidate = 1800;
+
+export function generateStaticParams() {
+  return [{ lang: 'en' }, { lang: 'fa' }, { lang: 'ps' }];
+}
+
 export async function generateMetadata({
   params,
 }: {

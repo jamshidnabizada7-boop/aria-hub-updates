@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { cache } from 'react';
+import { unstable_cache } from 'next/cache';
 import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
 import { getLocalizedContent } from '@/lib/i18n-content';
@@ -26,27 +28,38 @@ const FALLBACK_LANGUAGES: Language[] = [
   { code: 'ps', name: 'Pashto', nativeName: 'پښتو', direction: 'rtl', flag: '🇦🇫', isDefault: false, enabled: true, order: 3, id: 'fallback-ps' },
 ];
 
-async function getLanguages(): Promise<Language[]> {
-  try {
-    const languages = await db.language.findMany({
-      where: { enabled: true },
-      orderBy: { order: 'asc' },
-    });
-    if (languages && languages.length > 0) return languages as unknown as Language[];
-  } catch {
-    // fall through to static list
-  }
-  return FALLBACK_LANGUAGES;
-}
+const getCachedLanguages = unstable_cache(
+  async (): Promise<Language[]> => {
+    try {
+      const languages = await db.language.findMany({
+        where: { enabled: true },
+        orderBy: { order: 'asc' },
+      });
+      if (languages && languages.length > 0) return languages as unknown as Language[];
+    } catch {
+      // fall through to static list
+    }
+    return FALLBACK_LANGUAGES;
+  },
+  ['layout-languages-list'],
+  { revalidate: 3600, tags: ['languages'] }
+);
 
-async function getSettings(): Promise<SiteSettings | null> {
-  try {
-    const settings = await db.siteSetting.findFirst();
-    return (settings as unknown as SiteSettings) || null;
-  } catch {
-    return null;
-  }
-}
+const getCachedSettings = unstable_cache(
+  async (): Promise<SiteSettings | null> => {
+    try {
+      const settings = await db.siteSetting.findFirst();
+      return (settings as unknown as SiteSettings) || null;
+    } catch {
+      return null;
+    }
+  },
+  ['layout-site-settings'],
+  { revalidate: 600, tags: ['site-settings'] }
+);
+
+const getLanguages = cache(() => getCachedLanguages());
+const getSettings = cache(() => getCachedSettings());
 
 const SEO_TITLES: Record<string, string> = {
   en: 'ARIA HUB — Scholarships, Jobs & Opportunities in Afghanistan',
@@ -55,10 +68,14 @@ const SEO_TITLES: Record<string, string> = {
 };
 
 const SEO_DESCRIPTIONS: Record<string, string> = {
-  en: 'Discover verified scholarships, international jobs, fellowships, training programs, and career opportunities for Afghans with updates in Dari, Pashto, and English.',
-  fa: 'مرجع معتبر جدیدترین بورسیه‌های تحصیلی، فرصت‌های شغلی، کارآموزی و برنامه‌های بین‌المللی برای افغان‌ها — خلاصه‌شده و ترجمه‌شده به فارسی، پشتو و انگلیسی.',
-  ps: 'د افغانانو او نړیوالو غوښتونکو لپاره باوري تحصیلي بورسونه، کاري فرصتونه، انٹرنشیپونه او تحصیلي لارښوونې — په پښتو، دري او انګلیسي ژبو په آریا هاب کې.',
+  en: 'Discover verified scholarships, jobs, fellowships, and opportunities in Afghanistan with updates in English, Dari, and Pashto.',
+  fa: 'مرجع معتبر جدیدترین بورسیه‌های تحصیلی، وظایف و فرصت‌های آموزشی برای افغان‌ها به فارسی، پشتو و انگلیسی در آریا هاب.',
+  ps: 'د افغانانو لپاره باوري تحصیلي بورسونه، کاري فرصتونه، انٹرنشیپونه او دندې په پښتو، دري او انګلیسي په آریا هاب کې ومومئ.',
 };
+
+export function generateStaticParams() {
+  return [{ lang: 'en' }, { lang: 'fa' }, { lang: 'ps' }];
+}
 
 export async function generateMetadata({
   params,
@@ -96,6 +113,20 @@ export async function generateMetadata({
       siteName,
       locale: valid,
       type: 'website',
+      images: [
+        {
+          url: 'https://www.myariahub.com/og-image.png',
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: ['https://www.myariahub.com/og-image.png'],
     },
   };
 }
@@ -114,16 +145,20 @@ export default async function LangLayout({
 
   return (
     <LangProvider lang={lang}>
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `document.documentElement.lang="${lang}";document.documentElement.dir="${lang === 'en' ? 'ltr' : 'rtl'}";`,
+        }}
+      />
       <LangSync lang={lang} languages={languages} />
       {/* AdSense loads ONLY on public pages — /admin (outside this layout) is
           excluded so the dashboard never serves ads (invalid-impression risk).
-          A raw <script async> is used (NOT next/script): AdSense rejects head
-          tags carrying the data-nscript attribute next/script injects. */}
+          Loaded asynchronously during browser idle time so it never blocks FCP/LCP. */}
       <meta name="google-adsense-account" content="ca-pub-5960471686203476" />
       <script
-        async
-        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5960471686203476"
-        crossOrigin="anonymous"
+        dangerouslySetInnerHTML={{
+          __html: `(function(){window.adsbygoogle=window.adsbygoogle||[];function loadAdSense(){if(document.getElementById('adsbygoogle-js'))return;var s=document.createElement('script');s.id='adsbygoogle-js';s.async=true;s.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5960471686203476';s.crossOrigin='anonymous';document.head.appendChild(s);}function defer(fn){if('requestIdleCallback' in window){window.requestIdleCallback(fn,{timeout:1500});}else{setTimeout(fn,1000);}}if(document.readyState==='complete'){defer(loadAdSense);}else{window.addEventListener('load',function(){defer(loadAdSense);});}})();`,
+        }}
       />
       {children}
     </LangProvider>

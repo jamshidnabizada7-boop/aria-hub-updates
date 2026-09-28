@@ -23,8 +23,8 @@ import { cn } from '@/lib/utils';
 const SORTS: OpportunitySort[] = ['newest', 'deadline', 'title'];
 const PER_PAGE = 12;
 
-// New records land via periodic imports — keep the listing at most 60s stale.
-export const revalidate = 60;
+// New records land via periodic imports — keep the listing at most 300s stale.
+export const revalidate = 300;
 
 const OPPORTUNITIES_TITLES: Record<Lang, string> = {
   en: 'Latest Scholarships, Jobs & Opportunities | ARIA HUB',
@@ -91,7 +91,10 @@ export default async function OpportunitiesPage({
   // ---- filters from the URL -------------------------------------------------
   const category = firstParam(sp.category) || 'all';
   const q = (firstParam(sp.q) || '').trim();
-  const location = firstParam(sp.location) || 'all';
+  // `country` + `province` are the canonical filters. Legacy `location` URLs
+  // (which were always country filters) keep working.
+  const country = firstParam(sp.country) || firstParam(sp.location) || 'all';
+  const province = (firstParam(sp.province) || '').trim();
   const deadlineParam = firstParam(sp.deadline);
   const deadlineDays = ['7', '30', '90'].includes(deadlineParam || '')
     ? Number(deadlineParam)
@@ -105,10 +108,16 @@ export default async function OpportunitiesPage({
   const page = Math.max(1, parseInt(firstParam(sp.page) || '1', 10) || 1);
 
   const [list, facets, spotlightId] = await Promise.all([
-    listOpportunities({ lang, category, q, location, deadlineDays, sort, page, perPage: PER_PAGE, includeExpired }),
+    listOpportunities({ lang, category, q, country, province, deadlineDays, sort, page, perPage: PER_PAGE, includeExpired }),
     getFacets(lang),
     getDailySpotlightId(),
   ]);
+
+  // Province options for the selected country (or all when no country picked).
+  const provinceOptions = country !== 'all'
+    ? (facets.provinces || []).filter((p) => p.country === country)
+    : (facets.provinces || []);
+  const showProvinceFilter = provinceOptions.length > 0;
 
   // A page number beyond the last page (e.g. after filters changed) —
   // fall back to the last page so the user always sees results.
@@ -118,7 +127,8 @@ export default async function OpportunitiesPage({
       lang,
       category,
       q,
-      location,
+      country,
+      province,
       deadlineDays,
       sort,
       page: list.totalPages,
@@ -135,7 +145,8 @@ export default async function OpportunitiesPage({
     const merged: Record<string, string | null> = {
       category: category !== 'all' ? category : null,
       q: q || null,
-      location: location !== 'all' ? location : null,
+      country: country !== 'all' ? country : null,
+      province: province || null,
       deadline: deadlineDays ? String(deadlineDays) : null,
       sort: sort !== 'newest' ? sort : null,
       show: includeExpired ? showParam || 'expired' : null,
@@ -341,7 +352,8 @@ export default async function OpportunitiesPage({
                 >
                   {category !== 'all' && <input type="hidden" name="category" value={category} />}
                   {q && <input type="hidden" name="q" value={q} />}
-                  {location !== 'all' && <input type="hidden" name="location" value={location} />}
+                  {country !== 'all' && <input type="hidden" name="country" value={country} />}
+                  {province && <input type="hidden" name="province" value={province} />}
                   {deadlineDays && <input type="hidden" name="deadline" value={String(deadlineDays)} />}
                   {includeExpired && <input type="hidden" name="show" value={showParam || 'expired'} />}
                   <div className="relative flex-1 lg:w-44">
@@ -398,11 +410,11 @@ export default async function OpportunitiesPage({
               />
             </div>
 
-            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div className="relative">
                 <select
-                  name="location"
-                  defaultValue={location}
+                  name="country"
+                  defaultValue={country}
                   aria-label={t('opportunities.location')}
                   className={selectClasses}
                 >
@@ -418,6 +430,28 @@ export default async function OpportunitiesPage({
                   aria-hidden="true"
                 />
               </div>
+
+              {showProvinceFilter && (
+                <div className="relative">
+                  <select
+                    name="province"
+                    defaultValue={province}
+                    aria-label={t('opportunities.province')}
+                    className={selectClasses}
+                  >
+                    <option value="">{t('opportunities.allProvinces')}</option>
+                    {provinceOptions.map((p) => (
+                      <option key={p.name} value={p.name}>
+                        {p.name} · {p.count}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    className="pointer-events-none absolute inset-y-0 end-2.5 my-auto h-4 w-4 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                </div>
+              )}
 
               <div className="relative">
                 <select
@@ -460,7 +494,7 @@ export default async function OpportunitiesPage({
             >
               {includeExpired ? t('opportunities.activeOnly') : t('opportunities.showExpired')}
             </Link>
-            {(q || category !== 'all' || location !== 'all' || deadlineDays || includeExpired) && (
+            {(q || category !== 'all' || country !== 'all' || province || deadlineDays || includeExpired) && (
               <Link
                 href={`/${lang}/opportunities`}
                 className="inline-flex min-h-[44px] items-center gap-1 rounded-full px-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground sm:min-h-0"
@@ -505,7 +539,7 @@ export default async function OpportunitiesPage({
             </div>
           ) : (
             <OpportunityFeed
-              key={[category, q, location, deadlineDays ?? '', sort, showParam ?? '', currentPage].join('|')}
+              key={[category, q, country, province, deadlineDays ?? '', sort, showParam ?? '', currentPage].join('|')}
               lang={lang}
               initialItems={effectiveList.items}
               initialTotalPages={effectiveList.totalPages}
@@ -513,7 +547,8 @@ export default async function OpportunitiesPage({
               query={{
                 category,
                 q,
-                location,
+                country,
+                province,
                 deadline: deadlineDays ? String(deadlineDays) : '',
                 sort,
                 show: includeExpired ? showParam || 'expired' : '',

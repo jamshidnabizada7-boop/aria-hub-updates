@@ -56,6 +56,8 @@ export interface Facets {
   categories: CategoryFacet[];
   /** Top countries by active-opportunity count (label + count for filters). */
   locations: { name: string; count: number }[];
+  /** Provinces/admin-1 areas with active-opportunity counts, per country. */
+  provinces: { name: string; count: number; country: string | null }[];
   /** Total active (published + unexpired) opportunities across all categories. */
   totalActive: number;
 }
@@ -64,7 +66,16 @@ export interface ListOpportunitiesOptions {
   lang: Lang;
   category?: string; // category slug, or 'all'
   q?: string;
-  location?: string; // exact country value, or 'all'
+  /** Country filter (canonical country value), or 'all'. */
+  country?: string;
+  /**
+   * Legacy parameter that used to be the ONLY location filter — it actually
+   * filtered by country. Still accepted and mapped onto `country` so old
+   * URLs keep working. New code should pass `country`.
+   */
+  location?: string;
+  /** Province/admin-1 filter (canonical province value, e.g. 'Kabul'). */
+  province?: string;
   /** Only opportunities whose deadline lands within N days (7/30/90). */
   deadlineDays?: number;
   /** Exact sourceName filter, or 'all'. */
@@ -88,20 +99,25 @@ export function startOfTodayUtc(): Date {
 }
 
 /** Whole days between "today" (UTC midnight) and the deadline. */
-export function daysUntilDeadline(deadline: Date): number {
+export function daysUntilDeadline(deadline: Date | string | number | null | undefined): number {
+  if (!deadline) return 0;
+  const d = deadline instanceof Date ? deadline : new Date(deadline);
+  if (isNaN(d.getTime())) return 0;
   const today = startOfTodayUtc();
-  return Math.round((deadline.getTime() - today.getTime()) / 86_400_000);
+  return Math.round((d.getTime() - today.getTime()) / 86_400_000);
 }
 
 /** status expired, or deadline before UTC midnight of today. */
 export function isOpportunityExpired(
-  status: string,
-  deadline: Date | null
+  status: string | null | undefined,
+  deadline: Date | string | number | null | undefined
 ): boolean {
   if (status === 'expired') return true;
   if (!deadline) return false;
+  const d = deadline instanceof Date ? deadline : new Date(deadline);
+  if (isNaN(d.getTime())) return false;
   const today = startOfTodayUtc();
-  return deadline.getTime() < today.getTime();
+  return d.getTime() < today.getTime();
 }
 
 /** Local copy of the import-utils tag stripper (keeps this module browser-safe). */
@@ -173,13 +189,14 @@ export function categoryLabel(
 
 /** Detail-page summary (aiSummary fallback chain, capped at `max`). */
 export function resolveSummary(
-  opportunity: { aiSummary: string | null; aiSummaryI18n: unknown },
+  opportunity: { aiSummary?: string | null; aiSummaryI18n?: unknown } | null | undefined,
   lang: Lang,
   max = 155
 ): string {
+  if (!opportunity) return '';
   return cleanSummary(
     getLocalizedContent(
-      opportunity.aiSummary,
+      opportunity.aiSummary ?? null,
       opportunity.aiSummaryI18n as Record<string, string> | null,
       lang
     ),

@@ -14,7 +14,7 @@
 import os from 'node:os';
 import { db } from '@/lib/db';
 import { runImport } from '@/lib/import/orchestrator';
-import { translateNextBatch } from '@/lib/ai/translate-core';
+// (translation runs through @/lib/ai/translate-engine — see stepTranslate)
 import {
   getState, patchState, buildTodaysQueue, renderDueQueue, publishDueQueue,
 } from '@/lib/social/publisher';
@@ -119,13 +119,17 @@ async function stepTranslate(state: Awaited<ReturnType<typeof getState>>, errors
   }
   const batch = Math.min(8, Math.max(1, state.translateBatch ?? 3));
   try {
-    const r = await translateNextBatch(batch);
+    // Chunked, atomic, Persian-first engine (see src/lib/ai/translate-engine.ts).
+    const { processBatch } = await import('@/lib/ai/translate-engine');
+    const r = await processBatch(batch);
     if (r.rateLimited) {
       await patchState({ translateBackoffUntil: new Date(Date.now() + TRANSLATE_BACKOFF_MIN * 60000).toISOString() });
     } else if (state.translateBackoffUntil) {
       await patchState({ translateBackoffUntil: null });
     }
-    return { ...r, skipped: false };
+    // Failures are tracked per-chunk in TranslationChunk + row progress —
+    // the tick-level counter only reports rate-limit stops.
+    return { processed: r.processed, failed: 0, rateLimited: r.rateLimited, skipped: false };
   } catch (e) {
     const msg = (e instanceof Error ? e.message : String(e)).slice(0, 160);
     errors.push(`translate: ${msg}`);

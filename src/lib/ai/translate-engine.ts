@@ -1,0 +1,661 @@
+/**
+ * Chunked, atomic, Persian-first translation engine.
+ *
+ * Replaces the old approach (one capped LLM call per row; failed chunks
+ * silently dropped; "complete" declared without proof) with:
+ *
+ *  1. DETERMINISTIC CHUNKING — every source-present field is split into
+ *     ~900-char chunks. NOTHING is ever sliced off and discarded: the whole
+ *     source is always translated.
+ *  2. STAGED CHUNKS — every chunk lives in TranslationChunk with a source
+ *     hash, so a crashed/hung/rate-limited run resumes exactly where it
+ *     stopped, and changed sources re-translate automatically.
+ *  3. ATOMIC PUBLISH — a language's public i18n fields are committed in ONE
+ *     transaction only when 100% of that language's chunks succeeded and
+ *     validated. A failed chunk can never vanish from a published
+ *     translation; until the language is complete the public site shows the
+ *     previous translation or English fallback.
+ *  4. PERSIAN-FIRST — Pashto work only starts when faStatus === 'complete'.
+ *  5. FREE-LLM ADAPTIVE — single-language single-chunk requests keep outputs
+ *     small (fewer truncations); 429s bubble up so callers back off; failed
+ *     chunks are retried with a per-chunk attempt cap and a daily automatic
+ *     retry reset, so a rate-limited day never permanently loses content.
+ */
+import { createHash } from 'node:crypto';
+import { db } from '@/lib/db';
+import { getProviderSlots, chatWithFailover } from '@/lib/ai/failover';
+import {
+  chunkText, isSymbolic, parseChunkReply, validateTranslation,
+  FIELD_ORDER, type FieldKey,
+} from '@/lib/ai/translate-chunks';
+import type { Prisma } from '@prisma/client';
+
+// ─── configuration ───────────────────────────────────────────────────────────
+
+/** Long fields are split into chunks of this size (a chunk SIZE, not a cap). */
+const CHUNK_SIZE = 900;
+/** Per-chunk retry budget before the chunk is parked as failed. */
+const MAX_ATTEMPTS = 8;
+/** Parked failed chunks are automatically retried after this long. */
+const FAILED_RETRY_MS = 24 * 60 * 60 * 1000;
+
+const isRateLimitMsg = (msg: string): boolean =>
+  /\b429\b|rate.?limit|quota|too many requests/i.test(msg);
+
+// ─── source field extraction ─────────────────────────────────────────────────
+
+type TranslateRow = {
+  id: string;
+  language: string | null;
+  title: string; titleI18n: unknown;
+  description: string; descriptionI18n: unknown;
+  aiSummary: string | null; aiSummaryI18n: unknown;
+  eligibility: string | null; eligibilityI18n: unknown;
+  benefits: string | null; benefitsI18n: unknown;
+  responsibilities: string | null; responsibilitiesI18n: unknown;
+  requirements: string | null; requirementsI18n: unknown;
+  guidelines: string | null; guidelinesI18n: unknown;
+  jobType: string | null; jobTypeI18n: unknown;
+  salary: string | null; salaryI18n: unknown;
+  educationReq: string | null; educationReqI18n: unknown;
+  experience: string | null; experienceI18n: unknown;
+};
+
+const ROW_SELECT = {
+  id: true, language: true,
+  title: true, titleI18n: true,
+  description: true, descriptionI18n: true,
+  aiSummary: true, aiSummaryI18n: true,
+  eligibility: true, eligibilityI18n: true,
+  benefits: true, benefitsI18n: true,
+  responsibilities: true, responsibilitiesI18n: true,
+  requirements: true, requirementsI18n: true,
+  guidelines: true, guidelinesI18n: true,
+  jobType: true, jobTypeI18n: true,
+  salary: true, salaryI18n: true,
+  educationReq: true, educationReqI18n: true,
+  experience: true, experienceI18n: true,
+} satisfies Prisma.OpportunitySelect;
+
+/** English/base source text of one field (i18n.en wins over the base column). */
+function sourceOf(row: TranslateRow, field: FieldKey): string {
+  const base = (row as unknown as Record<string, unknown>)[field];
+  const i18n = (row as unknown as Record<string, unknown>)[`${field}I18n`];
+  if (i18n && typeof i18n === 'object') {
+    const en = (i18n as Record<string, unknown>).en;
+    if (typeof en === 'string' && en.trim()) return en;
+  }
+  return typeof base === 'string' ? base : '';
+}
+
+/** "PR-500/month" style values (no letters at all) need no translation. */
+// (isSymbolic lives in translate-chunks.ts)
+
+interface FieldPlan {
+  field: FieldKey;
+  chunks: { index: number; total: number; text: string; hash: string }[];
+}
+
+function sha256(s: string): string {
+  return createHash('sha256').update(s).digest('hex');
+}
+
+/** Chunk every source-present field. Deterministic given the row content. */
+function planFields(row: TranslateRow): FieldPlan[] {
+  const plans: FieldPlan[] = [];
+  for (const field of FIELD_ORDER) {
+    const raw = sourceOf(row, field);
+    const text = raw.trim();
+    if (!text || isSymbolic(text)) continue;
+    const chunks = chunkText(text);
+    if (!chunks.length) continue;
+    plans.push({
+      field,
+      chunks: chunks.map((c, i) => ({ index: i, total: chunks.length, text: c, hash: sha256(c) })),
+    });
+  }
+  return plans;
+}
+
+function sourceHashOf(plans: FieldPlan[]): string {
+  return sha256(plans.flatMap((p) => p.chunks.map((c) => `${p.field}:${c.hash}`)).join('|'));
+}
+
+// ─── prompts / validation ────────────────────────────────────────────────────
+
+const LANG_SYSTEM: Record<'fa' | 'ps', string> = {
+  fa: `You are a professional translator for ARIA HUB, an Afghan opportunities portal (jobs, scholarships, visas, interviews).
+Translate the given text into natural, fluent, professional Persian/Farsi (فارسی). Correct RTL script.
+Rules:
+- Translate MEANING faithfully. NEVER summarize, NEVER omit lists, details or paragraphs. NEVER invent facts.
+- Mirror the source line structure ("\\n", "- " bullets).
+- Keep URLs, emails, phone numbers, numerals, dates, org/brand names (UNICEF, IELTS, TOEFL, Chevening) and technical terms exactly as-is.
+- Respond ONLY with strict JSON — no markdown fences, no commentary: {"t":"<translation>"}`,
+  ps: `You are a professional translator for ARIA HUB, an Afghan opportunities portal (jobs, scholarships, visas, interviews).
+Translate the given text into natural, fluent, professional Pashto (پښتو). Correct RTL script.
+Rules:
+- Translate MEANING faithfully. NEVER summarize, NEVER omit lists, details or paragraphs. NEVER invent facts.
+- Mirror the source line structure ("\\n", "- " bullets).
+- Keep URLs, emails, phone numbers, numerals, dates, org/brand names (UNICEF, IELTS, TOEFL, Chevening) and technical terms exactly as-is.
+- Respond ONLY with strict JSON — no markdown fences, no commentary: {"t":"<translation>"}`,
+};
+
+// ─── chunk plan sync ─────────────────────────────────────────────────────────
+
+async function syncPlan(rowId: string, lang: 'fa' | 'ps', plans: FieldPlan[]): Promise<void> {
+  const existing = await db.translationChunk.findMany({
+    where: { ownerType: 'opportunity', ownerId: rowId, lang },
+    select: { id: true, fieldKey: true, chunkIndex: true, chunkHash: true },
+  });
+  const wanted = new Map<string, { hash: string }>();
+  for (const p of plans) for (const c of p.chunks) wanted.set(`${p.field}:${c.index}`, { hash: c.hash });
+
+  const staleIds: string[] = [];
+  const changedIds: string[] = [];
+  for (const row of existing) {
+    const key = `${row.fieldKey}:${row.chunkIndex}`;
+    const w = wanted.get(key);
+    if (!w) staleIds.push(row.id);
+    else if (w.hash !== row.chunkHash) changedIds.push(row.id);
+    wanted.delete(key);
+  }
+
+  // Source changed → drop the stale/changed chunk results so they re-translate.
+  if (staleIds.length) {
+    await db.translationChunk.deleteMany({ where: { id: { in: staleIds } } });
+  }
+  if (changedIds.length) {
+    await db.translationChunk.updateMany({
+      where: { id: { in: changedIds } },
+      data: { status: 'pending', result: null, attempts: 0, error: null },
+    });
+  }
+  for (const [key, w] of wanted) {
+    const [fieldKey, indexStr] = key.split(':');
+    const plan = plans.find((p) => p.field === fieldKey);
+    const chunk = plan?.chunks[Number(indexStr)];
+    if (!chunk) continue;
+    await db.translationChunk.create({
+      data: {
+        ownerType: 'opportunity', ownerId: rowId, lang, fieldKey,
+        chunkIndex: chunk.index, chunkTotal: chunk.total, chunkHash: chunk.hash,
+      },
+    });
+  }
+}
+
+// ─── language commit (atomic) ────────────────────────────────────────────────
+
+type Lang = 'fa' | 'ps';
+
+const FIELD_COLUMNS: Record<FieldKey, { base: string; i18n: string }> = {
+  title: { base: 'title', i18n: 'titleI18n' },
+  description: { base: 'description', i18n: 'descriptionI18n' },
+  summary: { base: 'aiSummary', i18n: 'aiSummaryI18n' },
+  eligibility: { base: 'eligibility', i18n: 'eligibilityI18n' },
+  benefits: { base: 'benefits', i18n: 'benefitsI18n' },
+  responsibilities: { base: 'responsibilities', i18n: 'responsibilitiesI18n' },
+  requirements: { base: 'requirements', i18n: 'requirementsI18n' },
+  guidelines: { base: 'guidelines', i18n: 'guidelinesI18n' },
+  jobType: { base: 'jobType', i18n: 'jobTypeI18n' },
+  salary: { base: 'salary', i18n: 'salaryI18n' },
+  educationReq: { base: 'educationReq', i18n: 'educationReqI18n' },
+  experience: { base: 'experience', i18n: 'experienceI18n' },
+};
+
+function legacyStatus(fa: string | null, ps: string | null): string {
+  if (fa === 'complete' && ps === 'complete') return 'complete';
+  if (fa === 'failed' || ps === 'failed') return 'partial';
+  if (fa === 'complete' || ps === 'complete') return 'partial';
+  return 'pending';
+}
+
+/**
+ * Commit one language's fully translated chunks to the public i18n fields in
+ * a SINGLE transaction. Called only when every chunk of the language is
+ * done — a partial result can never reach the public fields.
+ */
+async function commitLanguage(rowId: string, lang: Lang): Promise<void> {
+  const chunks = await db.translationChunk.findMany({
+    where: { ownerType: 'opportunity', ownerId: rowId, lang, status: 'done' },
+    orderBy: [{ fieldKey: 'asc' }, { chunkIndex: 'asc' }],
+    select: { fieldKey: true, chunkIndex: true, chunkTotal: true, result: true },
+  });
+  const byField = new Map<string, string[]>();
+  const totals = new Map<string, number>();
+  for (const c of chunks) {
+    const list = byField.get(c.fieldKey) || [];
+    list[c.chunkIndex] = c.result || '';
+    byField.set(c.fieldKey, list);
+    totals.set(c.fieldKey, c.chunkTotal);
+  }
+
+  const row = await db.opportunity.findUnique({
+    where: { id: rowId },
+    select: { faStatus: true, psStatus: true },
+  });
+  const nextFa = lang === 'fa' ? 'complete' : row?.faStatus ?? null;
+  const nextPs = lang === 'ps' ? 'complete' : row?.psStatus ?? null;
+
+  const data: Record<string, unknown> = {
+    faStatus: nextFa,
+    psStatus: nextPs,
+    translationStatus: legacyStatus(nextFa, nextPs),
+  };
+
+  for (const [field, parts] of byField) {
+    // Safety: only commit a field when EVERY chunk of it has a result.
+    const total = totals.get(field) || 0;
+    if (parts.length < total || parts.slice(0, total).some((p) => !p || !p.trim())) continue;
+    const joined = parts.slice(0, total).join('\n\n').trim();
+    if (!joined) continue;
+    const col = FIELD_COLUMNS[field as FieldKey];
+    if (!col) continue;
+    const current = await readI18nField(rowId, col.i18n, col.base);
+    const next = { ...current, [lang]: joined };
+    data[col.i18n] = next;
+  }
+
+  await db.$transaction([
+    db.opportunity.update({
+      where: { id: rowId },
+      data: data as Prisma.OpportunityUncheckedUpdateInput,
+    }),
+  ]);
+}
+
+async function readI18nField(
+  rowId: string,
+  i18nColumn: string,
+  baseColumn: string,
+): Promise<Record<string, string>> {
+  const row = (await db.opportunity.findUnique({
+    where: { id: rowId },
+    select: { [i18nColumn]: true, [baseColumn]: true },
+  })) as unknown as Record<string, unknown> | null;
+  if (!row) return {};
+  const current = row[i18nColumn];
+  const out: Record<string, string> = {};
+  if (current && typeof current === 'object' && !Array.isArray(current)) {
+    for (const [k, v] of Object.entries(current as Record<string, unknown>)) {
+      if (typeof v === 'string') out[k] = v;
+    }
+  }
+  const base = row[baseColumn];
+  if (!out.en && typeof base === 'string' && base.trim()) out.en = base;
+  return out;
+}
+
+// ─── progress / status helpers ───────────────────────────────────────────────
+
+async function writeProgress(rowId: string, lang: Lang): Promise<{ allDone: boolean; anyFailed: boolean; pending: boolean }> {
+  const chunks = await db.translationChunk.groupBy({
+    by: ['status'],
+    where: { ownerType: 'opportunity', ownerId: rowId, lang },
+    _count: { _all: true },
+  });
+  const count = (s: string) => chunks.find((c) => c.status === s)?._count._all ?? 0;
+  const total = chunks.reduce((acc, c) => acc + c._count._all, 0);
+  const done = count('done');
+  const failed = count('failed');
+  const progress = {
+    done, total, failed,
+    attempts: undefined as number | undefined,
+    updatedAt: new Date().toISOString(),
+  };
+  const row = (await db.opportunity.findUnique({
+    where: { id: rowId },
+    select: { translationProgress: true, faStatus: true, psStatus: true },
+  })) as unknown as { translationProgress: unknown; faStatus: string | null; psStatus: string | null } | null;
+  const prev = (row?.translationProgress && typeof row.translationProgress === 'object'
+    ? (row.translationProgress as Record<string, unknown>)
+    : {}) as Record<string, unknown>;
+  const nextProgress = { ...prev, [lang]: progress };
+
+  let status: string;
+  if (done === total && total > 0) status = 'complete';
+  else if (failed > 0 && done + failed === total) status = 'failed';
+  else status = 'processing';
+
+  const nextFa = lang === 'fa' ? status : row?.faStatus ?? null;
+  const nextPs = lang === 'ps' ? status : row?.psStatus ?? null;
+
+  await db.opportunity.update({
+    where: { id: rowId },
+    data: {
+      translationProgress: nextProgress as Prisma.InputJsonValue,
+      faStatus: nextFa,
+      psStatus: nextPs,
+      translationStatus: legacyStatus(nextFa, nextPs),
+    },
+  });
+
+  return {
+    allDone: total > 0 && done === total,
+    anyFailed: failed > 0 && done + failed === total,
+    pending: done + failed < total,
+  };
+}
+
+// ─── the processing unit ─────────────────────────────────────────────────────
+
+export interface UnitResult {
+  processed: boolean; // a chunk was translated and stored
+  committed: boolean; // a language reached 100% and was committed
+  rateLimited: boolean;
+  skipped: boolean;
+}
+
+/**
+ * Advance ONE chunk of the highest-priority incomplete language of the
+ * highest-priority incomplete row. Persian rows are always processed before
+ * any Pashto work starts.
+ */
+export async function processNextUnit(): Promise<UnitResult> {
+  // Daily mercy: parked failed chunks get another chance (free models have
+  // bad days; the content must never be lost forever).
+  await resetStaleFailures();
+
+  const row = await pickNextRow();
+  if (!row) return { processed: false, committed: false, rateLimited: false, skipped: true };
+
+  const plans = planFields(row);
+  const newHash = sourceHashOf(plans);
+  if (!plans.length) {
+    // Nothing translatable (e.g. pure symbols) — both languages are
+    // trivially complete so the queue moves on instead of spinning.
+    await db.opportunity.update({
+      where: { id: row.id },
+      data: {
+        faStatus: 'complete',
+        psStatus: 'complete',
+        translationStatus: 'complete',
+      },
+    }).catch(() => undefined);
+    return { processed: false, committed: false, rateLimited: false, skipped: true };
+  }
+
+  // Source changed since the plan was stored → invalidate both languages
+  // (Pashto is re-derived strictly: it may only run after fa completes).
+  if (row.translationSourceHash !== newHash) {
+    await db.translationChunk.deleteMany({ where: { ownerType: 'opportunity', ownerId: row.id } });
+    await db.opportunity.update({
+      where: { id: row.id },
+      data: {
+        translationSourceHash: newHash,
+        faStatus: 'pending',
+        psStatus: 'pending',
+      },
+    });
+  }
+
+  const lang: Lang = row.faStatus === 'complete' ? 'ps' : 'fa';
+  await syncPlan(row.id, lang, plans);
+  await db.opportunity.update({
+    where: { id: row.id },
+    data: lang === 'fa' ? { faStatus: 'processing' } : { psStatus: 'processing' },
+  }).catch(() => undefined);
+
+  // Next chunk to work on, in field order then chunk order.
+  const next = await db.translationChunk.findFirst({
+    where: {
+      ownerType: 'opportunity', ownerId: row.id, lang,
+      OR: [{ status: 'pending' }, { status: 'failed', attempts: { lt: MAX_ATTEMPTS } }],
+    },
+    orderBy: [{ fieldKey: 'asc' }, { chunkIndex: 'asc' }],
+  });
+
+  if (!next) {
+    const st = await writeProgress(row.id, lang);
+    if (st.allDone) {
+      await commitLanguage(row.id, lang);
+      return { processed: false, committed: true, rateLimited: false, skipped: false };
+    }
+    return { processed: false, committed: false, rateLimited: false, skipped: true };
+  }
+
+  const plan = plans.find((p) => p.field === next.fieldKey);
+  const chunk = plan?.chunks[next.chunkIndex];
+  if (!chunk) {
+    // Plan drifted (should not happen — syncPlan ran) — re-mark pending.
+    await db.translationChunk.update({ where: { id: next.id }, data: { status: 'pending' } });
+    return { processed: false, committed: false, rateLimited: false, skipped: true };
+  }
+
+  try {
+    const slots = await getProviderSlots();
+    if (!slots.length) throw new Error('no ai provider configured');
+    const context = plan && plan.chunks.length > 1
+      ? `This is part ${next.chunkIndex + 1} of ${next.chunkTotal} of the field "${next.fieldKey}" of an opportunity titled "${sourceOf(row, 'title').slice(0, 120)}". Translate it faithfully and completely.`
+      : undefined;
+    const prompt = `${context ? `${context}\n\n` : ''}${chunk.text}`;
+    const { text: raw } = await chatWithFailover(slots, LANG_SYSTEM[lang], prompt);
+    const translated = parseChunkReply(raw);
+    if (!translated || !validateTranslation(chunk.text, translated)) {
+      throw new Error('translation failed validation (empty/summary/junk)');
+    }
+    await db.translationChunk.update({
+      where: { id: next.id },
+      data: { status: 'done', result: translated, error: null, attempts: { increment: 1 } },
+    });
+  } catch (e) {
+    const msg = (e instanceof Error ? e.message : String(e)).slice(0, 240);
+    const rateLimited = isRateLimitMsg(msg);
+    await db.translationChunk.update({
+      where: { id: next.id },
+      data: {
+        attempts: { increment: 1 },
+        error: msg,
+        ...(attemptsExhausted(next.attempts + 1) ? { status: 'failed' } : {}),
+      },
+    });
+    await writeProgress(row.id, lang);
+    if (rateLimited) return { processed: false, committed: false, rateLimited: true, skipped: false };
+    return { processed: false, committed: false, rateLimited: false, skipped: false };
+  }
+
+  const st = await writeProgress(row.id, lang);
+  if (st.allDone) {
+    await commitLanguage(row.id, lang);
+    return { processed: true, committed: true, rateLimited: false, skipped: false };
+  }
+  return { processed: true, committed: false, rateLimited: false, skipped: false };
+}
+
+function attemptsExhausted(attempts: number): boolean {
+  return attempts >= MAX_ATTEMPTS;
+}
+
+/** Parked (capped) failed chunks retry automatically after a cool-off day. */
+async function resetStaleFailures(): Promise<void> {
+  const cutoff = new Date(Date.now() - FAILED_RETRY_MS);
+  const stale = await db.translationChunk.findMany({
+    where: { status: 'failed', attempts: { gte: MAX_ATTEMPTS }, updatedAt: { lt: cutoff } },
+    select: { id: true },
+    take: 200,
+  });
+  if (!stale.length) return;
+  await db.translationChunk.updateMany({
+    where: { id: { in: stale.map((s) => s.id) } },
+    data: { status: 'pending', attempts: 0, error: null },
+  });
+  // Rows marked failed purely from capped chunks become eligible again.
+  await db.opportunity.updateMany({
+    where: { faStatus: 'failed' },
+    data: { faStatus: 'pending' },
+  });
+  await db.opportunity.updateMany({
+    where: { psStatus: 'failed', faStatus: 'complete' },
+    data: { psStatus: 'pending' },
+  });
+}
+
+/**
+ * Priority queue: active/published rows first — deadline-soon before
+ * open-ended, newest before older — then drafts. Persian queue strictly
+ * before Pashto (a Pashto unit is picked only for rows with
+ * faStatus === 'complete').
+ */
+async function pickNextRow(): Promise<(TranslateRow & { faStatus: string | null; psStatus: string | null; translationSourceHash: string | null }) | null> {
+  const base = {
+    status: 'published' as const,
+  };
+  const orderBy = [
+    { deadline: { sort: 'asc' as const, nulls: 'last' as const } },
+    { createdAt: 'desc' as const },
+  ];
+
+  // 1. Persian-incomplete published rows.
+  const faRow = (await db.opportunity.findFirst({
+    where: { ...base, faStatus: { not: 'complete' }, OR: [{ faStatus: null }, { faStatus: { in: ['pending', 'processing'] } }] },
+    orderBy,
+    select: { ...ROW_SELECT, faStatus: true, psStatus: true, translationSourceHash: true },
+  })) as unknown as TranslateRow & { faStatus: string | null; psStatus: string | null; translationSourceHash: string | null } | null;
+  if (faRow) return faRow;
+
+  // 2. Pashto for Persian-complete rows.
+  const psRow = (await db.opportunity.findFirst({
+    where: { ...base, faStatus: 'complete', OR: [{ psStatus: null }, { psStatus: { in: ['pending', 'processing'] } }] },
+    orderBy,
+    select: { ...ROW_SELECT, faStatus: true, psStatus: true, translationSourceHash: true },
+  })) as unknown as TranslateRow & { faStatus: string | null; psStatus: string | null; translationSourceHash: string | null } | null;
+  return psRow ?? null;
+}
+
+// ─── batch driver (tick + import-time) ───────────────────────────────────────
+
+export interface BatchResult {
+  processed: number;
+  committed: number;
+  rateLimited: boolean;
+  exhausted: boolean; // queue drained
+}
+
+/**
+ * Process up to `maxUnits` chunks. Stops early on a rate-limit hit — the
+ * caller records a backoff window. Small units keep each LLM call short,
+ * which suits free models with tight output/timeout limits.
+ */
+export async function processBatch(maxUnits = 3): Promise<BatchResult> {
+  let processed = 0;
+  let committed = 0;
+  let rateLimited = false;
+  for (let i = 0; i < maxUnits; i++) {
+    const r = await processNextUnit();
+    if (r.rateLimited) { rateLimited = true; break; }
+    if (r.skipped && !r.processed && !r.committed && i === 0) {
+      return { processed, committed, rateLimited, exhausted: true };
+    }
+    if (r.processed) processed++;
+    if (r.committed) committed++;
+  }
+  return { processed, committed, rateLimited, exhausted: false };
+}
+
+/**
+ * Import-time helper: plan + immediately work a NEW row (Persian first, then
+ * Pashto) within a time budget. Whatever does not finish within the budget
+ * stays queued for the background tick with the same guarantees.
+ */
+export async function processOpportunityNow(opportunityId: string, budgetMs = 90_000): Promise<void> {
+  const start = Date.now();
+  for (let i = 0; i < 500; i++) {
+    if (Date.now() - start > budgetMs) return;
+    const row = (await db.opportunity.findUnique({
+      where: { id: opportunityId },
+      select: { ...ROW_SELECT, faStatus: true, psStatus: true, translationSourceHash: true, status: true },
+    })) as unknown as (TranslateRow & { faStatus: string | null; psStatus: string | null; translationSourceHash: string | null }) | null;
+    if (!row) return;
+    if (row.faStatus === 'complete' && row.psStatus === 'complete') return;
+    if (row.faStatus === 'failed' || row.psStatus === 'failed') return; // parked — queue will retry later
+
+    const lang: Lang = row.faStatus === 'complete' ? 'ps' : 'fa';
+    const plans = planFields(row);
+    if (!plans.length) {
+      await db.opportunity.update({
+        where: { id: row.id },
+        data: { faStatus: 'complete', psStatus: 'complete', translationStatus: 'complete' },
+      }).catch(() => undefined);
+      return;
+    }
+    const newHash = sourceHashOf(plans);
+    if (row.translationSourceHash !== newHash) {
+      await db.translationChunk.deleteMany({ where: { ownerType: 'opportunity', ownerId: row.id } });
+      await db.opportunity.update({
+        where: { id: row.id },
+        data: { translationSourceHash: newHash, faStatus: 'pending', psStatus: 'pending' },
+      });
+    }
+    await syncPlan(row.id, lang, plans);
+
+    const next = await db.translationChunk.findFirst({
+      where: {
+        ownerType: 'opportunity', ownerId: row.id, lang,
+        OR: [{ status: 'pending' }, { status: 'failed', attempts: { lt: MAX_ATTEMPTS } }],
+      },
+      orderBy: [{ fieldKey: 'asc' }, { chunkIndex: 'asc' }],
+    });
+    if (!next) {
+      const st = await writeProgress(row.id, lang);
+      if (st.allDone) await commitLanguage(row.id, lang);
+      else return; // parked failures — background retry owns it now
+      continue;
+    }
+
+    const plan = plans.find((p) => p.field === next.fieldKey);
+    const chunk = plan?.chunks[next.chunkIndex];
+    if (!chunk) return;
+
+    try {
+      const slots = await getProviderSlots();
+      if (!slots.length) return;
+      const { text: raw } = await chatWithFailover(slots, LANG_SYSTEM[lang], chunk.text);
+      const translated = parseChunkReply(raw);
+      if (!translated || !validateTranslation(chunk.text, translated)) throw new Error('translation failed validation');
+      await db.translationChunk.update({
+        where: { id: next.id },
+        data: { status: 'done', result: translated, error: null, attempts: { increment: 1 } },
+      });
+      const st = await writeProgress(row.id, lang);
+      if (st.allDone) {
+        await commitLanguage(row.id, lang);
+        if (lang === 'fa') continue; // move on to Pashto within the budget
+      }
+    } catch (e) {
+      const msg = (e instanceof Error ? e.message : String(e)).slice(0, 240);
+      await db.translationChunk.update({
+        where: { id: next.id },
+        data: {
+          attempts: { increment: 1 },
+          error: msg,
+          ...(attemptsExhausted(((await db.translationChunk.findUnique({ where: { id: next.id }, select: { attempts: true } }))?.attempts ?? 0)) ? { status: 'failed' } : {}),
+        },
+      });
+      if (isRateLimitMsg(msg)) return; // budget for this import is spent
+      return;
+    }
+  }
+}
+
+// ─── counters for the admin panel ────────────────────────────────────────────
+
+export interface TranslationCounters {
+  faComplete: number;
+  faActive: number;
+  psComplete: number;
+  psWaiting: number;
+  failedChunks: number;
+  pendingChunks: number;
+}
+
+export async function getTranslationCounters(): Promise<TranslationCounters> {
+  const [faComplete, faActive, psComplete, psWaiting, failedChunks, pendingChunks] = await Promise.all([
+    db.opportunity.count({ where: { status: 'published', faStatus: 'complete' } }),
+    db.opportunity.count({ where: { status: 'published' } }),
+    db.opportunity.count({ where: { status: 'published', psStatus: 'complete' } }),
+    db.opportunity.count({ where: { status: 'published', faStatus: 'complete', psStatus: { not: 'complete' } } }),
+    db.translationChunk.count({ where: { status: 'failed' } }),
+    db.translationChunk.count({ where: { status: 'pending' } }),
+  ]);
+  return { faComplete, faActive, psComplete, psWaiting, failedChunks, pendingChunks };
+}

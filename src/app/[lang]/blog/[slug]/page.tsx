@@ -50,19 +50,42 @@ export async function generateMetadata({
       title: `${title} | ARIA HUB`,
       description,
       type: 'article',
-      publishedTime: post.publishedAt.toISOString(),
+      publishedTime: post?.publishedAt && !isNaN(new Date(post.publishedAt).getTime())
+        ? new Date(post.publishedAt).toISOString()
+        : undefined,
       authors: post.author ? [post.author] : undefined,
       tags: post.tags.length ? post.tags : undefined,
+      images: [
+        {
+          url: post.image || '/og-image.png',
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${title} | ARIA HUB`,
+      description,
+      images: [post.image || '/og-image.png'],
     },
   };
 }
 
-function formatDate(date: Date, lang: string): string {
-  return new Intl.DateTimeFormat(lang === 'fa' ? 'fa-AF' : lang === 'ps' ? 'ps-AF' : 'en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  }).format(date);
+function formatDate(date: Date | string | null | undefined, lang: string): string {
+  try {
+    if (!date) return '';
+    const d = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(d.getTime())) return '';
+    return new Intl.DateTimeFormat(lang === 'fa' ? 'fa-AF' : lang === 'ps' ? 'ps-AF' : 'en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }).format(d);
+  } catch {
+    return '';
+  }
 }
 
 export default async function BlogPostPage({
@@ -78,20 +101,26 @@ export default async function BlogPostPage({
   const post = await getBlogPost(slug, typedLang);
   if (!post) notFound();
 
-  const related = await listRelatedPosts(typedLang, post.categorySlug, post.slug, 3);
+  const related = await listRelatedPosts(typedLang, post.categorySlug, post.slug, 3).catch((err) => {
+    console.error('[listRelatedPosts error]', err);
+    return [];
+  });
   const BackIcon = isRtl ? ArrowRight : ArrowLeft;
   const pageUrl = `https://www.myariahub.com/${lang}/blog/${post.slug}`;
+
+  const pubDate = post.publishedAt ? new Date(post.publishedAt) : null;
+  const safePubDateIso = pubDate && !isNaN(pubDate.getTime()) ? pubDate.toISOString() : new Date().toISOString();
 
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: post.title,
     description: post.excerpt,
-    datePublished: post.publishedAt.toISOString(),
-    dateModified: post.publishedAt.toISOString(),
+    datePublished: safePubDateIso,
+    dateModified: safePubDateIso,
     author: post.author ? { '@type': 'Organization', name: post.author } : undefined,
     publisher: { '@type': 'Organization', name: 'ARIA HUB' },
-    mainEntityOfPage: `https://www.myariahub.com${pageUrl}`,
+    mainEntityOfPage: pageUrl,
     ...(post.image ? { image: [post.image] } : {}),
   };
 
@@ -123,11 +152,11 @@ export default async function BlogPostPage({
                 </Link>
               )}
               <time
-                dateTime={post.publishedAt.toISOString()}
+                dateTime={safePubDateIso}
                 className="inline-flex items-center gap-1.5"
               >
                 <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
-                {formatDate(post.publishedAt, typedLang)}
+                {formatDate(pubDate, typedLang)}
               </time>
               <span className="inline-flex items-center gap-1.5">
                 <Clock className="h-3.5 w-3.5" aria-hidden="true" />
@@ -194,7 +223,10 @@ export default async function BlogPostPage({
                     {rel.title}
                   </h3>
                   <time
-                    dateTime={rel.publishedAt.toISOString()}
+                    dateTime={(() => {
+                      const d = rel.publishedAt instanceof Date ? rel.publishedAt : new Date(rel.publishedAt);
+                      return !isNaN(d.getTime()) ? d.toISOString() : '';
+                    })()}
                     className="mt-auto pt-3 text-xs text-muted-foreground"
                   >
                     {formatDate(rel.publishedAt, typedLang)}

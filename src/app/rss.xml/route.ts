@@ -37,7 +37,9 @@ export async function GET() {
   const itemsXml = items
     .map((item) => {
       const link = `${BASE_URL}/en/opportunities/${item.slug}`;
-      const deadline = item.deadline ? item.deadline.toISOString().slice(0, 10) : null;
+      const rawDl = item.deadline;
+      const deadlineObj = rawDl instanceof Date ? rawDl : rawDl ? new Date(rawDl) : null;
+      const deadline = deadlineObj && !isNaN(deadlineObj.getTime()) ? deadlineObj.toISOString().slice(0, 10) : null;
       const description = [
         item.summary,
         item.organization ? `Organization: ${item.organization}` : null,
@@ -47,13 +49,15 @@ export async function GET() {
       ]
         .filter(Boolean)
         .join(' — ');
+      const createdObj = item.createdAt ? new Date(item.createdAt) : null;
+      const pubDate = createdObj && !isNaN(createdObj.getTime()) ? createdObj.toUTCString() : new Date().toUTCString();
       return `    <item>
       <title>${cdata(item.title)}</title>
       <link>${escapeXml(link)}</link>
       <guid isPermaLink="true">${escapeXml(link)}</guid>
       <description>${cdata(description)}</description>
       <category>${cdata(item.categoryLabel || 'Opportunity')}</category>
-      <pubDate>${new Date(item.createdAt).toUTCString()}</pubDate>
+      <pubDate>${pubDate}</pubDate>
     </item>`;
     })
     .join('\n');

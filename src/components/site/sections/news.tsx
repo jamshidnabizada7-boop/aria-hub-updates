@@ -48,7 +48,7 @@ export function NewsSection({ news }: { news: News[] }) {
           {/* Featured */}
           {featured && (
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
+              initial={false}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '0px' }}
               transition={{ duration: 0.5 }}
@@ -97,7 +97,7 @@ export function NewsSection({ news }: { news: News[] }) {
             return (
             <motion.div
               key={n.id}
-              initial={{ opacity: 0, y: 30 }}
+              initial={false}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '0px' }}
               transition={{ duration: 0.5, delay: i * 0.08 }}

@@ -39,12 +39,25 @@ export async function generateMetadata({
   };
 }
 
-function formatDate(date: Date, lang: string): string {
-  return new Intl.DateTimeFormat(lang === 'fa' ? 'fa-AF' : lang === 'ps' ? 'ps-AF' : 'en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  }).format(date);
+function formatDate(date: Date | string | number | null | undefined, lang: string): string {
+  try {
+    if (!date) return '';
+    const d = typeof date === 'string' ? new Date(date) : date instanceof Date ? date : new Date(date);
+    if (isNaN(d.getTime())) return '';
+    return new Intl.DateTimeFormat(lang === 'fa' ? 'fa-AF' : lang === 'ps' ? 'ps-AF' : 'en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }).format(d);
+  } catch {
+    return '';
+  }
+}
+
+function toSafeIso(date: Date | string | number | null | undefined): string {
+  if (!date) return '';
+  const d = date instanceof Date ? date : new Date(date);
+  return isNaN(d.getTime()) ? '' : d.toISOString();
 }
 
 export default async function BlogPage({
@@ -149,7 +162,7 @@ export default async function BlogPage({
                       {featured.categoryName}
                     </span>
                   )}
-                  <time dateTime={featured.publishedAt.toISOString()}>
+                  <time dateTime={toSafeIso(featured.publishedAt)}>
                     {formatDate(featured.publishedAt, typedLang)}
                   </time>
                   <span className="inline-flex items-center gap-1">
@@ -188,7 +201,7 @@ export default async function BlogPage({
                       {post.categoryName}
                     </span>
                   )}
-                  <time dateTime={post.publishedAt.toISOString()}>
+                  <time dateTime={toSafeIso(post.publishedAt)}>
                     {formatDate(post.publishedAt, typedLang)}
                   </time>
                 </div>

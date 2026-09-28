@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev -p 3000",
     "postinstall": "prisma generate",
-    "build": "next build && node -e \"const fs=require('fs'); if (fs.existsSync('.next/standalone')) { fs.cpSync('.next/static','.next/standalone/.next/static',{recursive:true}); fs.cpSync('public','.next/standalone/public',{recursive:true}); }\"",
+    "build": "node --max-old-space-size=4096 ./node_modules/next/dist/bin/next build && node -e \"const fs=require('fs'); if (fs.existsSync('.next/standalone')) { fs.cpSync('.next/static','.next/standalone/.next/static',{recursive:true}); fs.cpSync('public','.next/standalone/public',{recursive:true}); }\"",
     "start": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
     "lint": "eslint .",
     "test": "bun test ./tests/",
@@ -117,3 +117,4 @@
     "@embedded-postgres/linux-x64"
   ]
 }
+

@@ -195,7 +195,7 @@ export function AutoImportPanel() {
   /* ─── Loading skeleton ─────────────────────────────────────────────── */
   if (loading) {
     return (
-      <div className="space-y-6" aria-busy="true" aria-label="Loading import data">
+      <div className="space-y-6" role="status" aria-busy="true" aria-label="Loading import data">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-2">
             <div className="h-6 w-40 animate-pulse rounded bg-muted" />

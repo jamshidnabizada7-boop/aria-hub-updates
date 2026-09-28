@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { unstable_cache } from 'next/cache';
 import Link from 'next/link';
 import { getSiteData } from '@/lib/get-site';
 import { Navbar } from '@/components/site/navbar';
@@ -9,7 +10,30 @@ import { isLang, type Lang } from '@/lib/lang-route';
 import { getPageSeo } from '@/lib/seo-metadata';
 import { GraduationCap, Briefcase, Plane, Compass, HelpCircle, ArrowRight, ShieldCheck } from 'lucide-react';
 
-export const revalidate = 60;
+export const revalidate = 300;
+
+const getCachedVisas = unstable_cache(
+  async (page: number, take: number) => {
+    try {
+      const skip = (Math.max(1, page) - 1) * take;
+      const [visas, total] = await Promise.all([
+        db.visa.findMany({
+          where: { status: 'published' },
+          orderBy: [{ sort: 'asc' }, { createdAt: 'desc' }],
+          take,
+          skip,
+        }),
+        db.visa.count({ where: { status: 'published' } }),
+      ]);
+      return { visas, total };
+    } catch (e) {
+      console.error('Failed to get cached visas:', e);
+      return { visas: [], total: 0 };
+    }
+  },
+  ['cached-visas-list-data'],
+  { revalidate: 300, tags: ['visas'] }
+);
 
 export async function generateMetadata({
   params,
@@ -139,17 +163,7 @@ export default async function VisasPage({
   const page = typeof sp.page === 'string' ? parseInt(sp.page, 10) : 1;
 
   const take = 12;
-  const skip = (Math.max(1, page) - 1) * take;
-
-  const [visas, total] = await Promise.all([
-    db.visa.findMany({
-      where: { status: 'published' },
-      orderBy: [{ sort: 'asc' }, { createdAt: 'desc' }],
-      take,
-      skip,
-    }),
-    db.visa.count({ where: { status: 'published' } }),
-  ]);
+  const { visas, total } = await getCachedVisas(page, take);
 
   const totalPages = Math.max(1, Math.ceil(total / take));
 

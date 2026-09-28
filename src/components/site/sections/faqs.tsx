@@ -11,20 +11,97 @@ import { getLocalizedContent } from '@/lib/i18n-content';
 import type { Faq } from '@/lib/types';
 import { LifeBuoy, Search, HelpCircle } from 'lucide-react';
 
+export const DEFAULT_FAQS: Faq[] = [
+  {
+    id: 'faq-1',
+    question: 'How do I find and apply for scholarships on ARIA HUB?',
+    questionI18n: {
+      en: 'How do I find and apply for scholarships on ARIA HUB?',
+      fa: 'چگونه می‌توانم بورسیه‌های تحصیلی را در آریا هاب پیدا کرده و اپلای کنم؟',
+      ps: 'څنګه کولی شم په آریا هاب کې تحصیلي بورسونه ومومم او غوښتنلیک وسپارم؟',
+    },
+    answer: 'To find and apply for international scholarships on ARIA HUB, browse our verified opportunities directory filtered by degree level, host country, and funding type. Each listing provides detailed eligibility requirements, deadline countdowns, required documentation, and direct official application portal links translated into English, Dari, and Pashto to support Afghan students worldwide.',
+    answerI18n: {
+      en: 'To find and apply for international scholarships on ARIA HUB, browse our verified opportunities directory filtered by degree level, host country, and funding type. Each listing provides detailed eligibility requirements, deadline countdowns, required documentation, and direct official application portal links translated into English, Dari, and Pashto to support Afghan students worldwide.',
+      fa: 'برای یافتن و درخواست بورسیه‌های بین‌المللی در آریا هاب، فهرست فرصت‌های تأییدشده ما را بر اساس مقطع تحصیلی، کشور میزبان و نوع تمویل جستجو کنید. هر آگهی شامل شرایط واجد شرایط بودن، شمارش معکوس ددلاین، اسناد لازم و لینک‌های مستقیم ثبت‌نام رسمی به زبان‌های فارسی، پشتو و انگلیسی برای حمایت از دانشجویان است.',
+      ps: 'په آریا هاب کې د نړیوالو تحصیلي بورسونو موندلو لپاره، زموږ د تایید شویو فرصتونو نوملړ د زده کړې کچې، کوربه هیواد او د تمویل ډول له مخې وپلټئ. هر اعلان د شرایطو، د ضرب الاجل شمیرنې، اړینو اسنادو او رسمي غوښتنلیک مستقیم لینکونه په انګلیسي، دري او پښتو ژبو وړاندې کوي.',
+    },
+    category: 'scholarships',
+    order: 1,
+    status: 'published',
+  },
+  {
+    id: 'faq-2',
+    question: 'Is posting jobs and scholarships on ARIA HUB free for employers?',
+    questionI18n: {
+      en: 'Is posting jobs and scholarships on ARIA HUB free for employers?',
+      fa: 'آیا ثبت وظایف و بورسیه‌ها در آریا هاب برای کارفرمایان رایگان است؟',
+      ps: 'ایا په آریا هاب کې د دندو او بورسونو اعلانول د کارفرما لپاره وړیا دي؟',
+    },
+    answer: 'Yes, posting verified job vacancies, internships, fellowships, and scholarship programs on ARIA HUB is completely free for reputable employers and academic institutions. Our editorial team reviews every submission for authenticity and translates all listing details into Dari, Pashto, and English within 24 hours to ensure maximum reach across the community.',
+    answerI18n: {
+      en: 'Yes, posting verified job vacancies, internships, fellowships, and scholarship programs on ARIA HUB is completely free for reputable employers and academic institutions. Our editorial team reviews every submission for authenticity and translates all listing details into Dari, Pashto, and English within 24 hours to ensure maximum reach across the community.',
+      fa: 'بله، ثبت فرصت‌های شغلی، کارآموزی، فلوشیپ‌ها و بورسیه‌های تحصیلی تأییدشده در آریا هاب برای کارفرمایان و نهادهای تحصیلی معتبر کاملاً رایگان است. تیم تحریریه ما هر درخواست را از نظر اعتبار بررسی کرده و جزئیات آن را ظرف ۲۴ ساعت به فارسی، پشتو و انگلیسی ترجمه می‌کند تا به بیشترین مخاطب برسد.',
+      ps: 'هو، په آریا هاب کې د باوري کاري فرصتونو، انټرنشیپونو، فیلوشپونو او تحصیلي بورسونو ثبتول د باوري کارګمارونکو او علمي بنسټونو لپاره په بشپړ ډول وړیا دي. زموږ اداري ډله هر اعلان د اعتبار له مخې ارزوي او په ۲۴ ساعتونو کې یې ټول جزییات په دري، پښتو او انګلیسي ژباړي.',
+    },
+    category: 'employers',
+    order: 2,
+    status: 'published',
+  },
+  {
+    id: 'faq-3',
+    question: 'What languages and localization features does ARIA HUB offer?',
+    questionI18n: {
+      en: 'What languages and localization features does ARIA HUB offer?',
+      fa: 'آریا هاب از چه زبان‌ها و امکانات بومی‌سازی پشتیبانی می‌کند؟',
+      ps: 'آریا هاب له کومو ژبو او ځانګړتیاوو ملاتړ کوي؟',
+    },
+    answer: "ARIA HUB is Afghanistan's premier trilingual career and educational gateway, offering complete native support across English, Dari (Persian), and Pashto. Users can seamlessly switch languages with full RTL layout support, localized Gregorian calendar dates, Eastern Arabic numerals, and culturally tailored interfaces designed for desktop and mobile devices.",
+    answerI18n: {
+      en: "ARIA HUB is Afghanistan's premier trilingual career and educational gateway, offering complete native support across English, Dari (Persian), and Pashto. Users can seamlessly switch languages with full RTL layout support, localized Gregorian calendar dates, Eastern Arabic numerals, and culturally tailored interfaces designed for desktop and mobile devices.",
+      fa: 'آریا هاب اولین درگاه سه زبانه کاریابی و تحصیلی افغانستان است که از زبان‌های انگلیسی، فارسی دری و پشتو به صورت کامل پشتیبانی می‌کند. کاربران می‌توانند به سادگی زبان را تغییر داده و از چیدمان راست‌چین (RTL)، تقویم میلادی بومی‌سازی‌شده، ارقام شرقی و رابط‌های واکنش‌گرا در موبایل و کامپیوتر بهره‌مند شوند.',
+      ps: 'آریا هاب د افغانستان لومړنۍ درې ژبنیز کاري او تحصیلي پورټل دی چې په انګلیسي، دري (فارسي) او پښتو ژبو بشپړ ملاتړ کوي. کاروونکي کولی شي ژبه بدله کړي او د ښي اړخ (RTL) بڼې، د میلادي تقویم نېټو، ختیځو عربي عددونو او په موبایل او کمپیوټر کې له اسانه انټرفیس څخه ګټه واخلي.',
+    },
+    category: 'general',
+    order: 3,
+    status: 'published',
+  },
+  {
+    id: 'faq-4',
+    question: 'How often are new job vacancies and educational deadlines updated?',
+    questionI18n: {
+      en: 'How often are new job vacancies and educational deadlines updated?',
+      fa: 'فرصت‌های شغلی و مهلت‌های ثبت‌نام بورسیه‌ها هر چند وقت یک‌بار به‌روزرسانی می‌شوند؟',
+      ps: 'کاري فرصتونه او د تحصیلي بورسونو ضرب‌الاجلونه څو ځله تازه کېږي؟',
+    },
+    answer: 'The ARIA HUB database is updated multiple times daily with verified international scholarships, remote work positions, local employment opportunities, and training programs. We provide automated deadline reminders, application tracking tools, and direct email alerts so Afghan candidates never miss critical submission dates for high-impact educational and professional opportunities.',
+    answerI18n: {
+      en: 'The ARIA HUB database is updated multiple times daily with verified international scholarships, remote work positions, local employment opportunities, and training programs. We provide automated deadline reminders, application tracking tools, and direct email alerts so Afghan candidates never miss critical submission dates for high-impact educational and professional opportunities.',
+      fa: 'پایگاه داده آریا هاب چندین بار در روز با بورسیه‌های بین‌المللی معتبر، موقعیت‌های کار از راه دور، فرصت‌های شغلی داخلی و دوره‌های آموزشی به‌روز می‌شود. ما یادآورهای خودکار ددلاین، ابزار پیگیری غوښتنلیک و هشدارهای ایمیلی ارائه می‌دهیم تا متقاضیان افغان هرگز مهلت‌های مهم را از دست ندهند.',
+      ps: 'د آریا هاب ډیټابیس هره ورځ څو ځله د باوري نړیوالو بورسونو، لیرې کاري دندو، کورنیو فرصتونو او روزنیزو پروګرامونو سره تازه کیږي. موږ د وروستۍ نیټې اتومات یادونه، د غوښتنلیک تعقیب او ایمیل خبرتیاوې چمتو کوو ترڅو غوښتونکي هیڅکله مهم فرصتونه له لاسه ورنکړي.',
+    },
+    category: 'updates',
+    order: 4,
+    status: 'published',
+  },
+];
+
 export function FaqsSection({ faqs }: { faqs: Faq[] }) {
   const t = useT();
   const lang = useLangStore((s) => s.code);
   const [query, setQuery] = useState('');
 
+  const effectiveFaqs = faqs && faqs.length > 0 ? faqs : DEFAULT_FAQS;
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return faqs;
-    return faqs.filter((f) => {
+    if (!q) return effectiveFaqs;
+    return effectiveFaqs.filter((f) => {
       const question = getLocalizedContent(f.question, f.questionI18n as any, lang);
       const answer = getLocalizedContent(f.answer, f.answerI18n as any, lang);
       return question.toLowerCase().includes(q) || answer.toLowerCase().includes(q);
     });
-  }, [faqs, query, lang]);
+  }, [effectiveFaqs, query, lang]);
 
   return (
     <section id="faqs" className="relative py-24 sm:py-32">
@@ -37,7 +114,7 @@ export function FaqsSection({ faqs }: { faqs: Faq[] }) {
 
         {/* Search */}
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
+          initial={false}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.1 }}
@@ -58,7 +135,7 @@ export function FaqsSection({ faqs }: { faqs: Faq[] }) {
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
+          initial={false}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '0px' }}
           transition={{ duration: 0.5 }}
@@ -66,7 +143,7 @@ export function FaqsSection({ faqs }: { faqs: Faq[] }) {
         >
           <AnimatePresence mode="popLayout">
             {filtered.length > 0 ? (
-              <Accordion type="single" collapsible className="space-y-3">
+              <Accordion type="single" collapsible defaultValue="item-0" className="space-y-3">
                 {filtered.map((f, i) => {
                   const question = getLocalizedContent(f.question, f.questionI18n as any, lang);
                   const answer = getLocalizedContent(f.answer, f.answerI18n as any, lang);
@@ -76,11 +153,11 @@ export function FaqsSection({ faqs }: { faqs: Faq[] }) {
                       value={`item-${i}`}
                       className="overflow-hidden rounded-2xl border border-border/60 bg-card/50 px-5 backdrop-blur-sm transition-colors data-[state=open]:border-primary/40 data-[state=open]:shadow-float"
                     >
-                      <AccordionTrigger className="py-5 text-left text-base font-semibold hover:no-underline">
+                      <AccordionTrigger className="faq-question py-5 text-left text-base font-semibold hover:no-underline">
                         {question}
                       </AccordionTrigger>
                       <AccordionContent className="pb-5 text-sm leading-relaxed text-muted-foreground">
-                        {answer}
+                        <p className="faq-answer leading-relaxed">{answer}</p>
                       </AccordionContent>
                     </AccordionItem>
                   );

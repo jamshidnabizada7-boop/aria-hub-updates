@@ -1,9 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Vazirmatn } from "next/font/google";
-import { cookies } from "next/headers";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
-import { isLang } from "@/lib/i18n-config";
 import { Providers } from "@/components/providers";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
@@ -39,10 +37,21 @@ const vazirmatn = Vazirmatn({
   ],
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#090d16" },
+  ],
+};
+
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.myariahub.com"),
   title: "ARIA HUB — Jobs, Scholarships & Opportunities in Afghanistan",
   description:
-    "Discover verified scholarships, international jobs, fellowships, and career opportunities for Afghans with real-time updates in Dari, Pashto, and English.",
+    "Discover verified scholarships, jobs, fellowships, and opportunities in Afghanistan with updates in English, Dari, and Pashto.",
   keywords: [
     "ARIA HUB",
     "آریا هاب",
@@ -65,30 +74,38 @@ export const metadata: Metadata = {
   openGraph: {
     title: "ARIA HUB — Jobs, Scholarships & Opportunities in Afghanistan",
     description:
-      "Discover verified scholarships, international jobs, fellowships, and career opportunities for Afghans with real-time updates in Dari, Pashto, and English.",
+      "Discover verified scholarships, jobs, fellowships, and opportunities in Afghanistan with updates in English, Dari, and Pashto.",
+    url: "https://www.myariahub.com",
     siteName: "ARIA HUB",
     type: "website",
+    images: [
+      {
+        url: "https://www.myariahub.com/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "ARIA HUB — Jobs, Scholarships & Opportunities in Afghanistan",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "ARIA HUB — Jobs, Scholarships & Opportunities in Afghanistan",
     description:
-      "Discover verified scholarships, international jobs, fellowships, and career opportunities for Afghans with real-time updates in Dari, Pashto, and English.",
+      "Discover verified scholarships, jobs, fellowships, and opportunities in Afghanistan with updates in English, Dari, and Pashto.",
+    images: ["https://www.myariahub.com/og-image.png"],
   },
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Language is path-addressable (/fa, /en, /ps). Middleware keeps the
-  // aria-lang cookie in sync with the URL prefix so the shell (html lang/dir)
-  // is rendered server-side in the right language.
-  const cookieStore = await cookies();
-  const cookieLang = cookieStore.get("aria-lang")?.value;
-  const lang = isLang(cookieLang) ? cookieLang : DEFAULT_LANG;
-  const dir = lang === "en" ? "ltr" : "rtl";
+  // Default statically to RTL Farsi so root layout does not read request cookies,
+  // which previously forced every route into dynamic SSR and destroyed ISR.
+  // [lang]/layout.tsx and LangSync immediately sync document lang/dir for /en and /ps.
+  const lang = DEFAULT_LANG;
+  const dir = "rtl";
 
   return (
     <html
@@ -102,7 +119,7 @@ export default async function RootLayout({
         <script
           type="text/javascript"
           dangerouslySetInnerHTML={{
-            __html: `(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i+"?ref=bwt";y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window, document, "clarity", "script", "ymu0ma5xzk");`,
+            __html: `(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};function load(){if(document.getElementById('clarity-js'))return;t=l.createElement(r);t.id='clarity-js';t.async=1;t.src="https://www.clarity.ms/tag/"+i+"?ref=bwt";y=l.getElementsByTagName(r)[0];if(y&&y.parentNode){y.parentNode.insertBefore(t,y);}else{l.head.appendChild(t);}}function defer(fn){if('requestIdleCallback' in c){c.requestIdleCallback(fn,{timeout:1500});}else{c.setTimeout(fn,1000);}}if(document.readyState==='complete'){defer(load);}else{c.addEventListener('load',function(){defer(load);});}})(window, document, "clarity", "script", "ymu0ma5xzk");`,
           }}
         />
         {/* google-adsense-account meta + the AdSense script itself live in

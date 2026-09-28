@@ -85,7 +85,14 @@ export async function GET(
     );
   }
 
-  const deadline = opp.deadline;
+  const rawDeadline = opp.deadline;
+  const deadline = rawDeadline instanceof Date ? rawDeadline : new Date(rawDeadline);
+  if (isNaN(deadline.getTime())) {
+    return Response.json(
+      { error: 'Invalid opportunity deadline' },
+      { status: 400 }
+    );
+  }
   const title = getLocalizedContent(
     opp.title,
     opp.titleI18n as Record<string, string> | null,

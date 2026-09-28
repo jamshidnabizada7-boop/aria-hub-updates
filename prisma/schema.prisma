@@ -234,6 +234,8 @@ model Opportunity {
   benefitsI18n    Json?
   website         String?
   applyUrl        String?
+  applyUrlType    String? // application_email | application_form | direct_application | source_article_fallback | unknown
+  locations       OpportunityLocation[]
   image           String?
   attachments     String? // JSON
   featured        Boolean              @default(false)
@@ -282,7 +284,11 @@ model Opportunity {
   ogDescriptionI18n    Json?
   canonicalUrl         String?
   importStatus         String? // imported | updated | skipped | failed | pending
-  translationStatus    String? // pending | partial | complete | failed
+  translationStatus    String? // pending | partial | complete | failed (legacy, recomputed from fa/ps states)
+  faStatus             String? // pending | processing | complete | failed — Persian gate
+  psStatus             String? // pending | processing | complete | failed — never started before faStatus === 'complete'
+  translationSourceHash String? // sha256 of all translated source fields; mismatch ⇒ statuses reset
+  translationProgress  Json? // { fa: {done,total,failed,attempts,updatedAt}, ps: {...} } observability
   language             String? // original source language code (en, fa, ps, ...)
   logoUrl              String?
   publishedDate        String?
@@ -297,6 +303,54 @@ model Opportunity {
   @@index([importStatus])
   @@index([deadline])
   @@index([createdAt])
+  @@index([faStatus])
+  @@index([psStatus])
+}
+
+// ─── Structured opportunity locations (one-to-many; multi-province = rows) ───
+model OpportunityLocation {
+  id            String      @id @default(cuid())
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  country       String? // canonical country, e.g. "Afghanistan"
+  countryCode   String? // ISO-3166 alpha-2, e.g. "AF"
+  province      String? // canonical admin-1, e.g. "Kabul" (34-province whitelist)
+  city          String?
+  district      String?
+  rawLabel      String? // verbatim source string, for auditability
+  source        String? // scraper | detail | backfill-extractedData | backfill-description | inferred | admin
+  confidence    Float? // 1.0 deterministic … 0.5 whitelist-inferred
+  createdAt     DateTime    @default(now())
+
+  @@unique([opportunityId, province, city, district, rawLabel])
+  @@index([opportunityId])
+  @@index([province])
+  @@index([country])
+}
+
+// ─── Translation chunk staging (atomic per-language commits) ─────────────────
+// Every source chunk of every translatable field is staged here. A language's
+// public i18n fields are committed ONLY when 100% of its chunks succeeded —
+// a failed chunk can never silently vanish from a published translation.
+model TranslationChunk {
+  id        String   @id @default(cuid())
+  ownerType String // opportunity | news
+  ownerId   String
+  lang      String // fa | ps (one language per chunk row — Persian-first gating)
+  fieldKey  String // title | description | summary | eligibility | benefits | ...
+  chunkIndex Int
+  chunkTotal Int
+  chunkHash String // sha256 of the source chunk text; mismatch ⇒ re-translate
+  status    String   @default("pending") // pending | done | failed
+  result    String? // translated text when status = done
+  attempts  Int      @default(0)
+  error     String?
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@unique([ownerType, ownerId, lang, fieldKey, chunkIndex])
+  @@index([ownerType, ownerId, lang, status])
+  @@index([status, updatedAt])
 }
 
 // ─── Automated import sources ────────────────────────────────────────────────

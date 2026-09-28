@@ -101,19 +101,23 @@ export default async function VisaRejectionsPage({
 }
 
 async function getRejections() {
-  const rows = await prisma.visaRejection.findMany({
-    where: { status: 'published' },
-    orderBy: { order: 'asc' },
-  });
-  return rows.map((r) => ({
-    id: r.code,
-    code: r.section,
-    titleI18n: r.titleI18n,
-    title: r.title,
-    descriptionI18n: r.descriptionI18n,
-    description: r.description,
-    mitigationI18n: r.mitigationI18n,
-    mitigation: r.mitigation,
-    icon: r.icon,
-  }));
+  try {
+    const rows = await prisma.visaRejection.findMany({
+      where: { status: 'published' },
+      orderBy: { order: 'asc' },
+    });
+    return rows.map((r) => ({
+      id: r.code,
+      code: r.section,
+      titleI18n: r.titleI18n,
+      title: r.title,
+      descriptionI18n: r.descriptionI18n,
+      description: r.description,
+      mitigationI18n: r.mitigationI18n,
+      mitigation: r.mitigation,
+      icon: r.icon,
+    }));
+  } catch {
+    return [];
+  }
 }
