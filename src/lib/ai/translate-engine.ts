@@ -514,7 +514,7 @@ async function pickNextRow(): Promise<(TranslateRow & { faStatus: string | null;
 
   // 1. Persian-incomplete published rows.
   const faRow = (await db.opportunity.findFirst({
-    where: { ...base, faStatus: { not: 'complete' }, OR: [{ faStatus: null }, { faStatus: { in: ['pending', 'processing'] } }] },
+    where: { ...base, OR: [{ faStatus: null }, { faStatus: { in: ['pending', 'processing'] } }] },
     orderBy,
     select: { ...ROW_SELECT, faStatus: true, psStatus: true, translationSourceHash: true },
   })) as unknown as TranslateRow & { faStatus: string | null; psStatus: string | null; translationSourceHash: string | null } | null;
