@@ -1,10 +1,13 @@
 import type { Metadata } from 'next';
-import { getSiteData } from '@/lib/get-site';
+import { notFound } from 'next/navigation';
+import { getToolPageData } from '@/lib/get-site';
 import { Navbar } from '@/components/site/navbar';
 import { Footer } from '@/components/site/footer';
 import { CVBuilderClient } from './client';
 import { isLang, type Lang } from '@/lib/lang-route';
 import { getPageSeo } from '@/lib/seo-metadata';
+import type { CVOutputLang, CVPurpose } from './types';
+import { getCVBuilderConfig } from '@/lib/cv-builder-config.server';
 
 export const revalidate = 1800;
 
@@ -42,8 +45,32 @@ export async function generateMetadata({
   };
 }
 
-export default async function CVBuilderPage() {
-  const data = await getSiteData();
+function safeReturnTo(value: string | undefined, lang: Lang): string | undefined {
+  if (!value) return undefined;
+  const expectedPrefix = `/${lang}/`;
+  return value.startsWith(expectedPrefix) && !value.startsWith('//') ? value : undefined;
+}
+
+export default async function CVBuilderPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ lang: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [{ lang: rawLang }, query, data, cvConfig] = await Promise.all([params, searchParams, getToolPageData(), getCVBuilderConfig()]);
+  const lang: Lang = isLang(rawLang) ? rawLang : 'fa';
+  if (!cvConfig.enabled) notFound();
+
+  const rawPurpose = typeof query.purpose === 'string' ? query.purpose : undefined;
+  const requestedPurpose: CVPurpose | undefined =
+    rawPurpose === 'professional' || rawPurpose === 'student' || rawPurpose === 'scholarship' ? rawPurpose : undefined;
+  const initialPurpose: CVPurpose =
+    requestedPurpose && cvConfig.purposes[requestedPurpose].enabled ? requestedPurpose : cvConfig.defaultPurpose;
+  const outputLang: CVOutputLang = lang;
+  const opportunitySlug = typeof query.opportunity === 'string' ? query.opportunity : undefined;
+  const opportunityTitle = typeof query.title === 'string' ? query.title.slice(0, 180) : undefined;
+  const returnTo = safeReturnTo(typeof query.returnTo === 'string' ? query.returnTo : undefined, lang);
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-900">
@@ -55,21 +82,25 @@ export default async function CVBuilderPage() {
           logoUrl={data.settings?.logoUrl ?? null}
         />
       </div>
-      <main className="flex-1 pt-24 pb-20 relative overflow-hidden print:pt-0 print:pb-0">
-        {/* Background Gradients */}
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 print:hidden">
-          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-500/20 blur-[100px]" />
-          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-indigo-500/20 blur-[100px]" />
+
+      <main className="relative flex-1 overflow-x-hidden pb-16 pt-24 print:overflow-visible print:bg-white print:p-0">
+        <div className="absolute inset-0 -z-10 overflow-hidden print:hidden" aria-hidden="true">
+          <div className="absolute left-[-10%] top-[-10%] h-[40%] w-[40%] rounded-full bg-blue-500/15 blur-[100px]" />
+          <div className="absolute bottom-[-10%] right-[-10%] h-[40%] w-[40%] rounded-full bg-indigo-500/15 blur-[100px]" />
         </div>
 
-        <CVBuilderClient settings={data.settings} />
+        <div data-clarity-mask="true">
+          <CVBuilderClient
+            initialLang={outputLang}
+            initialPurpose={initialPurpose}
+            config={cvConfig}
+            source={opportunitySlug || opportunityTitle || returnTo ? { opportunitySlug, opportunityTitle, returnTo } : undefined}
+          />
+        </div>
       </main>
+
       <div className="print:hidden">
-        <Footer
-          settings={data.settings}
-          footer={data.footer}
-          socialLinks={data.socialLinks}
-        />
+        <Footer settings={data.settings} footer={data.footer} socialLinks={data.socialLinks} />
       </div>
     </div>
   );
