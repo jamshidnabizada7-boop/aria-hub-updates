@@ -2,7 +2,7 @@ import pg from 'pg';
 const { Client } = pg;
 
 const LOCAL_URL = 'postgresql://postgres:postgres@127.0.0.1:5433/ariahub';
-const SUPA_URL = 'postgresql://postgres.ftmnqcjqqupkzafwevwn:AriaHub-DB-2026-secure-Xk39f@aws-0-ap-south-1.pooler.supabase.com:5432/postgres';
+const SUPA_URL = process.env.SUPABASE_AUDIT_DATABASE_URL;
 
 const CJK_RE = /[\u2E80-\u2EFF\u3000-\u303F\u3040-\u30FF\u3130-\u318F\u3400-\u4DBF\u4E00-\u9FFF\uAC00-\uD7AF\uFF01-\uFF60\uFFE0-\uFFE6]/;
 const CYRILLIC_RE = /[\u0400-\u04FF]/;
@@ -222,6 +222,7 @@ export async function runDeepAudit(dbName, connStr, ssl = false) {
 }
 
 async function main() {
+  if (!SUPA_URL) throw new Error('SUPABASE_AUDIT_DATABASE_URL is required for the production read-only audit');
   const localOk = await runDeepAudit('Local PostgreSQL', LOCAL_URL, false);
   const supaOk = await runDeepAudit('Production Supabase', SUPA_URL, true);
 
@@ -235,5 +236,8 @@ async function main() {
 }
 
 if (process.argv[1] && process.argv[1].endsWith('verify-all-complete-deep.mjs')) {
-  main().catch(console.error);
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  });
 }

@@ -24,6 +24,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useT } from '@/hooks/use-t';
 import { cn } from '@/lib/utils';
+import { FacebookGroupDistributionPanel } from '@/components/admin/facebook-group-distribution-panel';
 
 interface Channel {
   id: string; platform: string; label: string; enabled: boolean;
@@ -34,6 +35,17 @@ interface QueueRow {
   id: string; scheduledFor: string; templateType: string; contentRef: string | null;
   status: string; imageStatus: string; attempts: number; error: string | null;
   captionJson: Record<string, string>;
+  deliveries?: Array<{
+    id: string;
+    platform: string;
+    status: string;
+    attempts: number;
+    errorCode: string | null;
+    error: string | null;
+    permalink: string | null;
+    publishedAt: string | null;
+    nextAttemptAt: string | null;
+  }>;
 }
 interface RunRow {
   id: string; kind: string; status: string; startedAt: string; finishedAt: string | null; message: string | null;
@@ -42,6 +54,17 @@ interface Status {
   state: {
     publishTimes: string[]; captionLangs?: string[]; translateBatch?: number;
     autoImport?: boolean; autoPublish?: boolean; translateBackoffUntil?: string | null;
+    opportunityOnlyAutomation?: boolean;
+    opportunityDailyTarget?: number;
+    opportunityBatchSize?: number;
+    opportunityRepeatDays?: number;
+    opportunityBatchTimes?: string[];
+    lastSocialTickAt?: string | null;
+    lastSocialTickStatus?: string | null;
+    lastSocialTickRendered?: number;
+    lastSocialTickPublished?: number;
+    lastSocialTickFailed?: number;
+    lastSocialTickError?: string | null;
   };
   channels: Channel[];
   queue: QueueRow[];
@@ -50,16 +73,38 @@ interface Status {
   aiProviders?: { name: string; configured: boolean; cooling: boolean; cooldownSecondsLeft: number; lastError: string | null; usedCount: number }[];
 }
 
-const PLATFORM_META: Record<string, { icon: React.ComponentType<{ className?: string }>; credFields: { key: string; label: string }[] }> = {
+const PLATFORM_META: Record<string, {
+  icon: React.ComponentType<{ className?: string }>;
+  credFields: { key: string; label: string; kind?: 'select'; options?: { value: string; label: string }[] }[];
+}> = {
   telegram: { icon: Send, credFields: [{ key: 'botToken', label: 'Bot token' }, { key: 'chatId', label: 'Channel ID (@channel or -100…)' }] },
   facebook: { icon: Facebook, credFields: [{ key: 'pageId', label: 'Page ID' }, { key: 'accessToken', label: 'Page access token' }] },
   instagram: { icon: Instagram, credFields: [{ key: 'igUserId', label: 'Instagram business user ID' }, { key: 'accessToken', label: 'Access token' }] },
   x: { icon: XIcon, credFields: [{ key: 'accessToken', label: 'OAuth 2.0 access token' }] },
-  linkedin: { icon: Linkedin, credFields: [{ key: 'accessToken', label: 'LinkedIn access token' }, { key: 'authorUrn', label: 'Author URN (urn:li:person:… / organization)' }] },
-  whatsapp: { icon: MessageCircle, credFields: [{ key: 'accessToken', label: 'WhatsApp system-user access token' }, { key: 'phoneNumberId', label: 'Phone Number ID (Meta Business)' }, { key: 'channelId', label: 'Channel ID' }] },
+  linkedin: { icon: Linkedin, credFields: [{ key: 'accessToken', label: 'LinkedIn access token' }, { key: 'authorUrn', label: 'Organization numeric ID or full author URN' }] },
+  whatsapp: {
+    icon: MessageCircle,
+    credFields: [
+      {
+        key: 'mode',
+        label: 'Destination mode',
+        kind: 'select',
+        options: [
+          { value: 'individual', label: 'Individual recipient' },
+          { value: 'group', label: 'Meta Groups API group' },
+          { value: 'channel', label: 'WhatsApp Channel (not supported by this API)' },
+        ],
+      },
+      { key: 'accessToken', label: 'WhatsApp system-user access token' },
+      { key: 'phoneNumberId', label: 'Phone Number ID (Meta Business)' },
+      { key: 'recipient', label: 'Recipient phone / WA ID (individual mode)' },
+      { key: 'groupId', label: 'Group ID (Groups API mode)' },
+      { key: 'channelId', label: 'Legacy Channel ID (diagnostic only)' },
+    ],
+  },
 };
 
-const ALL_TIMES = ['07:00', '08:00', '09:00', '12:00', '12:30', '13:00', '17:00', '19:00', '20:00', '21:00'];
+const OPPORTUNITY_TIMES = ['07:00', '08:00', '09:00', '10:30', '12:00', '13:00', '15:30', '17:00', '18:00', '19:00', '20:30', '21:00'];
 
 const statusTone = (s: string) =>
   s === 'published' || s === 'ok' ? 'border-emerald-400/60 text-emerald-600 dark:text-emerald-400'
@@ -114,11 +159,11 @@ export function AutomationPanel() {
     } catch { toast({ title: 'Tick failed', variant: 'destructive' }); } finally { setBusy(null); }
   };
 
-  const toggleTime = (slot: string) => {
+  const toggleOpportunityTime = (slot: string) => {
     if (!status) return;
-    const cur = status.state.publishTimes || [];
+    const cur = status.state.opportunityBatchTimes || [];
     const next = cur.includes(slot) ? cur.filter((x) => x !== slot) : [...cur, slot].sort();
-    if (next.length) void act({ action: 'save-state', publishTimes: next }, 'times');
+    if (next.length) void act({ action: 'save-state', opportunityBatchTimes: next }, 'opp-times');
   };
 
   const saveChannel = async (platform: string, enabled: boolean) => {
@@ -189,31 +234,128 @@ export function AutomationPanel() {
         </div>
       </div>
 
+      <FacebookGroupDistributionPanel />
+
       <div className="grid gap-4 xl:grid-cols-2">
         {/* ── schedule & settings ── */}
         <div className="space-y-4">
-          <section className="rounded-2xl border bg-card p-4">
-            <h3 className="flex items-center gap-2 text-sm font-bold"><CalendarClock className="h-4 w-4 text-primary" /> {t('admin.automation.schedule')}</h3>
-            <p className="mt-1 text-xs text-muted-foreground" dir="auto">{t('admin.automation.scheduleHint')}</p>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {ALL_TIMES.map((slot) => {
-                const active = state.publishTimes.includes(slot);
-                return (
-                  <button
-                    key={slot}
-                    type="button"
-                    onClick={() => toggleTime(slot)}
-                    className={cn(
-                      'rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
-                      active ? 'border-primary bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-muted',
-                    )}
-                  >
-                    <Clock className="me-1 inline h-3 w-3" />
-                    {slot}
-                  </button>
-                );
-              })}
+          <section className="rounded-2xl border border-primary/20 bg-card p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="flex items-center gap-2 text-sm font-bold">
+                  <CalendarClock className="h-4 w-4 text-primary" />
+                  Opportunity distribution
+                </h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Automatic social publishing uses opportunities only. Quotes, tips, stats, stories and news remain available in Brand Studio for manual use.
+                </p>
+              </div>
+              <span className="rounded-full border border-primary/30 px-2 py-1 text-[10px] font-semibold text-primary">
+                Opportunity only
+              </span>
             </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border bg-background/50 px-3 py-2 text-[11px]">
+              <span className="font-semibold">Social worker:</span>
+              {state.lastSocialTickAt ? (
+                <>
+                  <Badge variant="outline" className={cn('text-[10px]', statusTone(state.lastSocialTickStatus || 'pending'))}>
+                    {state.lastSocialTickStatus || 'unknown'}
+                  </Badge>
+                  <span className="text-muted-foreground">
+                    last cycle {new Date(state.lastSocialTickAt).toLocaleString()}
+                  </span>
+                  <span className="text-muted-foreground">
+                    · rendered {state.lastSocialTickRendered ?? 0}
+                    {' · '}published {state.lastSocialTickPublished ?? 0}
+                    {' · '}failed {state.lastSocialTickFailed ?? 0}
+                  </span>
+                  {state.lastSocialTickError ? (
+                    <span className="w-full truncate text-destructive" title={state.lastSocialTickError}>
+                      {state.lastSocialTickError}
+                    </span>
+                  ) : null}
+                </>
+              ) : (
+                <span className="text-amber-600 dark:text-amber-400">
+                  no dedicated social-worker heartbeat recorded yet
+                </span>
+              )}
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div>
+                <Label className="text-xs">Daily target</Label>
+                <Select
+                  value={String(state.opportunityDailyTarget ?? 30)}
+                  onValueChange={(v) => act({ action: 'save-state', opportunityDailyTarget: Number(v) }, 'opp-target')}
+                >
+                  <SelectTrigger className="mt-1 h-9 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[10, 20, 30, 40].map((n) => <SelectItem key={n} value={String(n)}>{n} posts/day</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Posts per batch</Label>
+                <Select
+                  value={String(state.opportunityBatchSize ?? 5)}
+                  onValueChange={(v) => act({ action: 'save-state', opportunityBatchSize: Number(v) }, 'opp-batch')}
+                >
+                  <SelectTrigger className="mt-1 h-9 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4, 5].map((n) => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Repeat cooldown</Label>
+                <Select
+                  value={String(state.opportunityRepeatDays ?? 14)}
+                  onValueChange={(v) => act({ action: 'save-state', opportunityRepeatDays: Number(v) }, 'opp-repeat')}
+                >
+                  <SelectTrigger className="mt-1 h-9 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[7, 14, 21, 30].map((n) => <SelectItem key={n} value={String(n)}>{n} days</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <div className="flex items-center justify-between gap-3">
+                <Label className="text-xs">Batch windows (Afghanistan time)</Label>
+                <span className="text-[10px] text-muted-foreground">
+                  Capacity: {(state.opportunityBatchTimes?.length ?? 0) * (state.opportunityBatchSize ?? 5)} posts/day
+                </span>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {OPPORTUNITY_TIMES.map((slot) => {
+                  const active = (state.opportunityBatchTimes || []).includes(slot);
+                  return (
+                    <button
+                      key={slot}
+                      type="button"
+                      onClick={() => toggleOpportunityTime(slot)}
+                      className={cn(
+                        'rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
+                        active ? 'border-primary bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-muted',
+                      )}
+                    >
+                      <Clock className="me-1 inline h-3 w-3" />
+                      {slot}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-[10px] text-muted-foreground">
+                Posts inside each batch are staggered by 2 minutes instead of being sent simultaneously.
+              </p>
+            </div>
+          </section>
+
+          <section className="rounded-2xl border bg-card p-4">
+            <h3 className="flex items-center gap-2 text-sm font-bold"><Settings2 className="h-4 w-4 text-primary" /> Automation settings</h3>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <div>
                 <Label className="text-xs">{t('admin.automation.captionLangs')}</Label>
@@ -310,13 +452,35 @@ export function AutomationPanel() {
                       {meta.credFields.map((f) => (
                         <div key={f.key}>
                           <Label className="text-[10px] text-muted-foreground">{f.label}</Label>
-                          <Input
-                            type="password"
-                            className="h-8 text-xs"
-                            value={draft[f.key] ?? (typeof ch?.credentials?.[f.key] === 'string' ? (ch?.credentials?.[f.key] as string) : '')}
-                            placeholder={ch?.credentials?.[f.key] === true ? 'saved — leave blank to keep' : f.label}
-                            onChange={(e) => setCredDrafts((prev) => ({ ...prev, [platform]: { ...prev[platform], [f.key]: e.target.value } }))}
-                          />
+                          {f.kind === 'select' ? (
+                            <Select
+                              value={
+                                draft[f.key] ??
+                                (typeof ch?.credentials?.[f.key] === 'string' ? (ch.credentials[f.key] as string) : 'individual')
+                              }
+                              onValueChange={(value) =>
+                                setCredDrafts((prev) => ({
+                                  ...prev,
+                                  [platform]: { ...prev[platform], [f.key]: value },
+                                }))
+                              }
+                            >
+                              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {(f.options ?? []).map((option) => (
+                                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Input
+                              type="password"
+                              className="h-8 text-xs"
+                              value={draft[f.key] ?? (typeof ch?.credentials?.[f.key] === 'string' ? (ch?.credentials?.[f.key] as string) : '')}
+                              placeholder={ch?.credentials?.[f.key] === true ? 'saved — leave blank to keep' : f.label}
+                              onChange={(e) => setCredDrafts((prev) => ({ ...prev, [platform]: { ...prev[platform], [f.key]: e.target.value } }))}
+                            />
+                          )}
                         </div>
                       ))}
                     </div>
@@ -374,6 +538,23 @@ export function AutomationPanel() {
                       ) : null}
                     </div>
                   </div>
+                  {q.deliveries?.length ? (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {q.deliveries.map((delivery) => (
+                        <span
+                          key={delivery.id}
+                          title={delivery.error || delivery.errorCode || undefined}
+                          className={cn(
+                            'rounded-full border px-2 py-0.5 text-[9px] font-semibold',
+                            statusTone(delivery.status),
+                          )}
+                        >
+                          {delivery.platform}: {delivery.status}
+                          {delivery.attempts ? ` · ${delivery.attempts}×` : ''}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                   {q.error ? <p className="mt-1 line-clamp-2 text-[10px] text-destructive">{q.error}</p> : null}
                 </div>
               ))}

@@ -17,7 +17,7 @@
  *   - Sanitized errors recorded in ImportRun.errors for the admin log viewer.
  */
 
-import type { PrismaClient, Prisma, OpportunityStatus, ImportRunStatus } from '@prisma/client';
+import type { PrismaClient, Prisma, ImportRunStatus } from '@prisma/client';
 import { db } from '@/lib/db';
 import { getScraper } from './registry';
 import { computeHash, findExisting } from './dedupe';
@@ -28,6 +28,7 @@ import { sanitizeError, slugify } from './utils';
 import { buildLocationRows, resolveCountry } from '@/lib/geo/location-rows';
 import { classifyApplyUrl } from '@/lib/apply';
 import type { RawListing, SourceHandle } from './types';
+import { resolveImportedOpportunityStatus } from './publication-policy';
 
 /** True when this source has ever produced imported/updated opportunities. */
 async function hasEverImported(sourceId: string): Promise<boolean> {
@@ -470,7 +471,6 @@ async function processListing(
     logoUrl: logo.path || null,
     publishedDate: listing.publishedDate || null,  // String field in schema, no conversion needed
     canonicalUrl: listing.sourceUrl,
-    status: (source.autoPublish ? 'published' : 'draft') as OpportunityStatus,
     extractedData: listing.extractedData || {},
   };
 
@@ -480,8 +480,13 @@ async function processListing(
   let createdId: string | null = null;
 
   if (dedupe.action === 'update') {
-    // Update existing (preserve id, slug unless title changed)
-    const existing = await db.opportunity.findUnique({ where: { id: dedupe.existing.id }, select: { slug: true, title: true } });
+    // Update existing while preserving its moderation/publication lifecycle.
+    // A source with autoPublish=false must never demote a record that an admin
+    // or trusted source already published.
+    const existing = await db.opportunity.findUnique({
+      where: { id: dedupe.existing.id },
+      select: { slug: true, title: true },
+    });
     let newSlug = existing?.slug || slugBase;
     if (existing && slugify(listing.title) !== slugify(existing.title)) {
       newSlug = await ensureUniqueSlug(db, slugBase, dedupe.existing.id);
@@ -493,6 +498,9 @@ async function processListing(
         ...importFields,
         ...(categoryId ? { categoryId } : {}),
         slug: newSlug,
+        // Omit status from the UPDATE, including any AI-produced value.
+        // Rewriting a previously read status could undo a concurrent admin edit.
+        status: undefined,
         importStatus: 'updated',
         locations: {
           deleteMany: {},
@@ -508,6 +516,10 @@ async function processListing(
       data: {
         ...pipeline.data,
         ...importFields,
+        status: resolveImportedOpportunityStatus({
+          autoPublish: source.autoPublish,
+          deadline: importFields.deadline,
+        }),
         slug,
         sort: 0,
         categoryId,

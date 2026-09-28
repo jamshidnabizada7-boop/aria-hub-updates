@@ -23,7 +23,10 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
+      REQUIRE_TEST_DATABASE: '1'
+      ARIA_DISABLE_SCHEDULER: '1'
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5433/ariahub_test?sslmode=disable
+      DIRECT_URL: postgresql://postgres:postgres@127.0.0.1:5433/ariahub_test?sslmode=disable
     steps:
       - uses: actions/checkout@v5
 
@@ -34,13 +37,18 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Dependency security audit
+        run: bun audit --audit-level high
+
       - name: Prisma schema validation + client generation
         run: |
           bunx prisma validate
-          bunx prisma generate
+          bun run db:generate
 
-      - name: Push schema to test database
-        run: bunx prisma db push --skip-generate
+      - name: Deploy and verify test database migrations
+        run: |
+          bun run db:deploy
+          bunx prisma migrate diff --from-url "$DIRECT_URL" --to-schema-datamodel prisma/schema.prisma --exit-code
 
       - name: Type check
         run: bunx tsc --noEmit
@@ -48,5 +56,14 @@ jobs:
       - name: Tests (unit, scraper fixtures, publish safety, security guards*)
         run: bun test tests/
         # * The api-guards tests skip automatically: no running server in CI.
-        #   The publish-safety + utils + fixture tests run against the service
-        #   Postgres — a real DB pass in CI on every push.
+        #   Database/publisher tests are required and fail if setup is missing.
+
+      - name: Standalone worker runtime
+        run: |
+          export CREDENTIALS_SECRET="$(openssl rand -hex 32)"
+          bun run worker:social --once
+
+      - name: Production build
+        run: |
+          export ADMIN_SESSION_SECRET="$(openssl rand -hex 32)"
+          bun run build

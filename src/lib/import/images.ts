@@ -6,13 +6,14 @@
  * Returns the Vercel Blob URL so it works exactly like the existing
  * image URL fields.
  *
- * On any failure, falls back to the original remote URL (hybrid mode).
- * On no image, returns a placeholder path.
+ * On a failed or unsafe download, returns a placeholder path. Without Blob
+ * storage, a successfully fetched public URL remains the image source.
  */
 
 import sharp from 'sharp';
 import { slugify } from './utils';
 import { put } from '@vercel/blob';
+import { fetchPublicImage, isPublicImageUrlSyntax } from './public-image-url';
 
 const PLACEHOLDER = '/images/placeholder-opportunity.png';
 
@@ -70,6 +71,9 @@ async function downloadAndOptimize(
   }
 
   const trimmedUrl = url.trim();
+  if (!isPublicImageUrlSyntax(trimmedUrl)) {
+    return { path: kind === 'logo' ? '' : PLACEHOLDER, local: false };
+  }
   const cleanSlug = slugify(slug) || 'image';
   const subdir = kind === 'logo' ? 'logos' : 'featured';
   const filename = `${sourceKey}/${subdir}/${cleanSlug}-${Date.now()}.webp`;
@@ -78,12 +82,12 @@ async function downloadAndOptimize(
     // Download
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 30_000);
-    const res = await fetch(trimmedUrl, {
-      signal: controller.signal,
-      headers: { 'User-Agent': 'ARIAHubImportBot/1.0' },
-      redirect: 'follow',
-    });
-    clearTimeout(timer);
+    let res: Response;
+    try {
+      res = await fetchPublicImage(trimmedUrl, controller.signal);
+    } finally {
+      clearTimeout(timer);
+    }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     // Cap the download: a multi-hundred-MB body used to be fully buffered
     // before sharp ever saw it. Content-Length is authoritative when present;
@@ -131,8 +135,7 @@ async function downloadAndOptimize(
 
     return { path: blob.url, local: true };
   } catch (e) {
-    console.error(`[images] download failed for ${trimmedUrl}:`, e);
-    // Fallback to remote URL (hybrid mode)
-    return { path: trimmedUrl, local: false };
+    console.error('[images] download failed:', e instanceof Error ? e.message : String(e));
+    return { path: kind === 'logo' ? '' : PLACEHOLDER, local: false };
   }
 }

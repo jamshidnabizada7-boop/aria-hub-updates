@@ -1,3 +1,4 @@
+import { getLocalizedContent } from '@/lib/i18n-content';
 /**
  * Social auto-publisher — turns the deterministic daily plan into a scheduled
  * queue of ready-to-post items and publishes them at Afghanistan peak hours.
@@ -9,8 +10,8 @@
  *
  * All times are stored UTC; slots are defined in AFT (UTC+4:30).
  */
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { socialRenderBaseUrl } from '@/lib/automation/auth';
 import { existsSync } from 'node:fs';
 
 // Linux fallback paths kept for the original sandbox host. CHROMIUM_PATH lets
@@ -23,11 +24,20 @@ const CHROME_CANDIDATES = [
 import { join } from 'node:path';
 import os from 'node:os';
 import { db } from '@/lib/db';
-import { buildDailyPlan, type PlanPost } from '@/lib/social/plan';
+import type { PlanPost } from '@/lib/social/plan';
+import {
+  buildOpportunityDistributionPlan,
+  DEFAULT_OPPORTUNITY_BATCH_SIZE,
+  DEFAULT_OPPORTUNITY_BATCH_TIMES_AFT,
+  DEFAULT_OPPORTUNITY_DAILY_TARGET,
+  DEFAULT_OPPORTUNITY_REPEAT_DAYS,
+} from '@/lib/social/opportunity-distribution';
+import {
+  opportunityDistributionCapacity,
+  opportunityScheduleForIndex,
+} from '@/lib/social/opportunity-distribution-schedule';
 import { buildCaption, type CaptionInput } from '@/lib/social/captions';
-import { publishToPlatform } from '@/lib/social/channels';
-import { notifyAdmin } from '@/lib/social/notify';
-import { decryptCredentials } from '@/lib/social/credentials';
+import { isAllowedStudioMediaUrl } from '@/lib/social/studio/media-url';
 import { resolveExecutable } from '@/lib/import/scrapers/browser-fetch';
 import type { Lang } from '@/lib/i18n-config';
 import type { PostTemplate } from '@/lib/social/brand';
@@ -42,8 +52,6 @@ const PUBLIC_DIR = join(process.cwd(), 'public', 'generated-posts');
 const PUBLIC_BASE = `${(process.env.NEXT_PUBLIC_SITE_URL || 'https://www.myariahub.com').replace(/\/$/, '')}/generated-posts`;
 
 /** Per-platform caption budget — blocks are dropped whole, never cut mid-line. */
-const CAPTION_LIMITS: Record<string, number> = { telegram: 1000, facebook: 4500, x: 270, instagram: 2100 };
-const PUBLISH_CLAIM_TIMEOUT_MS = 10 * 60 * 1000;
 const RENDER_CLAIM_TIMEOUT_MS = 15 * 60 * 1000;
 
 // ── time helpers ─────────────────────────────────────────────────────────────
@@ -67,6 +75,13 @@ type AutomationStateShape = {
   translateBackoffUntil?: string | null;
   lastQueueBuildDate?: string | null;
   tickRunning?: boolean;
+  facebookGroupsEnabled?: boolean;
+  facebookGroupPaused?: boolean;
+  opportunityOnlyAutomation?: boolean;
+  opportunityDailyTarget?: number;
+  opportunityBatchSize?: number;
+  opportunityRepeatDays?: number;
+  opportunityBatchTimes?: string[];
 };
 
 export async function getState(): Promise<AutomationStateShape> {
@@ -75,14 +90,13 @@ export async function getState(): Promise<AutomationStateShape> {
 }
 
 export async function patchState(patch: Partial<AutomationStateShape>): Promise<AutomationStateShape> {
-  const current = await getState();
-  const next = { ...current, ...patch };
-  await db.automationState.upsert({
-    where: { id: 'singleton' },
-    create: { id: 'singleton', state: next as unknown as object },
-    update: { state: next as unknown as object },
-  });
-  return next;
+  const json = JSON.stringify(patch);
+  await db.$executeRaw`
+    INSERT INTO "AutomationState" (id, state, "updatedAt")
+    VALUES ('singleton', ${json}::jsonb, now())
+    ON CONFLICT (id) DO UPDATE
+    SET state = "AutomationState".state || ${json}::jsonb, "updatedAt" = now()`;
+  return getState();
 }
 
 // ── canvas props from a plan post (mirrors the studio preview exactly) ───────
@@ -184,80 +198,92 @@ function captionInputOf(post: PlanPost, lang: Lang): CaptionInput {
 }
 
 // ── 1. queue builder ─────────────────────────────────────────────────────────
+
 export async function buildTodaysQueue(): Promise<{ created: number }> {
-  const state = await getState();
-  const todayUtc = new Date().toISOString().slice(0, 10);
-  if (state.lastQueueBuildDate === todayUtc) return { created: 0 };
-
-  const slots = state.publishTimes?.length ? state.publishTimes : DEFAULT_SLOTS_AFT;
-  const captionLangs: Lang[] = state.captionLangs?.length ? state.captionLangs : ['fa', 'ps', 'en'];
-
-  // Studio defaults (theme/layout chosen in the Brand Studio apply to every
-  // automated post unless a per-post StudioDesign override exists).
-  const defaultDesign = {
-    themeId: state.studioTheme,
-    layout: state.studioLayout,
-  };
-
-  // Deterministic plan — same order in every language (zip by index).
-  const plans = await Promise.all((['fa', 'ps', 'en'] as Lang[]).map((l) => buildDailyPlan(l)));
-  const base = plans[0];
-  if (!base || base.posts.length === 0) return { created: 0 };
-
-  // Per-post designs saved from the Brand Studio override the defaults.
-  type StudioDesignRow = {
-    contentRef: string; templateType: string; themeId: string; layout: string;
-    size: string; overrides: unknown; captionOverride: unknown;
-  };
-  const designs = (await db.studioDesign
-    .findMany({ where: { forDate: todayUtc } })
-    .catch(() => [] as StudioDesignRow[])) as StudioDesignRow[];
-  const designByRef = new Map<string, StudioDesignRow>(designs.map((d) => [d.contentRef, d]));
-
-  const rows: {
-    scheduledFor: Date; templateType: string; contentRef: string | null;
-    contentJson: object; captionJson: object;
-  }[] = [];
-
-  base.posts.forEach((post, idx) => {
-    const slot = slots[idx % slots.length];
-    // Today's slots that already passed stay today (publish tick picks them up
-    // immediately); future ones wait. Rows for the whole day are created at once.
-    const scheduledFor = aftSlotToUtc(slot);
-    const captions: Record<string, string> = {};
-    (['fa', 'ps', 'en'] as Lang[]).forEach((l, li) => {
-      const p = plans[li]?.posts[idx];
-      if (p) captions[l] = p.caption;
+  return db.$transaction(async (tx) => {
+    // Shared with Studio ensure-row: serialize daily queue creation across the
+    // independent worker, legacy tick and manual design requests.
+    await tx.$executeRawUnsafe('SELECT pg_advisory_xact_lock(742194)');
+    const stored = await tx.automationState.findUnique({ where: { id: 'singleton' } });
+    const state = (stored?.state ?? {}) as AutomationStateShape;
+    const todayAft = new Date(Date.now() + AFT_OFFSET_MIN * 60000).toISOString().slice(0, 10);
+    if (state.lastQueueBuildDate === todayAft) return { created: 0 };
+    const primary = state.captionLangs?.[0] ?? 'fa';
+    const slots = state.opportunityBatchTimes?.length ? state.opportunityBatchTimes : DEFAULT_OPPORTUNITY_BATCH_TIMES_AFT;
+    const batchSize = Math.min(10, Math.max(1, state.opportunityBatchSize ?? DEFAULT_OPPORTUNITY_BATCH_SIZE));
+    const target = Math.min(state.opportunityDailyTarget ?? DEFAULT_OPPORTUNITY_DAILY_TARGET, opportunityDistributionCapacity(slots, batchSize));
+    const posts = await buildOpportunityDistributionPlan(primary, { target, repeatDays: state.opportunityRepeatDays ?? DEFAULT_OPPORTUNITY_REPEAT_DAYS });
+    // A morning import can populate an initially empty database later today.
+    if (!posts.length) return { created: 0 };
+    const designs = await tx.studioDesign.findMany({ where: { forDate: todayAft } });
+    const dayStart = new Date(todayAft + 'T00:00:00.000Z');
+    dayStart.setUTCMinutes(dayStart.getUTCMinutes() - AFT_OFFSET_MIN);
+    const existing = await tx.socialPostQueue.findMany({
+      where: { scheduledFor: { gte: dayStart, lt: new Date(dayStart.getTime() + 86400000) } },
+      select: { contentRef: true },
     });
-    // primary canvas language: first captionLang (fa default)
-    const primary: Lang = captionLangs[0] ?? 'fa';
-    const primaryIdx = (['fa', 'ps', 'en'] as Lang[]).indexOf(primary);
-    const primaryPost = plans[primaryIdx]?.posts[idx] ?? post;
-    const ref = post.opp?.slug ?? post.news?.slug ?? post.idea?.id ?? post.story?.id ?? post.stat?.labelKey ?? null;
-    if (ref && designByRef.has(ref)) {
-      // A saved StudioDesign owns this post's queue row for today (created via
-      // the studio save flow) — building the plan row as well would double-post.
-      return;
+    const refs = new Set(existing.map((row) => row.contentRef));
+    const rows: { scheduledFor: Date; templateType: string; contentRef: string; contentJson: object; captionJson: object }[] = [];
+    for (const [index, post] of posts.entries()) {
+      const ref = post.opp?.slug;
+      const schedule = opportunityScheduleForIndex(index, slots, batchSize);
+      if (!ref || !schedule || refs.has(ref) || refs.has(post.key)) continue;
+      const design = designs.find((d) => d.contentRef === ref || d.contentRef === post.key);
+      const overrides = (design?.overrides ?? {}) as Record<string, unknown>;
+      const captions: Record<string, string> = {};
+      const savedCaptions = (design?.captionOverride ?? {}) as Record<string, string>;
+      for (const lang of ['fa', 'ps', 'en'] as Lang[]) {
+        const title = getLocalizedContent(post.opp!.title, post.opp!.titleI18n as Record<string, string> | null, lang);
+        captions[lang] = savedCaptions[lang] || buildCaption(captionInputOf({ ...post, title }, lang));
+      }
+      const props = buildCanvasProps(post, primary, (design?.size ?? 'square') as PosterSize, {
+        themeId: design?.themeId ?? state.studioTheme, layout: design?.layout ?? state.studioLayout,
+      });
+      if (props.posterData && overrides.title) {
+        props.posterData = { ...(props.posterData as object), title: overrides.title, titleI18n: { [primary]: overrides.title } };
+      }
+      rows.push({
+        scheduledFor: new Date(aftSlotToUtc(schedule.slot).getTime() + schedule.offsetMinutes * 60000),
+        templateType: post.template, contentRef: ref,
+        contentJson: {
+          ...props, organization: post.opp?.organization, country: post.opp?.country,
+          deadlineDate: post.opp?.deadline, ...overrides, template: post.template, sourceSlug: ref,
+        },
+        captionJson: captions,
+      });
     }
-    rows.push({
-      scheduledFor,
-      templateType: post.template,
-      contentRef: ref,
-      contentJson: buildCanvasProps(primaryPost, primary, 'square', defaultDesign),
-      captionJson: captions,
-    });
-  });
-
-  // skipDuplicates + the (contentRef, scheduledFor) unique index make the
-  // build idempotent even if two ticks race past the daily cursor check.
-  const res = await db.socialPostQueue.createMany({ data: rows, skipDuplicates: true });
-  await patchState({ lastQueueBuildDate: todayUtc });
-  void res;
-  return { created: rows.length };
+    const result = await tx.socialPostQueue.createMany({ data: rows, skipDuplicates: true });
+    const patch = JSON.stringify({ lastQueueBuildDate: todayAft });
+    await tx.$executeRawUnsafe(
+      'INSERT INTO "AutomationState" (id, state, "updatedAt") VALUES (\'singleton\', $1::jsonb, now()) ON CONFLICT (id) DO UPDATE SET state = "AutomationState".state || $1::jsonb, "updatedAt" = now()', patch,
+    );
+    return { created: result.count };
+  }, { timeout: 30000, maxWait: 10000 });
 }
 
 // ── 2. renderer (playwright screenshots the CODE template) ──────────────────
-async function renderQueueImage(baseUrl: string, props: CanvasProps): Promise<{ file: string; publicUrl: string; localPath: string | null } | null> {
+async function verifyPublicImageUrl(url: string): Promise<boolean> {
+  try {
+    const head = await fetch(url, { method: 'HEAD', cache: 'no-store', signal: AbortSignal.timeout(20000), redirect: 'error' });
+    const type = head.headers.get('content-type') || '';
+    if (head.ok && type.startsWith('image/')) return true;
+
+    const get = await fetch(url, {
+      method: 'GET',
+      cache: 'no-store',
+      headers: { Range: 'bytes=0-32' },
+      signal: AbortSignal.timeout(20000),
+      redirect: 'error',
+    });
+    const getType = get.headers.get('content-type') || '';
+    await get.body?.cancel();
+    return get.ok && getType.startsWith('image/');
+  } catch {
+    return false;
+  }
+}
+
+async function renderQueueImage(baseUrl: string, props: CanvasProps, requireDurableMedia: boolean): Promise<{ file: string; publicUrl: string; localPath: string | null } | null> {
   // Chrome resolution order: env override → known local installs (self-host /
   // workstation) → @sparticuz/chromium (serverless bundle for Vercel). Without
   // the serverless fallback the render step silently returned null on Vercel
@@ -277,34 +303,69 @@ async function renderQueueImage(baseUrl: string, props: CanvasProps): Promise<{ 
   let browser: import('playwright-core').Browser | null = null;
   try {
     const { chromium } = await import('playwright-core');
-    await mkdir(PUBLIC_DIR, { recursive: true });
     browser = await chromium.launch({
       executablePath: exe,
       args: launchArgs,
     });
     const vh = props.size === 'story' ? 2100 : props.size === 'portrait' ? 1500 : 1180;
-    const page = await browser.newPage({ viewport: { width: 1180, height: vh } });
+    const page = await browser.newPage({ viewport: { width: 1180, height: vh }, serviceWorkers: 'block' });
+    const renderOrigin = new URL(baseUrl).origin;
+    await page.route('**/*', async (route) => {
+      const requestUrl = route.request().url();
+      try {
+        const url = new URL(requestUrl);
+        if (url.protocol === 'data:' || url.protocol === 'blob:' ||
+            url.origin === renderOrigin || isAllowedStudioMediaUrl(requestUrl)) {
+          await route.continue();
+        } else {
+          await route.abort();
+        }
+      } catch {
+        await route.abort();
+      }
+    });
     const qs = encodeURIComponent(JSON.stringify(props));
-    const token = process.env.SOCIAL_RENDER_TOKEN ? `&t=${encodeURIComponent(process.env.SOCIAL_RENDER_TOKEN)}` : '';
-    await page.goto(`${baseUrl}/fa/studio-render?p=${qs}${token}`, { waitUntil: 'networkidle', timeout: 45000 });
-    await page.waitForSelector('[data-studio-canvas="1"]', { timeout: 15000 });
+    if (process.env.SOCIAL_RENDER_TOKEN) await page.context().addCookies([{ name: 'aria_render', value: process.env.SOCIAL_RENDER_TOKEN, url: renderOrigin, httpOnly: true, sameSite: 'Strict', secure: renderOrigin.startsWith('https:') }]);
+    await page.goto(`${baseUrl}/fa/studio-render?p=${qs}`, { waitUntil: 'networkidle', timeout: 45000 });
+    await page.waitForSelector('[data-studio-canvas="1"][data-render-ready="1"]', { timeout: 15000 });
+    await page.evaluate(async () => {
+      await document.fonts.ready;
+      await Promise.all(Array.from(document.images, (img) => img.decode()));
+    });
     const el = await page.$('[data-studio-canvas="1"]');
     if (!el) throw new Error('canvas element not found');
-    const file = `post-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.png`;
-    const shotPath = join(tmpdir(), file);
-    await el.screenshot({ path: shotPath });
-    const buf = await readFile(shotPath).catch(() => null);
-    if (!buf) return null;
+    // JPEG is compatible with Instagram feed image publishing; Studio's
+    // interactive PNG export is unchanged. No temporary file is retained.
+    const file = `post-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+    const buf = await el.screenshot({ type: 'jpeg', quality: 92 });
 
-    // Public URL: Vercel Blob when configured (serverless FS is ephemeral —
-    // files under public/ are not served). Self-host keeps the local flow.
+    // Prefer durable object storage on EVERY host when configured. A separate
+    // worker (for example Oracle VM) must not fabricate a myariahub.com URL for
+    // a file that only exists on its local filesystem.
     if (process.env.BLOB_READ_WRITE_TOKEN) {
       try {
         const { put } = await import('@vercel/blob');
-        const blob = await put(`generated-posts/${file}`, buf, { access: 'public', addRandomSuffix: false });
+        const blob = await put(`generated-posts/${file}`, buf, { access: 'public', addRandomSuffix: false, contentType: 'image/jpeg', abortSignal: AbortSignal.timeout(30000) });
+        if (!(await verifyPublicImageUrl(blob.url))) {
+          console.error('[render] blob uploaded but public verification failed:', blob.url);
+          return null;
+        }
         return { file, publicUrl: blob.url, localPath: null };
-      } catch { /* blob failed → try local persistence below */ }
+      } catch (e) {
+        console.error('[render] blob upload failed:', e instanceof Error ? e.message : String(e));
+        return null;
+      }
     }
+
+    // Opportunity posts always need a durable URL, regardless of host setup.
+    // Vercel is ephemeral, and other workers can require this for manual posts.
+    if (requireDurableMedia || process.env.VERCEL || process.env.SOCIAL_REQUIRE_DURABLE_MEDIA === '1') {
+      console.error('[render] durable media unavailable: BLOB_READ_WRITE_TOKEN is required');
+      return null;
+    }
+
+    // Persistent/self-hosted deployments may serve files written under public/.
+    await mkdir(PUBLIC_DIR, { recursive: true });
     await writeFile(join(PUBLIC_DIR, file), buf);
     return { file, publicUrl: `${PUBLIC_BASE}/${file}`, localPath: join(PUBLIC_DIR, file) };
   } catch (e) {
@@ -326,7 +387,7 @@ export async function cleanupGeneratedPosts(): Promise<number> {
     const cutoff = Date.now() - POST_RETENTION_DAYS * 86400000;
     let removed = 0;
     for (const f of files) {
-      if (!f.endsWith('.png')) continue;
+      if (!/\.(?:png|jpg)$/.test(f)) continue;
       const path = join(PUBLIC_DIR, f);
       const st = await (await import('node:fs/promises')).stat(path).catch(() => null);
       if (st && st.mtimeMs < cutoff) {
@@ -341,7 +402,7 @@ export async function cleanupGeneratedPosts(): Promise<number> {
 }
 
 // ── 3. publish flow ──────────────────────────────────────────────────────────
-export async function renderDueQueue(baseUrl: string, limit = 2): Promise<{ rendered: number }> {
+export async function renderDueQueue(baseUrl: string, limit = 2): Promise<{ rendered: number; failed: number }> {
   // Stale-render sweep: a process that died mid-render leaves rows in
   // 'rendering' forever (they were never publishable from that state).
   // Rendering touches no external API, so resetting to pending is safe.
@@ -350,32 +411,61 @@ export async function renderDueQueue(baseUrl: string, limit = 2): Promise<{ rend
     data: { status: 'pending', claimedAt: null },
   }).catch(() => undefined);
   const rows = await db.socialPostQueue.findMany({
-    where: { status: 'pending', scheduledFor: { lte: new Date(Date.now() + 3600000) } },
+    where: {
+      status: { in: ['pending', 'failed'] },
+      imageStatus: { not: 'ready' },
+      renderAttempts: { lt: 3 },
+      OR: [{ nextRenderAttemptAt: null }, { nextRenderAttemptAt: { lte: new Date() } }],
+      requiresManualPublish: false,
+      templateType: { in: ['spotlight', 'deadline'] },
+      scheduledFor: { lte: new Date(Date.now() + 3600000) },
+    },
     orderBy: { scheduledFor: 'asc' },
     take: limit,
   });
   let rendered = 0;
+  let failed = 0;
   for (const row of rows) {
     const ok = await renderOneQueueRow(row.id, baseUrl);
-    if (ok) rendered++;
+    if (ok) rendered++; else failed++;
   }
-  return { rendered };
+  return { rendered, failed };
 }
 
-/** Render (or re-render) ONE queue row's image and mark it ready. */
-export async function renderOneQueueRow(id: string, baseUrl = 'http://127.0.0.1:3000'): Promise<boolean> {
+/** Render (or re-render) ONE queue row's image and mark it ready.
+ *
+ * The claim is compare-and-swap just like publishing. This matters now that a
+ * persistent social worker can run beside the legacy tick/backstop: only one
+ * process may launch Chromium for a given queue row.
+ */
+export async function renderOneQueueRow(id: string, baseUrl = socialRenderBaseUrl()): Promise<boolean> {
   const row = await db.socialPostQueue.findUnique({ where: { id } });
   if (!row) return false;
   // Re-check memory right before launching chrome — a compile wave may have
   // started between the tick's gate and this call.
   if (!process.env.VERCEL && Math.floor(os.freemem() / 1024 / 1024) < 900) return false;
-  await db.socialPostQueue.update({ where: { id }, data: { status: 'rendering', claimedAt: new Date() } });
-  const img = await renderQueueImage(baseUrl, row.contentJson as CanvasProps);
-  await db.socialPostQueue.update({
-    where: { id },
+
+  const claimAt = new Date();
+  const claim = await db.socialPostQueue.updateMany({
+    where: {
+      id,
+      status: { in: ['pending', 'failed'] },
+      imageStatus: { not: 'ready' },
+    },
+    data: { status: 'rendering', claimedAt: claimAt },
+  });
+  if (claim.count === 0) return false;
+
+  const img = await renderQueueImage(baseUrl, row.contentJson as CanvasProps, ['spotlight', 'deadline'].includes(row.templateType));
+  await db.socialPostQueue.updateMany({
+    where: { id, status: 'rendering', claimedAt: claimAt },
     data: {
-      status: 'ready',
+      status: img ? 'ready' : 'failed',
       imageStatus: img ? 'ready' : 'failed',
+      claimedAt: null,
+      renderAttempts: { increment: 1 },
+      nextRenderAttemptAt: img ? null : new Date(Date.now() + 5 * Math.pow(3, row.renderAttempts) * 60000),
+      error: img ? null : 'media render/upload failed — opportunity posts will not publish without a durable image',
       ...(img ? { imagePaths: { square: img.publicUrl, ...(img.localPath ? { local: img.localPath } : {}) } } : {}),
     },
   });
@@ -411,132 +501,4 @@ export function deepLinkOf(caption: string): string | null {
   return caption.match(/🔗\s*(\S+)/)?.[1] ?? null;
 }
 
-export async function publishDueQueue(limit = 2): Promise<{ published: number; failed: number }> {
-  const state = await getState();
-  if (state.autoPublish === false) return { published: 0, failed: 0 };
-  const channels = await db.publishChannel.findMany({ where: { enabled: true } });
-  if (channels.length === 0) return { published: 0, failed: 0 };
-
-  // Stale-claim sweep: a worker that died between claiming and recording left
-  // the row in 'publishing' forever. The platform call MAY have gone out —
-  // fail the row (never silently re-queue → duplicate) and tell the admin.
-  const stale = await db.socialPostQueue.updateMany({
-    where: { status: 'publishing', claimedAt: { lt: new Date(Date.now() - PUBLISH_CLAIM_TIMEOUT_MS) } },
-    data: { status: 'failed', claimedAt: null, error: 'publish claim timed out — check channel posts for an accidental duplicate before retrying', attempts: { increment: 1 } },
-  }).catch(() => null);
-  if (stale?.count) {
-    void notifyAdmin('Publish claim timeout', [
-      `${stale.count} queue row(s) were stuck in 'publishing' and are now marked failed.`,
-      'Before retrying them by hand, check the channels for posts that may have gone out anyway.',
-    ]);
-  }
-
-  const due = await db.socialPostQueue.findMany({
-    // 'partial' rows are retried per-channel (channels already ok are skipped
-    // below), so they are due again — they used to be frozen forever.
-    where: { status: { in: ['ready', 'failed', 'partial'] }, scheduledFor: { lte: new Date() }, attempts: { lt: 3 } },
-    orderBy: { scheduledFor: 'asc' },
-    take: limit,
-  });
-
-  let published = 0;
-  let failed = 0;
-  for (const row of due) {
-    const langs = state.captionLangs?.length ? state.captionLangs : (['fa', 'ps', 'en'] as Lang[]);
-    const images = (row.imagePaths ?? {}) as { square?: string; local?: string };
-
-    // Claim the row with a compare-and-swap: only the worker that flips the
-    // status owns it. Two ticks (scheduler + cron backstop) used to both
-    // select the same row and double-post it to every channel.
-    const claim = await db.socialPostQueue.updateMany({
-      where: { id: row.id, status: { in: ['ready', 'failed', 'partial'] } },
-      data: { status: 'publishing', claimedAt: new Date() },
-    });
-    if (claim.count === 0) continue; // another worker claimed it first
-
-    const prevResults = (row.results ?? {}) as Record<string, { ok?: boolean; error?: string }>;
-    const results: Record<string, { ok: boolean; error?: string; downgraded?: string }> = {};
-    const external: Record<string, { id: string | null; permalink: string | null }> = {};
-    let anyOk = false;
-    let tokenExpiredChannel: string | null = null;
-
-    for (const ch of channels) {
-      // Per-channel retry: channels that already succeeded in an earlier run
-      // must NOT be posted to again (that's how partial rows froze/duplicated).
-      if (prevResults[ch.platform]?.ok) {
-        results[ch.platform] = { ok: true };
-        anyOk = true;
-        continue;
-      }
-      const caption = composeCaptionWithLimit(row.captionJson, langs, CAPTION_LIMITS[ch.platform] ?? 2200);
-      const creds = decryptCredentials(ch.credentials);
-      const r = await publishToPlatform(ch.platform, creds, {
-        caption,
-        imageUrl: images.square ?? null,
-        imagePath: images.local ?? null,
-        link: deepLinkOf(caption) || (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.myariahub.com'),
-      });
-      results[ch.platform] = { ok: r.ok, ...(r.error ? { error: r.error } : {}), ...(r.downgraded ? { downgraded: r.downgraded } : {}) };
-      if (r.ok) {
-        anyOk = true;
-        external[ch.platform] = { id: r.id ?? null, permalink: r.permalink ?? null };
-        await db.publishChannel.update({
-          where: { id: ch.id },
-          data: { lastStatus: 'ok', lastError: null, lastPublishedAt: new Date() },
-        });
-      } else if (r.tokenExpired) {
-        // Dead token: disable the channel and alert — retrying for days is noise.
-        tokenExpiredChannel = ch.platform;
-        await db.publishChannel.update({
-          where: { id: ch.id },
-          data: { lastStatus: 'error', lastError: r.error ?? 'token expired', enabled: false },
-        });
-      } else {
-        await db.publishChannel.update({
-          where: { id: ch.id },
-          data: { lastStatus: 'error', lastError: r.error ?? 'unknown' },
-        });
-        if (r.rateLimited) break; // platform-wide throttle — skip its remaining posts this run
-      }
-    }
-
-    // Merge over previous results so a partially-succeeded row keeps its wins.
-    const merged: Record<string, { ok: boolean; error?: string; downgraded?: string }> =
-      { ...(prevResults as Record<string, { ok: boolean; error?: string; downgraded?: string }>) };
-    for (const [k, v] of Object.entries(results)) merged[k] = v;
-    const mergedList = Object.values(merged);
-    const allOk = mergedList.length > 0 && mergedList.every((r) => r.ok);
-    const status = allOk ? 'published' : anyOk ? 'partial' : 'failed';
-
-    await db.socialPostQueue.update({
-      where: { id: row.id },
-      data: {
-        status,
-        results: merged,
-        externalIds: Object.keys(external).length ? { ...((row.externalIds ?? {}) as object), ...external } : (row.externalIds ?? undefined),
-        attempts: { increment: 1 },
-        claimedAt: null,
-        error: allOk ? null : mergedList.map((r) => r.error).filter(Boolean).join(' | ').slice(0, 500) || 'channels pending or failed',
-        publishedAt: allOk ? (row.publishedAt ?? new Date()) : row.publishedAt ?? null,
-      },
-    });
-    if (allOk) published++; else failed++;
-
-    // One-shot admin alert when a row exhausts its retries or a token died.
-    if ((status !== 'published' && row.attempts + 1 >= 3 && !row.notifiedAt) || tokenExpiredChannel) {
-      const sent = await notifyAdmin(
-        tokenExpiredChannel ? `Publishing paused: ${tokenExpiredChannel} token rejected` : `Post failed after ${row.attempts + 1} attempts`,
-        [
-          tokenExpiredChannel
-            ? `The ${tokenExpiredChannel} channel's credentials were rejected (error 190/expired). It has been disabled — reauthorize it in Admin → Automation.`
-            : `Queue row ${row.id} (${row.templateType} / ${row.contentRef ?? 'no ref'}) failed on all remaining channels.`,
-          ...(tokenExpiredChannel ? [] : [Object.values(results).map((r) => r.error).filter(Boolean).join(' | ').slice(0, 400) || 'no error detail']),
-        ],
-      );
-      if (sent || !tokenExpiredChannel) {
-        await db.socialPostQueue.update({ where: { id: row.id }, data: { notifiedAt: new Date() } }).catch(() => undefined);
-      }
-    }
-  }
-  return { published, failed };
-}
+export { publishDueQueue, publishQueueRow } from '@/lib/social/queue-publishing';

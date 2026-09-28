@@ -18,6 +18,13 @@ try {
 }
 
 describe.skipIf(!serverUp)('security closures (Phase 0 regressions)', () => {
+  test('social worker endpoint requires authorization and has no mutating GET', async () => {
+    const post = await fetch(`${BASE}/api/admin/pipeline/social`, { method: 'POST', signal: AbortSignal.timeout(10000) });
+    expect(post.status).toBe(401);
+    const get = await fetch(`${BASE}/api/admin/pipeline/social`, { signal: AbortSignal.timeout(10000) });
+    expect(get.status).toBe(405);
+  });
+
   test('GET /api/admin/seed is 401 (was: created a known super-admin)', async () => {
     const res = await fetch(`${BASE}/api/admin/seed`, { signal: AbortSignal.timeout(10000) });
     expect(res.status).toBe(401);

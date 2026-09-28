@@ -20,6 +20,7 @@ let warned = false;
 function key(): Buffer | null {
   const secret = process.env.CREDENTIALS_SECRET || process.env.ADMIN_SESSION_SECRET;
   if (!secret || secret.length < 16) {
+    if (process.env.NODE_ENV === 'production') throw new Error('A valid CREDENTIALS_SECRET or ADMIN_SESSION_SECRET is required');
     if (!warned) {
       warned = true;
       console.warn(
@@ -74,7 +75,10 @@ export function decryptCredentials(value: unknown): Record<string, unknown> {
 }
 
 /** Fields that identify a channel but are not secrets — safe to show admins. */
-const PUBLIC_FIELDS = new Set(['chatId', 'pageId', 'igUserId', 'username']);
+const PUBLIC_FIELDS = new Set([
+  'chatId', 'pageId', 'igUserId', 'username',
+  'mode', 'phoneNumberId', 'groupId', 'channelId',
+]);
 
 /**
  * Admin-API view of a channel's credentials: which fields are configured,
