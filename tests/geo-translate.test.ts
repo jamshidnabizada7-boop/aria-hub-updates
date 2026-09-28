@@ -253,6 +253,12 @@ describe('parseChunkReply', () => {
     expect(parseChunkReply('این یک ترجمه آزمایشی است.')).toBe('این یک ترجمه آزمایشی است.');
     expect(parseChunkReply('')).toBeNull();
   });
+
+  test('rejects malformed or incomplete JSON instead of publishing protocol text', () => {
+    expect(parseChunkReply('{"t":"ناتمام"')).toBeNull();
+    expect(parseChunkReply('{"translation":"wrong key"}')).toBeNull();
+    expect(parseChunkReply('```json\n{"t": 42}\n```')).toBeNull();
+  });
 });
 
 describe('isSymbolic', () => {

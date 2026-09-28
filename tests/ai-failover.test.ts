@@ -46,6 +46,14 @@ describe('chatWithFailover', () => {
     expect(groqCalls).toBe(0);
   });
 
+  test('propagates a 429 signal when every provider is rate-limited', async () => {
+    const slots = [
+      slot('groq', async () => { throw new Error('429 rate limit'); }),
+      slot('openrouter', async () => { throw new Error('429 quota exceeded'); }),
+    ];
+    await expect(chatWithFailover(slots, 'sys', 'prompt')).rejects.toThrow(/429/);
+  });
+
   test('non-rate-limit errors also fail over but do not cool down', async () => {
     let boomCalls = 0;
     const slots = [

@@ -56,6 +56,9 @@ export function parseChunkReply(raw: string): string | null {
       if (typeof parsed.t === 'string') return parsed.t.trim() || null;
     } catch { /* fall through */ }
   }
+  // A broken JSON-shaped response is never a usable translation. Treating
+  // it as prose could publish raw protocol text as the public translation.
+  if (/^(?:\{|\[)/.test(text)) return null;
   if (text && text.length > 1 && !/^null$/i.test(text)) return text;
   return null;
 }

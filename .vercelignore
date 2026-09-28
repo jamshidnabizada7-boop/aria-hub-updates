@@ -1,0 +1,16 @@
+node_modules
+.next
+.stage1-integration
+release-backups
+videos
+scripts/tmp
+tests/fixtures
+*.log
+.env*
+_video-studio
+db
+tools
+upload
+download
+.localpg
+.localpg-linux

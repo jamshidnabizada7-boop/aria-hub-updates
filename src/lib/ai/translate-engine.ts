@@ -79,8 +79,11 @@ const ROW_SELECT = {
 
 /** English/base source text of one field (i18n.en wins over the base column). */
 function sourceOf(row: TranslateRow, field: FieldKey): string {
-  const base = (row as unknown as Record<string, unknown>)[field];
-  const i18n = (row as unknown as Record<string, unknown>)[`${field}I18n`];
+  // The public field key is `summary`, while Opportunity stores it as
+  // `aiSummary`. Without this mapping the summary silently misses the plan.
+  const column = field === 'summary' ? 'aiSummary' : field;
+  const base = (row as unknown as Record<string, unknown>)[column];
+  const i18n = (row as unknown as Record<string, unknown>)[`${column}I18n`];
   if (i18n && typeof i18n === 'object') {
     const en = (i18n as Record<string, unknown>).en;
     if (typeof en === 'string' && en.trim()) return en;
@@ -145,18 +148,22 @@ Rules:
 async function syncPlan(rowId: string, lang: 'fa' | 'ps', plans: FieldPlan[]): Promise<void> {
   const existing = await db.translationChunk.findMany({
     where: { ownerType: 'opportunity', ownerId: rowId, lang },
-    select: { id: true, fieldKey: true, chunkIndex: true, chunkHash: true },
+    select: { id: true, fieldKey: true, chunkIndex: true, chunkHash: true, chunkTotal: true },
   });
   const wanted = new Map<string, { hash: string }>();
   for (const p of plans) for (const c of p.chunks) wanted.set(`${p.field}:${c.index}`, { hash: c.hash });
 
   const staleIds: string[] = [];
-  const changedIds: string[] = [];
+  const changed: { id: string; hash: string; total: number }[] = [];
   for (const row of existing) {
     const key = `${row.fieldKey}:${row.chunkIndex}`;
     const w = wanted.get(key);
+    const plan = plans.find((p) => p.field === row.fieldKey);
+    const chunk = plan?.chunks[row.chunkIndex];
     if (!w) staleIds.push(row.id);
-    else if (w.hash !== row.chunkHash) changedIds.push(row.id);
+    else if (w.hash !== row.chunkHash || chunk?.total !== row.chunkTotal) {
+      if (chunk) changed.push({ id: row.id, hash: w.hash, total: chunk.total });
+    }
     wanted.delete(key);
   }
 
@@ -164,10 +171,10 @@ async function syncPlan(rowId: string, lang: 'fa' | 'ps', plans: FieldPlan[]): P
   if (staleIds.length) {
     await db.translationChunk.deleteMany({ where: { id: { in: staleIds } } });
   }
-  if (changedIds.length) {
-    await db.translationChunk.updateMany({
-      where: { id: { in: changedIds } },
-      data: { status: 'pending', result: null, attempts: 0, error: null },
+  for (const item of changed) {
+    await db.translationChunk.update({
+      where: { id: item.id },
+      data: { chunkHash: item.hash, chunkTotal: item.total, status: 'pending', result: null, attempts: 0, error: null },
     });
   }
   for (const [key, w] of wanted) {
@@ -377,8 +384,8 @@ export async function processNextUnit(): Promise<UnitResult> {
 
   // Source changed since the plan was stored → invalidate both languages
   // (Pashto is re-derived strictly: it may only run after fa completes).
-  if (row.translationSourceHash !== newHash) {
-    await db.translationChunk.deleteMany({ where: { ownerType: 'opportunity', ownerId: row.id } });
+  const sourceChanged = row.translationSourceHash !== newHash;
+  if (sourceChanged) {
     await db.opportunity.update({
       where: { id: row.id },
       data: {
@@ -389,7 +396,7 @@ export async function processNextUnit(): Promise<UnitResult> {
     });
   }
 
-  const lang: Lang = row.faStatus === 'complete' ? 'ps' : 'fa';
+  const lang: Lang = sourceChanged ? 'fa' : row.faStatus === 'complete' ? 'ps' : 'fa';
   await syncPlan(row.id, lang, plans);
   await db.opportunity.update({
     where: { id: row.id },
@@ -566,10 +573,6 @@ export async function processOpportunityNow(opportunityId: string, budgetMs = 90
       select: { ...ROW_SELECT, faStatus: true, psStatus: true, translationSourceHash: true, status: true },
     })) as unknown as (TranslateRow & { faStatus: string | null; psStatus: string | null; translationSourceHash: string | null }) | null;
     if (!row) return;
-    if (row.faStatus === 'complete' && row.psStatus === 'complete') return;
-    if (row.faStatus === 'failed' || row.psStatus === 'failed') return; // parked — queue will retry later
-
-    const lang: Lang = row.faStatus === 'complete' ? 'ps' : 'fa';
     const plans = planFields(row);
     if (!plans.length) {
       await db.opportunity.update({
@@ -579,13 +582,17 @@ export async function processOpportunityNow(opportunityId: string, budgetMs = 90
       return;
     }
     const newHash = sourceHashOf(plans);
-    if (row.translationSourceHash !== newHash) {
-      await db.translationChunk.deleteMany({ where: { ownerType: 'opportunity', ownerId: row.id } });
+    const sourceChanged = row.translationSourceHash !== newHash;
+    if (sourceChanged) {
       await db.opportunity.update({
         where: { id: row.id },
         data: { translationSourceHash: newHash, faStatus: 'pending', psStatus: 'pending' },
       });
     }
+    if (!sourceChanged && row.faStatus === 'complete' && row.psStatus === 'complete') return;
+    if (!sourceChanged && (row.faStatus === 'failed' || row.psStatus === 'failed')) return; // parked — queue will retry later
+
+    const lang: Lang = sourceChanged ? 'fa' : row.faStatus === 'complete' ? 'ps' : 'fa';
     await syncPlan(row.id, lang, plans);
 
     const next = await db.translationChunk.findFirst({
@@ -628,9 +635,10 @@ export async function processOpportunityNow(opportunityId: string, budgetMs = 90
         data: {
           attempts: { increment: 1 },
           error: msg,
-          ...(attemptsExhausted(((await db.translationChunk.findUnique({ where: { id: next.id }, select: { attempts: true } }))?.attempts ?? 0)) ? { status: 'failed' } : {}),
+          ...(attemptsExhausted(((await db.translationChunk.findUnique({ where: { id: next.id }, select: { attempts: true } }))?.attempts ?? 0) + 1) ? { status: 'failed' } : {}),
         },
       });
+      await writeProgress(row.id, lang);
       if (isRateLimitMsg(msg)) return; // budget for this import is spent
       return;
     }
