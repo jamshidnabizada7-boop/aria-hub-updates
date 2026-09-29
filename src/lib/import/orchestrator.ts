@@ -205,6 +205,7 @@ async function runOneSource(
     scraper.deadline = startedAt + GLOBAL_TIMEOUT;
 
     let remainingNew = 0;
+    const knownForRecheck: RawListing[] = [];
     const processBatch = async (listings: RawListing[]) => {
       counters.found += listings.length;
       // Query URL existence in one batch so the newest unseen cards get the
@@ -220,10 +221,11 @@ async function runOneSource(
           for (const row of known) if (row.sourceUrl) knownUrls.add(row.sourceUrl);
         }
       }
-      const ordered = bounded
-        ? [...listings.filter((item) => !knownUrls.has(item.sourceUrl)), ...listings.filter((item) => knownUrls.has(item.sourceUrl))]
-        : listings;
-      if (bounded) remainingNew += ordered.filter((item) => !knownUrls.has(item.sourceUrl)).length;
+      const unseen = listings.filter((item) => !knownUrls.has(item.sourceUrl));
+      const known = listings.filter((item) => knownUrls.has(item.sourceUrl));
+      if (streamPrimary) knownForRecheck.push(...known);
+      const ordered = bounded ? (streamPrimary ? unseen : [...unseen, ...known]) : listings;
+      if (bounded) remainingNew += unseen.length;
 
       for (const listing of ordered) {
         if (Date.now() - startedAt > GLOBAL_TIMEOUT) {
@@ -245,17 +247,36 @@ async function runOneSource(
       // requests could consume the entire 35-second budget, importing zero.
       let pagesSeen = 0;
       let lastHadNext = false;
+      let reachedPageCap = false;
       for await (const page of scraper.scrapePages()) {
         pagesSeen++;
         lastHadNext = Boolean(page.nextPage);
         await processBatch(page.listings);
-        if (Date.now() >= scraper.deadline || pagesSeen >= Number(handle.config.maxPages)) {
+        if (pagesSeen >= Number(handle.config.maxPages)) {
+          reachedPageCap = true;
+          break;
+        }
+        if (Date.now() >= scraper.deadline) {
           break;
         }
       }
       // A next-page link left unvisited (including after a fetch error) keeps
-      // the source in the retry queue instead of reporting full coverage.
-      if (lastHadNext) remainingNew = Math.max(1, remainingNew);
+      // the source in the retry queue. Reaching the configured recent-page cap
+      // does not: older archive pages should not cause endless fast retries.
+      if (lastHadNext && !reachedPageCap) remainingNew = Math.max(1, remainingNew);
+      // Recheck existing details only after the recent-page crawl found no
+      // unattempted opportunities. This keeps old cards from blocking new ones.
+      if (remainingNew === 0) {
+        for (const listing of knownForRecheck) {
+          if (Date.now() - startedAt > GLOBAL_TIMEOUT) break;
+          try {
+            await processListing(db, scraper, listing, source, categories, knownSlugs, counters, force, errors, bounded);
+          } catch (e) {
+            counters.failed++;
+            errors.push({ url: listing.sourceUrl, message: sanitizeError(e), ts: new Date().toISOString() });
+          }
+        }
+      }
     } else {
       await processBatch(await scraper.scrapeAll());
     }
