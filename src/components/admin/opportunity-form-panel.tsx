@@ -13,7 +13,7 @@
  * on the public site — it exists so admins can trace where content came from.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import {
   Plus, Pencil, Trash2, Search, Loader2, X, Sparkles, Globe,
   FileText, Coins, CalendarDays, Link2, Shield, Eye, ChevronDown,
@@ -88,6 +88,8 @@ function fromItem(item: Item): Record<string, unknown> {
 export function OpportunityFormPanel() {
   const t = useT();
   const { toast } = useToast();
+  const tRef = useRef(t);
+  useEffect(() => { tRef.current = t; }, [t]);
 
   const [items, setItems] = useState<Item[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -121,10 +123,10 @@ export function OpportunityFormPanel() {
         setTotal(d.total ?? (d.items || []).length);
         if (Array.isArray(d.sources)) setSources(d.sources);
       })
-      .catch(() => { if (!cancelled) toast({ title: t('admin.toast.failedLoad'), variant: 'destructive' }); })
+      .catch(() => { if (!cancelled) toast({ title: tRef.current('admin.toast.failedLoad'), variant: 'destructive' }); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [page, pageSize, search, categoryFilter, statusFilter, sourceFilter, reloadKey, t, toast]);
+  }, [page, pageSize, search, categoryFilter, statusFilter, sourceFilter, reloadKey, toast]);
 
   useEffect(() => {
     fetch('/api/admin/crud?model=opportunityCategory&pageSize=100')
@@ -297,6 +299,68 @@ export function OpportunityFormPanel() {
 
 // ─── Dedicated form dialog ───────────────────────────────────────────────────
 
+interface OpportunityFormContextValue {
+  data: Record<string, unknown>;
+  set: (field: string, value: unknown) => void;
+  setMulti: (field: string, baseValue: string, i18nValue: Record<string, string>) => void;
+  openSections: Record<string, boolean>;
+  toggleSection: (key: string) => void;
+}
+
+const OpportunityFormContext = createContext<OpportunityFormContextValue | null>(null);
+
+function useOpportunityForm() {
+  const form = useContext(OpportunityFormContext);
+  if (!form) throw new Error('Opportunity form fields must be inside the form dialog');
+  return form;
+}
+
+// Keep field component identities stable while the dialog state changes. Defining
+// them inside OpportunityFormDialog remounts every input on each keystroke.
+function Section({ id, icon: Icon, title, children }: { id: string; icon: React.ComponentType<{ className?: string }>; title: string; children: React.ReactNode }) {
+  const { openSections, toggleSection } = useOpportunityForm();
+  return (
+    <div className="overflow-hidden rounded-xl border border-border/60 bg-card">
+      <button
+        type="button"
+        onClick={() => toggleSection(id)}
+        className="flex w-full items-center gap-2 px-4 py-3 text-start transition-colors hover:bg-accent/40"
+      >
+        <Icon className="h-4 w-4 text-primary" />
+        <span className="flex-1 text-sm font-bold">{title}</span>
+        <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', openSections[id] && 'rotate-180')} />
+      </button>
+      {openSections[id] && <div className="space-y-4 border-t border-border/60 p-4">{children}</div>}
+    </div>
+  );
+}
+
+function M({ field, label, long }: { field: TranslatableField; label: string; long?: boolean }) {
+  const { data, setMulti } = useOpportunityForm();
+  return (
+    <div className={cn(long && 'sm:col-span-2')}>
+      <MultilingualInput
+        field={field}
+        value={(data[field] as string) || ''}
+        i18nValue={(data[`${field}I18n`] as Record<string, string>) || null}
+        isLong={long ?? LONG_FIELDS.has(field)}
+        onChange={(base, i18n) => setMulti(field, base, i18n)}
+      />
+      <p className="mt-1 text-[11px] text-muted-foreground">{label}</p>
+    </div>
+  );
+}
+
+function Simple({ field, label, type }: { field: string; label: string; type?: string }) {
+  const { data, set } = useOpportunityForm();
+  return (
+    <div>
+      <Label className="mb-1.5 block text-sm font-medium">{label}</Label>
+      <Input type={type || 'text'} value={(data[field] as string) || ''} onChange={(e) => set(field, e.target.value)} className="w-full" />
+    </div>
+  );
+}
+
 function OpportunityFormDialog({
   item, categories, onClose, onSaved,
 }: {
@@ -413,42 +477,8 @@ function OpportunityFormDialog({
     }
   };
 
-  const Section = ({ id, icon: Icon, title, children }: { id: string; icon: React.ComponentType<{ className?: string }>; title: string; children: React.ReactNode }) => (
-    <div className="overflow-hidden rounded-xl border border-border/60 bg-card">
-      <button
-        type="button"
-        onClick={() => toggleSection(id)}
-        className="flex w-full items-center gap-2 px-4 py-3 text-start transition-colors hover:bg-accent/40"
-      >
-        <Icon className="h-4 w-4 text-primary" />
-        <span className="flex-1 text-sm font-bold">{title}</span>
-        <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', openSections[id] && 'rotate-180')} />
-      </button>
-      {openSections[id] && <div className="space-y-4 border-t border-border/60 p-4">{children}</div>}
-    </div>
-  );
-
-  const M = ({ field, label, long }: { field: TranslatableField; label: string; long?: boolean }) => (
-    <div className={cn(long && 'sm:col-span-2')}>
-      <MultilingualInput
-        field={field}
-        value={(data[field] as string) || ''}
-        i18nValue={(data[`${field}I18n`] as Record<string, string>) || null}
-        isLong={long ?? LONG_FIELDS.has(field)}
-        onChange={(base, i18n) => setMulti(field, base, i18n)}
-      />
-      <p className="mt-1 text-[11px] text-muted-foreground">{label}</p>
-    </div>
-  );
-
-  const Simple = ({ field, label, type }: { field: string; label: string; type?: string }) => (
-    <div>
-      <Label className="mb-1.5 block text-sm font-medium">{label}</Label>
-      <Input type={type || 'text'} value={(data[field] as string) || ''} onChange={(e) => set(field, e.target.value)} className="w-full" />
-    </div>
-  );
-
   return (
+    <OpportunityFormContext.Provider value={{ data, set, setMulti, openSections, toggleSection }}>
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-h-[92vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
@@ -569,5 +599,6 @@ function OpportunityFormDialog({
         </form>
       </DialogContent>
     </Dialog>
+    </OpportunityFormContext.Provider>
   );
 }
