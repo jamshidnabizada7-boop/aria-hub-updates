@@ -8,6 +8,11 @@ const nextConfig: NextConfig = {
   // copy step because chunk filenames contain ":" (e.g. node:fs/promises).
   ...(process.env.STANDALONE === "1" ? { output: "standalone" as const } : {}),
   compress: true,
+  // Chromium extracts these archives at runtime when CV PDFs are rendered.
+  // Static tracing sees the launcher but does not discover its compressed binaries.
+  outputFileTracingIncludes: {
+    '/api/cv-builder/pdf': ['node_modules/@sparticuz/chromium/bin/**/*'],
+  },
   // Type errors now fail the build — the codebase compiles clean under
   // `tsc --noEmit` (scripts/ and examples/ are excluded from type-checking).
   reactStrictMode: true,
