@@ -1,13 +1,10 @@
 import { db } from '@/lib/db';
 import { acquireTickLock, releaseTickLock } from '@/lib/automation/tick';
 import { runImport } from '@/lib/import/orchestrator';
-import { getState, patchState } from '@/lib/social/publisher';
+import { patchState } from '@/lib/social/publisher';
+import { selectScheduledOpportunitySource } from './import-selection';
 
 const MAX_DATABASE_BYTES = 250 * 1024 * 1024;
-
-type ImportState = Awaited<ReturnType<typeof getState>> & {
-  lastOpportunityImportDate?: string;
-};
 
 export interface ScheduledImportResult {
   ran: boolean;
@@ -17,18 +14,15 @@ export interface ScheduledImportResult {
   imported?: number;
   updated?: number;
   found?: number;
+  remainingNew?: number;
   databaseBytes?: number;
 }
 
-/** One small source refresh per UTC day; news sources are left to their worker. */
+/** One bounded opportunity-source refresh per cron call; news is excluded. */
 export async function runScheduledOpportunityImport(): Promise<ScheduledImportResult> {
   if (!(await acquireTickLock())) return { ran: false, reason: 'tick_locked_elsewhere' };
 
   try {
-    const today = new Date().toISOString().slice(0, 10);
-    const state = (await getState()) as ImportState;
-    if (state.lastOpportunityImportDate === today) return { ran: false, reason: 'daily_budget' };
-
     const rows = await db.$queryRaw<Array<{ bytes: bigint }>>
       `SELECT pg_database_size(current_database())::bigint AS bytes`;
     const databaseBytes = Number(rows[0]?.bytes ?? 0);
@@ -36,14 +30,16 @@ export async function runScheduledOpportunityImport(): Promise<ScheduledImportRe
       return { ran: false, reason: 'database_budget', databaseBytes };
     }
 
-    const source = await db.importSource.findFirst({
+    const sources = await db.importSource.findMany({
       where: { enabled: true, type: { in: ['job', 'scholarship'] } },
-      orderBy: [{ lastRunAt: { sort: 'asc', nulls: 'first' } }, { name: 'asc' }],
-      select: { id: true, name: true },
+      select: { id: true, name: true, scraperKey: true, lastRunAt: true, lastRunStatus: true, lastRunStats: true },
     });
-    if (!source) return { ran: false, reason: 'no_enabled_source' };
+    const source = selectScheduledOpportunitySource(sources, new Date());
+    if (!source) return { ran: false, reason: 'no_source_due', databaseBytes };
 
-    // Reserve the day before scraping; a timeout must not cause another run.
+    const today = new Date().toISOString().slice(0, 10);
+    // The cross-process lock prevents overlap; lastRunAt and remainingNew
+    // control the next selection after this source finishes.
     await patchState({
       lastOpportunityImportDate: today,
       lastOpportunityImportStartedAt: new Date().toISOString(),
@@ -59,6 +55,7 @@ export async function runScheduledOpportunityImport(): Promise<ScheduledImportRe
       lastOpportunityImportStatus: summary.status,
       lastOpportunityImportImported: summary.imported,
       lastOpportunityImportUpdated: summary.updated,
+      lastOpportunityImportRemainingNew: summary.remainingNew,
     } as Parameters<typeof patchState>[0]);
     return {
       ran: true,
@@ -67,6 +64,7 @@ export async function runScheduledOpportunityImport(): Promise<ScheduledImportRe
       imported: summary.imported,
       updated: summary.updated,
       found: summary.found,
+      remainingNew: summary.remainingNew,
       databaseBytes,
     };
   } finally {

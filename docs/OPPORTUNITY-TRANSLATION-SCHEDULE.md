@@ -41,19 +41,23 @@ several days.
 
 ## New-listing refresh
 
-`aria-opportunity-import` calls `/api/admin/pipeline/import` once daily through
+`aria-opportunity-import` calls `/api/admin/pipeline/import` hourly through
 the same Supabase Cron and Vault pattern. Its credential is separately stored
 as `aria_opportunity_import_cron` / Vercel Production `IMPORT_CRON_SECRET`.
-It chooses the least recently run enabled job or scholarship source. Each run
-reads at most **one list page**, processes at most **three listings**, and has
-a **25-second scrape/processing budget**. It skips inline AI enrichment and
-translation; the translation queue processes new published rows at its own
-bounded pace. It also reserves one run per UTC day and stops at 250 MB database
-size. Existing source auto-publish settings still decide whether an imported
-row is published.
+It gives ACBAR, Wazifaha, Jobs.af, O4AF, and Scholarships.af a slot every
+12 hours. Unattempted new listings get an hourly retry slot. Other enabled
+opportunity sources run weekly when no primary source is due; news sources are
+excluded. One request still handles only one source to stay within Vercel's
+function limit. It crawls up to five configured recent list pages, prioritizes
+unseen URLs, and processes until its 35-second budget; the remaining unseen
+count is recorded for the next run. Expired listings are skipped before being
+stored. Inline AI enrichment and translation remain queued separately. The
+scheduled importer stops starting new runs at 250 MB database size. Existing
+source auto-publish settings still decide whether an imported row is published.
 
 Check `lastOpportunityImportDate`, `lastOpportunityImportFinishedAt`,
-`lastOpportunityImportSource`, and `lastOpportunityImportStatus` in
+`lastOpportunityImportSource`, `lastOpportunityImportStatus`, and
+`lastOpportunityImportRemainingNew` in
 `AutomationState.state`, plus `ImportRun` counts and source health. Some sites
 may fail or block scraping; a daily run can finish without a new listing. To
 stop this refresh separately:

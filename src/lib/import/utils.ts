@@ -331,3 +331,10 @@ export function cleanTitleJunk(title: string): string {
     .replace(/\s*[-–—|·]\s*$/, '')
     .trim();
 }
+/** Date-only deadlines remain open through their stated UTC day. */
+export function isExpiredListingDeadline(input: string | null | undefined, now = new Date()): boolean {
+  if (!input) return false;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(input)) return input < now.toISOString().slice(0, 10);
+  const deadline = new Date(input);
+  return !Number.isNaN(deadline.getTime()) && deadline.getTime() < now.getTime();
+}
