@@ -11,7 +11,10 @@ const nextConfig: NextConfig = {
   // Chromium extracts these archives at runtime when CV PDFs are rendered.
   // Static tracing sees the launcher but does not discover its compressed binaries.
   outputFileTracingIncludes: {
-    '/api/cv-builder/pdf': ['node_modules/@sparticuz/chromium/bin/**/*'],
+    '/api/cv-builder/pdf': [
+      'node_modules/@sparticuz/chromium/bin/**/*',
+      'node_modules/playwright-core/browsers.json',
+    ],
   },
   // Type errors now fail the build — the codebase compiles clean under
   // `tsc --noEmit` (scripts/ and examples/ are excluded from type-checking).
