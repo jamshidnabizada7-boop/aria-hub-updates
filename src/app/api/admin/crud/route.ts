@@ -61,12 +61,110 @@ const MODELS: Record<string, { delegate: any; fields: string[]; label: string; s
   socialIdea: { label: 'Post Ideas', delegate: db.socialIdea, fields: ['kind', 'text', 'textI18n', 'note', 'noteI18n', 'active', 'sortOrder'] },
 };
 
+/** Prisma-schema facts per crud key: required scalars without a DB default, and DateTime columns. */
+const SCHEMA_INFO: Record<string, { required: string[]; dates: string[] }> = (() => {
+  const info: Record<string, { required: string[]; dates: string[] }> = {};
+  for (const m of Prisma.dmmf.datamodel.models) {
+    const key = m.name.charAt(0).toLowerCase() + m.name.slice(1);
+    info[key] = {
+      required: m.fields.filter((f: any) => f.kind === 'scalar' && f.isRequired && !f.hasDefault && !f.isUpdatedAt).map((f) => f.name),
+      dates: m.fields.filter((f: any) => f.kind === 'scalar' && f.type === 'DateTime').map((f) => f.name),
+    };
+  }
+  return info;
+})();
+
+/** Editable FK fields whose values may arrive as a human-readable name instead of an id. */
+const RELATION_BY_FIELD: Record<string, { delegate: any }> = {
+  'news.categoryId': { delegate: db.newsCategory },
+  'service.categoryId': { delegate: db.serviceCategory },
+  'opportunity.categoryId': { delegate: db.opportunityCategory },
+  'interviewQuestion.categoryId': { delegate: db.interviewCategory },
+  'visaQuestion.categoryId': { delegate: db.visaCategory },
+  'visaDocument.categoryId': { delegate: db.visaCategory },
+  'documentTemplate.categoryId': { delegate: db.documentCategory },
+  'visaQuestion.countryId': { delegate: db.visaCountry },
+  'visaDocument.countryId': { delegate: db.visaCountry },
+};
+
+function slugify(input: string): string {
+  return input.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+/**
+ * Fill a missing/empty slug from the title, falling back to a short random id
+ * for non-Latin titles (same pattern the news importer uses, e.g. news-1be0e8c663e4).
+ * On update, an ABSENT slug means "keep the existing one" — only a cleared
+ * (empty-string) slug is regenerated.
+ */
+function fillSlug(model: string, data: any, isCreate: boolean): void {
+  if (!MODELS[model].fields.includes('slug')) return;
+  if (typeof data.slug === 'string' && data.slug.trim()) return;
+  if (!isCreate && data.slug === undefined) return;
+  if (data.slug !== undefined && typeof data.slug !== 'string') return;
+  data.slug = slugify(String(data.title ?? '')) || `${model}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/** Normalize user-entered dates to ISO. Returns the offending field name, or null. */
+function normalizeDates(model: string, data: any): string | null {
+  for (const f of SCHEMA_INFO[model]?.dates ?? []) {
+    const v = data[f];
+    if (v === undefined || v === null || v === '') continue;
+    if (typeof v !== 'string') {
+      if (isRequiredField(model, f)) return f;
+      delete data[f];
+      continue;
+    }
+    const d = new Date(v);
+    if (isNaN(d.getTime())) {
+      if (isRequiredField(model, f)) return f;
+      delete data[f];
+    } else {
+      data[f] = d.toISOString();
+    }
+  }
+  return null;
+}
+
+/** Resolve name-like values in relation fields to real ids. Returns an error string, or null. */
+async function resolveRelations(model: string, data: any): Promise<string | null> {
+  for (const [key, spec] of Object.entries(RELATION_BY_FIELD)) {
+    const [relModel, field] = key.split('.');
+    if (relModel !== model) continue;
+    const v = data[field];
+    if (typeof v !== 'string' || !v.trim()) continue;
+    const value = v.trim();
+    const byId = await spec.delegate.findUnique({ where: { id: value } });
+    if (byId) continue;
+    const byName = await spec.delegate.findFirst({ where: { name: { equals: value, mode: 'insensitive' } } });
+    if (byName) {
+      data[field] = byName.id;
+    } else {
+      return `"${value}" is not a valid ${key.endsWith('countryId') ? 'country' : 'category'} — pick one from the list.`;
+    }
+  }
+  return null;
+}
+
+/** Pull the first actionable argument message out of a Prisma validation error. */
+function firstValidationMessage(message: string): string {
+  const line = String(message)
+    .split('\n')
+    .map((l) => l.trim())
+    .find((l) => /^(Argument|Unknown argument|Unknown field|Invalid value|Missing required|Unable to)/i.test(l) || /argument `/.test(l));
+  return line ? line.replace(/^`+|`+$/g, '') : '';
+}
+
 /** Map Prisma errors to clean HTTP responses without leaking schema details. */
 function handleError(e: any) {
   if (e instanceof Prisma.PrismaClientKnownRequestError) {
     if (e.code === 'P2002') return NextResponse.json({ error: 'A record with this unique value already exists.' }, { status: 409 });
     if (e.code === 'P2025') return NextResponse.json({ error: 'Record not found.' }, { status: 404 });
     if (e.code === 'P2003') return NextResponse.json({ error: 'This record is referenced by other records and cannot be modified this way.' }, { status: 409 });
+  }
+  if (e instanceof Prisma.PrismaClientValidationError) {
+    console.error('[crud] validation error:', e.message);
+    return NextResponse.json({ error: firstValidationMessage(e.message) || 'Invalid data — check the highlighted fields.' }, { status: 400 });
   }
   console.error('[crud] error:', e);
   return NextResponse.json({ error: 'An internal error occurred.' }, { status: 500 });
@@ -128,21 +226,21 @@ function isRequiredField(model: string, field: string): boolean {
     interviewSession: ['mode', 'status'],
     socialIdea: ['kind', 'text'],
   };
-  
+
   return requiredFields[model]?.includes(field) || false;
 }
 
 /** Validate i18n fields contain only valid language codes */
 function validateI18nFields(data: any): { valid: boolean; error?: string } {
   const validLangs = ['en', 'fa', 'ps'];
-  
+
   for (const key of Object.keys(data)) {
     if (key.endsWith('I18n') && data[key]) {
       // Skip if it's an empty string, null, or undefined
       if (data[key] === '' || data[key] === null || data[key] === undefined) {
         continue;
       }
-      
+
       // If it's a string, try to parse it as JSON
       let obj = data[key];
       if (typeof data[key] === 'string') {
@@ -156,30 +254,30 @@ function validateI18nFields(data: any): { valid: boolean; error?: string } {
           continue;
         }
       }
-      
+
       // Check if it's an object (not an array)
       if (typeof obj !== 'object' || Array.isArray(obj)) {
         return { valid: false, error: `${key} must be an object with language codes` };
       }
-      
+
       // If it's an empty object, that's fine - skip validation
       if (Object.keys(obj).length === 0) {
         continue;
       }
-      
+
       // Validate language codes
       const langs = Object.keys(obj);
       const invalidLangs = langs.filter(l => !validLangs.includes(l));
-      
+
       if (invalidLangs.length > 0) {
-        return { 
-          valid: false, 
-          error: `Invalid language codes in ${key}: ${invalidLangs.join(', ')}. Valid codes are: en, fa, ps` 
+        return {
+          valid: false,
+          error: `Invalid language codes in ${key}: ${invalidLangs.join(', ')}. Valid codes are: en, fa, ps`
         };
       }
     }
   }
-  
+
   return { valid: true };
 }
 
@@ -192,7 +290,7 @@ function cleanI18nFields(data: any): void {
         data[key] = null;
         continue;
       }
-      
+
       // If it's a string that looks like JSON, try to parse it
       if (typeof data[key] === 'string') {
         try {
@@ -202,12 +300,12 @@ function cleanI18nFields(data: any): void {
           continue;
         }
       }
-      
+
       // Clean empty strings from within i18n objects
       if (typeof data[key] === 'object' && data[key] !== null && !Array.isArray(data[key])) {
         const cleaned: Record<string, any> = {};
         let hasContent = false;
-        
+
         for (const lang of Object.keys(data[key])) {
           const value = data[key][lang];
           // Only keep non-empty string values or non-empty arrays
@@ -219,11 +317,11 @@ function cleanI18nFields(data: any): void {
             hasContent = true;
           }
         }
-        
+
         // If no content after cleaning, set to null; otherwise use cleaned object
         data[key] = hasContent ? cleaned : null;
       }
-      
+
       // If it's an empty object, set to null
       if (typeof data[key] === 'object' && !Array.isArray(data[key]) && data[key] !== null && Object.keys(data[key]).length === 0) {
         data[key] = null;
@@ -365,22 +463,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
   if (!model || !MODELS[model]) return NextResponse.json({ error: 'Invalid model' }, { status: 400 });
-  
+
   // Clean i18n fields first
   cleanI18nFields(data);
-  
+
   // Validate i18n fields
   const validation = validateI18nFields(data);
   if (!validation.valid) {
     return NextResponse.json({ error: validation.error }, { status: 400 });
   }
-  
+
   const { delegate, fields } = MODELS[model];
 
   const clean: any = {};
   for (const f of fields) {
     if (data[f] !== undefined) clean[f] = data[f];
   }
+
+  // Slug: derive from title; a non-Latin title falls back to a short random id.
+  fillSlug(model, clean, true);
+
   // Convert empty strings to null ONLY for optional fields
   for (const f of fields) {
     if (clean[f] === '' && !isRequiredField(model, f)) {
@@ -390,6 +492,22 @@ export async function POST(req: NextRequest) {
     if (clean[f] === '' && isRequiredField(model, f)) {
       delete clean[f];
     }
+  }
+
+  const dateErr = normalizeDates(model, clean);
+  if (dateErr) {
+    return NextResponse.json({ error: `${dateErr} must be a valid date (e.g. 2026-09-29).` }, { status: 400 });
+  }
+
+  // Create-time guard: fields the schema requires and that carry no DB default.
+  const missing = (SCHEMA_INFO[model]?.required ?? []).filter((f) => clean[f] === undefined || clean[f] === null || clean[f] === '');
+  if (missing.length > 0) {
+    return NextResponse.json({ error: `Missing required fields: ${missing.join(', ')}` }, { status: 400 });
+  }
+
+  const relErr = await resolveRelations(model, clean);
+  if (relErr) {
+    return NextResponse.json({ error: relErr }, { status: 400 });
   }
 
   // Enforce single default language
@@ -421,22 +539,26 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
   if (!model || !MODELS[model] || !id) return NextResponse.json({ error: 'Invalid params' }, { status: 400 });
-  
+
   // Clean i18n fields first
   cleanI18nFields(data);
-  
+
   // Validate i18n fields
   const validation = validateI18nFields(data);
   if (!validation.valid) {
     return NextResponse.json({ error: validation.error }, { status: 400 });
   }
-  
+
   const { delegate, fields } = MODELS[model];
 
   const clean: any = {};
   for (const f of fields) {
     if (data[f] !== undefined) clean[f] = data[f];
   }
+
+  // Slug: derive from title; a non-Latin title falls back to a short random id.
+  fillSlug(model, clean, false);
+
   // Convert empty strings to null ONLY for optional fields
   for (const f of fields) {
     if (clean[f] === '' && !isRequiredField(model, f)) {
@@ -446,6 +568,16 @@ export async function PUT(req: NextRequest) {
     if (clean[f] === '' && isRequiredField(model, f)) {
       delete clean[f];
     }
+  }
+
+  const dateErr = normalizeDates(model, clean);
+  if (dateErr) {
+    return NextResponse.json({ error: `${dateErr} must be a valid date (e.g. 2026-09-29).` }, { status: 400 });
+  }
+
+  const relErr = await resolveRelations(model, clean);
+  if (relErr) {
+    return NextResponse.json({ error: relErr }, { status: 400 });
   }
 
   if (model === 'language' && clean.isDefault === true) {

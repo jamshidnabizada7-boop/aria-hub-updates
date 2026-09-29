@@ -887,6 +887,48 @@ function CrudForm({ model, fields, item, label, statusOptions, onClose, onSaved 
 function FieldInput({ field, value, item, model, allFields = [], statusOptions, onChange }: { field: string; value: any; item?: any; model: string; allFields?: string[]; statusOptions?: string[]; onChange: (v: any) => void }) {
   const t = useT();
   
+  // Date-only fields render as native date inputs — the API always receives ISO.
+  const DATE_INPUT_FIELDS: Record<string, string[]> = {
+    news: ['publishedAt'],
+    opportunity: ['deadline'],
+    importSource: ['lastRunAt'],
+  };
+  const isDateField = (DATE_INPUT_FIELDS[model] ?? []).includes(field);
+
+  // Relation fields render as dropdowns so the API always receives a real id
+  // (a typed category name used to reach Prisma raw and fail the whole save).
+  const CATEGORY_SOURCE: Record<string, string> = {
+    service: 'serviceCategory',
+    opportunity: 'opportunityCategory',
+    news: 'newsCategory',
+    interviewQuestion: 'interviewCategory',
+    visaQuestion: 'visaCategory',
+    visaDocument: 'visaCategory',
+    documentTemplate: 'documentCategory',
+  };
+  const COUNTRY_SOURCE: Record<string, string> = {
+    visaQuestion: 'visaCountry',
+    visaDocument: 'visaCountry',
+  };
+  const relationSource =
+    field === 'categoryId' ? CATEGORY_SOURCE[model] : field === 'countryId' ? COUNTRY_SOURCE[model] : undefined;
+
+  const [relationOptions, setRelationOptions] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    if (!relationSource) return;
+    let alive = true;
+    fetch(`/api/admin/crud?model=${relationSource}&pageSize=1000`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (!alive || !Array.isArray(d.items)) return;
+        setRelationOptions(d.items.map((i: any) => ({ id: i.id, name: i.name })));
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [relationSource]);
+
   // Define required fields by model (must match backend exactly)
   const getRequiredFields = (modelName: string): string[] => {
     const requiredFields: Record<string, string[]> = {
@@ -1109,6 +1151,47 @@ function FieldInput({ field, value, item, model, allFields = [], statusOptions, 
           rows={6} 
           className="font-mono text-xs"
         />
+      </div>
+    );
+  }
+
+  if (isDateField) {
+    const iso = typeof value === 'string' && value ? value.slice(0, 10) : '';
+    return (
+      <div>
+        <Label className="mb-1.5 block text-sm font-medium">{getFieldLabel()}</Label>
+        <Input
+          type="date"
+          value={iso}
+          onChange={(e) => onChange(e.target.value)}
+          className={isRequired && !value ? 'border-orange-500 border-2' : ''}
+        />
+      </div>
+    );
+  }
+
+  if (relationSource) {
+    const known = relationOptions.some((o) => o.id === value);
+    return (
+      <div>
+        <Label className="mb-1.5 block text-sm font-medium">{getFieldLabel()}</Label>
+        <Select
+          value={known && value ? String(value) : '__none__'}
+          onValueChange={(v) => onChange(v === '__none__' ? '' : v)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="—" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">—</SelectItem>
+            {relationOptions.map((o) => (
+              <SelectItem key={o.id} value={o.id}>
+                {o.name}
+              </SelectItem>
+            ))}
+            {!known && value ? <SelectItem value={String(value)}>{String(value)}</SelectItem> : null}
+          </SelectContent>
+        </Select>
       </div>
     );
   }
