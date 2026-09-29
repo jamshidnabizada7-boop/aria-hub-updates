@@ -24,7 +24,7 @@ import { computeHash, findExisting } from './dedupe';
 import { downloadFeaturedImage, downloadLogo } from './images';
 import { runAIPipeline, ensureUniqueSlug, makeSlug } from '@/lib/ai/pipeline';
 import { ReliefWebPendingError } from './scrapers/reliefweb';
-import { sanitizeError, slugify } from './utils';
+import { isExpiredListingDeadline, sanitizeError, slugify } from './utils';
 import { buildLocationRows, resolveCountry } from '@/lib/geo/location-rows';
 import { classifyApplyUrl } from '@/lib/apply';
 import type { RawListing, SourceHandle } from './types';
@@ -70,7 +70,7 @@ export interface RunImportOptions {
   type?: string | null;
   triggeredBy?: string;
   force?: boolean;
-  /** One source, one list page, at most three listings, no inline AI calls. */
+  /** Bounded serverless run: recent list pages, unseen listings first, no inline AI calls. */
   bounded?: boolean;
 }
 
@@ -85,6 +85,8 @@ export interface RunSummary {
   failed: number;
   processingMs: number;
   error?: string;
+  /** New listings discovered but not attempted before the time budget ended. */
+  remainingNew?: number;
 }
 
 /** Module-level guard: prevent overlapping runs of the same source. */
@@ -176,7 +178,10 @@ async function runOneSource(
 ): Promise<RunSummary> {
   const startedAt = Date.now();
   const handle = toHandle(source);
-  if (bounded) handle.config.maxPages = 1;
+  if (bounded) {
+    handle.config.maxPages = Math.min(Number(handle.config.maxPages) || 5, 5);
+    handle.config.recentOnly = true;
+  }
   const scraper = getScraper(handle);
   const run = await db.importRun.create({
     data: { sourceId: source.id, status: 'running', triggeredBy },
@@ -194,19 +199,39 @@ async function runOneSource(
 
     // Deadline so serverless hosts (Vercel ~60s) don't kill the function mid-run.
     // Long-running hosts (sandbox / cron workers) set IMPORT_GLOBAL_TIMEOUT_MS.
-    const GLOBAL_TIMEOUT = bounded ? 25_000 : parseInt(process.env.IMPORT_GLOBAL_TIMEOUT_MS || '45000', 10);
+    const GLOBAL_TIMEOUT = bounded ? 35_000 : parseInt(process.env.IMPORT_GLOBAL_TIMEOUT_MS || '45000', 10);
     scraper.deadline = startedAt + GLOBAL_TIMEOUT;
 
     // 1. Scrape
-    const listings = (await scraper.scrapeAll()).slice(0, bounded ? 3 : undefined);
+    const listings = await scraper.scrapeAll();
     counters.found = listings.length;
 
+    // A scheduled run must not spend its time rechecking old cards while new
+    // cards farther down the page wait. Query URL existence in batches, then
+    // attempt every unseen listing before older records.
+    const knownUrls = new Set<string>();
+    if (bounded) {
+      const urls = [...new Set(listings.map((item) => item.sourceUrl).filter(Boolean))];
+      for (let i = 0; i < urls.length; i += 250) {
+        const known = await db.opportunity.findMany({
+          where: { sourceUrl: { in: urls.slice(i, i + 250) } },
+          select: { sourceUrl: true },
+        });
+        for (const row of known) if (row.sourceUrl) knownUrls.add(row.sourceUrl);
+      }
+    }
+    const ordered = bounded
+      ? [...listings.filter((item) => !knownUrls.has(item.sourceUrl)), ...listings.filter((item) => knownUrls.has(item.sourceUrl))]
+      : listings;
+    let remainingNew = bounded ? ordered.filter((item) => !knownUrls.has(item.sourceUrl)).length : 0;
+
     // 2. Process each listing
-    for (const listing of listings) {
+    for (const listing of ordered) {
       if (Date.now() - startedAt > GLOBAL_TIMEOUT) {
         console.warn(`[import] Approaching function timeout (${GLOBAL_TIMEOUT}ms). Saving partial run.`);
         break;
       }
+      if (bounded && !knownUrls.has(listing.sourceUrl)) remainingNew--;
       try {
         await processListing(db, scraper, listing, source, categories, knownSlugs, counters, force, errors, bounded);
       } catch (e) {
@@ -221,7 +246,8 @@ async function runOneSource(
     // panel and the run history surface the anomaly instead of hiding it.
     let status: ImportRunStatus =
       counters.failed === 0 ? 'ok' : (counters.imported + counters.updated > 0 ? 'partial' : 'error');
-    if (counters.found === 0 && status === 'ok' && (await hasEverImported(source.id))) {
+    if (remainingNew > 0 && status === 'ok') status = 'partial';
+    if (counters.found === 0 && status === 'ok' && (bounded || await hasEverImported(source.id))) {
       status = 'error'; // ImportRunStatus has no 'degraded' — error + message below
       errors.push({
         url: source.baseUrl,
@@ -252,11 +278,11 @@ async function runOneSource(
       data: {
         lastRunAt: new Date(),
         lastRunStatus: status,
-        lastRunStats: JSON.stringify(counters),
+        lastRunStats: JSON.stringify({ ...counters, remainingNew }),
       },
     });
 
-    return { runId: run.id, status, processingMs, ...counters };
+    return { runId: run.id, status, processingMs, remainingNew, ...counters };
   } catch (e) {
     // Fatal error for this source
     const processingMs = Date.now() - startedAt;
@@ -339,8 +365,7 @@ async function processListing(
     const cfg = source.config ? (JSON.parse(source.config) as Record<string, unknown>) : {};
     allowExpired = cfg.allowExpired === true;
   } catch { /* ignore */ }
-  const earlyDeadline = safeDate(listing.deadline);
-  if (!allowExpired && earlyDeadline && earlyDeadline.getTime() < Date.now()) {
+  if (!allowExpired && isExpiredListingDeadline(listing.deadline)) {
     counters.skipped++;
     return;
   }
@@ -365,10 +390,6 @@ async function processListing(
     const last = dedupe.existing.lastChecked?.getTime() ?? 0;
     if (Date.now() - last < DETAIL_RECHECK_MS) {
       counters.skipped++;
-      await db.opportunity.update({
-        where: { id: dedupe.existing.id },
-        data: { lastChecked: new Date() },
-      });
       return;
     }
   }
@@ -377,7 +398,10 @@ async function processListing(
   // source.config is a raw JSON string from the DB; parse it before property access.
   let parsedConfig: Record<string, unknown> = {};
   try { parsedConfig = source.config ? JSON.parse(source.config) : {}; } catch { /* ignore */ }
-  if (scraper && typeof scraper.parseDetail === 'function' && parsedConfig?.detailFetch !== false) {
+  // O4AF's legacy production config disabled detail fetch, but its list cards
+  // contain no article body. Fetching details is required to import valid rows.
+  if (scraper && typeof scraper.parseDetail === 'function' &&
+      (parsedConfig?.detailFetch !== false || source.scraperKey === 'o4af')) {
     try {
       const enriched = await scraper.parseDetail(listing);
       Object.assign(listing, enriched);
@@ -415,8 +439,7 @@ async function processListing(
   // a deadline the listing page didn't have. Anything already past is skipped
   // here too (before images/AI), so the database never gains expired rows.
   if (!allowExpired) {
-    const lateDeadline = safeDate(listing.deadline);
-    if (lateDeadline && lateDeadline.getTime() < Date.now()) {
+    if (isExpiredListingDeadline(listing.deadline)) {
       counters.skipped++;
       return;
     }

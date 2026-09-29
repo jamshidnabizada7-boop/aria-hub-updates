@@ -65,6 +65,11 @@ export class O4afScraper extends BaseScraper {
   constructor(source: any) {
     super(source);
     if (!this.source.config) this.source.config = {};
+    if (/^https?:\/\/(?:www\.)?o4af\.com\/?$/i.test(this.source.baseUrl)) {
+      // Older source rows point at the home page, which has no opportunity
+      // cards. The all-opportunities list includes jobs and scholarships.
+      this.source.baseUrl = 'https://o4af.com/opportunities/';
+    }
     // o4af rate-limits aggressively: default to a slow crawl and few pages.
     if (!this.source.config.maxPages) this.source.config.maxPages = 5;
     if (!this.source.config.crawlDelayMs) this.source.config.crawlDelayMs = 2500;
@@ -74,6 +79,10 @@ export class O4afScraper extends BaseScraper {
 
   /** Send every request with a full browser fingerprint; fall back to curl. */
   async fetchText(url: string, opts: FetchOptions = {}): Promise<string> {
+    const scheduled = this.source.config.recentOnly === true;
+    const configuredTimeout =
+      opts.timeoutMs ?? ((this.source.config as Record<string, unknown>).timeoutMs as number) ?? 20000;
+    const timeoutMs = scheduled ? Math.min(configuredTimeout, 15000) : configuredTimeout;
     const headers = {
       ...browserHeaders(O4AF_LIST_REFERER),
       ...(opts.headers || {}),
@@ -84,8 +93,8 @@ export class O4afScraper extends BaseScraper {
       try {
         return await super.fetchText(url, {
           ...opts,
-          retries: opts.retries ?? 1,
-          timeoutMs: opts.timeoutMs ?? (this.source.config as Record<string, unknown>).timeoutMs as number ?? 20000,
+          retries: opts.retries ?? (scheduled ? 0 : 1),
+          timeoutMs,
           headers,
           validate,
         });
@@ -98,8 +107,6 @@ export class O4afScraper extends BaseScraper {
     }
 
     if (await isCurlAvailable()) {
-      const timeoutMs =
-        opts.timeoutMs ?? ((this.source.config as Record<string, unknown>).timeoutMs as number) ?? 30000;
       const delay = opts.crawlDelayMs ?? this.source.config.crawlDelayMs ?? 2500;
       const body = await curlFetch(url, headers, timeoutMs);
       if (!validate(body)) {
@@ -121,7 +128,7 @@ export class O4afScraper extends BaseScraper {
     const listings: RawListing[] = [];
 
     const urlObj = new URL(pageUrl);
-    const jobTypeParam = urlObj.searchParams.get('job_type') || 'job';
+    const jobTypeParam = urlObj.searchParams.get('job_type');
 
     const seenUrls = new Set<string>();
 
@@ -170,13 +177,19 @@ export class O4afScraper extends BaseScraper {
       if (typeBtn) extractedData['Opportunity Button'] = typeBtn;
       if (card.find('.urgntpkg-jobv1').length) extractedData['Urgent'] = 'true';
 
+      const detectedType = /scholarship/i.test(typeBtn) ? 'scholarship'
+        : /fellowship/i.test(typeBtn) ? 'fellowship'
+        : /internship/i.test(typeBtn) ? 'internship'
+        : /job/i.test(typeBtn) ? 'job'
+        : null;
+
       listings.push({
         title: title && title.length > 5 ? title : 'O4AF Opportunity',
         sourceUrl: fullUrl,
         originalUrl: fullUrl,
         sourceName: 'O4AF',
         sourceLanguage: 'en',
-        jobType: jobTypeParam,
+        jobType: jobTypeParam || detectedType || 'opportunity',
         category,
         location,
         imageUrl,

@@ -42,6 +42,7 @@ import { curlFetch, isCurlAvailable } from './curl-fallback';
 import type { FetchOptions, RawListing, ScrapePage } from '../types';
 
 const SCH_LIST_URL = 'https://scholarships.af/opportunities/?job_type=scholarship';
+const SCH_RECENT_URL = 'https://scholarships.af/opportunities/';
 const SCH_SITEMAP_URL = 'https://scholarships.af/job-sitemap1.xml';
 
 export class ScholarshipsAfScraper extends BaseScraper {
@@ -54,6 +55,13 @@ export class ScholarshipsAfScraper extends BaseScraper {
 
   constructor(source: any) {
     super(source);
+    if (this.source.config?.recentOnly) {
+      // The scheduled refresh needs the newest jobs AND scholarships. The
+      // sitemap starts with historical posts and can consume the whole budget.
+      this.source.baseUrl = SCH_RECENT_URL;
+      this.fallbackUrl = SCH_RECENT_URL;
+      return;
+    }
     // Store the original HTML listing URL as a fallback
     this.fallbackUrl = SCH_LIST_URL;
     // Prefer the sitemap for broader coverage
@@ -68,6 +76,10 @@ export class ScholarshipsAfScraper extends BaseScraper {
    * and fall back to curl when the runtime's fetch is fingerprint-blocked.
    */
   async fetchText(url: string, opts: FetchOptions = {}): Promise<string> {
+    const scheduled = this.source.config?.recentOnly === true;
+    const configuredTimeout =
+      opts.timeoutMs ?? ((this.source.config as Record<string, unknown>).timeoutMs as number) ?? 15000;
+    const timeoutMs = scheduled ? Math.min(configuredTimeout, 10000) : configuredTimeout;
     const headers = {
       ...browserHeaders(SCH_LIST_URL),
       ...(opts.headers || {}),
@@ -78,7 +90,8 @@ export class ScholarshipsAfScraper extends BaseScraper {
       try {
         return await super.fetchText(url, {
           ...opts,
-          retries: opts.retries ?? 3,
+          retries: opts.retries ?? (scheduled ? 0 : 3),
+          timeoutMs,
           headers,
           validate,
         });
@@ -91,8 +104,6 @@ export class ScholarshipsAfScraper extends BaseScraper {
     }
 
     if (await isCurlAvailable()) {
-      const timeoutMs =
-        opts.timeoutMs ?? ((this.source.config as Record<string, unknown>).timeoutMs as number) ?? 15000;
       const delay = opts.crawlDelayMs ?? this.source.config.crawlDelayMs ?? 1200;
       const body = await curlFetch(url, headers, timeoutMs);
       if (!validate(body)) {
@@ -111,6 +122,7 @@ export class ScholarshipsAfScraper extends BaseScraper {
    * is unreachable (the site may block XML or be temporarily down).
    */
   async scrapeAll(): Promise<RawListing[]> {
+    if (this.source.config?.recentOnly) return super.scrapeAll();
     try {
       const results = await super.scrapeAll();
       if (results.length > 0) return results;
@@ -200,7 +212,7 @@ export class ScholarshipsAfScraper extends BaseScraper {
         logoUrl: imageUrl,
         deadline,
         jobType,
-        category: 'scholarship',
+        category: /job|internship/i.test(jobType) ? 'job' : 'scholarship',
       });
     });
 

@@ -104,6 +104,10 @@ export class AcbarScraper extends BaseScraper {
    * the JS challenge in a real browser (cookie reuse) as the last resort.
    */
   async fetchText(url: string, opts: FetchOptions = {}): Promise<string> {
+    const scheduled = this.source.config?.recentOnly === true;
+    const requestOpts = scheduled
+      ? { ...opts, retries: 0, timeoutMs: Math.min(opts.timeoutMs ?? 10000, 10000) }
+      : opts;
     const validate = opts.validate ?? notChallengePage;
 
     if (Date.now() < blockedUntil) {
@@ -117,16 +121,20 @@ export class AcbarScraper extends BaseScraper {
       const headers = { ...browserHeaders(ACBAR_LIST_URL), Cookie: clearedCookieHeader, ...(opts.headers || {}) };
       if (!this.preferCurl) {
         try {
-          return await super.fetchText(url, { ...opts, retries: opts.retries ?? 2, headers, validate });
+          return await super.fetchText(url, { ...requestOpts, retries: requestOpts.retries ?? 2, headers, validate });
         } catch {
           /* fall through to curl */
         }
       }
       if (await isCurlAvailable()) {
-        const body = await this.curlWithDelay(url, headers, opts);
-        if (!isChallengeBody(body)) return body;
-        // Clearance expired — force a fresh one below.
-        clearedCookieHeader = null;
+        try {
+          const body = await this.curlWithDelay(url, headers, requestOpts);
+          if (!isChallengeBody(body)) return body;
+          // Clearance expired — force a fresh one below.
+          clearedCookieHeader = null;
+        } catch {
+          clearedCookieHeader = null;
+        }
       }
     }
 
@@ -135,22 +143,30 @@ export class AcbarScraper extends BaseScraper {
     if (!this.preferCurl) {
       try {
         return await super.fetchText(url, {
-          ...opts,
-          retries: opts.retries ?? 3,
+          ...requestOpts,
+          retries: requestOpts.retries ?? 3,
           headers,
           validate,
         });
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
-        const blocked = /HTTP 40|HTTP 42|challenge page|bot protection/i.test(msg);
+        const blocked = /HTTP 40|HTTP 42|challenge page|bot protection|timed out|Unable to connect/i.test(msg);
         if (!blocked) throw e;
         // fall through to curl
       }
     }
 
     if (await isCurlAvailable()) {
-      const body = await this.curlWithDelay(url, headers, opts);
-      if (!isChallengeBody(body)) return body;
+      try {
+        const body = await this.curlWithDelay(url, headers, requestOpts);
+        if (!isChallengeBody(body)) return body;
+      } catch {
+        // A full run may still clear the interstitial in a browser below.
+      }
+    }
+
+    if (scheduled) {
+      throw new Error(`Fetch failed for ${url}: bot protection blocked the bounded native and curl attempts`);
     }
 
     // Last resort: clear the JS interstitial in a real browser, then retry

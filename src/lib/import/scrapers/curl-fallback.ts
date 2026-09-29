@@ -46,19 +46,7 @@ export function curlFetch(
   headers: Record<string, string>,
   timeoutMs = 20000,
 ): Promise<string> {
-  const args = [
-    '-s',
-    '-L',
-    '--compressed',
-    '--max-time',
-    String(Math.ceil(timeoutMs / 1000)),
-    '-w',
-    '\n__HTTP_STATUS__%{http_code}',
-  ];
-  for (const [key, value] of Object.entries(headers)) {
-    args.push('-H', `${key}: ${value}`);
-  }
-  args.push(url);
+  const args = curlArgs(url, headers, timeoutMs);
 
   return new Promise((resolve, reject) => {
     let settled = false;
@@ -114,4 +102,25 @@ export function curlFetch(
       reject(new Error(`curl spawn failed for ${url}: ${e instanceof Error ? e.message : String(e)}`));
     }
   });
+}
+
+export function curlArgs(url: string, headers: Record<string, string>, timeoutMs: number): string[] {
+  const args = [
+    '-s',
+    '-L',
+    '--compressed',
+    '--max-time',
+    String(Math.ceil(timeoutMs / 1000)),
+    '-w',
+    '\n__HTTP_STATUS__%{http_code}',
+  ];
+  for (const [key, value] of Object.entries(headers)) {
+    // --compressed supplies curl's own Accept-Encoding with only decoders
+    // compiled into this binary. Forwarding the browser's "br" header to a
+    // curl build without Brotli causes exit 61 on otherwise valid HTTP 200s.
+    if (key.toLowerCase() === 'accept-encoding') continue;
+    args.push('-H', `${key}: ${value}`);
+  }
+  args.push(url);
+  return args;
 }
