@@ -41,15 +41,16 @@ several days.
 
 ## New-listing refresh
 
-`aria-opportunity-import` calls `/api/admin/pipeline/import` hourly through
+`aria-opportunity-import` calls `/api/admin/pipeline/import` every 15 minutes through
 the same Supabase Cron and Vault pattern. Its credential is separately stored
 as `aria_opportunity_import_cron` / Vercel Production `IMPORT_CRON_SECRET`.
 It gives ACBAR, Wazifaha, Jobs.af, O4AF, and Scholarships.af a slot every
-12 hours. Unattempted new listings get an hourly retry slot. Other enabled
+12 hours. Unattempted new listings get a retry slot after 15 minutes. Other enabled
 opportunity sources run weekly when no primary source is due; news sources are
 excluded. One request still handles only one source to stay within Vercel's
-function limit. It crawls up to five configured recent list pages, prioritizes
-unseen URLs, and processes until its 35-second budget; the remaining unseen
+function limit. Primary sources crawl up to ten recent list pages, processing
+each page before fetching the next and prioritizing unseen URLs. Runs stop at
+the 35-second budget; the remaining unseen
 count is recorded for the next run. Expired listings are skipped before being
 stored. Inline AI enrichment and translation remain queued separately. The
 scheduled importer stops starting new runs at 250 MB database size. Existing

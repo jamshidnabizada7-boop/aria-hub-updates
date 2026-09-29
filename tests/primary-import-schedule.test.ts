@@ -52,13 +52,14 @@ test('daily primary sources run before older weekly sources', () => {
   expect(selectScheduledOpportunitySource(rows, now)?.name).toBe('ACBAR');
 });
 
-test('unfinished new listings get another slot after one hour', () => {
+test('unfinished new listings get another slot after 15 minutes', () => {
   const rows = [
     source('Other', 'wpApi', null),
     source('Wazifaha', 'wazifaha', '2026-09-29T10:30:00.000Z', 7),
   ];
   expect(selectScheduledOpportunitySource(rows, now)?.name).toBe('Wazifaha');
-  expect(selectScheduledOpportunitySource(rows, new Date('2026-09-29T11:00:00.000Z'))?.name).toBe('Other');
+  expect(selectScheduledOpportunitySource(rows, new Date('2026-09-29T10:40:00.000Z'))?.name).toBe('Other');
+  expect(selectScheduledOpportunitySource(rows, new Date('2026-09-29T10:45:00.000Z'))?.name).toBe('Wazifaha');
 });
 
 test('secondary opportunity sources run weekly, not daily', () => {
