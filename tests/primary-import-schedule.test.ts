@@ -4,6 +4,33 @@ import { isExpiredListingDeadline } from '../src/lib/import/utils';
 import { O4afScraper } from '../src/lib/import/scrapers/o4af';
 import { ScholarshipsAfScraper } from '../src/lib/import/scrapers/scholarships-af';
 import { curlArgs } from '../src/lib/import/scrapers/curl-fallback';
+import { BaseScraper } from '../src/lib/import/base-scraper';
+import type { ScrapePage } from '../src/lib/import/types';
+
+test('listing pages are yielded before the next page is fetched', async () => {
+  const fetched: string[] = [];
+  class PageScraper extends BaseScraper {
+    async fetchText(url: string): Promise<string> {
+      fetched.push(url);
+      return url;
+    }
+    protected parseListPage(url: string): ScrapePage {
+      return {
+        listings: [{ title: url, sourceUrl: url, sourceName: 'test', description: 'A complete description for the test listing.' }],
+        nextPage: url.endsWith('/1') ? 'https://example.org/2' : null,
+      };
+    }
+  }
+  const scraper = new PageScraper({
+    id: 'test', name: 'test', type: 'job', scraperKey: 'test',
+    baseUrl: 'https://example.org/1', defaultCategory: null, config: { maxPages: 2 },
+  });
+  const pages = scraper.scrapePages();
+  expect((await pages.next()).value?.listings).toHaveLength(1);
+  expect(fetched).toEqual(['https://example.org/1']);
+  expect((await pages.next()).value?.listings).toHaveLength(1);
+  expect(fetched).toEqual(['https://example.org/1', 'https://example.org/2']);
+});
 
 const now = new Date('2026-09-29T12:00:00.000Z');
 const source = (name: string, scraperKey: string, lastRunAt: string | null, remainingNew = 0): ScheduledSource => ({

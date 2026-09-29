@@ -29,6 +29,7 @@ import { buildLocationRows, resolveCountry } from '@/lib/geo/location-rows';
 import { classifyApplyUrl } from '@/lib/apply';
 import type { RawListing, SourceHandle } from './types';
 import { resolveImportedOpportunityStatus } from './publication-policy';
+import { PRIMARY_OPPORTUNITY_KEYS } from '@/lib/automation/import-selection';
 
 /** True when this source has ever produced imported/updated opportunities. */
 async function hasEverImported(sourceId: string): Promise<boolean> {
@@ -178,8 +179,9 @@ async function runOneSource(
 ): Promise<RunSummary> {
   const startedAt = Date.now();
   const handle = toHandle(source);
+  const streamPrimary = bounded && PRIMARY_OPPORTUNITY_KEYS.has(source.scraperKey);
   if (bounded) {
-    handle.config.maxPages = Math.min(Number(handle.config.maxPages) || 5, 5);
+    handle.config.maxPages = streamPrimary ? 10 : Math.min(Number(handle.config.maxPages) || 5, 5);
     handle.config.recentOnly = true;
   }
   const scraper = getScraper(handle);
@@ -202,42 +204,60 @@ async function runOneSource(
     const GLOBAL_TIMEOUT = bounded ? 35_000 : parseInt(process.env.IMPORT_GLOBAL_TIMEOUT_MS || '45000', 10);
     scraper.deadline = startedAt + GLOBAL_TIMEOUT;
 
-    // 1. Scrape
-    const listings = await scraper.scrapeAll();
-    counters.found = listings.length;
+    let remainingNew = 0;
+    const processBatch = async (listings: RawListing[]) => {
+      counters.found += listings.length;
+      // Query URL existence in one batch so the newest unseen cards get the
+      // remaining serverless budget before daily checks of known records.
+      const knownUrls = new Set<string>();
+      if (bounded) {
+        const urls = [...new Set(listings.map((item) => item.sourceUrl).filter(Boolean))];
+        for (let i = 0; i < urls.length; i += 250) {
+          const known = await db.opportunity.findMany({
+            where: { sourceUrl: { in: urls.slice(i, i + 250) } },
+            select: { sourceUrl: true },
+          });
+          for (const row of known) if (row.sourceUrl) knownUrls.add(row.sourceUrl);
+        }
+      }
+      const ordered = bounded
+        ? [...listings.filter((item) => !knownUrls.has(item.sourceUrl)), ...listings.filter((item) => knownUrls.has(item.sourceUrl))]
+        : listings;
+      if (bounded) remainingNew += ordered.filter((item) => !knownUrls.has(item.sourceUrl)).length;
 
-    // A scheduled run must not spend its time rechecking old cards while new
-    // cards farther down the page wait. Query URL existence in batches, then
-    // attempt every unseen listing before older records.
-    const knownUrls = new Set<string>();
-    if (bounded) {
-      const urls = [...new Set(listings.map((item) => item.sourceUrl).filter(Boolean))];
-      for (let i = 0; i < urls.length; i += 250) {
-        const known = await db.opportunity.findMany({
-          where: { sourceUrl: { in: urls.slice(i, i + 250) } },
-          select: { sourceUrl: true },
-        });
-        for (const row of known) if (row.sourceUrl) knownUrls.add(row.sourceUrl);
+      for (const listing of ordered) {
+        if (Date.now() - startedAt > GLOBAL_TIMEOUT) {
+          console.warn(`[import] Approaching function timeout (${GLOBAL_TIMEOUT}ms). Saving partial run.`);
+          break;
+        }
+        if (bounded && !knownUrls.has(listing.sourceUrl)) remainingNew--;
+        try {
+          await processListing(db, scraper, listing, source, categories, knownSlugs, counters, force, errors, bounded);
+        } catch (e) {
+          counters.failed++;
+          errors.push({ url: listing.sourceUrl, message: sanitizeError(e), ts: new Date().toISOString() });
+        }
       }
-    }
-    const ordered = bounded
-      ? [...listings.filter((item) => !knownUrls.has(item.sourceUrl)), ...listings.filter((item) => knownUrls.has(item.sourceUrl))]
-      : listings;
-    let remainingNew = bounded ? ordered.filter((item) => !knownUrls.has(item.sourceUrl)).length : 0;
+    };
 
-    // 2. Process each listing
-    for (const listing of ordered) {
-      if (Date.now() - startedAt > GLOBAL_TIMEOUT) {
-        console.warn(`[import] Approaching function timeout (${GLOBAL_TIMEOUT}ms). Saving partial run.`);
-        break;
+    if (streamPrimary) {
+      // Process page one before requesting page two. Previously five list-page
+      // requests could consume the entire 35-second budget, importing zero.
+      let pagesSeen = 0;
+      let lastHadNext = false;
+      for await (const page of scraper.scrapePages()) {
+        pagesSeen++;
+        lastHadNext = Boolean(page.nextPage);
+        await processBatch(page.listings);
+        if (Date.now() >= scraper.deadline || pagesSeen >= Number(handle.config.maxPages)) {
+          break;
+        }
       }
-      if (bounded && !knownUrls.has(listing.sourceUrl)) remainingNew--;
-      try {
-        await processListing(db, scraper, listing, source, categories, knownSlugs, counters, force, errors, bounded);
-      } catch (e) {
-        counters.failed++;
-        errors.push({ url: listing.sourceUrl, message: sanitizeError(e), ts: new Date().toISOString() });
-      }
+      // A next-page link left unvisited (including after a fetch error) keeps
+      // the source in the retry queue instead of reporting full coverage.
+      if (lastHadNext) remainingNew = Math.max(1, remainingNew);
+    } else {
+      await processBatch(await scraper.scrapeAll());
     }
 
     // Source-health gate: a historically productive source that suddenly
