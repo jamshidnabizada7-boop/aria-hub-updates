@@ -67,7 +67,7 @@ const SCHEMA_INFO: Record<string, { required: string[]; dates: string[] }> = (()
   for (const m of Prisma.dmmf.datamodel.models) {
     const key = m.name.charAt(0).toLowerCase() + m.name.slice(1);
     info[key] = {
-      required: m.fields.filter((f: any) => f.kind === 'scalar' && f.isRequired && !f.hasDefault && !f.isUpdatedAt).map((f) => f.name),
+      required: m.fields.filter((f: any) => f.kind === 'scalar' && f.isRequired && !f.hasDefaultValue && !f.isUpdatedAt).map((f) => f.name),
       dates: m.fields.filter((f: any) => f.kind === 'scalar' && f.type === 'DateTime').map((f) => f.name),
     };
   }
