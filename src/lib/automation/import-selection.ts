@@ -10,7 +10,7 @@ export const PRIMARY_OPPORTUNITY_KEYS = new Set([
 const DAY_MS = 24 * 60 * 60 * 1000;
 const PRIMARY_INTERVAL_MS = DAY_MS / 2;
 const WEEK_MS = 7 * DAY_MS;
-const RETRY_MS = 60 * 60 * 1000;
+const RETRY_MS = 15 * 60 * 1000;
 
 export interface ScheduledSource {
   id: string;
@@ -36,7 +36,7 @@ function oldestFirst(a: ScheduledSource, b: ScheduledSource): number {
 
 /**
  * Reserve the hourly cron slots for the five primary sites twice daily. When a run
- * runs out of time with unseen listings, retry it after one hour, then use
+ * runs out of time with unseen listings, retry it after 15 minutes, then use
  * remaining slots for the other opportunity sources once a week.
  */
 export function selectScheduledOpportunitySource(
