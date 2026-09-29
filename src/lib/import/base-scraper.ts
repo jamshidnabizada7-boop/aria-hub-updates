@@ -138,15 +138,13 @@ export abstract class BaseScraper {
     throw new Error(`Fetch failed for ${url}: ${sanitizeError(lastErr)}`);
   }
 
-  /**
-   * Crawl all listing pages up to maxPages, optionally enriching each listing
-   * via its detail page. Returns the full flattened set of listings.
-   */
-  async scrapeAll(): Promise<RawListing[]> {
+  /** Yield each page before fetching the next, so scheduled imports can save
+   * fresh listings within the serverless time budget. */
+  async *scrapePages(): AsyncGenerator<ScrapePage> {
     const maxPages = this.source.config.maxPages ?? 10;
-    const all: RawListing[] = [];
     let nextUrl: string | null | undefined = this.source.baseUrl;
     const visited = new Set<string>();
+    let foundAny = false;
 
     for (let page = 0; page < maxPages && nextUrl; page++) {
       if (this.deadline > 0 && Date.now() > this.deadline) {
@@ -163,7 +161,7 @@ export abstract class BaseScraper {
         scrapePage = await this.parseListPage(body, nextUrl);
       } catch (e) {
         // If we fail on the very first page, throw so the run is marked as error
-        if (all.length === 0) throw e;
+        if (!foundAny) throw e;
         // Otherwise, record the page failure but keep going with whatever we have.
         console.error(`[import] list page failed (${nextUrl}):`, sanitizeError(e));
         break;
@@ -171,10 +169,16 @@ export abstract class BaseScraper {
 
       if (!scrapePage.listings.length) break;
 
-      all.push(...scrapePage.listings);
+      foundAny = true;
+      yield scrapePage;
       nextUrl = scrapePage.nextPage || null;
     }
+  }
 
+  /** Crawl all listing pages and return the full flattened set. */
+  async scrapeAll(): Promise<RawListing[]> {
+    const all: RawListing[] = [];
+    for await (const page of this.scrapePages()) all.push(...page.listings);
     return all;
   }
 }
