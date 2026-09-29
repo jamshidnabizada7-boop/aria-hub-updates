@@ -3,6 +3,7 @@ import { selectScheduledOpportunitySource, type ScheduledSource } from '../src/l
 import { isExpiredListingDeadline } from '../src/lib/import/utils';
 import { O4afScraper } from '../src/lib/import/scrapers/o4af';
 import { ScholarshipsAfScraper } from '../src/lib/import/scrapers/scholarships-af';
+import { AcbarScraper } from '../src/lib/import/scrapers/acbar';
 import { curlArgs } from '../src/lib/import/scrapers/curl-fallback';
 import { BaseScraper } from '../src/lib/import/base-scraper';
 import type { ScrapePage } from '../src/lib/import/types';
@@ -89,6 +90,14 @@ test('scheduled source URLs reach the mixed opportunity lists', () => {
   });
   expect(o4af.source.baseUrl).toBe('https://o4af.com/opportunities/');
   expect(scholarships.source.baseUrl).toBe('https://scholarships.af/opportunities/');
+});
+
+test('ACBAR root configuration resolves to its jobs listing', () => {
+  const scraper = new AcbarScraper({
+    id: 'acbar', name: 'ACBAR', type: 'job', scraperKey: 'acbar',
+    baseUrl: 'https://www.acbar.org', defaultCategory: null, config: { recentOnly: true },
+  });
+  expect(scraper.source.baseUrl).toBe('https://www.acbar.org/en/jobs');
 });
 
 test('curl advertises only encodings supported by its own binary', () => {

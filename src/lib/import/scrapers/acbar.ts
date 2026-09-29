@@ -95,6 +95,11 @@ export class AcbarScraper extends BaseScraper {
     super(source);
     if (!this.source.config) this.source.config = {};
     if (!this.source.config.maxPages) this.source.config.maxPages = 30;
+    // Production stores the site root as baseUrl. Its homepage has no job
+    // cards, so both scheduled and root-configured manual runs need /en/jobs.
+    if (this.source.config.recentOnly || /^https?:\/\/(?:www\.)?acbar\.org\/?$/i.test(this.source.baseUrl)) {
+      this.source.baseUrl = ACBAR_LIST_URL;
+    }
   }
 
   /**
