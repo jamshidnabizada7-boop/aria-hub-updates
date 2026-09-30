@@ -56,7 +56,7 @@ function mapVolunteering(item: any): Volunteering { return { id: typeof item?.id
 function mapResearch(item: any): Research { return { id: typeof item?.id === 'string' ? item.id : makeId('research'), title: String(item?.title || item?.name || ''), organization: String(item?.organization || ''), startDate: monthOrBlank(item?.startDate), endDate: monthOrBlank(item?.endDate), isCurrent: Boolean(item?.isCurrent), description: String(item?.description || ''), link: String(item?.link || '') }; }
 function mapPublication(item: any): Publication { return { id: typeof item?.id === 'string' ? item.id : makeId('publication'), title: String(item?.title || item?.name || ''), publisher: String(item?.publisher || ''), date: monthOrBlank(item?.date), description: String(item?.description || ''), link: String(item?.link || '') }; }
 
-const TEMPLATE_IDS: TemplateType[] = ['ats-simple','ats-compact','modern-sidebar','executive','minimal-elegant','tech-profile','academic-research','scholarship-profile'];
+const TEMPLATE_IDS: TemplateType[] = ['ats-simple','ats-compact','modern-sidebar','executive','minimal-elegant','tech-profile','academic-research','scholarship-profile','chronological-classic','skills-first','european-classic'];
 
 export function normalizeDraft(raw: any): CVDraft | null {
   if (!raw || typeof raw !== 'object') return null;

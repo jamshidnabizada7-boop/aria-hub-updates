@@ -104,10 +104,21 @@ describe('CV Builder readiness and exact error targeting', () => {
 });
 
 describe('CV Builder templates and preview/PDF parity', () => {
-  test('ships eight structurally distinct template choices', () => {
-    expect(CV_TEMPLATES).toHaveLength(8);
-    expect(new Set(CV_TEMPLATES.map((template) => template.id)).size).toBe(8);
-    expect(CV_TEMPLATES.filter((template) => template.atsFocused)).toHaveLength(2);
+  test('ships standard and visual template choices', () => {
+    expect(CV_TEMPLATES).toHaveLength(11);
+    expect(new Set(CV_TEMPLATES.map((template) => template.id)).size).toBe(11);
+    expect(CV_TEMPLATES.filter((template) => template.atsFocused)).toHaveLength(3);
+  });
+
+  test('renders every selectable layout into the PDF document', () => {
+    for (const template of CV_TEMPLATES) {
+      const draft = createDraft('professional', 'en', undefined, { template: template.id });
+      draft.data.personal.fullName = 'Candidate';
+      draft.data.personal.summary = 'Experienced applicant';
+      const document = renderCvStandaloneHtml(draft);
+      expect(document).toContain(`cv-template-${template.id}`);
+      expect(document).toContain('Experienced applicant');
+    }
   });
 
   test('uses one shared renderer for web preview and standalone PDF HTML', () => {

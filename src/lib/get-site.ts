@@ -94,7 +94,7 @@ const fetchSiteData = async (): Promise<SiteData> => {
       db.whyChooseUsFeature.findMany({ where: { enabled: true }, orderBy: { order: 'asc' } }).catch(() => []),
     ]);
 
-    const menuTree = buildMenuTree(menuItems as any) as MenuItem[];
+    const menuTree = ensureApplicationTools(buildMenuTree(menuItems as any) as MenuItem[]);
     const footer: Record<string, any[]> = {};
     for (const fl of footerLinks) {
       (footer[fl.column] ||= []).push(fl);
@@ -135,7 +135,7 @@ const fetchSiteData = async (): Promise<SiteData> => {
       settings: getDefaultSettings() as any,
       languages: [],
       sections: [],
-      menu: [],
+      menu: ensureApplicationTools([]),
       serviceCategories: [],
       services: [],
       visas: [],
@@ -188,7 +188,7 @@ export const getToolPageData = cache(async () => {
     return {
       settings: (settings as any) || getDefaultSettings(),
       languages: languages as any,
-      menu: buildMenuTree(menuItems as any) as MenuItem[],
+      menu: ensureApplicationTools(buildMenuTree(menuItems as any) as MenuItem[]),
       socialLinks: socialLinks as any,
       footer,
     };
@@ -197,7 +197,7 @@ export const getToolPageData = cache(async () => {
     return {
       settings: getDefaultSettings() as any,
       languages: [],
-      menu: [],
+      menu: ensureApplicationTools([]),
       socialLinks: [],
       footer: {},
     };
@@ -229,6 +229,33 @@ function buildMenuTree(items: { id: string; label: string; url: string | null; p
     }
   }
   return roots;
+}
+
+function ensureApplicationTools(menu: MenuItem[]): MenuItem[] {
+  const tools = menu.find(item => item.label.toLowerCase() === 'tools' && !item.url);
+  const parent: MenuItem = tools || {
+    id: 'application-tools', label: 'Tools', labelI18n: { en: 'Tools', fa: 'ابزارها', ps: 'وسیلې' },
+    url: null, parentId: null, icon: null, order: 99, visible: true, openInNewTab: false, children: [],
+  };
+  const defaults = [
+    { label: 'CV Builder', url: '/cv-builder', i18n: { en: 'CV Builder', fa: 'سی‌وی ساز', ps: 'سي وي جوړونکی' } },
+    { label: 'CV Templates', url: '/cv-builder?templates=1', i18n: { en: 'CV Templates', fa: 'قالب‌های سی‌وی', ps: 'د سي وي قالبونه' } },
+    { label: 'Cover Letter', url: '/letters?type=cover', i18n: { en: 'Cover Letter', fa: 'نامه پوششی', ps: 'د غوښتنلیک لیک' } },
+    { label: 'Recommendation Letter', url: '/letters?type=recommendation', i18n: { en: 'Recommendation Letter', fa: 'توصیه‌نامه', ps: 'سپارښت لیک' } },
+    { label: 'Other Letters', url: '/letters', i18n: { en: 'Other Letters', fa: 'نامه‌های دیگر', ps: 'نور لیکونه' } },
+    { label: 'Opportunity Matcher', url: '/opportunity-matcher', i18n: { en: 'Opportunity Matcher', fa: 'فرصت‌یاب', ps: 'د فرصت موندونکی' } },
+  ];
+  const children = [...(parent.children || [])];
+  for (const [index, item] of defaults.entries()) {
+    if (children.some(child => child.url === item.url)) continue;
+    children.push({ id: `application-tool-${index}`, label: item.label, labelI18n: item.i18n,
+      url: item.url, parentId: parent.id, icon: null, order: index + 1, visible: true,
+      openInNewTab: false, children: [] });
+  }
+  const rank = new Map(defaults.map((item, index) => [item.url, index]));
+  children.sort((a, b) => (rank.get(a.url || '') ?? 100) - (rank.get(b.url || '') ?? 100));
+  const updated = { ...parent, children };
+  return tools ? menu.map(item => item.id === tools.id ? updated : item) : [...menu, updated];
 }
 
 const DEFAULT_SOCIAL_LINKS = [

@@ -9,7 +9,10 @@ export type TemplateType =
   | 'minimal-elegant'
   | 'tech-profile'
   | 'academic-research'
-  | 'scholarship-profile';
+  | 'scholarship-profile'
+  | 'chronological-classic'
+  | 'skills-first'
+  | 'european-classic';
 export type TemplateCategory = 'ats' | 'professional' | 'student' | 'academic';
 export type PaperSize = 'a4' | 'letter';
 export type CVOutputLang = 'en' | 'fa' | 'ps';

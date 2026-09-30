@@ -1,31 +1,56 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, LayoutTemplate } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { CVAppearance, CVOutputLang, CVPurpose, TemplateCategory, TemplateType } from '../types';
 import { CV_TEMPLATES, CV_TEMPLATE_BY_ID, RECOMMENDED_TEMPLATES_BY_PURPOSE } from '../lib/cv-templates';
 import { cvText } from '../lib/cv-copy';
+import { createEmptyData } from '../lib/cv-utils';
+import { cvRendererCss, renderCvBody } from '../lib/cv-renderer';
+import type { CVDraft } from '../types';
 
-function Miniature({ id }: { id: TemplateType }) {
-  const side = ['modern-sidebar','tech-profile','scholarship-profile'].includes(id);
-  const centered = ['minimal-elegant','academic-research','scholarship-profile'].includes(id);
-  const dark = ['modern-sidebar','tech-profile'].includes(id);
-  const compact = id === 'ats-compact';
+function sampleDraft(id: TemplateType, lang: CVOutputLang): CVDraft {
+  const data = createEmptyData();
+  data.personal = { ...data.personal,
+    fullName: lang === 'fa' ? 'سارا احمدی' : lang === 'ps' ? 'سارا احمدي' : 'Sara Ahmadi',
+    headline: lang === 'fa' ? 'مدیر پروژه' : lang === 'ps' ? 'د پروژې مدیر' : 'Project Manager',
+    email: 'sara@example.com', phone: '+93 700 000 000', location: 'Kabul',
+    summary: lang === 'fa' ? 'متخصص مدیریت پروژه با تجربه در هماهنگی تیم‌ها و اجرای برنامه‌های آموزشی.' : lang === 'ps' ? 'د پروژې مدیر چې د ټیمونو په همغږۍ او د زده کړې پروګرامونو په پلي کولو کې تجربه لري.' : 'Project manager experienced in coordinating teams and delivering measurable education initiatives.',
+  };
+  data.experience = [
+    { id: 'sample-1', role: 'Program Coordinator', company: 'Community Learning Initiative', location: 'Kabul', startDate: '2022-01', endDate: '', isCurrent: true, description: 'Led a cross-functional team and improved program delivery across three districts.' },
+    { id: 'sample-2', role: 'Project Assistant', company: 'Education Partners', location: 'Kabul', startDate: '2020-06', endDate: '2021-12', isCurrent: false, description: 'Tracked milestones and supported partner communications.' },
+  ];
+  data.education = [{ id: 'sample-education', degree: 'Bachelor of Business Administration', institution: 'Kabul University', location: 'Kabul', startDate: '2016-09', endDate: '2020-06', isCurrent: false, description: '' }];
+  data.projects = [{ id: 'sample-project', name: 'Digital Learning Access', role: 'Project Lead', startDate: '2023-01', endDate: '2023-09', description: 'Coordinated a learning pilot for 150 students.', link: '', technologies: '' }];
+  data.skills = ['Program planning', 'Stakeholder engagement', 'Reporting'].map((name, index) => ({ id: `sample-skill-${index}`, name, level: 'expert' }));
+  data.languages = [{ id: 'sample-language', name: 'English', proficiency: 'fluent' }, { id: 'sample-language-2', name: 'Dari', proficiency: 'native' }];
+  data.awards = [{ id: 'sample-award', title: 'Community Leadership Award', issuer: 'Education Partners', date: '2023-06', description: '' }];
+  data.research = [{ id: 'sample-research', title: 'Access to Digital Education', organization: 'Kabul University', startDate: '2019-01', endDate: '2020-05', isCurrent: false, description: 'Study of barriers to online learning.', link: '' }];
+  return { schemaVersion: 4, id: 'sample', name: '', purpose: id === 'academic-research' || id === 'scholarship-profile' ? 'scholarship' : id === 'tech-profile' ? 'student' : 'professional', template: id, paperSize: 'a4', outputLang: lang, appearance: { accent: 'navy', density: 'comfortable', showPhoto: false }, data, createdAt: '', updatedAt: '' };
+}
+
+function Miniature({ id, lang }: { id: TemplateType; lang: CVOutputLang }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.25);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const resize = () => setScale(element.clientWidth / 794);
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  const html = useMemo(() => renderCvBody(sampleDraft(id, lang)), [id, lang]);
   return (
-    <div className="aspect-[0.72] overflow-hidden rounded-lg border bg-white p-2 shadow-sm">
-      <div className={`mb-2 h-5 rounded-sm ${dark ? 'bg-slate-900' : 'bg-slate-200'} ${centered ? 'mx-auto w-2/3' : 'w-full'}`} />
-      {side ? (
-        <div className="grid h-[calc(100%-1.75rem)] grid-cols-[1fr_32%] gap-1.5">
-          <div className="space-y-1.5">{Array.from({length:compact?7:5}).map((_,i)=><div key={i} className="h-2 rounded bg-slate-200" />)}</div>
-          <div className="space-y-1.5 rounded bg-slate-100 p-1">{Array.from({length:6}).map((_,i)=><div key={i} className="h-1.5 rounded bg-slate-300" />)}</div>
-        </div>
-      ) : (
-        <div className="space-y-1.5">
-          {Array.from({length:compact?10:7}).map((_,i)=><div key={i} className={`h-2 rounded ${i%3===0?'bg-slate-300':'bg-slate-200'} ${centered&&i%3===0?'mx-auto w-3/4':'w-full'}`} />)}
-        </div>
-      )}
+    <div ref={ref} className="relative aspect-[0.707] w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm" aria-hidden="true">
+      <div className="pointer-events-none absolute left-0 top-0 origin-top-left bg-white p-[42px]" style={{ width: 794, minHeight: 1123, transform: `scale(${scale})` }}>
+        <style dangerouslySetInnerHTML={{ __html: cvRendererCss }} />
+        <div dangerouslySetInnerHTML={{ __html: html }} />
+      </div>
     </div>
   );
 }
@@ -73,7 +98,7 @@ export function TemplateGallery({
           ))}
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {list.map(template=>{
             const isSelected=selected===template.id;
             const isDisabled=!enabledTemplateIds.includes(template.id);
@@ -83,9 +108,10 @@ export function TemplateGallery({
                 type="button"
                 onClick={()=>{ if(!isDisabled) onSelect(template.id); }}
                 disabled={isDisabled}
-                className={`group rounded-xl border p-3 text-start transition hover:border-primary hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${isSelected?'border-primary bg-primary/5 ring-1 ring-primary':''}`}
+                aria-pressed={isSelected}
+                className={`group rounded-xl border p-3 text-start transition hover:border-primary hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60 ${isSelected?'border-primary bg-primary/5 ring-1 ring-primary':''}`}
               >
-                <Miniature id={template.id} />
+                <Miniature id={template.id} lang={uiLang} />
                 <div className="mt-3 flex items-start justify-between gap-2">
                   <div>
                     <div className="font-semibold">{c(template.name)}</div>

@@ -1390,7 +1390,7 @@ function SettingsPanel() {
       {/* Database Operations */}
       <section className="space-y-4 rounded-2xl border border-destructive/20 bg-destructive/5 p-5">
         <h3 className="text-sm font-bold text-destructive">Database Operations</h3>
-        <p className="text-sm text-muted-foreground">Run the database seed script to insert default data and missing &quot;Tools&quot; menus (CV Builder, Opportunity Matcher).</p>
+        <p className="text-sm text-muted-foreground">Run the database seed script to insert default data and missing Tools links, including CV templates and application letters.</p>
         <Button 
           type="button" 
           variant="destructive" 

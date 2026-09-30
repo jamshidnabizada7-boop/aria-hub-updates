@@ -28,14 +28,14 @@ export async function PageShell({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Navbar
+      <div className="print:hidden"><Navbar
         menu={data.menu}
         languages={data.languages}
         siteName={data.settings?.siteName || 'ARIA HUB'}
         logoUrl={data.settings?.logoUrl ?? null}
-      />
+      /></div>
       <main className={`flex-1 ${className}`}>{children}</main>
-      <Footer settings={data.settings} footer={data.footer} socialLinks={data.socialLinks} />
+      <div className="print:hidden"><Footer settings={data.settings} footer={data.footer} socialLinks={data.socialLinks} /></div>
     </div>
   );
 }

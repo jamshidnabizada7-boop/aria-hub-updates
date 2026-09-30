@@ -93,6 +93,7 @@ export default async function CVBuilderPage({
           <CVBuilderClient
             initialLang={outputLang}
             initialPurpose={initialPurpose}
+            initialTemplatesOpen={query.templates === '1'}
             config={cvConfig}
             source={opportunitySlug || opportunityTitle || returnTo ? { opportunitySlug, opportunityTitle, returnTo } : undefined}
           />

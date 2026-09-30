@@ -64,8 +64,9 @@ export async function GET() {
 
     // ── Tools Menu ──────────────────────────────────────────────
     const existingTools = await db.menuItem.findFirst({ where: { url: null, label: 'Tools' } });
-    if (!existingTools) {
-      const toolsMenu = await db.menuItem.create({
+    let toolsMenu = existingTools;
+    if (!toolsMenu) {
+      toolsMenu = await db.menuItem.create({
         data: {
           label: 'Tools',
           labelI18n: { en: 'Tools', fa: 'ابزارها', ps: 'وسیلې' },
@@ -76,31 +77,20 @@ export async function GET() {
         }
       });
       
-      await db.menuItem.create({
-        data: {
-          label: 'CV Builder',
-          labelI18n: { en: 'CV Builder', fa: 'رزومه ساز', ps: 'سی وي جوړونکی' },
-          url: '/cv-builder',
-          parentId: toolsMenu.id,
-          order: 1,
-          visible: true,
-        }
-      });
-
-      await db.menuItem.create({
-        data: {
-          label: 'Opportunity Matcher',
-          labelI18n: { en: 'Opportunity Matcher', fa: 'فرصت یاب', ps: 'د فرصت موندونکی' },
-          url: '/opportunity-matcher',
-          parentId: toolsMenu.id,
-          order: 2,
-          visible: true,
-        }
-      });
-      logs.push('Tools menu seeded.');
-    } else {
-      logs.push('Tools menu already exists.');
     }
+    const applicationTools = [
+      { label: 'CV Builder', url: '/cv-builder', order: 1, labelI18n: { en: 'CV Builder', fa: 'سی‌وی ساز', ps: 'سي وي جوړونکی' } },
+      { label: 'CV Templates', url: '/cv-builder?templates=1', order: 2, labelI18n: { en: 'CV Templates', fa: 'قالب‌های سی‌وی', ps: 'د سي وي قالبونه' } },
+      { label: 'Cover Letter', url: '/letters?type=cover', order: 3, labelI18n: { en: 'Cover Letter', fa: 'نامه پوششی', ps: 'د غوښتنلیک لیک' } },
+      { label: 'Recommendation Letter', url: '/letters?type=recommendation', order: 4, labelI18n: { en: 'Recommendation Letter', fa: 'توصیه‌نامه', ps: 'سپارښت لیک' } },
+      { label: 'Other Letters', url: '/letters', order: 5, labelI18n: { en: 'Other Letters', fa: 'نامه‌های دیگر', ps: 'نور لیکونه' } },
+      { label: 'Opportunity Matcher', url: '/opportunity-matcher', order: 6, labelI18n: { en: 'Opportunity Matcher', fa: 'فرصت‌یاب', ps: 'د فرصت موندونکی' } },
+    ];
+    for (const item of applicationTools) {
+      const exists = await db.menuItem.findFirst({ where: { parentId: toolsMenu.id, url: item.url } });
+      if (!exists) await db.menuItem.create({ data: { ...item, parentId: toolsMenu.id, visible: true } });
+    }
+    logs.push('Tools menu verified.');
 
     // ── Legal Footer Links ───────────────────────────────────────
     const legalLinks = [

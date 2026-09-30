@@ -19,6 +19,9 @@ export const CV_TEMPLATES: CVTemplateDefinition[] = [
   { id: 'tech-profile', name: 'Tech Profile', category: 'student', description: 'Projects and technical skills are promoted ahead of traditional work history.', bestFor: 'Software, data and technical internships', supportsPhoto: true, atsFocused: false },
   { id: 'academic-research', name: 'Academic Research', category: 'academic', description: 'Research-first academic structure emphasizing education, publications and scholarship.', bestFor: 'Research, Masters and PhD applications', supportsPhoto: false, atsFocused: false },
   { id: 'scholarship-profile', name: 'Scholarship Profile', category: 'academic', description: 'Balanced academic profile emphasizing education, awards, leadership and languages.', bestFor: 'Scholarships and fellowships', supportsPhoto: true, atsFocused: false },
+  { id: 'chronological-classic', name: 'Chronological Classic', category: 'professional', description: 'Traditional reverse-chronological format with clear roles, employers and dates.', bestFor: 'Career progression and established work history', supportsPhoto: false, atsFocused: true },
+  { id: 'skills-first', name: 'Skills First', category: 'professional', description: 'Highlights transferable skills and projects before employment history.', bestFor: 'Career changers and applicants with employment gaps', supportsPhoto: false, atsFocused: false },
+  { id: 'european-classic', name: 'European Classic', category: 'professional', description: 'Structured European-style CV with prominent personal details and qualifications.', bestFor: 'European programs and international applications', supportsPhoto: true, atsFocused: false },
 ];
 
 export const CV_TEMPLATE_BY_ID = Object.fromEntries(CV_TEMPLATES.map((template) => [template.id, template])) as Record<TemplateType, CVTemplateDefinition>;
@@ -30,7 +33,7 @@ export const DEFAULT_TEMPLATE_BY_PURPOSE: Record<CVPurpose, TemplateType> = {
 };
 
 export const RECOMMENDED_TEMPLATES_BY_PURPOSE: Record<CVPurpose, TemplateType[]> = {
-  professional: ['ats-simple', 'ats-compact', 'modern-sidebar', 'executive', 'minimal-elegant'],
-  student: ['tech-profile', 'ats-simple', 'modern-sidebar', 'minimal-elegant'],
-  scholarship: ['academic-research', 'scholarship-profile', 'ats-simple', 'minimal-elegant'],
+  professional: ['ats-simple', 'chronological-classic', 'modern-sidebar'],
+  student: ['tech-profile', 'ats-simple', 'skills-first'],
+  scholarship: ['academic-research', 'scholarship-profile', 'european-classic'],
 };

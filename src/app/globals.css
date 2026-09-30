@@ -515,6 +515,16 @@
 
 
 /* ── CV Builder paper preview + dedicated PDF print surface ──────────────── */
+.letter-sheet { overflow-wrap: anywhere; font-family: Arial, "Vazirmatn", sans-serif; }
+.letter-layout-modern .letter-heading { border-top: 10px solid #1d4ed8; padding-top: 22px; }
+.letter-layout-modern .letter-subject { color: #1d4ed8; }
+.letter-layout-formal { font-family: Georgia, "Vazirmatn", serif; }
+.letter-layout-formal .letter-heading { border-inline-start: 5px solid #1e293b; padding-inline-start: 16px; }
+.letter-layout-formal .letter-subject { border-bottom: 1px solid #1e293b; padding-bottom: 12px; }
+@media print {
+  @page { size: A4; margin: 20mm; }
+  .letter-sheet { break-inside: auto; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
 .cv-paper-a4 {
   width: min(100%, 210mm);
   min-height: 297mm;

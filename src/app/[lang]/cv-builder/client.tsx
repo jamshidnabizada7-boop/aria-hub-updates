@@ -20,6 +20,7 @@ import type { CVIssue, CVOutputLang, CVPurpose, CVSourceContext, PaperSize, Temp
 interface Props {
   initialLang: CVOutputLang;
   initialPurpose?: CVPurpose;
+  initialTemplatesOpen?: boolean;
   config: CVBuilderAdminConfig;
   source?: CVSourceContext;
 }
@@ -35,14 +36,14 @@ function cleanFilename(value:string){
   return (value.trim()||'CV').replace(/[\\/:*?"<>|\x00-\x1F]/g,'-').replace(/\s+/g,' ').slice(0,90);
 }
 
-export function CVBuilderClient({ initialLang, initialPurpose='professional', config, source }:Props){
+export function CVBuilderClient({ initialLang, initialPurpose='professional', initialTemplatesOpen=false, config, source }:Props){
   const initialTemplate=config.defaultTemplates[initialPurpose];
   const {drafts,activeDraft,status,updateActive,createNewDraft,duplicateActive,switchDraft,removeDraft}=useCVDrafts({
     purpose:initialPurpose,outputLang:initialLang,source,template:initialTemplate,paperSize:config.defaultPaperSize,
   });
   const { toast }=useToast();
   const [exportOpen,setExportOpen]=useState(false);
-  const [templatesOpen,setTemplatesOpen]=useState(false);
+  const [templatesOpen,setTemplatesOpen]=useState(initialTemplatesOpen);
   const [mobileTab,setMobileTab]=useState('edit');
   const [generating,setGenerating]=useState(false);
   const readiness=useMemo(()=>activeDraft?validateDraft(activeDraft,config):null,[activeDraft,config]);
