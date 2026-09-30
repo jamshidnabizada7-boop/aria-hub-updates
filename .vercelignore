@@ -9,7 +9,6 @@ tests/fixtures
 .env*
 _video-studio
 db
-tools
 upload
 download
 .localpg
