@@ -5,6 +5,7 @@ import {
   type OpportunitySort,
 } from '@/lib/opportunity-queries';
 import { isLang, type Lang } from '@/lib/lang-route';
+import { toSafeIsoString } from '@/lib/date-format';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,8 +62,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       items: list.items.map((item) => ({
         ...item,
-        deadline: item.deadline ? item.deadline.toISOString() : null,
-        createdAt: item.createdAt.toISOString(),
+        deadline: item.deadline ? toSafeIsoString(item.deadline) : null,
+        createdAt: toSafeIsoString(item.createdAt),
       })),
       total: list.total,
       page: list.page,
