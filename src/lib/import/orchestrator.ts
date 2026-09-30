@@ -441,7 +441,11 @@ async function processListing(
   try { parsedConfig = source.config ? JSON.parse(source.config) : {}; } catch { /* ignore */ }
   // O4AF's legacy production config disabled detail fetch, but its list cards
   // contain no article body. Fetching details is required to import valid rows.
+  // Jobs.af detail URLs usually serve a client-side login shell. In a bounded
+  // run the structured homepage card already has usable job data, while its
+  // detail fetch can consume the whole function lifetime and strand the run.
   if (scraper && typeof scraper.parseDetail === 'function' &&
+      !(bounded && source.scraperKey === 'jobsaf') &&
       (parsedConfig?.detailFetch !== false || source.scraperKey === 'o4af')) {
     try {
       const enriched = await scraper.parseDetail(listing);
