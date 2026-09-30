@@ -181,6 +181,33 @@ describe('Opportunity Matcher canonical contract', () => {
     expect(result?.evidence.reasons).toContain('destination');
   });
 
+  test('a known different destination is excluded from recommendations', () => {
+    expect(rankOpportunity(baseProfile, opportunity({ country: 'France' }))).toBeNull();
+    expect(rankOpportunities(baseProfile, [opportunity({ country: 'France' })])).toHaveLength(0);
+  });
+
+  test('country names are matched exactly rather than by substring', () => {
+    const nigerProfile = { ...baseProfile, destinations: ['Niger'] };
+    expect(rankOpportunity(nigerProfile, opportunity({ country: 'Nigeria' }))).toBeNull();
+  });
+
+  test('a listed country in a multi-country location can match exactly', () => {
+    const result = rankOpportunity(baseProfile, opportunity({ country: 'France, Germany' }));
+    expect(result?.evidence.reasons).toContain('destination');
+  });
+
+  test('anywhere does not claim a destination match without a chosen destination', () => {
+    const result = rankOpportunity({ ...baseProfile, destinations: ['anywhere'] }, opportunity());
+    expect(result?.evidence.reasons).not.toContain('destination');
+  });
+
+  test('explicit nationality exclusions are not treated as eligibility evidence', () => {
+    const row = opportunity({ eligibility: 'Applicants from Afghanistan are not eligible.' });
+    const result = rankOpportunity(baseProfile, row);
+    expect(result?.evidence.conflicts).toContain('nationality');
+    expect(rankOpportunities(baseProfile, [row])).toHaveLength(0);
+  });
+
   test('known minimum experience can produce an explicit conflict', () => {
     const result = rankOpportunity(
       { ...baseProfile, experienceYears: 1 },

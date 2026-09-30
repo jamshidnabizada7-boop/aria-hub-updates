@@ -80,16 +80,18 @@ export async function GET() {
     }
     const applicationTools = [
       { label: 'CV Builder', url: '/cv-builder', order: 1, labelI18n: { en: 'CV Builder', fa: 'سی‌وی ساز', ps: 'سي وي جوړونکی' } },
-      { label: 'CV Templates', url: '/cv-builder?templates=1', order: 2, labelI18n: { en: 'CV Templates', fa: 'قالب‌های سی‌وی', ps: 'د سي وي قالبونه' } },
-      { label: 'Cover Letter', url: '/letters?type=cover', order: 3, labelI18n: { en: 'Cover Letter', fa: 'نامه پوششی', ps: 'د غوښتنلیک لیک' } },
-      { label: 'Recommendation Letter', url: '/letters?type=recommendation', order: 4, labelI18n: { en: 'Recommendation Letter', fa: 'توصیه‌نامه', ps: 'سپارښت لیک' } },
-      { label: 'Other Letters', url: '/letters', order: 5, labelI18n: { en: 'Other Letters', fa: 'نامه‌های دیگر', ps: 'نور لیکونه' } },
-      { label: 'Opportunity Matcher', url: '/opportunity-matcher', order: 6, labelI18n: { en: 'Opportunity Matcher', fa: 'فرصت‌یاب', ps: 'د فرصت موندونکی' } },
+      { label: 'Letter Builder', url: '/letters', order: 2, labelI18n: { en: 'Letter Builder', fa: 'نامه‌ساز', ps: 'د لیک جوړوونکی' } },
+      { label: 'Opportunity Matcher', url: '/opportunity-matcher', order: 3, labelI18n: { en: 'Opportunity Matcher', fa: 'فرصت‌یاب', ps: 'د فرصت موندونکی' } },
     ];
     for (const item of applicationTools) {
       const exists = await db.menuItem.findFirst({ where: { parentId: toolsMenu.id, url: item.url } });
       if (!exists) await db.menuItem.create({ data: { ...item, parentId: toolsMenu.id, visible: true } });
+      else await db.menuItem.update({ where: { id: exists.id }, data: { label: item.label, labelI18n: item.labelI18n, order: item.order, visible: true } });
     }
+    await db.menuItem.updateMany({
+      where: { parentId: toolsMenu.id, url: { in: ['/cv-builder?templates=1', '/letters?type=cover', '/letters?type=recommendation'] } },
+      data: { visible: false },
+    });
     logs.push('Tools menu verified.');
 
     // ── Legal Footer Links ───────────────────────────────────────

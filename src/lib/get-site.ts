@@ -239,13 +239,20 @@ function ensureApplicationTools(menu: MenuItem[]): MenuItem[] {
   };
   const defaults = [
     { label: 'CV Builder', url: '/cv-builder', i18n: { en: 'CV Builder', fa: 'سی‌وی ساز', ps: 'سي وي جوړونکی' } },
-    { label: 'CV Templates', url: '/cv-builder?templates=1', i18n: { en: 'CV Templates', fa: 'قالب‌های سی‌وی', ps: 'د سي وي قالبونه' } },
-    { label: 'Cover Letter', url: '/letters?type=cover', i18n: { en: 'Cover Letter', fa: 'نامه پوششی', ps: 'د غوښتنلیک لیک' } },
-    { label: 'Recommendation Letter', url: '/letters?type=recommendation', i18n: { en: 'Recommendation Letter', fa: 'توصیه‌نامه', ps: 'سپارښت لیک' } },
-    { label: 'Other Letters', url: '/letters', i18n: { en: 'Other Letters', fa: 'نامه‌های دیگر', ps: 'نور لیکونه' } },
+    { label: 'Letter Builder', url: '/letters', i18n: { en: 'Letter Builder', fa: 'نامه‌ساز', ps: 'د لیک جوړوونکی' } },
     { label: 'Opportunity Matcher', url: '/opportunity-matcher', i18n: { en: 'Opportunity Matcher', fa: 'فرصت‌یاب', ps: 'د فرصت موندونکی' } },
   ];
-  const children = [...(parent.children || [])];
+  const duplicateDestinations = new Set(['/cv-builder?templates=1', '/letters?type=cover', '/letters?type=recommendation']);
+  const seen = new Set<string>();
+  const children = (parent.children || []).filter(child => {
+    if (duplicateDestinations.has(child.url || '')) return false;
+    if (child.url && seen.has(child.url)) return false;
+    if (child.url) seen.add(child.url);
+    return true;
+  }).map(child => {
+    const canonical = defaults.find(item => item.url === child.url);
+    return canonical ? { ...child, label: canonical.label, labelI18n: canonical.i18n } : child;
+  });
   for (const [index, item] of defaults.entries()) {
     if (children.some(child => child.url === item.url)) continue;
     children.push({ id: `application-tool-${index}`, label: item.label, labelI18n: item.i18n,

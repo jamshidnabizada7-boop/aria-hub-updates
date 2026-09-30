@@ -533,6 +533,12 @@
   width: min(100%, 215.9mm);
   min-height: 279.4mm;
 }
+@media (max-width: 639px) {
+  .cv-paper-a4,
+  .cv-paper-letter {
+    min-height: 560px;
+  }
+}
 .cv-print-sheet {
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;

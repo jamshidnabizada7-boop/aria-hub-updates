@@ -38,7 +38,7 @@ export function CVPreview({ draft, config }: { draft: CVDraft; config: CVBuilder
         </div>
       ) : null}
       <div
-        className="p-8 sm:p-10"
+        className="p-4 sm:p-10"
         dangerouslySetInnerHTML={{ __html: renderCvBody(draft, config) }}
       />
     </div>

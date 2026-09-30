@@ -110,7 +110,7 @@ export function CVBuilderClient({ initialLang, initialPurpose='professional', in
   const template=CV_TEMPLATE_BY_ID[activeDraft.template];
 
   return (
-    <div className="mx-auto max-w-[1500px] px-3 sm:px-5 lg:px-8" data-clarity-mask="true">
+    <div className="mx-auto max-w-[1360px] px-3 sm:px-5 lg:px-8" data-clarity-mask="true">
       <div className="mb-5 rounded-2xl border bg-card/95 p-4 shadow-sm backdrop-blur">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="min-w-0">
@@ -133,7 +133,7 @@ export function CVBuilderClient({ initialLang, initialPurpose='professional', in
           </div>
         </div>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
           <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground" htmlFor="draft-select">{cvText(initialLang,'Saved CV')}</label>
             <select id="draft-select" className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={activeDraft.id} onChange={e=>switchDraft(e.target.value)}>
@@ -190,7 +190,7 @@ export function CVBuilderClient({ initialLang, initialPurpose='professional', in
       <Tabs value={mobileTab} onValueChange={setMobileTab} className="lg:hidden">
         <TabsList className="mb-4 grid h-11 w-full grid-cols-2"><TabsTrigger value="edit">{cvText(initialLang,'Edit')}</TabsTrigger><TabsTrigger value="preview">{cvText(initialLang,'Preview')}</TabsTrigger></TabsList>
         <TabsContent value="edit"><CVForm draft={activeDraft} onChange={updateActive} uiLang={initialLang} config={config} /></TabsContent>
-        <TabsContent value="preview"><div className="overflow-x-auto rounded-xl bg-slate-200/70 p-2 dark:bg-slate-950/50"><div className="min-w-[700px]"><CVPreview draft={activeDraft} config={config} /></div></div></TabsContent>
+        <TabsContent value="preview"><div className="rounded-xl bg-slate-200/70 p-2 dark:bg-slate-950/50"><CVPreview draft={activeDraft} config={config} /></div></TabsContent>
       </Tabs>
 
       <div className="hidden gap-6 lg:grid lg:grid-cols-[minmax(0,0.95fr)_minmax(620px,1.05fr)]">

@@ -220,17 +220,27 @@ function normalizeCountry(value: unknown): string {
   return COUNTRY_ALIASES[normalized] || normalized;
 }
 
+function locationCountries(value: unknown): string[] {
+  return String(value ?? '').split(/[,;|()/]/).map(normalizeCountry).filter(Boolean);
+}
+
 function countryMatches(profile: MatcherProfile, opportunity: MatcherOpportunity): boolean {
-  if (profile.destinations.some((d) => normalize(d) === 'anywhere')) return true;
-  const country = normalizeCountry(opportunity.country);
-  if (!country) return false;
-  if (['global', 'worldwide', 'international', 'remote', 'multiple countries'].some((term) => country.includes(term))) {
+  const countries = locationCountries(opportunity.country);
+  if (!countries.length) return false;
+  if (countries.some(country => ['global', 'worldwide', 'international', 'multiple countries'].includes(country))) {
     return true;
   }
-  return profile.destinations.some((destination) => {
-    const d = normalizeCountry(destination);
-    return d === country || country.includes(d) || d.includes(country);
-  });
+  return profile.destinations.some((destination) => countries.includes(normalizeCountry(destination)));
+}
+
+function explicitlyExcludesNationality(text: string, nationality: string): boolean {
+  if (!nationality) return false;
+  const escaped = nationality.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return [
+    `(?:except|excluding|exclude|not open to)\\s+${escaped}\\b`,
+    `\\b${escaped}\\b.{0,50}(?:not eligible|ineligible|excluded)`,
+    `(?:not eligible|ineligible).{0,50}\\b${escaped}\\b`,
+  ].some((pattern) => new RegExp(pattern).test(text));
 }
 
 function extractNationalityRestriction(extractedData: unknown, eligibilityText: string): { present: boolean; values: string[]; text: string } {
@@ -315,11 +325,15 @@ export function rankOpportunity(profile: MatcherProfile, opportunity: MatcherOpp
   score += 50;
   reasons.push('opportunity_type');
 
+  const anywhere = profile.destinations.some((d) => normalize(d) === 'anywhere');
   const destinationMatch = countryMatches(profile, opportunity);
-  if (destinationMatch) {
-    score += profile.destinations.some((d) => normalize(d) === 'anywhere') ? 5 : 20;
+  const listedCountries = locationCountries(opportunity.country);
+  const flexibleLocation = listedCountries.some(country => ['global', 'worldwide', 'international', 'multiple countries', 'remote'].includes(country));
+  if (!anywhere && listedCountries.length && !flexibleLocation && !destinationMatch) return null;
+  if (!anywhere && destinationMatch) {
+    score += 20;
     reasons.push('destination');
-  } else if (opportunity.country) {
+  } else if (!anywhere && !destinationMatch) {
     unknowns.push('destination');
   }
 
@@ -376,9 +390,9 @@ export function rankOpportunity(profile: MatcherProfile, opportunity: MatcherOpp
   if (structuredNationalities.length > 0) {
     const normalizedAllowed = structuredNationalities.map(normalizeCountry);
     const openToAll = normalizedAllowed.some((value) =>
-      ['all nationalities', 'any nationality', 'all countries', 'international', 'worldwide', 'global'].some((marker) => value.includes(marker))
+      ['all nationalities', 'any nationality', 'all countries', 'international', 'worldwide', 'global'].includes(value)
     );
-    if (openToAll || normalizedAllowed.some((value) => value === nationality || value.includes(nationality) || nationality.includes(value))) {
+    if (openToAll || normalizedAllowed.includes(nationality)) {
       verified.push('nationality');
       score += 5;
     } else {
@@ -386,12 +400,13 @@ export function rankOpportunity(profile: MatcherProfile, opportunity: MatcherOpp
     }
   } else if (nationalityRestriction.present) {
     const openToAll = ['all nationalities', 'any nationality', 'all countries', 'international', 'worldwide', 'global']
-      .some((marker) => nationalityRestriction.text.includes(marker));
+      .some((marker) => nationalityRestriction.values.includes(marker));
 
-    if (
+    if (explicitlyExcludesNationality(nationalityRestriction.text, nationality)) {
+      conflicts.push('nationality');
+    } else if (
       openToAll ||
-      (nationality && nationalityRestriction.values.some((value) => normalizeCountry(value).includes(nationality) || nationality.includes(normalizeCountry(value)))) ||
-      (nationality && nationalityRestriction.text.includes(normalize(profile.nationality)))
+      (nationality && nationalityRestriction.values.some((value) => normalizeCountry(value) === nationality))
     ) {
       verified.push('nationality');
       score += 5;
@@ -438,7 +453,7 @@ export function rankOpportunity(profile: MatcherProfile, opportunity: MatcherOpp
   const eligibilityStatus: EligibilityStatus =
     conflicts.length > 0
       ? 'potential_conflict'
-      : verified.includes('education') && verified.includes('nationality') && confidence !== 'low'
+      : verified.includes('education') && verified.includes('nationality') && !unknowns.some((key) => ['destination', 'target_level', 'experience'].includes(key)) && confidence !== 'low'
         ? 'likely_eligible'
         : confidence === 'low'
           ? 'incomplete'
@@ -472,7 +487,7 @@ export function rankOpportunities(
 ): RankedOpportunity[] {
   return opportunities
     .map((opportunity) => rankOpportunity(profile, opportunity))
-    .filter((item): item is RankedOpportunity => item !== null)
+    .filter((item): item is RankedOpportunity => item !== null && item.eligibilityStatus !== 'potential_conflict')
     .sort((a, b) => {
       if (a.eligibilityStatus !== b.eligibilityStatus) {
         const order: Record<EligibilityStatus, number> = {

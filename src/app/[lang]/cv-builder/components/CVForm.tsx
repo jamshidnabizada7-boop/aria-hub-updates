@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   ArrowDown, ArrowUp, Award, BookOpen, Briefcase, Check, FlaskConical, GraduationCap, Languages as LanguagesIcon,
   Plus, Trash2, Upload, UserRound, Wrench, FolderGit2, HeartHandshake, FileText, UsersRound
@@ -18,6 +18,7 @@ import type { CVBuilderAdminConfig } from '../lib/cv-admin-config';
 import { getRecommendedSections, validateDraft } from '../lib/cv-validation';
 import { makeId, prepareProfileImage } from '../lib/cv-utils';
 import { cvText } from '../lib/cv-copy';
+import { WritingAssistant } from '@/components/tools/writing-assistant';
 
 interface Props {
   draft: CVDraft;
@@ -128,14 +129,13 @@ function SectionCard({ section, title, icon: Icon, children, recommended, comple
   const errors = sectionIssues.filter((issue) => issue.severity === 'error').length;
   const warnings = sectionIssues.filter((issue) => issue.severity === 'warning').length;
   const [open, setOpen] = useState(title === c('Personal information') || errors > 0);
-  useEffect(() => { if (errors > 0) setOpen(true); }, [errors]);
   if (!enabled) return null;
 
   return (
     <details
       id={`cv-section-${section}`}
       className={`group rounded-2xl border bg-card p-4 transition sm:p-5 ${errors ? 'border-destructive/60' : warnings ? 'border-amber-400/70' : ''}`}
-      open={open}
+      open={open || errors > 0}
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
       <summary className="flex cursor-pointer list-none items-start justify-between gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
@@ -321,6 +321,7 @@ export function CVForm({ draft, onChange, uiLang, config }: Props) {
 
       <SectionCard uiLang={uiLang} section="summary" enabled={config.sections.summary.enabled} issues={readiness.issues} title={c('Professional summary')} icon={FileText} recommended={recommended.has('summary')} complete={Boolean(draft.data.personal.summary)}>
         <TextField id="cv-summary" {...issueProps('cv-summary')} meta={`${summaryWords} ${c('words')} · ${summaryRecommendation}`} label={c('Summary')} value={draft.data.personal.summary} onChange={(v) => setPersonal('summary', v)} placeholder={c('In 3–5 lines, explain who you are, your strongest skills, and the value you bring.')} hint={c('Focus on strengths, goals, and evidence. Avoid generic statements that could describe anyone.')} />
+        <WritingAssistant tool="cv" lang={draft.outputLang} text={draft.data.personal.summary} documentType={draft.purpose} onApply={value => setPersonal('summary', value)} />
       </SectionCard>
 
       <SectionCard uiLang={uiLang} section="experience" enabled={config.sections.experience.enabled} issues={readiness.issues} title={c('Experience')} icon={Briefcase} recommended={recommended.has('experience')} complete={draft.data.experience.length > 0}>

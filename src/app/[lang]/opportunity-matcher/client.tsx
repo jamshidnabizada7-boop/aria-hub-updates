@@ -98,7 +98,7 @@ const COPY = {
     strong: 'Strong', good: 'Good', possible: 'Possible',
     likely_eligible: 'Likely eligible from known requirements', needs_check: 'Some requirements need checking', potential_conflict: 'Potential eligibility conflict', incomplete: 'Eligibility information incomplete',
     high: 'High', medium: 'Medium', low: 'Low',
-    why: 'Why this matched', verified: 'What ARIA HUB could verify', unknown: 'Still check', ai: 'AI explanation',
+    why: 'Why this matched', verified: 'What ARIA HUB could verify', unknown: 'Still check', conflict: 'Potential conflict', details: 'Matching details', ai: 'AI explanation',
     aiDisclosure: 'AI may help explain already-selected evidence. It does not decide eligibility and does not estimate acceptance probability.',
     saveHint: 'Save this opportunity', cv: 'Prepare CV for this opportunity',
     helpful: 'Helpful', notRelevant: 'Not relevant',
@@ -129,7 +129,7 @@ const COPY = {
     strong: 'قوی', good: 'خوب', possible: 'ممکن',
     likely_eligible: 'بر اساس شرایط شناخته‌شده احتمالاً واجد شرایط', needs_check: 'بعضی شرایط باید بررسی شود', potential_conflict: 'تعارض احتمالی در شرایط', incomplete: 'اطلاعات شرایط ناقص است',
     high: 'زیاد', medium: 'متوسط', low: 'کم',
-    why: 'چرا این فرصت پیشنهاد شد', verified: 'مواردی که آریا هاب توانست بررسی کند', unknown: 'مواردی که باید بررسی کنید', ai: 'توضیح AI',
+    why: 'چرا این فرصت پیشنهاد شد', verified: 'مواردی که آریا هاب توانست بررسی کند', unknown: 'مواردی که باید بررسی کنید', conflict: 'ناسازگاری احتمالی', details: 'جزئیات تطبیق', ai: 'توضیح AI',
     aiDisclosure: 'AI فقط می‌تواند شواهد از قبل انتخاب‌شده را توضیح دهد. درباره واجد شرایط بودن تصمیم نمی‌گیرد و شانس قبولی را تخمین نمی‌زند.',
     saveHint: 'ذخیره این فرصت', cv: 'آماده‌سازی CV برای این فرصت',
     helpful: 'مفید بود', notRelevant: 'مرتبط نبود',
@@ -160,7 +160,7 @@ const COPY = {
     strong: 'قوي', good: 'ښه', possible: 'ممکن',
     likely_eligible: 'د پېژندل شویو شرطونو له مخې ښايي وړ وي', needs_check: 'ځینې شرطونه باید وکتل شي', potential_conflict: 'د وړتیا احتمالي ټکر', incomplete: 'د وړتیا معلومات نیمګړي دي',
     high: 'لوړ', medium: 'منځنی', low: 'ټیټ',
-    why: 'ولې دا فرصت برابر شو', verified: 'هغه څه چې آریا هاب تایید کړای شول', unknown: 'لا یې وګورئ', ai: 'د AI تشریح',
+    why: 'ولې دا فرصت برابر شو', verified: 'هغه څه چې آریا هاب تایید کړای شول', unknown: 'لا یې وګورئ', conflict: 'احتمالي ټکر', details: 'د سمون جزییات', ai: 'د AI تشریح',
     aiDisclosure: 'AI یوازې مخکې ټاکل شوي شواهد تشریح کوي. د وړتیا پرېکړه نه کوي او د منل کېدو چانس نه اټکلوي.',
     saveHint: 'فرصت خوندي کړئ', cv: 'د دې فرصت لپاره CV چمتو کړئ',
     helpful: 'ګټور و', notRelevant: 'اړوند نه و',
@@ -465,20 +465,20 @@ export function OpportunityMatcherClient() {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-3 sm:px-4" dir={rtl ? 'rtl' : 'ltr'}>
-      <div className="mb-6 text-center">
+      <div className="mb-4 text-center">
         <Sparkles className="mx-auto mb-3 h-8 w-8 text-amber-600" aria-hidden="true" />
-        <h1 className="text-3xl font-bold sm:text-4xl">{c.title}</h1>
+        <h1 className="text-2xl font-bold sm:text-3xl">{c.title}</h1>
         <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">{c.intro}</p>
       </div>
 
       <AnimatePresence mode="wait">
         <motion.div key={step} {...motionProps}>
           <GlassCard>
-            <div className="mb-6">
+            <div className="mb-4">
               <span className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
                 {c.step} {step} {c.of} 4
               </span>
-              <h2 ref={headingRef} tabIndex={-1} className="mt-4 text-2xl font-bold outline-none">
+              <h2 ref={headingRef} tabIndex={-1} className="mt-3 text-xl font-bold outline-none">
                 {step === 1 ? c.intentTitle : step === 2 ? c.educationTitle : step === 3 ? c.profileTitle : c.destinationTitle}
               </h2>
               <p className="mt-2 text-sm text-muted-foreground">
@@ -487,7 +487,7 @@ export function OpportunityMatcherClient() {
             </div>
 
             {step === 1 && (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" role="group" aria-label={c.intentTitle}>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="group" aria-label={c.intentTitle}>
                 {(Object.keys(INTENT_LABELS[lang]) as MatcherIntent[]).map((intent) => {
                   const selected = profile.intents.includes(intent);
                   return (
@@ -500,7 +500,7 @@ export function OpportunityMatcherClient() {
                         if (p.intents.length >= 3) return p;
                         return { ...p, intents: [...p.intents, intent] };
                       })}
-                      className={`flex min-h-20 items-center gap-3 rounded-2xl border p-4 text-start transition-colors ${selected ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/30' : 'bg-background/60 hover:bg-accent'}`}
+                      className={`flex min-h-14 items-center gap-2 rounded-xl border p-2 text-start text-sm transition-colors sm:p-3 ${selected ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/30' : 'bg-background/60 hover:bg-accent'}`}
                     >
                       <span className={`grid h-5 w-5 shrink-0 place-items-center rounded border ${selected ? 'border-amber-600 bg-amber-600 text-white' : 'border-muted-foreground/40'}`}>
                         {selected && <Check className="h-3.5 w-3.5" aria-hidden="true" />}
@@ -516,11 +516,11 @@ export function OpportunityMatcherClient() {
               <RadioGroup
                 value={profile.education}
                 onValueChange={(value) => setProfile((p) => ({ ...p, education: value as EducationLevel }))}
-                className="space-y-3"
+                className="grid grid-cols-2 gap-2"
                 aria-label={c.educationTitle}
               >
                 {(Object.keys(EDUCATION_LABELS[lang]) as EducationLevel[]).map((level) => (
-                  <Label key={level} htmlFor={`edu-${level}`} className="flex cursor-pointer items-center gap-3 rounded-xl border bg-background/60 p-4 hover:bg-accent">
+                  <Label key={level} htmlFor={`edu-${level}`} className="flex min-h-12 cursor-pointer items-center gap-2 rounded-xl border bg-background/60 p-2 text-sm hover:bg-accent sm:p-3">
                     <RadioGroupItem id={`edu-${level}`} value={level} />
                     <span>{EDUCATION_LABELS[lang][level]}</span>
                   </Label>
@@ -604,7 +604,7 @@ export function OpportunityMatcherClient() {
               </div>
             )}
 
-            <div className="mt-8 flex items-center justify-between border-t pt-5">
+            <div className="mt-5 flex items-center justify-between border-t pt-4">
               {step > 1 ? <Button variant="ghost" onClick={() => setStep((s) => s - 1)}>{c.back}</Button> : <span />}
               <Button onClick={next} disabled={!canContinue}>
                 {step === 4 ? c.find : c.next}
@@ -779,7 +779,7 @@ function ResultCard({
 
   return (
     <Card className="overflow-hidden border-border/70 bg-background/80 shadow-sm">
-      <div className="p-5 sm:p-6">
+      <div className="p-4 sm:p-5">
         <div className="flex flex-wrap items-center gap-2">
           <Badge>{result.type}</Badge>
           <Badge>{result.location}</Badge>
@@ -796,7 +796,7 @@ function ResultCard({
           <SaveButton slug={result.slug} />
         </div>
 
-        <div className="mt-4 grid gap-2 sm:grid-cols-3">
+        <div className="mt-4 grid grid-cols-3 gap-1.5 sm:gap-2">
           <Status label={copy.match} value={copy[result.matchStrength]} />
           <Status label={copy.eligibility} value={copy[result.eligibilityStatus]} />
           <Status label={copy.confidence} value={copy[result.dataConfidence]} />
@@ -810,15 +810,13 @@ function ResultCard({
           )}
         </div>
 
-        {result.reasons.length > 0 && (
-          <EvidenceBlock title={copy.why} items={result.reasons.map((key) => REASON_COPY[lang][key] || key)} tone="positive" />
-        )}
-        {result.verified.length > 0 && (
-          <EvidenceBlock title={copy.verified} items={result.verified.map((key) => REASON_COPY[lang][key] || key)} tone="positive" />
-        )}
-        {result.unknowns.length > 0 && (
-          <EvidenceBlock title={copy.unknown} items={result.unknowns.map((key) => UNKNOWN_COPY[lang][key] || key)} tone="neutral" />
-        )}
+        {result.conflicts.length > 0 && <EvidenceBlock title={copy.conflict} items={result.conflicts.map((key) => UNKNOWN_COPY[lang][key] || key)} tone="neutral" />}
+        <details className="mt-4 rounded-xl border px-3 py-2">
+          <summary className="cursor-pointer text-sm font-semibold">{copy.details}</summary>
+          {result.reasons.length > 0 && <EvidenceBlock title={copy.why} items={result.reasons.map((key) => REASON_COPY[lang][key] || key)} tone="positive" />}
+          {result.verified.length > 0 && <EvidenceBlock title={copy.verified} items={result.verified.map((key) => REASON_COPY[lang][key] || key)} tone="positive" />}
+          {result.unknowns.length > 0 && <EvidenceBlock title={copy.unknown} items={result.unknowns.map((key) => UNKNOWN_COPY[lang][key] || key)} tone="neutral" />}
+        </details>
         {result.explanation && (
           <div className="mt-4 rounded-xl border border-amber-200/70 bg-amber-50/50 p-4 dark:border-amber-900 dark:bg-amber-950/20">
             <p className="text-xs font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-300">{copy.ai}</p>
