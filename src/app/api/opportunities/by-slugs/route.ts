@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOpportunitiesBySlugs } from '@/lib/opportunity-queries';
 import type { Lang } from '@/lib/lang-route';
+import { toSafeIsoString } from '@/lib/date-format';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,8 +21,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       items: items.map((item) => ({
         ...item,
-        deadline: item.deadline ? item.deadline.toISOString() : null,
-        createdAt: item.createdAt ? item.createdAt.toISOString() : null,
+        deadline: item.deadline ? toSafeIsoString(item.deadline) : null,
+        createdAt: item.createdAt ? toSafeIsoString(item.createdAt) : null,
       })),
     });
   } catch (e) {
