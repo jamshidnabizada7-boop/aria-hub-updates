@@ -38,15 +38,24 @@ export async function runScheduledOpportunityImport(): Promise<ScheduledImportRe
     if (!source) return { ran: false, reason: 'no_source_due', databaseBytes };
 
     const today = new Date().toISOString().slice(0, 10);
-    // The cross-process lock prevents overlap; lastRunAt and remainingNew
-    // control the next selection after this source finishes.
+    // Record the attempt before scraping. If the host kills the process, the
+    // source still yields its next slot to the other due sources.
+    await db.importSource.update({
+      where: { id: source.id },
+      data: {
+        lastRunAt: new Date(),
+        lastRunStatus: 'running',
+        lastRunStats: JSON.stringify({ remainingNew: 0 }),
+      },
+    });
     await patchState({
       lastOpportunityImportDate: today,
       lastOpportunityImportStartedAt: new Date().toISOString(),
+      lastOpportunityImportSource: source.name,
     } as Parameters<typeof patchState>[0]);
     const summary = await runImport({
       sourceId: source.id,
-      triggeredBy: 'scheduled:free-tier',
+      triggeredBy: 'scheduled:opportunity',
       bounded: true,
     });
     await patchState({

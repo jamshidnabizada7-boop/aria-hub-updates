@@ -1,5 +1,34 @@
 # Opportunity translation schedule
 
+## Current production setup (October 2026)
+
+Opportunity imports and translations now run on the Oracle host, using the
+separate `/opt/aria-hub-automation` checkout and the systemd units in
+`ops/systemd/`. Imports run at `:05`, `:20`, `:35`, and `:50` UTC; translations
+run at `:00` and `:30` UTC. The Oracle social worker is separate. The old
+Supabase Cron jobs `aria-opportunity-import` (ID 2) and
+`aria-opportunity-translate` (ID 1) are **inactive**, retained only as a
+fallback. Vercel's in-process scheduler remains disabled.
+
+The worker reads database credentials from `/etc/aria-hub/social-worker.env`
+and AI settings from `/etc/aria-hub/opportunity-worker.env`; never commit their
+values. The database role has scoped table grants and row policies for the
+opportunity pipeline. Each systemd run handles one bounded import or one
+translation chunk and shares the database tick lock. A source is marked as
+attempted before scraping, so an interrupted run yields to other sources.
+
+Check `systemctl list-timers --all 'aria-opportunity*'` and the journals for
+`aria-opportunity@import.service` and `aria-opportunity@translate.service`.
+Check recent `ImportRun` rows and `AutomationState.state` for successful work.
+
+Emergency rollback: disable the two Oracle timers with
+`sudo systemctl disable --now aria-opportunity-import.timer aria-opportunity-translate.timer`,
+then reactivate the old Supabase jobs with `select cron.alter_job(1, active := true);`
+and `select cron.alter_job(2, active := true);`. Vercel function use will rise
+again. Disable the Supabase jobs before re-enabling Oracle timers.
+
+## Previous Vercel schedule (inactive)
+
 Production uses one Supabase Cron job, `aria-opportunity-translate`, every 30
 minutes. `pg_net` posts to
 `https://www.myariahub.com/api/admin/pipeline/translate` with a dedicated Bearer

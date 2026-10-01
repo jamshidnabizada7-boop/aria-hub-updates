@@ -74,6 +74,14 @@ test('primary sources are due twice daily', () => {
   expect(selectScheduledOpportunitySource(rows, new Date('2026-09-29T13:00:00.000Z'))?.name).toBe('ACBAR');
 });
 
+test('an interrupted primary import yields its slot, then retries after an hour', () => {
+  const interrupted = { ...source('ACBAR', 'acbar', '2026-09-29T11:30:00.000Z'), lastRunStatus: 'running' };
+  const rows = [interrupted, source('Wazifaha', 'wazifaha', '2026-09-28T10:00:00.000Z')];
+  expect(selectScheduledOpportunitySource(rows, now)?.name).toBe('Wazifaha');
+  expect(selectScheduledOpportunitySource([interrupted], now)).toBeNull();
+  expect(selectScheduledOpportunitySource([interrupted], new Date('2026-09-29T12:30:00.000Z'))?.name).toBe('ACBAR');
+});
+
 test('deadline dated today remains valid; past dates are skipped', () => {
   expect(isExpiredListingDeadline('2026-09-29', now)).toBe(false);
   expect(isExpiredListingDeadline('2026-09-28', now)).toBe(true);

@@ -68,9 +68,10 @@ const SITE_URL = 'https://www.myariahub.com';
 const getOpportunity = cache((slug: string) => getOpportunityBySlug(slug));
 
 // Opportunity content changes with imports + AI enrichment backfills —
-// re-render at most 60s stale so deadline counts and cleaned content stay
+// re-render at most 10 minutes stale so deadline counts and cleaned content stay
 // fresh without sacrificing the static-render performance win.
 export const revalidate = 600;
+export const dynamic = 'force-static';
 
 // ---------------------------------------------------------------------------
 // helpers

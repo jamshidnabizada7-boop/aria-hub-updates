@@ -11,6 +11,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const PRIMARY_INTERVAL_MS = DAY_MS / 2;
 const WEEK_MS = 7 * DAY_MS;
 const RETRY_MS = 15 * 60 * 1000;
+const INTERRUPTED_RETRY_MS = 60 * 60 * 1000;
 
 export interface ScheduledSource {
   id: string;
@@ -47,7 +48,10 @@ export function selectScheduledOpportunitySource(
   const secondary = sources.filter((s) => !PRIMARY_OPPORTUNITY_KEYS.has(s.scraperKey));
   const age = (s: ScheduledSource) => now.getTime() - (s.lastRunAt?.getTime() ?? 0);
 
-  const duePrimary = primary.filter((s) => !s.lastRunAt || age(s) >= PRIMARY_INTERVAL_MS).sort(oldestFirst);
+  const duePrimary = primary.filter((s) =>
+    !s.lastRunAt || age(s) >= PRIMARY_INTERVAL_MS ||
+    (s.lastRunStatus === 'running' && age(s) >= INTERRUPTED_RETRY_MS),
+  ).sort(oldestFirst);
   if (duePrimary.length) return duePrimary[0];
 
   const backlog = primary.filter((s) =>

@@ -1,0 +1,10 @@
+[Unit]
+Description=Translate new ARIA HUB opportunities every 30 minutes
+
+[Timer]
+OnCalendar=*-*-* *:00,30:00 UTC
+Persistent=true
+Unit=aria-opportunity@translate.service
+
+[Install]
+WantedBy=timers.target

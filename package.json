@@ -8,6 +8,7 @@
     "build": "node --max-old-space-size=4096 ./node_modules/next/dist/bin/next build && node -e \"const fs=require('fs'); if (fs.existsSync('.next/standalone')) { fs.cpSync('.next/static','.next/standalone/.next/static',{recursive:true}); fs.cpSync('public','.next/standalone/public',{recursive:true}); }\"",
     "start": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
     "worker:social": "bun --conditions=react-server scripts/social-publish-worker.ts",
+    "worker:opportunities": "bun --conditions=react-server scripts/opportunity-schedule-worker.ts",
     "lint": "eslint .",
     "test": "bun test ./tests/",
     "db:push": "prisma db push",

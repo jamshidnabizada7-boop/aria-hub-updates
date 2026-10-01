@@ -1,0 +1,16 @@
+[Unit]
+Description=ARIA HUB opportunity %i worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ariahub
+Group=ariahub
+WorkingDirectory=/opt/aria-hub-automation
+EnvironmentFile=/etc/aria-hub/social-worker.env
+EnvironmentFile=/etc/aria-hub/opportunity-worker.env
+ExecStart=/usr/local/bin/bun --conditions=react-server scripts/opportunity-schedule-worker.ts %i
+TimeoutStartSec=15min
+MemoryMax=1500M
+NoNewPrivileges=true
