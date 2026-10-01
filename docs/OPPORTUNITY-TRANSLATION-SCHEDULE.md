@@ -16,6 +16,8 @@ values. The database role has scoped table grants and row policies for the
 opportunity pipeline. Each systemd run handles one bounded import or one
 translation chunk and shares the database tick lock. A source is marked as
 attempted before scraping, so an interrupted run yields to other sources.
+The public opportunity feed and its load-more API have a 60-second Vercel CDN
+TTL with stale revalidation; detail pages use a 10-minute page cache.
 
 Check `systemctl list-timers --all 'aria-opportunity*'` and the journals for
 `aria-opportunity@import.service` and `aria-opportunity@translate.service`.

@@ -3,6 +3,17 @@ import type { NextConfig } from "next";
 const isDev = process.env.NODE_ENV === "development" || process.env.__NEXT_DEV === "true";
 
 const nextConfig: NextConfig = {
+  async headers() {
+    return [{
+      // The public feed is identical for visitors with the same URL. Cache
+      // query variants separately at Vercel's CDN while keeping browsers live.
+      source: '/:lang(en|fa|ps)/opportunities',
+      headers: [{
+        key: 'Vercel-CDN-Cache-Control',
+        value: 's-maxage=60, stale-while-revalidate=120',
+      }],
+    }];
+  },
   // Standalone output packs a deployable server bundle — for the Linux
   // container. Set STANDALONE=1 there; on Windows the build fails at the
   // copy step because chunk filenames contain ":" (e.g. node:fs/promises).

@@ -70,6 +70,8 @@ export async function GET(req: NextRequest) {
       perPage: list.perPage,
       totalPages: list.totalPages,
       spotlightId,
+    }, {
+      headers: { 'Vercel-CDN-Cache-Control': 's-maxage=60, stale-while-revalidate=120' },
     });
   } catch (e) {
     console.error('[api/opportunities/list]', (e as Error).message);
