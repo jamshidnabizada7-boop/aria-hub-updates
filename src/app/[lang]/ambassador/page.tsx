@@ -4,6 +4,7 @@ import { StaticDocView } from '@/components/site/static-doc-view';
 import { AMBASSADOR_DOC } from '@/lib/growth-page-content';
 import { isLang, type Lang } from '@/lib/lang-route';
 import { getPageSeo } from '@/lib/seo-metadata';
+import { loadGrowthPage } from '@/lib/growth-page-load';
 
 export const revalidate = 1800;
 
@@ -48,10 +49,11 @@ export default async function AmbassadorPage({
 }) {
   const { lang } = await params;
   const safeLang: Lang = isLang(lang) ? lang : 'fa';
+  const { title, dbHtml } = await loadGrowthPage('ambassador', safeLang, AMBASSADOR_DOC);
 
   return (
     <PageShell lang={safeLang}>
-      <StaticDocView doc={AMBASSADOR_DOC} lang={safeLang} />
+      <StaticDocView doc={AMBASSADOR_DOC} lang={safeLang} title={title} dbHtml={dbHtml} />
     </PageShell>
   );
 }

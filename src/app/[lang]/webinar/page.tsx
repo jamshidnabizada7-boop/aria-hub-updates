@@ -5,6 +5,7 @@ import { WebinarRegisterForm } from '@/components/site/webinar-register-form';
 import { WEBINAR_DOC } from '@/lib/growth-page-content';
 import { isLang, type Lang } from '@/lib/lang-route';
 import { getPageSeo } from '@/lib/seo-metadata';
+import { loadGrowthPage } from '@/lib/growth-page-load';
 
 export const revalidate = 1800;
 
@@ -49,10 +50,11 @@ export default async function WebinarPage({
 }) {
   const { lang } = await params;
   const safeLang: Lang = isLang(lang) ? lang : 'fa';
+  const { title, dbHtml } = await loadGrowthPage('webinar', safeLang, WEBINAR_DOC);
 
   return (
     <PageShell lang={safeLang}>
-      <StaticDocView doc={WEBINAR_DOC} lang={safeLang} />
+      <StaticDocView doc={WEBINAR_DOC} lang={safeLang} title={title} dbHtml={dbHtml} />
       <div className="mx-auto max-w-4xl px-4 pb-20 sm:px-6 lg:px-8" dir="auto">
         <div className="rounded-2xl border border-border/60 bg-card/40 p-6 shadow-sm backdrop-blur-sm md:p-8">
           <WebinarRegisterForm />
