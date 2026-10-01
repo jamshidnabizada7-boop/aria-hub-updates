@@ -122,6 +122,39 @@ export default function RootLayout({
             __html: `(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};function load(){if(document.getElementById('clarity-js'))return;t=l.createElement(r);t.id='clarity-js';t.async=1;t.src="https://www.clarity.ms/tag/"+i+"?ref=bwt";y=l.getElementsByTagName(r)[0];if(y&&y.parentNode){y.parentNode.insertBefore(t,y);}else{l.head.appendChild(t);}}function defer(fn){if('requestIdleCallback' in c){c.requestIdleCallback(fn,{timeout:1500});}else{c.setTimeout(fn,1000);}}if(document.readyState==='complete'){defer(load);}else{c.addEventListener('load',function(){defer(load);});}})(window, document, "clarity", "script", "ymu0ma5xzk");`,
           }}
         />
+        {/* Maze universal snippet — domain verification + live website testing
+            and in-product survey prompts (apiKey: b791ebeb-881b-4a3f-bb9c-59ba3371cfac) */}
+        <script
+          type="text/javascript"
+          dangerouslySetInnerHTML={{
+            __html: `(function (m, a, z, e) {
+  var s, t, u, v;
+  try {
+    t = m.sessionStorage.getItem('maze-us');
+  } catch (err) {}
+
+  if (!t) {
+    t = new Date().getTime();
+    try {
+      m.sessionStorage.setItem('maze-us', t);
+    } catch (err) {}
+  }
+
+  u = document.currentScript || (function () {
+    var w = document.getElementsByTagName('script');
+    return w[w.length - 1];
+  })();
+  v = u && u.nonce;
+
+  s = a.createElement('script');
+  s.src = z + '?apiKey=' + e;
+  s.async = true;
+  if (v) s.setAttribute('nonce', v);
+  a.getElementsByTagName('head')[0].appendChild(s);
+  m.mazeUniversalSnippetApiKey = e;
+})(window, document, 'https://snippet.maze.co/maze-universal-loader.js', 'b791ebeb-881b-4a3f-bb9c-59ba3371cfac');`,
+          }}
+        />
         {/* google-adsense-account meta + the AdSense script itself live in
             /[lang]/layout.tsx so ONLY public pages load ads — /admin and
             non-public routes stay ad-free (invalid-impression protection). */}
