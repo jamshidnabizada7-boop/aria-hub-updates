@@ -280,6 +280,10 @@ export function Footer({
                 <Link href={hrefFn('/advertise')} className="inline-flex min-h-[44px] items-center px-2 py-1 font-semibold transition-colors hover:text-foreground">{t('footer.advertise')}</Link>
                 <span className="text-border">·</span>
                 <Link href={hrefFn('/track')} className="inline-flex min-h-[44px] items-center px-2 py-1 transition-colors hover:text-foreground">{t('track.title')}</Link>
+                <span className="text-border">·</span>
+                <Link href={hrefFn('/partners')} className="inline-flex min-h-[44px] items-center px-2 py-1 font-semibold transition-colors hover:text-foreground">{t('footer.partners')}</Link>
+                <span className="text-border">·</span>
+                <Link href={hrefFn('/press')} className="inline-flex min-h-[44px] items-center px-2 py-1 transition-colors hover:text-foreground">{t('footer.press')}</Link>
               </>
             )}
           </div>

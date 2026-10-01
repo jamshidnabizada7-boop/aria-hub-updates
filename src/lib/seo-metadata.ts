@@ -234,6 +234,54 @@ export const SEO_PAGE_DATA: Record<string, PageSeoEntry> = {
       ps: 'باوري بورسونه، کاري اعلانونه او روزنیز پروګرامونه د افغانستان د فرصتونو تر ټولو لویې شبکې سره شریک کړئ — په ۲۴ ساعتونو کې بیاکتنه او خپرېدل.',
     },
   },
+  press: {
+    title: {
+      en: 'Press & Media Kit | ARIA HUB',
+      fa: 'کیت مطبوعاتی و رسانه‌ای | ARIA HUB',
+      ps: 'د مطبوعاتو او میډیا کټ | ARIA HUB',
+    },
+    description: {
+      en: 'Official ARIA HUB press kit: company boilerplate in three lengths, logo files, facts editors can use, and a priority media contact.',
+      fa: 'کیت رسمی مطبوعاتی آریا هاب: معرفی شرکت در سه اندازه، فایل‌های لوگو، حقایق قابل استناد برای سردبیران و تماس مطبوعاتی با پاسخ در اولویت.',
+      ps: 'د آریا هاب رسمي مطبوعاتي کټ: په درېو اندازو د شرکت پېژندنه، لوګو فایلونه، د مدیرانو لپاره کارېدونکې حقیقتونه او د لومړیتوب ځواب ویونکی اړیکه.',
+    },
+  },
+  partners: {
+    title: {
+      en: 'Partner with ARIA HUB — Opportunity Feed, Webinars & More | ARIA HUB',
+      fa: 'همکاری با آریا هاب — فید فرصت‌ها، وبینار و بیشتر | ARIA HUB',
+      ps: 'له آریا هاب سره همکاري — د فرصتونو فیډ، ویبنار او نور | ARIA HUB',
+    },
+    description: {
+      en: 'Give your community a continuously updated opportunity resource: co-posting, co-hosted webinars, a free embeddable opportunities feed and co-branded pages — all with tracked UTM links.',
+      fa: 'به جامعهٔ خود منبعی پیوسته به‌روز از فرصت‌ها بدهید: انتشار مشترک، وبینارهای مشترک، فید رایگان و قابل جاسازی فرصت‌ها و صفحات مشترک — همه با لینک‌های UTM ردیابی‌شده.',
+      ps: 'خپلې ټولنې ته د تل لپاره تازه د فرصتونو سرچینه ورکړئ: ګډه خپرونه، ګډ ویبنارونه، وړیا او ښکاره کېدونکی د فرصتونو فیډ او ګډې پاڼې — ټول د تعقیبي UTM لینکونو سره.',
+    },
+  },
+  webinar: {
+    title: {
+      en: 'Free Webinar: Find and Verify Scholarships & Jobs | ARIA HUB',
+      fa: 'وبینار رایگان: یافتن و راستی‌آزمایی بورسیه و شغل | ARIA HUB',
+      ps: 'وړیا ویبنار: د بورسونو او دندو موندل او تایید | ARIA HUB',
+    },
+    description: {
+      en: 'Join a free 45-minute session on verifying official opportunity sources, avoiding misleading application links and building a deadline system that never misses. Register for the invitation.',
+      fa: 'در یک جلسهٔ رایگان ۴۵ دقیقه‌ای شرکت کنید: راستی‌آزمایی منابع رسمی فرصت‌ها، تشخیص لینک‌های گمراه‌کننده و ساخت سیستم ددلاین که هیچ مهلی را از دست نمی‌دهد. برای دعوت‌نامه ثبت‌نام کنید.',
+      ps: 'په یوه وړیا ۴۵ دقیقو ناسته کې ګډون وکړئ: د رسمي سرچینو تایید، د ګمراه کوونکو لینکونو پېژندنه او داسې د مهلو سیستم جوړول چې هیڅ مهل نه بېلېږي. د بلنې لپاره ثبت نوم کړئ.',
+    },
+  },
+  ambassador: {
+    title: {
+      en: 'Campus & Community Ambassador Program | ARIA HUB',
+      fa: 'برنامهٔ سفیران دانشگاهی و اجتماعی | ARIA HUB',
+      ps: 'د پوهنتون او ټولنې سفیرانو پروګرام | ARIA HUB',
+    },
+    description: {
+      en: 'Join the ARIA HUB ambassador pilot: share selected opportunities, host one session a month, collect feedback and earn contribution-based recognition. No spam, no posting quotas.',
+      fa: 'به دورهٔ آزمایشی سفیران آریا هاب بپیوندید: اشتراک فرصت‌های منتخب، یک جلسه در ماه، جمع‌آوری بازخورد و قدردانی بر اساس سهم واقعی. بدون اسپم و بدون سهمیهٔ پست.',
+      ps: 'د آریا هاب د سفیرانو ازموینې ډلې سره یوځای شئ: ټاکلي فرصتونه شریکول، په میاشت کې یوه ناسته، فیډبیک راټولول او پر ریښتینې ونډه قدرداني. نه سپام، نه د پوسټ کوټه.',
+    },
+  },
 };
 
 export function getPageSeo(pageKey: keyof typeof SEO_PAGE_DATA, lang: Lang) {
