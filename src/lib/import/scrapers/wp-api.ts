@@ -39,6 +39,7 @@ import { htmlToExcerpt, parseDate, sleep, stripHtml, stripTextJunk } from '../ut
 import { browserHeaders, isChallengePage } from './browser-headers';
 import { curlFetch, isCurlAvailable } from './curl-fallback';
 import type { FetchOptions, RawListing, ScrapePage } from '../types';
+import { classifyApplyUrl, isRealApplyLink } from '@/lib/apply';
 
 /** Minimal shape of the WP REST post payload we consume. */
 interface WpPost {
@@ -252,6 +253,22 @@ export class WpApiScraper extends BaseScraper {
     // Content → description. Boilerplate strip, then plain text (the site
     // renders opportunity bodies as pre-line text, not HTML).
     const rawContent = post.content?.rendered || post.excerpt?.rendered || '';
+    // Preserve explicit application anchors before HTML stripping removes hrefs.
+    // A source article URL remains an internal fallback, never a public Apply button.
+    let applyUrl = link;
+    try {
+      const $content = cheerio.load(rawContent);
+      $content('a[href]').each((_, element) => {
+        if (applyUrl !== link) return;
+        const label = $content(element).text().replace(/\s+/g, ' ').trim();
+        if (!/\b(apply|application|submit|register)\b/i.test(label)) return;
+        const href = $content(element).attr('href');
+        if (!href) return;
+        let candidate: string;
+        try { candidate = new URL(href, link).toString(); } catch { return; }
+        if (isRealApplyLink(classifyApplyUrl(candidate, link, link))) applyUrl = candidate;
+      });
+    } catch { /* Keep the source article fallback when HTML is malformed. */ }
     const description =
       stripHtml(stripTextJunk(stripWpBoilerplate(rawContent))) ||
       htmlToExcerpt(post.excerpt?.rendered || '');
@@ -275,7 +292,7 @@ export class WpApiScraper extends BaseScraper {
       title,
       sourceUrl: link,
       originalUrl: link,
-      applyUrl: link,
+      applyUrl,
       sourceName: this.source.name,
       sourceLanguage: 'en',
       jobType,

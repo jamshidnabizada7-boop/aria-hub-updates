@@ -85,7 +85,9 @@ function fromItem(item: Item): Record<string, unknown> {
   return form;
 }
 
-export function OpportunityFormPanel() {
+type RepairIssue = 'apply' | 'core' | 'evidence' | 'translation';
+
+export function OpportunityFormPanel({ focus, onFocusHandled }: { focus?: { id: string; issue: RepairIssue } | null; onFocusHandled?: () => void } = {}) {
   const t = useT();
   const { toast } = useToast();
   const tRef = useRef(t);
@@ -104,7 +106,26 @@ export function OpportunityFormPanel() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Item | null>(null);
+  const [editingIssue, setEditingIssue] = useState<RepairIssue | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    if (!focus) return;
+    let cancelled = false;
+    fetch(`/api/admin/crud?model=opportunity&id=${encodeURIComponent(focus.id)}&pageSize=1`, { cache: 'no-store' })
+      .then((response) => response.json())
+      .then((result) => {
+        if (cancelled) return;
+        const item = result.items?.[0];
+        if (!item) throw new Error('Opportunity no longer exists.');
+        setEditing(item);
+        setEditingIssue(focus.issue);
+        setShowForm(true);
+        onFocusHandled?.();
+      })
+      .catch((error) => { if (!cancelled) toast({ title: error.message || 'Could not open opportunity', variant: 'destructive' }); });
+    return () => { cancelled = true; };
+  }, [focus, onFocusHandled, toast]);
 
   useEffect(() => {
     let cancelled = false;
@@ -184,7 +205,7 @@ export function OpportunityFormPanel() {
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={() => { setEditing(null); setShowForm(true); }} className="gap-2 rounded-xl bg-gradient-to-r from-primary to-chart-2">
+        <Button onClick={() => { setEditing(null); setEditingIssue(null); setShowForm(true); }} className="gap-2 rounded-xl bg-gradient-to-r from-primary to-chart-2">
           <Plus className="h-4 w-4" /> {t('admin.button.addNew')}
         </Button>
       </div>
@@ -255,7 +276,7 @@ export function OpportunityFormPanel() {
                           >
                             <Eye className="h-4 w-4" />
                           </a>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditing(item); setShowForm(true); }}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditing(item); setEditingIssue(null); setShowForm(true); }}>
                             <Pencil className="h-4 w-4" />
                           </Button>
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(String(item.id))}>
@@ -288,6 +309,7 @@ export function OpportunityFormPanel() {
       {showForm && (
         <OpportunityFormDialog
           item={editing}
+          issue={editingIssue}
           categories={categories}
           onClose={() => setShowForm(false)}
           onSaved={() => { setShowForm(false); reload(); }}
@@ -362,9 +384,10 @@ function Simple({ field, label, type }: { field: string; label: string; type?: s
 }
 
 function OpportunityFormDialog({
-  item, categories, onClose, onSaved,
+  item, issue, categories, onClose, onSaved,
 }: {
   item: Item | null;
+  issue: RepairIssue | null;
   categories: Category[];
   onClose: () => void;
   onSaved: () => void;
@@ -374,9 +397,11 @@ function OpportunityFormDialog({
   const [data, setData] = useState<Record<string, unknown>>(() => (item ? fromItem(item) : emptyForm()));
   const [saving, setSaving] = useState(false);
   const [translating, setTranslating] = useState(false);
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    basics: true, facts: true, content: true, application: true, seo: false, internal: false,
-  });
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => ({
+    basics: !issue || issue === 'core', facts: !issue || issue === 'core' || issue === 'evidence',
+    content: !issue || issue === 'evidence' || issue === 'translation',
+    application: !issue || issue === 'apply', seo: false, internal: false,
+  }));
 
   const set = useCallback((field: string, value: unknown) => {
     setData((d) => ({ ...d, [field]: value }));
@@ -496,6 +521,12 @@ function OpportunityFormDialog({
             </Button>
           </DialogTitle>
         </DialogHeader>
+
+        {issue && <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400">
+          {issue === 'apply' ? 'Check the internal source, then enter an exact application email, form, or portal below.' : issue === 'core' ? 'Verify the category and country against the source before saving.' : issue === 'evidence' ? 'Add explicit eligibility, education, experience, or requirements from the source.' : 'Review the Persian and Pashto content below; the background engine may still be processing full-field translation.'}
+        </p>}
+        {issue && typeof item?.sourceUrl === 'string' && /^https?:\/\//i.test(item.sourceUrl) &&
+          <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-primary underline">Open original source for verification</a>}
 
         <form onSubmit={submit} className="space-y-4">
           <Section id="basics" icon={FileText} title="Basics">

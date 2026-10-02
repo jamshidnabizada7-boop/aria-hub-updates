@@ -97,10 +97,9 @@ interface ApplyInfo {
 
 function getApplyInfo(opp: OpportunityDetail): ApplyInfo {
   const applyUrl = opp.applyUrl?.trim() || null;
-  // Trust the persisted classification; fall back to render-time detection
-  // for rows imported before applyUrlType existed.
-  const urlType =
-    opp.applyUrlType ?? classifyApplyUrl(applyUrl, opp.sourceUrl, opp.originalUrl);
+  // Reclassify at render time so a stale stored type cannot expose a source
+  // article as an Apply destination after an admin edits the URL.
+  const urlType = classifyApplyUrl(applyUrl, opp.sourceUrl, opp.originalUrl);
   const isMailto = !!applyUrl?.toLowerCase().startsWith('mailto:');
   const isHttp = !!applyUrl && /^https?:\/\//i.test(applyUrl);
 

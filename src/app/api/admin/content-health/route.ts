@@ -1,14 +1,15 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentAdmin } from '@/lib/admin-auth';
 import { getTranslationCounters } from '@/lib/ai/translate-engine';
+import { HealthIssue, matchesHealthIssue, opportunityHealth } from '@/lib/opportunity-health';
 
 /**
  * GET /api/admin/content-health
  * Translation coverage, category distribution, deadline health and
  * import-source health — the metrics the ops team needs at a glance.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   const admin = await getCurrentAdmin();
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -25,7 +26,6 @@ export async function GET() {
     categories,
     expiring7,
     expiring30,
-    noApplyLink,
     sources,
     lastRuns,
     alertSubscribers,
@@ -43,7 +43,6 @@ export async function GET() {
     }),
     db.opportunity.count({ where: { deadline: { gte: now, lte: in7 }, status: 'published' } }),
     db.opportunity.count({ where: { deadline: { gte: now, lte: in30 }, status: 'published' } }),
-    db.opportunity.count({ where: { applyUrl: null, status: 'published' } }),
     db.importSource.findMany({ select: { id: true, name: true, enabled: true } }),
     // Last 100 runs — deduped in JS (PostgreSQL DISTINCT + ORDER BY on
     // non-selected columns is not portable).
@@ -90,9 +89,17 @@ export async function GET() {
   // from the chunk engine's counters below (faStatus/psStatus + chunks).
   const all = await db.opportunity.findMany({
     where: { status: 'published' },
+    orderBy: { createdAt: 'desc' },
     select: {
       titleI18n: true,
       aiSummaryI18n: true,
+      id: true,
+      title: true,
+      sourceUrl: true,
+      originalUrl: true,
+      applyUrl: true,
+      faStatus: true,
+      psStatus: true,
       categoryId: true,
       country: true,
       deadline: true,
@@ -115,6 +122,12 @@ export async function GET() {
   let freshVerified = 0;
   let normalizedProfiles = 0;
   let reviewedProfiles = 0;
+  let noApplyLink = 0;
+  let noStoredApplyLink = 0;
+  let sourceFallback = 0;
+  let noCategory = 0;
+  let noCountry = 0;
+  let noEvidence = 0;
   for (const o of all) {
     const title = (o.titleI18n ?? {}) as Record<string, unknown>;
     const summary = (o.aiSummaryI18n ?? {}) as Record<string, unknown>;
@@ -125,19 +138,16 @@ export async function GET() {
     else if (faOk || psOk) partial++;
     else englishOnly++;
 
-    const hasText = (v: unknown) => typeof v === 'string' && v.trim().length > 0;
-    const hasExtracted =
-      !!o.extractedData &&
-      typeof o.extractedData === 'object' &&
-      Object.keys(o.extractedData as Record<string, unknown>).length > 0;
-    const core = !!o.categoryId && hasText(o.country);
-    const eligibilitySignals = [
-      hasText(o.eligibility),
-      hasText(o.educationReq),
-      hasText(o.experience),
-      hasText(o.requirements),
-      hasExtracted,
-    ].filter(Boolean).length;
+    const quality = opportunityHealth(o);
+    const core = quality.coreReady;
+    const eligibilitySignals = quality.evidenceCount;
+
+    if (!quality.hasRealApply) noApplyLink++;
+    if (!o.applyUrl?.trim()) noStoredApplyLink++;
+    if (quality.applyType === 'source_article_fallback') sourceFallback++;
+    if (!o.categoryId) noCategory++;
+    if (!o.country?.trim()) noCountry++;
+    if (eligibilitySignals === 0) noEvidence++;
 
     if (core) matchableCore++;
     if (eligibilitySignals >= 3) eligibilityRich++;
@@ -157,6 +167,34 @@ export async function GET() {
 
   // Chunk-engine truth: Persian-first progress + staged-chunk health.
   const engineCounters = await getTranslationCounters().catch(() => null);
+  const automation = await db.automationState.findUnique({ where: { id: 'singleton' }, select: { state: true } }).catch(() => null);
+  const scheduleState = (automation?.state && typeof automation.state === 'object' && !Array.isArray(automation.state))
+    ? automation.state as Record<string, unknown> : {};
+  const translationSchedule = {
+    lastAt: typeof scheduleState.lastOpportunityTranslateAt === 'string' ? scheduleState.lastOpportunityTranslateAt : null,
+    lastFinishedAt: typeof scheduleState.lastOpportunityTranslateFinishedAt === 'string' ? scheduleState.lastOpportunityTranslateFinishedAt : null,
+    unitsToday: scheduleState.opportunityTranslateDate === new Date().toISOString().slice(0, 10) && typeof scheduleState.opportunityTranslateUnits === 'number'
+      ? scheduleState.opportunityTranslateUnits : 0,
+    dailyLimit: 48,
+    lastProcessed: typeof scheduleState.lastOpportunityTranslateProcessed === 'number' ? scheduleState.lastOpportunityTranslateProcessed : null,
+    backoffUntil: typeof scheduleState.translateBackoffUntil === 'string' ? scheduleState.translateBackoffUntil : null,
+  };
+
+  const requestedIssue = req.nextUrl.searchParams.get('issue');
+  const issue: HealthIssue = requestedIssue === 'core' || requestedIssue === 'evidence' || requestedIssue === 'translation'
+    ? requestedIssue : 'apply';
+  const page = Math.max(1, Number(req.nextUrl.searchParams.get('page')) || 1);
+  const issueRows = all.filter((row) => matchesHealthIssue(row, issue));
+  const issueItems = issueRows.slice((page - 1) * 25, page * 25).map((row) => ({
+    id: row.id,
+    title: row.title,
+    sourceName: row.sourceName,
+    sourceUrl: row.sourceUrl,
+    applyType: opportunityHealth(row).applyType,
+    missing: opportunityHealth(row).missing,
+    faStatus: row.faStatus,
+    psStatus: row.psStatus,
+  }));
 
   const lastRunBySource = new Map<string, (typeof lastRuns)[number]>();
   for (const run of lastRuns) {
@@ -184,17 +222,21 @@ export async function GET() {
 
   return NextResponse.json({
     opportunities: { total, published, expired, draft },
-    translation: { trilingual, partial, englishOnly, publishedTotal: all.length, engine: engineCounters },
+    translation: { trilingual, partial, englishOnly, publishedTotal: all.length, engine: engineCounters, schedule: translationSchedule },
     matchability: {
       publishedTotal: all.length,
       coreReady: matchableCore,
       eligibilityRich,
       weakData: weakMatchData,
+      noCategory,
+      noCountry,
+      noEvidence,
       freshVerified,
       normalizedProfiles,
       reviewedProfiles,
     },
-    deadlines: { expiring7, expiring30, noApplyLink },
+    deadlines: { expiring7, expiring30, noApplyLink, noStoredApplyLink, sourceFallback },
+    issueQueue: { issue, page, total: issueRows.length, items: issueItems },
     submissions: { pending: pendingSubmissions },
     alerts: {
       pending: alertSubscribers.find((g) => g.status === 'pending')?._count ?? 0,

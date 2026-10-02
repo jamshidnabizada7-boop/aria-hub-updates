@@ -118,6 +118,7 @@ const NAV: NavItem[] = [
 
 export function AdminApp({ admin }: { admin: AdminUser }) {
   const [active, setActive] = useState('dashboard');
+  const [repairOpportunity, setRepairOpportunity] = useState<{ id: string; issue: 'apply' | 'core' | 'evidence' | 'translation' } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [pwDialog, setPwDialog] = useState(false);
   const router = useRouter();
@@ -150,7 +151,7 @@ export function AdminApp({ admin }: { admin: AdminUser }) {
             ) : (
               <button
                 key={item.key}
-                onClick={() => { setActive(item.key); setSidebarOpen(false); }}
+                onClick={() => { setActive(item.key); setRepairOpportunity(null); setSidebarOpen(false); }}
                 className={cn(
                   'mb-0.5 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                   active === item.key ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
@@ -203,7 +204,7 @@ export function AdminApp({ admin }: { admin: AdminUser }) {
           </div>
         </header>
         <main className="flex-1 overflow-x-hidden p-4 lg:p-6">
-          {active === 'dashboard' ? <Dashboard onNavigate={setActive} /> : active === 'settings' ? <SettingsPanel /> : active === 'autoImport' ? <AutoImportPanel /> : active === 'documentTemplate' ? <TemplatesPanel /> : active === 'submissions' ? <SubmissionsPanel /> : active === 'contentHealth' ? <ContentHealthPanel /> : active === 'orders' ? <OrdersPanel /> : active === 'brandStudio' ? <BrandStudioPanel /> : active === 'automation' ? <AutomationPanel /> : active === 'opportunity' ? <OpportunityFormPanel /> : active === 'cvBuilder' ? <CVBuilderAdminPanel /> : <CrudTable model={active} />}
+          {active === 'dashboard' ? <Dashboard onNavigate={setActive} /> : active === 'settings' ? <SettingsPanel /> : active === 'autoImport' ? <AutoImportPanel /> : active === 'documentTemplate' ? <TemplatesPanel /> : active === 'submissions' ? <SubmissionsPanel /> : active === 'contentHealth' ? <ContentHealthPanel onEditOpportunity={(id, issue) => { setRepairOpportunity({ id, issue }); setActive('opportunity'); }} /> : active === 'orders' ? <OrdersPanel /> : active === 'brandStudio' ? <BrandStudioPanel /> : active === 'automation' ? <AutomationPanel /> : active === 'opportunity' ? <OpportunityFormPanel focus={repairOpportunity} onFocusHandled={() => setRepairOpportunity(null)} /> : active === 'cvBuilder' ? <CVBuilderAdminPanel /> : <CrudTable model={active} />}
         </main>
       </div>
     </div>

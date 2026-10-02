@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { getCurrentAdmin, logAction } from '@/lib/admin-auth';
 import { Prisma } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
+import { classifyApplyUrl } from '@/lib/apply';
 
 // Model registry: maps model key → prisma delegate + editable fields
 const MODELS: Record<string, { delegate: any; fields: string[]; label: string; statusOptions?: string[] }> = {
@@ -358,12 +359,14 @@ export async function GET(req: NextRequest) {
   const category = req.nextUrl.searchParams.get('category')?.trim();
   const status = req.nextUrl.searchParams.get('status')?.trim();
   const source = req.nextUrl.searchParams.get('source')?.trim();
+  const exactId = req.nextUrl.searchParams.get('id')?.trim();
 
   const where: any = {};
 
   // Server-side status/source filters — the UI used to filter client-side
   // over the current page only, which produced empty pages and wrong totals.
   if (model === 'opportunity') {
+    if (exactId) where.id = exactId;
     if (status && status !== 'all' && fields.includes('status')) where.status = status;
     if (source && source !== 'all' && fields.includes('sourceName')) where.sourceName = source;
   }
@@ -510,6 +513,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: relErr }, { status: 400 });
   }
 
+  if (model === 'opportunity') {
+    clean.applyUrlType = classifyApplyUrl(clean.applyUrl, clean.sourceUrl, clean.originalUrl);
+  }
+
   // Enforce single default language
   if (model === 'language' && clean.isDefault === true) {
     await db.language.updateMany({ where: { isDefault: true }, data: { isDefault: false } });
@@ -578,6 +585,16 @@ export async function PUT(req: NextRequest) {
   const relErr = await resolveRelations(model, clean);
   if (relErr) {
     return NextResponse.json({ error: relErr }, { status: 400 });
+  }
+
+  if (model === 'opportunity' && ['applyUrl', 'sourceUrl', 'originalUrl'].some((field) => field in clean)) {
+    const previous = await db.opportunity.findUnique({ where: { id }, select: { applyUrl: true, sourceUrl: true, originalUrl: true } });
+    if (!previous) return NextResponse.json({ error: 'Record not found.' }, { status: 404 });
+    clean.applyUrlType = classifyApplyUrl(
+      clean.applyUrl === undefined ? previous.applyUrl : clean.applyUrl,
+      clean.sourceUrl === undefined ? previous.sourceUrl : clean.sourceUrl,
+      clean.originalUrl === undefined ? previous.originalUrl : clean.originalUrl,
+    );
   }
 
   if (model === 'language' && clean.isDefault === true) {

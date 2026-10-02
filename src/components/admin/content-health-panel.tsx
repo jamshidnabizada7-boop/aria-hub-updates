@@ -28,9 +28,11 @@ interface ContentHealth {
       faComplete: number; faActive: number; psComplete: number; psWaiting: number;
       failedChunks: number; pendingChunks: number;
     } | null;
+    schedule?: { lastAt: string | null; lastFinishedAt: string | null; unitsToday: number; dailyLimit: number; lastProcessed: number | null; backoffUntil: string | null };
   };
-  matchability: { publishedTotal: number; coreReady: number; eligibilityRich: number; weakData: number; freshVerified: number; normalizedProfiles: number; reviewedProfiles: number };
-  deadlines: { expiring7: number; expiring30: number; noApplyLink: number };
+  matchability: { publishedTotal: number; coreReady: number; eligibilityRich: number; weakData: number; noCategory: number; noCountry: number; noEvidence: number; freshVerified: number; normalizedProfiles: number; reviewedProfiles: number };
+  deadlines: { expiring7: number; expiring30: number; noApplyLink: number; noStoredApplyLink: number; sourceFallback: number };
+  issueQueue: { issue: HealthIssue; page: number; total: number; items: Array<{ id: string; title: string; sourceName: string | null; sourceUrl: string | null; applyType: string; missing: string[]; faStatus: string | null; psStatus: string | null }> };
   submissions: { pending: number };
   alerts: { pending: number; active: number; unsubscribed: number };
   matcherProduct: { alertPending: number; alertActive: number; alertUnsubscribed: number; helpful: number; notRelevant: number };
@@ -51,16 +53,20 @@ interface ContentHealth {
   }[];
 }
 
+type HealthIssue = 'apply' | 'core' | 'evidence' | 'translation';
+
 /* ─── Component ─────────────────────────────────────────────────────────── */
 
-export function ContentHealthPanel() {
+export function ContentHealthPanel({ onEditOpportunity }: { onEditOpportunity: (id: string, issue: HealthIssue) => void }) {
   const [data, setData] = useState<ContentHealth | null>(null);
   const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
+  const [issue, setIssue] = useState<HealthIssue>('apply');
+  const [issuePage, setIssuePage] = useState(1);
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/admin/content-health', { cache: 'no-store' })
+    fetch(`/api/admin/content-health?issue=${issue}&page=${issuePage}`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((d) => {
         if (!cancelled) setData(d.error ? null : d);
@@ -74,7 +80,7 @@ export function ContentHealthPanel() {
     return () => {
       cancelled = true;
     };
-  }, [reloadKey]);
+  }, [reloadKey, issue, issuePage]);
 
   const fetchHealth = () => {
     setLoading(true);
@@ -124,9 +130,9 @@ export function ContentHealthPanel() {
           accent="sky"
         />
         <StatCard label="Expiring ≤ 7 days" value={deadlines.expiring7} sub={`${deadlines.expiring30} within 30 days`} icon={CalendarClock} accent={deadlines.expiring7 > 0 ? 'rose' : 'emerald'} />
-        <StatCard label="Missing apply link" value={deadlines.noApplyLink} sub="published records" icon={ExternalLink} accent={deadlines.noApplyLink > 0 ? 'amber' : 'emerald'} />
+        <StatCard label="No usable apply link" value={deadlines.noApplyLink} sub={`${deadlines.noStoredApplyLink} absent · ${deadlines.sourceFallback} source articles`} icon={ExternalLink} accent={deadlines.noApplyLink > 0 ? 'amber' : 'emerald'} />
         <StatCard
-          label="Matcher core-ready"
+          label="Matcher core fields present"
           value={matchability.coreReady}
           sub={`${matchability.eligibilityRich} eligibility-rich · ${matchability.weakData} weak-data`}
           icon={CheckCircle2}
@@ -142,7 +148,7 @@ export function ContentHealthPanel() {
             Opportunity Matcher data quality
           </CardTitle>
           <Badge variant="secondary">
-            {matchability.coreReady}/{matchability.publishedTotal} core-ready
+            {matchability.coreReady}/{matchability.publishedTotal} category + country
           </Badge>
         </CardHeader>
         <CardContent>
@@ -180,9 +186,54 @@ export function ContentHealthPanel() {
             <div className="rounded-lg border bg-muted/20 p-3">
               <p className="text-xs font-medium text-muted-foreground">Weak match data</p>
               <p className="mt-1 text-xl font-black tabular-nums text-amber-600 dark:text-amber-400">{matchability.weakData}</p>
-              <p className="mt-1 text-[11px] text-muted-foreground">missing core taxonomy/geography or eligibility evidence</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">{matchability.noCategory} no category · {matchability.noCountry} no country · {matchability.noEvidence} no eligibility evidence</p>
             </div>
           </div>
+          {matchability.normalizedProfiles === 0 && matchability.publishedTotal > 0 &&
+            <p className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-700 dark:text-amber-400">
+              No normalized match profiles exist yet. The matcher can use source text, but structured profile facts require the separate explicit-data backfill and review.
+            </p>}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="py-4">
+          <CardTitle className="text-base">Repair opportunities</CardTitle>
+          <p className="text-xs text-muted-foreground">Open a record to correct the source-backed fields. Counts can overlap.</p>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-3 flex flex-wrap gap-2">
+            {([
+              ['apply', 'No usable apply link', deadlines.noApplyLink],
+              ['core', 'Missing category or country', matchability.publishedTotal - matchability.coreReady],
+              ['evidence', 'Weak match data', matchability.weakData],
+              ['translation', 'Full translation pending', translation.publishedTotal - (translation.engine?.psComplete ?? 0)],
+            ] as const).map(([key, label, count]) => (
+              <Button key={key} size="sm" variant={issue === key ? 'default' : 'outline'} onClick={() => { setIssue(key); setIssuePage(1); setLoading(true); }}>
+                {label} ({count})
+              </Button>
+            ))}
+          </div>
+          <div className="space-y-2">
+            {data.issueQueue.items.map((item) => (
+              <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium" title={item.title}>{item.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {item.sourceName || 'Manual'} · {issue === 'apply' ? item.applyType.replaceAll('_', ' ') : issue === 'translation' ? `Persian ${item.faStatus || 'pending'} · Pashto ${item.psStatus || 'pending'}` : item.missing.join(', ') || 'Eligibility details need review'}
+                  </p>
+                </div>
+                {item.sourceUrl && /^https?:\/\//i.test(item.sourceUrl) && <Button asChild size="sm" variant="outline"><a href={item.sourceUrl} target="_blank" rel="noopener noreferrer">Check source</a></Button>}
+                <Button size="sm" onClick={() => onEditOpportunity(item.id, issue)}>Edit exact record</Button>
+              </div>
+            ))}
+            {data.issueQueue.total === 0 && <p className="py-4 text-sm text-muted-foreground">No records in this queue.</p>}
+          </div>
+          {data.issueQueue.total > 25 && <div className="mt-3 flex items-center justify-between text-xs">
+            <Button size="sm" variant="outline" disabled={issuePage === 1} onClick={() => { setIssuePage((p) => p - 1); setLoading(true); }}>Previous</Button>
+            <span>Page {issuePage} of {Math.ceil(data.issueQueue.total / 25)}</span>
+            <Button size="sm" variant="outline" disabled={issuePage * 25 >= data.issueQueue.total} onClick={() => { setIssuePage((p) => p + 1); setLoading(true); }}>Next</Button>
+          </div>}
         </CardContent>
       </Card>
 
@@ -194,7 +245,7 @@ export function ContentHealthPanel() {
             Translation coverage
           </CardTitle>
           <Badge variant="secondary">
-            {translation.trilingual}/{translation.publishedTotal} fully trilingual
+            {translation.trilingual}/{translation.publishedTotal} title/summary in FA+PS
           </Badge>
         </CardHeader>
         <CardContent>
@@ -204,14 +255,13 @@ export function ContentHealthPanel() {
             <div className="bg-muted-foreground/30 transition-all" style={{ width: `${Math.max(0, 100 - coveragePct - partialPct)}%` }} title={`English only ${translation.englishOnly}`} />
           </div>
           <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted-foreground">
-            <Legend color="bg-emerald-500" label={`Fully trilingual (fa+ps): ${translation.trilingual}`} />
+            <Legend color="bg-emerald-500" label={`Title/summary in FA+PS: ${translation.trilingual}`} />
             <Legend color="bg-amber-500" label={`Partial: ${translation.partial}`} />
             <Legend color="bg-muted-foreground/30" label={`English only: ${translation.englishOnly}`} />
           </div>
           {translation.englishOnly > 20 && (
             <p className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-700 dark:text-amber-400">
-              {translation.englishOnly} published records have no Farsi/Pashto content yet — run the
-              translation backfill to fill them in.
+              {translation.englishOnly} published records have no Farsi/Pashto title or summary. The engine status below tracks full-field translation progress.
             </p>
           )}
           {translation.engine && (
@@ -219,6 +269,10 @@ export function ContentHealthPanel() {
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Persian-first engine (authoritative)
               </p>
+              {translation.schedule && <p className="mt-1 text-xs text-muted-foreground">
+                Last scheduled unit: {translation.schedule.lastFinishedAt ? new Date(translation.schedule.lastFinishedAt).toLocaleString() : 'not recorded'} · {translation.schedule.unitsToday}/{translation.schedule.dailyLimit} units used today
+                {translation.schedule.backoffUntil && new Date(translation.schedule.backoffUntil) > new Date() ? ` · provider backoff until ${new Date(translation.schedule.backoffUntil).toLocaleString()}` : ''}
+              </p>}
               <div className="mt-2 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
                 <span>
                   <strong className="tabular-nums">{translation.engine.faComplete}</strong>

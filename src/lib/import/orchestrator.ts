@@ -26,7 +26,7 @@ import { runAIPipeline, ensureUniqueSlug, makeSlug } from '@/lib/ai/pipeline';
 import { ReliefWebPendingError } from './scrapers/reliefweb';
 import { isExpiredListingDeadline, sanitizeError, slugify } from './utils';
 import { buildLocationRows, resolveCountry } from '@/lib/geo/location-rows';
-import { classifyApplyUrl } from '@/lib/apply';
+import { classifyApplyUrl, isRealApplyLink, shouldHealApplyLink } from '@/lib/apply';
 import type { RawListing, SourceHandle } from './types';
 import { resolveImportedOpportunityStatus } from './publication-policy';
 import { PRIMARY_OPPORTUNITY_KEYS } from '@/lib/automation/import-selection';
@@ -422,6 +422,26 @@ async function processListing(
     counters.skipped++;
     counters.duplicates++;
     return;
+  }
+
+  // The content hash excludes application links. A feed can add an explicit
+  // Apply anchor without changing article text, so heal a fallback before the
+  // unchanged-content fast paths below return. Preserve existing real links.
+  if (dedupe.action === 'update' && listing.applyUrl &&
+      isRealApplyLink(classifyApplyUrl(listing.applyUrl, listing.sourceUrl, listing.originalUrl))) {
+    const current = await db.opportunity.findUnique({
+      where: { id: dedupe.existing.id },
+      select: { applyUrl: true, sourceUrl: true, originalUrl: true },
+    });
+    if (current && shouldHealApplyLink(
+      current.applyUrl, current.sourceUrl, current.originalUrl,
+      listing.applyUrl, listing.sourceUrl, listing.originalUrl,
+    )) {
+      await db.opportunity.update({
+        where: { id: dedupe.existing.id },
+        data: { applyUrl: listing.applyUrl, applyUrlType: classifyApplyUrl(listing.applyUrl, listing.sourceUrl, listing.originalUrl) },
+      });
+    }
   }
 
   // Fast path: this row was fully detail-checked less than a day ago and the

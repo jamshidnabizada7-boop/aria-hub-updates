@@ -52,12 +52,26 @@ export function classifyApplyUrl(
   if (!applyUrl || !applyUrl.trim()) return 'unknown';
   const url = applyUrl.trim();
   if (/^mailto:/i.test(url)) return 'application_email';
-  if (FORM_URL_RE.test(url)) return 'application_form';
+  if (!/^https?:\/\//i.test(url)) return 'unknown';
   const applyHost = hostOf(url);
   if (!applyHost) return 'unknown';
   const sourceHosts = [sourceUrl, originalUrl]
     .map((u) => (u ? hostOf(u) : ''))
     .filter(Boolean);
   if (sourceHosts.includes(applyHost)) return 'source_article_fallback';
+  if (FORM_URL_RE.test(url)) return 'application_form';
   return 'direct_application';
+}
+
+/** Allow a newly discovered real destination to replace an unusable stored one. */
+export function shouldHealApplyLink(
+  currentUrl: string | null | undefined,
+  currentSource: string | null | undefined,
+  currentOriginal: string | null | undefined,
+  candidateUrl: string | null | undefined,
+  candidateSource: string | null | undefined,
+  candidateOriginal: string | null | undefined,
+): boolean {
+  return !isRealApplyLink(classifyApplyUrl(currentUrl, currentSource, currentOriginal)) &&
+    isRealApplyLink(classifyApplyUrl(candidateUrl, candidateSource, candidateOriginal));
 }
