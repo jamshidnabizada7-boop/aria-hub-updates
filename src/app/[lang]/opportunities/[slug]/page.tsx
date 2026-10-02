@@ -59,7 +59,7 @@ import {
 import { cn } from '@/lib/utils';
 import { ensureSeoDescription } from '@/lib/seo-metadata';
 import { parseDate } from '@/lib/import/utils';
-import { classifyApplyUrl, isRealApplyLink } from '@/lib/apply';
+import { classifyApplyUrl, isRealApplyLink, normalizeApplyUrl } from '@/lib/apply';
 import { buildJobPostingPayload } from '@/lib/seo-job-schema';
 
 const SITE_URL = 'https://www.myariahub.com';
@@ -96,7 +96,7 @@ interface ApplyInfo {
 }
 
 function getApplyInfo(opp: OpportunityDetail): ApplyInfo {
-  const applyUrl = opp.applyUrl?.trim() || null;
+  const applyUrl = normalizeApplyUrl(opp.applyUrl);
   // Reclassify at render time so a stale stored type cannot expose a source
   // article as an Apply destination after an admin edits the URL.
   const urlType = classifyApplyUrl(applyUrl, opp.sourceUrl, opp.originalUrl);

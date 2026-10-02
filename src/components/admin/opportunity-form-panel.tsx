@@ -592,7 +592,7 @@ function OpportunityFormDialog({
 
           <Section id="application" icon={Link2} title="Application (the ONLY link users see)">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Simple field="applyUrl" label="Exact application link (form, portal or mailto:email)" />
+              <Simple field="applyUrl" label="Exact application link or email (form, portal, mailto: or plain email)" />
               <Simple field="website" label="Organization website (optional)" />
               <p className="sm:col-span-2 rounded-lg bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
                 Users only ever see this application link. Scraped source pages are hidden from them and stay in the Internal section below.

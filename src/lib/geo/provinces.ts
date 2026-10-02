@@ -224,10 +224,11 @@ export function isKnownCountry(raw: string | null | undefined): boolean {
   if (!raw) return false;
   const key = canon(raw);
   if (!key) return false;
+  if (key === 'uk' || key === 'u.k.' || key === 'u.s.' || key === 'us') return true;
   if (KNOWN_COUNTRIES.has(key)) return true;
   // "Kabul, Afghanistan" style — last token decides
   const tokens = key.split(',').map((t) => t.trim());
-  return tokens.length > 1 && KNOWN_COUNTRIES.has(tokens[tokens.length - 1]);
+  return tokens.length > 1 && (KNOWN_COUNTRIES.has(tokens[tokens.length - 1]) || ['uk', 'u.k.', 'us', 'u.s.'].includes(tokens[tokens.length - 1]));
 }
 
 /**
@@ -245,6 +246,8 @@ export function normalizeCountry(raw: string | null | undefined): string | null 
   const segments = trimmed.split(',').map((s) => s.trim()).filter(Boolean);
   const value = segments[segments.length - 1] || trimmed;
   const key = canon(value);
+  if (key === 'uk' || key === 'u.k.') return 'United Kingdom';
+  if (key === 'us' || key === 'u.s.') return 'United States';
   if (key === 'usa') return 'United States';
   if (key === 'uae') return 'United Arab Emirates';
   if (key === 'türkiye') return 'Turkey';

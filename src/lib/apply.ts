@@ -22,6 +22,16 @@ export type ApplyUrlType =
   | 'source_article_fallback'
   | 'unknown';
 
+const BARE_EMAIL_RE = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
+
+/** Accept a verified email pasted into the admin field as well as mailto:email. */
+export function normalizeApplyUrl(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  if (BARE_EMAIL_RE.test(trimmed)) return `mailto:${trimmed}`;
+  return trimmed;
+}
+
 function hostOf(url: string): string {
   try {
     return new URL(url).host.replace(/^www\./, '').toLowerCase();
@@ -49,9 +59,13 @@ export function classifyApplyUrl(
   sourceUrl: string | null | undefined,
   originalUrl?: string | null,
 ): ApplyUrlType {
-  if (!applyUrl || !applyUrl.trim()) return 'unknown';
-  const url = applyUrl.trim();
-  if (/^mailto:/i.test(url)) return 'application_email';
+  const url = normalizeApplyUrl(applyUrl);
+  if (!url) return 'unknown';
+  if (/^mailto:/i.test(url)) {
+    const recipients = url.slice(7).split('?')[0].split(',').map((email) => email.trim()).filter(Boolean);
+    return recipients.length > 0 && recipients.every((email) => BARE_EMAIL_RE.test(email))
+      ? 'application_email' : 'unknown';
+  }
   if (!/^https?:\/\//i.test(url)) return 'unknown';
   const applyHost = hostOf(url);
   if (!applyHost) return 'unknown';

@@ -40,6 +40,34 @@ import { browserHeaders, isChallengePage } from './browser-headers';
 import { curlFetch, isCurlAvailable } from './curl-fallback';
 import type { FetchOptions, RawListing, ScrapePage } from '../types';
 import { classifyApplyUrl, isRealApplyLink } from '@/lib/apply';
+import { normalizeCountry } from '@/lib/geo/provinces';
+
+/** Only source-labeled sections become structured matching evidence. */
+export function extractWpFacts(description: string): Pick<RawListing, 'eligibility' | 'benefits' | 'requirements' | 'guidelines' | 'country'> {
+  const lines = description.split(/\n+/).map((line) => line.trim()).filter(Boolean);
+  const sections: Record<string, string[]> = {};
+  let active: string | null = null;
+  for (const line of lines) {
+    const heading = line.match(/^(eligibility|who can apply\??|who is eligible\??|requirements?|qualifications?|benefits?|what (?:are|will) the benefits\??|how to apply\??|application (?:process|procedure)|where (?:will|is).*?(?:taken|held)\??|location|host country|country)\s*[:?]?\s*(.*)$/i);
+    if (heading && heading[0].length < 140) {
+      const key = /where|location|host country|^country$/i.test(heading[1]) ? 'location'
+        : /eligib|who can apply/i.test(heading[1]) ? 'eligibility'
+        : /require|qualif/i.test(heading[1]) ? 'requirements'
+        : /benefit/i.test(heading[1]) ? 'benefits' : 'guidelines';
+      active = key;
+      sections[key] ??= [];
+      if (heading[2]) sections[key].push(heading[2]);
+    } else if (active) {
+      sections[active].push(line);
+    }
+  }
+  const fact = (key: string) => sections[key]?.join('\n').trim().slice(0, 12000) || null;
+  const location = sections.location?.slice(0, 2).join(' ') || '';
+  const firstLocation = sections.location?.[0] || '';
+  const countryHint = location.match(/(?:,\s*|\bin\s+)(UK|U\.K\.|US|U\.S\.|Afghanistan|United Kingdom|United States|Canada|Australia|Germany|France|Pakistan|India)\b/i)?.[1]
+    || location.match(/^(UK|U\.K\.|US|U\.S\.|Afghanistan|United Kingdom|United States|Canada|Australia|Germany|France|Pakistan|India)\b/i)?.[1];
+  return { eligibility: fact('eligibility'), benefits: fact('benefits'), requirements: fact('requirements'), guidelines: fact('guidelines'), country: normalizeCountry(firstLocation) || normalizeCountry(countryHint) };
+}
 
 /** Minimal shape of the WP REST post payload we consume. */
 interface WpPost {
@@ -272,6 +300,11 @@ export class WpApiScraper extends BaseScraper {
     const description =
       stripHtml(stripTextJunk(stripWpBoilerplate(rawContent))) ||
       htmlToExcerpt(post.excerpt?.rendered || '');
+    const facts = extractWpFacts(description);
+    if (applyUrl === link && facts.guidelines) {
+      const email = facts.guidelines.match(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i);
+      if (email) applyUrl = `mailto:${email[0]}`;
+    }
 
     const publishedDate = parseDate(post.date_gmt || post.date);
 
@@ -298,10 +331,14 @@ export class WpApiScraper extends BaseScraper {
       jobType,
       category,
       description,
+      eligibility: facts.eligibility,
+      requirements: facts.requirements,
+      benefits: facts.benefits,
+      guidelines: facts.guidelines,
       publishedDate,
       deadline,
       imageUrl,
-      country: null,
+      country: facts.country,
       organization: null,
       extractedData: {
         wpPostId: post.id ?? null,

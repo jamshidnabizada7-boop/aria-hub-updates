@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { getCurrentAdmin, logAction } from '@/lib/admin-auth';
 import { Prisma } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
-import { classifyApplyUrl } from '@/lib/apply';
+import { classifyApplyUrl, normalizeApplyUrl } from '@/lib/apply';
 
 // Model registry: maps model key → prisma delegate + editable fields
 const MODELS: Record<string, { delegate: any; fields: string[]; label: string; statusOptions?: string[] }> = {
@@ -514,6 +514,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (model === 'opportunity') {
+    clean.applyUrl = normalizeApplyUrl(clean.applyUrl);
     clean.applyUrlType = classifyApplyUrl(clean.applyUrl, clean.sourceUrl, clean.originalUrl);
   }
 
@@ -525,7 +526,12 @@ export async function POST(req: NextRequest) {
   try {
     const item = await delegate.create({ data: clean });
     await logAction({ userId: admin.id, action: 'create', entity: model, entityId: item.id, req });
-    try { revalidatePath('/', 'layout'); } catch (e) { console.error('[crud] revalidate error:', e); }
+    try {
+      revalidatePath('/', 'layout');
+      if (model === 'opportunity' && item.slug) {
+        for (const lang of ['en', 'fa', 'ps']) revalidatePath(`/${lang}/opportunities/${item.slug}`);
+      }
+    } catch (e) { console.error('[crud] revalidate error:', e); }
     return NextResponse.json({ success: true, item });
   } catch (e: any) {
     return handleError(e);
@@ -590,6 +596,7 @@ export async function PUT(req: NextRequest) {
   if (model === 'opportunity' && ['applyUrl', 'sourceUrl', 'originalUrl'].some((field) => field in clean)) {
     const previous = await db.opportunity.findUnique({ where: { id }, select: { applyUrl: true, sourceUrl: true, originalUrl: true } });
     if (!previous) return NextResponse.json({ error: 'Record not found.' }, { status: 404 });
+    if (clean.applyUrl !== undefined) clean.applyUrl = normalizeApplyUrl(clean.applyUrl);
     clean.applyUrlType = classifyApplyUrl(
       clean.applyUrl === undefined ? previous.applyUrl : clean.applyUrl,
       clean.sourceUrl === undefined ? previous.sourceUrl : clean.sourceUrl,
@@ -604,7 +611,12 @@ export async function PUT(req: NextRequest) {
   try {
     const item = await delegate.update({ where: { id }, data: clean });
     await logAction({ userId: admin.id, action: 'update', entity: model, entityId: id, req });
-    try { revalidatePath('/', 'layout'); } catch (e) { console.error('[crud] revalidate error:', e); }
+    try {
+      revalidatePath('/', 'layout');
+      if (model === 'opportunity' && item.slug) {
+        for (const lang of ['en', 'fa', 'ps']) revalidatePath(`/${lang}/opportunities/${item.slug}`);
+      }
+    } catch (e) { console.error('[crud] revalidate error:', e); }
     return NextResponse.json({ success: true, item });
   } catch (e: any) {
     return handleError(e);

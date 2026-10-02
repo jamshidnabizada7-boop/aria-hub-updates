@@ -444,6 +444,30 @@ async function processListing(
     }
   }
 
+  // Structured facts are excluded from the article hash. Fill only missing
+  // fields from explicit source evidence, even when a recent or unchanged
+  // article takes a fast path below. Never replace an admin-populated value.
+  const healMissingFacts = async () => {
+    if (dedupe.action !== 'update') return;
+    const current = await db.opportunity.findUnique({
+      where: { id: dedupe.existing.id },
+      select: { eligibility: true, requirements: true, educationReq: true, experience: true,
+        benefits: true, guidelines: true, country: true, categoryId: true },
+    });
+    if (current) {
+      const data: Record<string, string> = {};
+      for (const field of ['eligibility', 'requirements', 'educationReq', 'experience', 'benefits', 'guidelines'] as const) {
+        if (!current[field] && listing[field]?.trim()) data[field] = listing[field]!.trim();
+      }
+      const country = resolveCountry(listing);
+      if (!current.country && country) data.country = country;
+      const categoryId = resolveCategory([], listing.category, listing.jobType, source.defaultCategory, categories);
+      if (!current.categoryId && categoryId) data.categoryId = categoryId;
+      if (Object.keys(data).length) await db.opportunity.update({ where: { id: dedupe.existing.id }, data });
+    }
+  };
+  await healMissingFacts();
+
   // Fast path: this row was fully detail-checked less than a day ago and the
   // list-page content is unchanged — skip the detail re-fetch. The daily
   // recheck below is what catches source-side edits (deadline extensions…).
@@ -483,7 +507,27 @@ async function processListing(
     }
   }
 
+  // Detail pages often expose the application address outside the feed card.
+  // Heal it before the unchanged-content guard: applyUrl is not in the hash.
+  if (dedupe.action === 'update' && listing.applyUrl &&
+      isRealApplyLink(classifyApplyUrl(listing.applyUrl, listing.sourceUrl, listing.originalUrl))) {
+    const current = await db.opportunity.findUnique({
+      where: { id: dedupe.existing.id },
+      select: { applyUrl: true, sourceUrl: true, originalUrl: true },
+    });
+    if (current && shouldHealApplyLink(
+      current.applyUrl, current.sourceUrl, current.originalUrl,
+      listing.applyUrl, listing.sourceUrl, listing.originalUrl,
+    )) {
+      await db.opportunity.update({
+        where: { id: dedupe.existing.id },
+        data: { applyUrl: listing.applyUrl, applyUrlType: classifyApplyUrl(listing.applyUrl, listing.sourceUrl, listing.originalUrl) },
+      });
+    }
+  }
+
   // ── CONTENT QUALITY GUARDS (all sources) ─────────────────────────────────
+  await healMissingFacts();
   // 1. Never persist a URL as the title (sitemap fallback that survived
   //    detail enrichment).
   if (/^https?:\/\//i.test(listing.title || '')) {
@@ -538,7 +582,7 @@ async function processListing(
   const categoryId = resolveCategory(pipeline.categorySlugs, listing.category, listing.jobType, source.defaultCategory, categories);
 
   // Common import-tracking fields
-  const applyUrl = (pipeline.data.applyUrl as string | null) || listing.applyUrl || null;
+  let applyUrl = (pipeline.data.applyUrl as string | null) || listing.applyUrl || null;
   const finalCountry = resolveCountry(listing);
   const importFields = {
     sourceName: source.name,
@@ -578,8 +622,16 @@ async function processListing(
     // or trusted source already published.
     const existing = await db.opportunity.findUnique({
       where: { id: dedupe.existing.id },
-      select: { slug: true, title: true },
+      select: { slug: true, title: true, applyUrl: true, sourceUrl: true, originalUrl: true, country: true },
     });
+    // A later import with only a source-article fallback must not erase an
+    // application destination or country that an administrator verified.
+    if (existing && isRealApplyLink(classifyApplyUrl(existing.applyUrl, existing.sourceUrl, existing.originalUrl))) {
+      applyUrl = existing.applyUrl;
+      importFields.applyUrl = existing.applyUrl;
+      importFields.applyUrlType = classifyApplyUrl(existing.applyUrl, existing.sourceUrl, existing.originalUrl);
+    }
+    if (existing?.country && !finalCountry) importFields.country = existing.country;
     let newSlug = existing?.slug || slugBase;
     if (existing && slugify(listing.title) !== slugify(existing.title)) {
       newSlug = await ensureUniqueSlug(db, slugBase, dedupe.existing.id);

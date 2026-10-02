@@ -13,6 +13,7 @@ const db = new PrismaClient();
 // ── Opportunity categories (multilingual names) ──────────────────────────────
 const CATEGORIES: Array<{ slug: string; icon: string; nameI18n: { en: string; fa: string; ps: string } }> = [
   { slug: 'scholarship',     icon: '🎓', nameI18n: { en: 'Scholarship',      fa: 'بورسیه',          ps: 'بورسونه' } },
+  { slug: 'grant',           icon: '💰', nameI18n: { en: 'Grant',            fa: 'کمک‌هزینه',       ps: 'مرسته' } },
   { slug: 'fellowship',      icon: '🏛️', nameI18n: { en: 'Fellowship',       fa: 'موقت‌المលت',        ps: 'فیلوشپ' } },
   { slug: 'internship',      icon: '💼', nameI18n: { en: 'Internship',       fa: 'کارآموزی',        ps: 'کار احاطه' } },
   { slug: 'government-job',  icon: '🏢', nameI18n: { en: 'Government Job',   fa: 'کار دولتی',       ps: 'دولتي دنده' } },

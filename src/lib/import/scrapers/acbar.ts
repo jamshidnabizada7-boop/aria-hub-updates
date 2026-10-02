@@ -40,6 +40,7 @@ import { browserHeaders, notChallengePage } from './browser-headers';
 import { curlFetch, isCurlAvailable } from './curl-fallback';
 import { getCookieHeader, renderHtml } from './browser-fetch';
 import type { FetchOptions, RawListing, ScrapePage } from '../types';
+import { classifyApplyUrl, isRealApplyLink } from '@/lib/apply';
 
 const ACBAR_LIST_URL = 'https://www.acbar.org/en/jobs';
 /** Detail-page pattern — precise match avoids nav/footer false positives. */
@@ -345,6 +346,19 @@ export class AcbarScraper extends BaseScraper {
       $('.acbar-jd__card').each(function () {
         const sectionTitle = $(this).find('.acbar-jd__card-title').first().text().trim().toLowerCase();
         const bodyEl = $(this).find('.acbar-jd__rich').first();
+        // ACBAR renders "Email / Application Form" as a sibling of the rich
+        // guideline body. Reading only .acbar-jd__rich loses the actual address.
+        if (sectionTitle.includes('submission') || sectionTitle.includes('guideline') || sectionTitle.includes('how to apply')) {
+          $(this).find('.acbar-jd__email').each(function () {
+            if (listing.applyUrl) return false;
+            const linked = $(this).find('a[href]').first().attr('href');
+            const value = $(this).find('span').first().text().trim() ||
+              $(this).text().replace(/^Email\s*\/\s*Application Form\s*:?/i, '').trim();
+            const candidate = linked || value;
+            if (/^[\w.+-]+@[\w.-]+\.[a-z]{2,}$/i.test(candidate)) listing.applyUrl = `mailto:${candidate}`;
+            else if (isRealApplyLink(classifyApplyUrl(candidate, listing.sourceUrl, listing.originalUrl))) listing.applyUrl = candidate;
+          });
+        }
         let bodyHtml = bodyEl.html() || '';
         // Sanitize to prevent layout breakage on frontend
         bodyHtml = bodyHtml.replace(/style="[^"]*"/gi, '');
@@ -362,6 +376,20 @@ export class AcbarScraper extends BaseScraper {
           if (!listing.applyUrl) {
             const emailMatch = bodyText.match(/[\w.+-]+@[\w-]+\.[a-z]{2,}/i);
             if (emailMatch) listing.applyUrl = `mailto:${emailMatch[0]}`;
+          }
+          // Some ACBAR posts print the actual form URL as text on the next
+          // line instead of making it an anchor (for example KoboToolbox).
+          if (!listing.applyUrl && /\b(apply|submit|application|form|link below)\b/i.test(bodyText)) {
+            const urls = bodyText.split('\n').flatMap((line) => {
+              const trimmed = line.trim();
+              if (!/^https?:\/\/[^\s]+$/i.test(trimmed) &&
+                  !/\b(?:apply|submit|application)\b.{0,60}https?:\/\//i.test(trimmed)) return [];
+              return trimmed.match(/https?:\/\/[^\s<>"']+/gi) || [];
+            }).map((url) => url.replace(/[),.;]+$/, '')).filter((url) =>
+              isRealApplyLink(classifyApplyUrl(url, listing.sourceUrl, listing.originalUrl)));
+            // A list of province-specific portals needs a human choice; do
+            // not silently route all applicants to the first province.
+            if (urls.length === 1) listing.applyUrl = urls[0];
           }
         } else {
           // Job Summary / About the Company / any other section → description
