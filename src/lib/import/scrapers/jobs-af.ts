@@ -5,9 +5,9 @@
  *   - The HOMEPAGE (https://www.jobs.af/) server-renders the latest job cards
  *     and embeds their full structured JSON inside the React Server Component
  *     flight payload (`self.__next_f.push([1,"…"])` chunks, quotes escaped).
- *   - `/jobs?page=N` and detail pages `/jobs/<slug>` return an empty client
- *     shell over plain HTTP (data loads client-side / is auth-gated), so
- *     list pagination and detail fetching CANNOT rely on HTML markup.
+ *   - `/jobs?page=N` and detail pages render a client shell over plain HTTP.
+ *     The public detail page calls `api.jobs.af/public/jobs/<slug>`, which
+ *     returns application destinations and the full fact sheet as JSON.
  *
  * Strategy (tolerant of their class soup — we never parse CSS classes):
  *   1. Extract all `self.__next_f.push` string literals and JSON.parse them
@@ -18,10 +18,8 @@
  *      by slug within the run.
  *   4. deadline = expiryDate, publishedDate = publishDate, organization =
  *      company.name, location = provinces, imageUrl = company logo.
- *   5. Detail pages are client-rendered, so `parseDetail` re-extracts the
- *      flight JSON from the detail URL (in case the site ever server-renders
- *      descriptions) and otherwise keeps the synthesized description built
- *      from the structured card fields.
+ *   5. Fetch public detail JSON for submissionEmail/submissionLink, prose and
+ *      match facts. Flight JSON and the saved browser profile are fallbacks.
  */
 
 import * as cheerio from 'cheerio';
@@ -29,6 +27,7 @@ import { BaseScraper } from '../base-scraper';
 import { parseDate, stripHtml } from '../utils';
 import { hasPersistentProfile, renderHtmlPersistent } from './browser-fetch';
 import type { RawListing, ScrapePage } from '../types';
+import { classifyApplyUrl, isRealApplyLink, normalizeApplyUrl, shouldHealApplyLink } from '@/lib/apply';
 
 /** A job card object as embedded by jobs.af in its RSC flight payload. */
 interface JobsAfJob {
@@ -60,6 +59,14 @@ interface JobsAfJob {
   description?: string | null;
   howToApply?: string | null;
   applyInstructions?: string | null;
+  roleSummary?: string | null;
+  jobRequirements?: string | null;
+  dutiesAndResponsibilities?: string | null;
+  submissionGuidelines?: string | null;
+  submissionEmail?: string | null;
+  submissionLink?: string | null;
+  minimumExperience?: number | null;
+  maximumExperience?: number | null;
 }
 
 /**
@@ -169,8 +176,8 @@ export class JobsAfScraper extends BaseScraper {
         title,
         organization,
         sourceUrl,
-        originalUrl: sourceUrl,
-        applyUrl: sourceUrl, // applications flow through jobs.af
+        originalUrl: `https://www.jobs.af/public/job/${slug}`,
+        applyUrl: sourceUrl, // source article fallback until detail JSON is read
         sourceName: this.source.name,
         sourceLanguage: 'en',
         jobType: 'job',
@@ -223,7 +230,7 @@ export class JobsAfScraper extends BaseScraper {
       out.push({
         title: text,
         sourceUrl: `https://www.jobs.af/jobs/${m[1]}`,
-        originalUrl: `https://www.jobs.af/jobs/${m[1]}`,
+        originalUrl: `https://www.jobs.af/public/job/${m[1]}`,
         sourceName: 'Jobs.af',
         sourceLanguage: 'en',
         jobType: 'job',
@@ -234,16 +241,29 @@ export class JobsAfScraper extends BaseScraper {
   }
 
   /**
-   * Detail enrichment, two tiers:
-   *  1. Plain HTTP: look for a description-bearing job object in the page's
-   *     flight payload (works if the site ever server-renders details).
-   *  2. Logged-in persistent profile: jobs.af gates the full fact sheet +
-   *     description behind a login (the plain-HTTP detail page is a login
-   *     shell). After `bun run scripts/jobsaf-login.ts` has been run once,
-   *     the saved session unlocks the real content — parse it generically.
-   * Otherwise the (already synthesized) listing-level data is kept.
+   * Detail enrichment: the public JSON endpoint first, then flight data or a
+   * previously authenticated browser profile if that endpoint is unavailable.
+   * Otherwise keep the synthesized homepage-card content.
    */
   public async parseDetail(listing: RawListing): Promise<RawListing> {
+    // The public job page fetches this JSON endpoint after hydration. It
+    // includes submissionEmail/submissionLink and works without a login.
+    const slug = listing.sourceUrl.match(/\/(?:jobs|public\/job)\/([^/?#]+)/)?.[1];
+    if (slug) {
+      try {
+        const { data: job } = await this.fetchJson<JobsAfJob>(
+          `https://api.jobs.af/public/jobs/${encodeURIComponent(slug)}`,
+          { timeoutMs: 8000, retries: 1, crawlDelayMs: 250 },
+        );
+        if (job && job.slug === slug && job.title) {
+          this.enrichFromPublicApi(listing, job);
+          return listing;
+        }
+      } catch (e) {
+        console.warn(`[jobsaf] public detail API failed for ${slug}:`, e instanceof Error ? e.message : String(e));
+      }
+    }
+
     // Tier 1 — flight payload over plain HTTP.
     try {
       const html = await this.fetchText(listing.sourceUrl, { timeoutMs: 12000, retries: 1 });
@@ -251,9 +271,8 @@ export class JobsAfScraper extends BaseScraper {
       if (flight) {
         const jobs = extractFlightObjects<JobsAfJob>(flight, '{"id":"', ['title', 'slug']);
         const match = jobs.find((j) => listing.sourceUrl.endsWith(`/jobs/${j.slug}`));
-        const detail = match?.description || match?.howToApply || match?.applyInstructions || null;
-        if (detail && detail.trim().length > 80) {
-          listing.description = stripHtml(detail).trim();
+        if (match && (match.description || match.howToApply || match.applyInstructions)) {
+          this.enrichFromPublicApi(listing, match);
           return listing;
         }
       }
@@ -276,7 +295,10 @@ export class JobsAfScraper extends BaseScraper {
           if (parsed.guidelines && !listing.guidelines) {
             listing.guidelines = parsed.guidelines;
             const email = parsed.guidelines.match(/[\w.+-]+@[\w-]+\.[a-z]{2,}/i);
-            if (email && !listing.applyUrl) listing.applyUrl = `mailto:${email[0]}`;
+            if (email && shouldHealApplyLink(
+              listing.applyUrl, listing.sourceUrl, listing.originalUrl,
+              `mailto:${email[0]}`, listing.sourceUrl, listing.originalUrl,
+            )) listing.applyUrl = `mailto:${email[0]}`;
           }
           if (parsed.eligibility && !listing.eligibility) listing.eligibility = parsed.eligibility;
           if (parsed.experience && !listing.experience) listing.experience = parsed.experience;
@@ -289,6 +311,45 @@ export class JobsAfScraper extends BaseScraper {
       // Profile unavailable or parse failed — keep the list-level data.
     }
     return listing;
+  }
+
+  private enrichFromPublicApi(listing: RawListing, job: JobsAfJob): void {
+    const summary = stripHtml(job.roleSummary || job.description || '').trim();
+    if (summary.length > 30) listing.description = summary;
+    const responsibilities = stripHtml(job.dutiesAndResponsibilities || '').trim();
+    if (responsibilities) listing.responsibilities = responsibilities;
+    const requirements = stripHtml(job.jobRequirements || '').trim();
+    if (requirements) listing.requirements = requirements;
+    const guidelines = stripHtml(job.submissionGuidelines || job.howToApply || job.applyInstructions || '').trim();
+    if (guidelines) listing.guidelines = guidelines;
+    if (typeof job.minimumExperience === 'number') {
+      listing.experience = job.maximumExperience && job.maximumExperience > job.minimumExperience
+        ? `${job.minimumExperience}-${job.maximumExperience} years`
+        : `${job.minimumExperience}+ years`;
+    }
+    if (job.educationLevel) listing.educationReq = this.humanize(job.educationLevel);
+    if (job.country?.name) listing.country = job.country.name;
+    const provinces = (job.provinces || []).map((p) => p?.province?.name).filter((p): p is string => Boolean(p));
+    if (provinces.length) {
+      listing.provinces = provinces;
+      listing.location = provinces.join(', ');
+    }
+    if (job.expiryDate) listing.deadline = parseDate(job.expiryDate);
+
+    const explicit = [job.submissionEmail, job.submissionLink]
+      .map((value) => normalizeApplyUrl(value))
+      .find((candidate) => isRealApplyLink(classifyApplyUrl(candidate, listing.sourceUrl, listing.originalUrl)));
+    const guidelineEmail = guidelines.match(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i)?.[0];
+    const candidate = explicit || (guidelineEmail ? `mailto:${guidelineEmail}` : null);
+    if (candidate && shouldHealApplyLink(
+      listing.applyUrl, listing.sourceUrl, listing.originalUrl,
+      candidate, listing.sourceUrl, listing.originalUrl,
+    )) listing.applyUrl = candidate;
+    listing.extractedData = {
+      ...(listing.extractedData || {}),
+      submission: job.submissionThroughout || null,
+      jobId: job.id || null,
+    };
   }
 
   /** Structured fallback description (detail pages are client-rendered). */

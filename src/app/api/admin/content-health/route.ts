@@ -190,6 +190,7 @@ export async function GET(req: NextRequest) {
     title: row.title,
     sourceName: row.sourceName,
     sourceUrl: row.sourceUrl,
+    originalUrl: row.originalUrl,
     applyType: opportunityHealth(row).applyType,
     missing: opportunityHealth(row).missing,
     faStatus: row.faStatus,

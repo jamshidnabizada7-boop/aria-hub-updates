@@ -502,6 +502,9 @@ function OpportunityFormDialog({
     }
   };
 
+  const verificationUrl = [item?.originalUrl, item?.sourceUrl]
+    .find((url) => typeof url === 'string' && /^https?:\/\//i.test(url)) as string | undefined;
+
   return (
     <OpportunityFormContext.Provider value={{ data, set, setMulti, openSections, toggleSection }}>
     <Dialog open onOpenChange={onClose}>
@@ -525,8 +528,8 @@ function OpportunityFormDialog({
         {issue && <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400">
           {issue === 'apply' ? 'Check the internal source, then enter an exact application email, form, or portal below.' : issue === 'core' ? 'Verify the category and country against the source before saving.' : issue === 'evidence' ? 'Add explicit eligibility, education, experience, or requirements from the source.' : 'Review the Persian and Pashto content below; the background engine may still be processing full-field translation.'}
         </p>}
-        {issue && typeof item?.sourceUrl === 'string' && /^https?:\/\//i.test(item.sourceUrl) &&
-          <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-primary underline">Open original source for verification</a>}
+        {issue && verificationUrl &&
+          <a href={verificationUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-primary underline">Open original source for verification</a>}
 
         <form onSubmit={submit} className="space-y-4">
           <Section id="basics" icon={FileText} title="Basics">

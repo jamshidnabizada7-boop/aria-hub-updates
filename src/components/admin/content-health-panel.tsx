@@ -32,7 +32,7 @@ interface ContentHealth {
   };
   matchability: { publishedTotal: number; coreReady: number; eligibilityRich: number; weakData: number; noCategory: number; noCountry: number; noEvidence: number; freshVerified: number; normalizedProfiles: number; reviewedProfiles: number };
   deadlines: { expiring7: number; expiring30: number; noApplyLink: number; noStoredApplyLink: number; sourceFallback: number };
-  issueQueue: { issue: HealthIssue; page: number; total: number; items: Array<{ id: string; title: string; sourceName: string | null; sourceUrl: string | null; applyType: string; missing: string[]; faStatus: string | null; psStatus: string | null }> };
+  issueQueue: { issue: HealthIssue; page: number; total: number; items: Array<{ id: string; title: string; sourceName: string | null; sourceUrl: string | null; originalUrl: string | null; applyType: string; missing: string[]; faStatus: string | null; psStatus: string | null }> };
   submissions: { pending: number };
   alerts: { pending: number; active: number; unsubscribed: number };
   matcherProduct: { alertPending: number; alertActive: number; alertUnsubscribed: number; helpful: number; notRelevant: number };
@@ -223,7 +223,10 @@ export function ContentHealthPanel({ onEditOpportunity }: { onEditOpportunity: (
                     {item.sourceName || 'Manual'} · {issue === 'apply' ? item.applyType.replaceAll('_', ' ') : issue === 'translation' ? `Persian ${item.faStatus || 'pending'} · Pashto ${item.psStatus || 'pending'}` : item.missing.join(', ') || 'Eligibility details need review'}
                   </p>
                 </div>
-                {item.sourceUrl && /^https?:\/\//i.test(item.sourceUrl) && <Button asChild size="sm" variant="outline"><a href={item.sourceUrl} target="_blank" rel="noopener noreferrer">Check source</a></Button>}
+                {(() => {
+                  const source = [item.originalUrl, item.sourceUrl].find((url) => url && /^https?:\/\//i.test(url));
+                  return source && <Button asChild size="sm" variant="outline"><a href={source} target="_blank" rel="noopener noreferrer">Check source</a></Button>;
+                })()}
                 <Button size="sm" onClick={() => onEditOpportunity(item.id, issue)}>Edit exact record</Button>
               </div>
             ))}
