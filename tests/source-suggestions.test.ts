@@ -33,7 +33,7 @@ describeIf(dbUp)('source suggestions (db)', () => {
     await db.organizationSourceSuggestion.deleteMany({ where: { suggestedName: { contains: runId } } });
     await db.organizationAlias.deleteMany({ where: { organization: { slug: { contains: `sugg21-${runId}` } } } });
     await db.organization.deleteMany({ where: { slug: { contains: `sugg21-${runId}` } } });
-    orgId = (await db.organization.create({ data: { name: `Known Org ${runId}`, slug: `sugg21-known-${runId}` } })).id;
+    orgId = (await resolveOrganization(db, `Known Org ${runId}`)).organization!.id; // via resolver so the primary alias exists
   });
 
   afterAll(async () => {
