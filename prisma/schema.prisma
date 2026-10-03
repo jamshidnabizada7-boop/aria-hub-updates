@@ -295,6 +295,7 @@ model Organization {
 
   aliases            OrganizationAlias[]
   opportunities      Opportunity[]
+  observations       OpportunitySourceObservation[]
 }
 
 // ─── Controlled organization name aliases ────────────────────────────────────
@@ -385,6 +386,7 @@ model Opportunity {
   ogDescriptionI18n    Json?
   canonicalUrl         String?
   importStatus         String? // imported | updated | skipped | failed | pending
+  sourceObservations   OpportunitySourceObservation[]
   translationStatus    String? // pending | partial | complete | failed (legacy, recomputed from fa/ps states)
   faStatus             String? // pending | processing | complete | failed — Persian gate
   psStatus             String? // pending | processing | complete | failed — never started before faStatus === 'complete'
@@ -471,6 +473,7 @@ model ImportSource {
   lastRunStatus   String? // ok | error | partial
   lastRunStats    String? // JSON summary of last run
   runs            ImportRun[]
+  observations    OpportunitySourceObservation[]
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 }
@@ -496,6 +499,54 @@ model ImportRun {
 
   @@index([sourceId])
   @@index([startedAt])
+}
+
+// ─── Source observations (Phase 3): where ARIA HUB saw an opportunity ───────
+// The Opportunity is the canonical record; every place it was discovered —
+// official careers page, ATS, government portal, employer submission, or an
+// aggregator like ACBAR/Wazifaha — becomes ONE observation row here. Several
+// observations may point at one Opportunity; the most authoritative one is
+// isPrimary. Legacy Opportunity.sourceName/sourceUrl/originalUrl stay in
+// place for backwards compatibility until observations are proven stable.
+// sourceRole: official_api | official_feed | official_careers |
+//   official_ats | official_government | official_university |
+//   employer_submission | aggregator | discovery
+model OpportunitySourceObservation {
+  id             String        @id @default(cuid())
+  opportunityId  String
+  opportunity    Opportunity   @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  importSourceId String?
+  importSource   ImportSource? @relation(fields: [importSourceId], references: [id], onDelete: SetNull)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  sourceName String // "ACBAR", "Employer", "UNICEF Careers", "Manual" …
+  sourceRole String // see sourceRole comment above (see also src/lib/import/source-observations.ts)
+  sourceUrl  String?
+
+  sourcePublishedAt DateTime?
+  firstSeenAt       DateTime @default(now())
+  lastSeenAt        DateTime @default(now())
+
+  contentHash   String? // hash of the observed listing content at last sight
+  vacancyNumber String? // employer's reference/vacancy number when stated
+
+  observedApplyUrl String?
+  observedDeadline DateTime?
+
+  rawData Json? // verbatim source payload (API item, feed entry) when available
+
+  trustScore Int? // 0-100 baseline by role; refined per source in later phases
+  isPrimary  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([opportunityId, sourceName, sourceUrl])
+  @@index([opportunityId])
+  @@index([organizationId])
+  @@index([sourceUrl])
+  @@index([vacancyNumber])
 }
 
 // ─── Gallery ─────────────────────────────────────────────────────────────────
