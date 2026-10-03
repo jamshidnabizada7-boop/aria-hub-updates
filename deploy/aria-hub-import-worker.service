@@ -1,0 +1,35 @@
+[Unit]
+Description=ARIA HUB Opportunity Import Worker
+After=network-online.target
+Wants=network-online.target
+
+# PREPARED TEMPLATE (Phase 8) — DO NOT INSTALL ON PRODUCTION YET.
+# Activation happens only in the authorized production rollout:
+#   1. scp this file to /etc/systemd/system/aria-hub-import-worker.service
+#   2. create /etc/aria-hub/import-worker.env with at least:
+#        DATABASE_URL=postgres://…
+#        (optional) WORKER_TICK_SECONDS=60
+#   3. systemctl daemon-reload && systemctl enable --now aria-hub-import-worker
+# The worker refuses to start against a non-local database unless
+# WORKER_ALLOW_REMOTE=1 is present in the environment file.
+
+[Service]
+Type=simple
+User=ariahub
+WorkingDirectory=/opt/aria-hub
+Environment=NODE_ENV=production
+Environment=WORKER_ALLOW_REMOTE=1
+EnvironmentFile=-/etc/aria-hub/import-worker.env
+ExecStart=/usr/local/bin/bun --conditions=react-server scripts/opportunity-import-worker.ts
+Restart=always
+RestartSec=10
+TimeoutStopSec=900
+KillSignal=SIGTERM
+
+# One source at a time; ACBAR's browser fallback needs headroom.
+MemoryMax=2500M
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
