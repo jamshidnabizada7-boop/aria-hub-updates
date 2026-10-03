@@ -27,12 +27,15 @@ export interface OrgStatsRow {
   active: boolean;
   activeJobs: number;
   sourceCount: number;
+  pendingMembers: number;
   sources: { id: string; name: string; scraperKey: string; enabled: boolean; healthStatus: string; lastRunAt: Date | null; lastRunStatus: string | null; lastSuccessAt: Date | null }[];
 }
 
 type OrgDb = {
   organization: { findMany: (a: any) => Promise<any[]>; findUnique: (a: any) => Promise<any>; update: (a: any) => Promise<any>; delete: (a: any) => Promise<any> };
   organizationAlias: { findMany: (a: any) => Promise<any[]>; findFirst: (a: any) => Promise<any>; updateMany: (a: any) => Promise<any>; update: (a: any) => Promise<any>; delete: (a: any) => Promise<any>; create: (a: any) => Promise<any>; count: (a: any) => Promise<number> };
+  organizationMember: { findMany: (a: any) => Promise<any[]>; findUnique: (a: any) => Promise<any>; update: (a: any) => Promise<any>; updateMany: (a: any) => Promise<any> };
+  user: { findMany: (a: any) => Promise<any[]> };
   opportunity: { updateMany: (a: any) => Promise<any>; count: (a: any) => Promise<number>; groupBy: (a: any) => Promise<any[]> };
   importSource: { findMany: (a: any) => Promise<any[]>; updateMany: (a: any) => Promise<any>; update: (a: any) => Promise<any>; create: (a: any) => Promise<any>; count: (a: any) => Promise<number> };
   opportunitySourceObservation: { updateMany: (a: any) => Promise<any> };
@@ -59,11 +62,42 @@ export async function listOrganizations(db: OrgDb): Promise<OrgStatsRow[]> {
     by: ['organizationId'], where: { organizationId: { in: ids }, status: { in: ['published', 'draft'] } }, _count: { _all: true },
   }).catch(() => [] as any[]);
   const jobsByOrg = new Map(jobCounts.map((row: any) => [row.organizationId, row._count._all]));
+  const pending = await db.organizationMember.findMany({
+    where: { status: 'pending', organizationId: { in: ids } },
+    select: { organizationId: true },
+  });
+  const pendingByOrg = new Map<string, number>();
+  for (const p of pending) pendingByOrg.set(p.organizationId, (pendingByOrg.get(p.organizationId) ?? 0) + 1);
   return (orgs as any[]).map((o) => ({
     ...o,
     activeJobs: jobsByOrg.get(o.id) ?? 0,
     sourceCount: o.sources.length,
+    pendingMembers: pendingByOrg.get(o.id) ?? 0,
+  }));
+}
 
+/** Pending membership requests (claims) across orgs, with claim evidence. */
+export async function listPendingMembers(db: OrgDb): Promise<Array<{ id: string; organizationId: string; organizationName: string; role: string; status: string; claimEmail: string | null; userName: string | null; userEmail: string | null; createdAt: Date }>> {
+  const rows = await db.organizationMember.findMany({
+    where: { status: 'pending' },
+    include: {
+      organization: { select: { name: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+  const userIds = [...new Set((rows as any[]).map((r) => r.userId))];
+  const users = await db.user.findMany({ where: { id: { in: userIds } }, select: { id: true, name: true, email: true } }).catch(() => [] as any[]);
+  const byUser = new Map(users.map((u: any) => [u.id, u]));
+  return (rows as any[]).map((m) => ({
+    id: m.id,
+    organizationId: m.organizationId,
+    organizationName: m.organization.name,
+    role: m.role,
+    status: m.status,
+    claimEmail: m.claimEmail,
+    userName: byUser.get(m.userId)?.name ?? null,
+    userEmail: byUser.get(m.userId)?.email ?? null,
+    createdAt: m.createdAt,
   }));
 }
 
@@ -147,6 +181,7 @@ export async function mergeOrganizations(db: OrgDb, targetId: string, sourceId: 
   const movedOpportunities = (await db.opportunity.updateMany({ where: { organizationId: sourceId }, data: { organizationId: targetId } })).count ?? 0;
   const movedSources = (await db.importSource.updateMany({ where: { organizationId: sourceId }, data: { organizationId: targetId } })).count ?? 0;
   const movedObservations = (await db.opportunitySourceObservation.updateMany({ where: { organizationId: sourceId }, data: { organizationId: targetId } })).count ?? 0;
+  await db.organizationMember.updateMany({ where: { organizationId: sourceId }, data: { organizationId: targetId } }).catch(() => null);
   await db.organization.delete({ where: { id: sourceId } });
 
   await db.auditLog.create({

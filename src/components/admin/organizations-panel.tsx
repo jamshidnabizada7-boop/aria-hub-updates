@@ -24,6 +24,12 @@ interface OrgSource {
   healthStatus: string; lastRunAt: string | null; lastRunStatus: string | null; lastSuccessAt: string | null;
 }
 
+interface PendingMember {
+  id: string; organizationId: string; organizationName: string; role: string;
+  status: string; claimEmail: string | null; userName: string | null;
+  userEmail: string | null; createdAt: string;
+}
+
 interface OrgRow {
   id: string; name: string; slug: string; organizationType: string | null;
   website: string | null; careersUrl: string | null; officialDomains: unknown;
@@ -35,6 +41,7 @@ const fmt = (d: string | null) => (d ? new Date(d).toISOString().slice(0, 16).re
 
 export function OrganizationsPanel({ onNavigate }: { onNavigate?: (key: string) => void }) {
   const [orgs, setOrgs] = useState<OrgRow[] | null>(null);
+  const [pendingMembers, setPendingMembers] = useState<PendingMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'orgs' | 'sources'>('orgs');
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -50,6 +57,7 @@ export function OrganizationsPanel({ onNavigate }: { onNavigate?: (key: string) 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       setOrgs(json.organizations);
+      setPendingMembers(json.pendingMembers ?? []);
     } catch (e) {
       toast.error(`Failed to load organizations: ${(e as Error).message}`);
     } finally {
@@ -118,6 +126,34 @@ export function OrganizationsPanel({ onNavigate }: { onNavigate?: (key: string) 
           </Button>
         </div>
       </div>
+
+      {pendingMembers.length > 0 && (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+            Organization claim requests ({pendingMembers.length}) — approval is manual; compare the claim email domain against official domains
+          </p>
+          <div className="space-y-1.5">
+            {pendingMembers.map((m) => (
+              <div key={m.id} className="flex flex-wrap items-center gap-2 rounded-md border bg-card px-2 py-1.5 text-xs">
+                <span className="font-medium">{m.organizationName}</span>
+                <span className="text-muted-foreground">
+                  {m.userName ?? '—'} ({m.userEmail ?? '—'}) claims owner · evidence email: {m.claimEmail ?? '—'}
+                </span>
+                <div className="ml-auto flex gap-1.5">
+                  <Button size="sm" className="h-6 px-2 text-xs" disabled={busy}
+                    onClick={() => void act({ action: 'approve-member', memberId: m.id }, `Claim approved for ${m.organizationName}`)}>
+                    Approve
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" disabled={busy}
+                    onClick={() => void act({ action: 'reject-member', memberId: m.id }, 'Claim rejected')}>
+                    Reject
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {loading && <p className="py-10 text-center text-sm text-muted-foreground">Loading…</p>}
 

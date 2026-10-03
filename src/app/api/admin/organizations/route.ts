@@ -17,15 +17,19 @@ import { NextResponse } from 'next/server';
 import { getCurrentAdmin } from '@/lib/admin-auth';
 import { db } from '@/lib/db';
 import {
-  listOrganizations, updateOrganization, setVerified, mergeOrganizations,
+  listOrganizations, listPendingMembers, updateOrganization, setVerified, mergeOrganizations,
   addOfficialSource, setSourcePaused,
 } from '@/lib/import/organization-actions';
+import { reviewMembership } from '@/lib/employers/membership';
 
 export async function GET() {
   const admin = await getCurrentAdmin();
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const organizations = await listOrganizations(db);
-  return NextResponse.json({ organizations });
+  const [organizations, pendingMembers] = await Promise.all([
+    listOrganizations(db),
+    listPendingMembers(db),
+  ]);
+  return NextResponse.json({ organizations, pendingMembers });
 }
 
 export async function PATCH(request: Request) {
@@ -89,6 +93,13 @@ export async function PATCH(request: Request) {
       }
       case 'resume-source': {
         await setSourcePaused(db, String(body.importSourceId ?? ''), false, email);
+        return NextResponse.json({ success: true, action });
+      }
+      case 'approve-member':
+      case 'reject-member': {
+        const memberId = String(body.memberId ?? '');
+        if (!memberId) return NextResponse.json({ error: 'memberId required' }, { status: 400 });
+        await reviewMembership(db, memberId, action === 'approve-member', email);
         return NextResponse.json({ success: true, action });
       }
       default:

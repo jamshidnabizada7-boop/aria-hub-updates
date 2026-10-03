@@ -297,6 +297,7 @@ model Organization {
   opportunities      Opportunity[]
   observations       OpportunitySourceObservation[]
   sources            ImportSource[]
+  members            OrganizationMember[]
 }
 
 // ─── Controlled organization name aliases ────────────────────────────────────
@@ -1106,6 +1107,8 @@ model User {
   email         String?            @unique
   emailVerified DateTime?
   image         String?
+  passwordHash  String? // employer credentials login (Phase 12; null = no password set)
+  members       OrganizationMember[]
   accounts      Account[]
   sessions      Session[]
   bookmarks     TemplateBookmark[]
@@ -1115,6 +1118,28 @@ model User {
   interviewExperiences InterviewExperience[]
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
+}
+
+// ─── Employer organization membership (Phase 12) ─────────────────────────────
+// Claiming = a `pending` row awaiting admin approval. NEVER auto-approved
+// from the organization name alone — an admin (or later, official-domain
+// email verification) must confirm. Roles: owner > recruiter > viewer.
+model OrganizationMember {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           String       @default("owner") // owner | recruiter | viewer
+  status         String       @default("pending") // pending | active | suspended
+  claimEmail     String? // the employer email presented as ownership evidence
+  reviewedBy     String?
+  reviewedAt     DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, userId])
+  @@index([userId])
 }
 
 model Account {
