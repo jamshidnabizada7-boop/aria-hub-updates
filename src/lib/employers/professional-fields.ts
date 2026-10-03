@@ -65,8 +65,9 @@ const clean = (value: unknown, max: number): string | undefined => {
 export function parseProfessionalFields(body: Record<string, unknown>): ParsedProfessional {
   const vacancyNumber = clean(body.vacancyNumber, 60);
   const rawVacancies = body.numberOfVacancies;
-  const numberOfVacancies = rawVacancies != null && String(rawVacancies).trim() !== ''
-    ? Math.max(1, Math.min(999, Number(rawVacancies) || 0)) || undefined
+  const rawVacancyCount = rawVacancies != null && String(rawVacancies).trim() !== '' ? Number(rawVacancies) : NaN;
+  const numberOfVacancies = Number.isFinite(rawVacancyCount)
+    ? Math.max(1, Math.min(999, Math.floor(rawVacancyCount)))
     : undefined;
   const contractType = clean(body.contractType, 60);
   const contractDuration = clean(body.contractDuration, 60);
