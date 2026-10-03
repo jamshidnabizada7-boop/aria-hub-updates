@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { rateLimit, getClientIp } from '@/lib/admin-auth';
 import { parseProfessionalFields } from '@/lib/employers/professional-fields';
+import { translationPendingFlags } from '@/lib/translation/pending';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

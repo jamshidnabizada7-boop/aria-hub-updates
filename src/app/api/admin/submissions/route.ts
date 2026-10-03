@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentAdmin, logAction } from '@/lib/admin-auth';
 import { db } from '@/lib/db';
+import { translationPendingFlags } from '@/lib/translation/pending';
 import { ensureUniqueSlug, makeSlug } from '@/lib/ai/pipeline';
 import { sendDecisionEmail } from '@/lib/submission-notify';
 
@@ -154,6 +155,7 @@ export async function PATCH(req: NextRequest) {
       categoryId: category?.id ?? null,
       status: 'published',
       sourceName: isEmployer ? 'Employer' : 'Community',
+      ...translationPendingFlags(), // Phase 18: straight into the translation queue
       importedAt: new Date(),
       website: isEmployer ? submission.companyWebsite : null,
       jobType: jobTypeLabel,

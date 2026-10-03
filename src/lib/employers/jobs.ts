@@ -12,6 +12,7 @@ import { requireMembership } from './membership';
 import { slugify } from '@/lib/import/utils';
 import type { Prisma } from '@prisma/client';
 import { parseProfessionalFields, professionalToExtractedData, professionalToColumns, professionalLocationRow } from './professional-fields';
+import { translationPendingFlags } from '@/lib/translation/pending';
 
 export interface EmployerJobInput {
   title: string;
@@ -127,6 +128,7 @@ export async function createJob(db: JobsDb, userId: string, organizationId: stri
       categoryId: category?.id ?? null,
       language: 'en',
       extractedData: profExtracted as unknown as Prisma.InputJsonValue,
+      ...translationPendingFlags(), // Phase 18: enter the shared translation queue
       ...profColumns,
       ...(locationRow ? { locations: { create: locationRow } } : {}),
     },
