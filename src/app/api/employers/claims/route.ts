@@ -8,6 +8,7 @@
 import { NextResponse } from 'next/server';
 import { getCurrentEmployer } from '@/lib/employer-auth';
 import { claimOrganization, myOrganizations } from '@/lib/employers/membership';
+import { checkRateLimit, rateLimitKey, clientIpOf } from '@/lib/security/rate-limit';
 import { db } from '@/lib/db';
 
 function employerCookieValue(request: Request): string | undefined {
@@ -59,6 +60,10 @@ export async function POST(request: Request) {
     const org = await db.organization.findUnique({ where: { slug }, select: { id: true } });
     if (!org) return NextResponse.json({ error: 'Organization not found.' }, { status: 404 });
     organizationId = org.id;
+  }
+
+  if (!checkRateLimit(rateLimitKey('employer-claims', employer.id, clientIpOf(request)), 10, 60_000)) {
+    return NextResponse.json({ error: 'Too many requests — slow down.' }, { status: 429 });
   }
 
   try {

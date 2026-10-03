@@ -5,6 +5,7 @@
 import { NextResponse } from 'next/server';
 import { employerFromRequest } from '@/lib/employer-auth';
 import { updateJob, setJobClosed, extendJobDeadline, duplicateJob } from '@/lib/employers/jobs';
+import { checkRateLimit, rateLimitKey, clientIpOf } from '@/lib/security/rate-limit';
 import { db } from '@/lib/db';
 
 export async function PATCH(request: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -19,6 +20,10 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
   const action = String(body.action ?? '');
+
+  if (!checkRateLimit(rateLimitKey('employer-jobs-patch', employer.id, clientIpOf(request)), 30, 60_000)) {
+    return NextResponse.json({ error: 'Too many requests — slow down.' }, { status: 429 });
+  }
 
   try {
     switch (action) {

@@ -12,6 +12,7 @@
  *   pauseSource/resumeSource → healthStatus paused / healthy (worker skips paused)
  */
 import { normalizeOrgName } from '../organizations/normalize';
+import { isSafePublicUrl } from '../security/url-guard';
 
 export interface OrgStatsRow {
   id: string;
@@ -114,6 +115,12 @@ export async function updateOrganization(db: OrgDb, id: string, patch: Record<st
       : String(patch.officialDomains).split(',').map((d) => d.trim().toLowerCase()).filter(Boolean);
     data.officialDomains = domains;
   }
+  for (const urlField of ['website', 'careersUrl', 'logoUrl'] as const) {
+    const value = data[urlField];
+    if (typeof value === 'string' && value && !isSafePublicUrl(value)) {
+      throw new Error(`${urlField} failed the security guard (public http/s hosts only).`);
+    }
+  }
   if (!Object.keys(data).length) throw new Error('no editable fields provided');
   await db.organization.update({ where: { id }, data });
   await db.auditLog.create({ data: { entity: 'organization', entityId: id, action: 'organization.edit', details: JSON.stringify({ by: adminEmail, fields: Object.keys(data) }) } });
@@ -195,6 +202,9 @@ export async function addOfficialSource(db: OrgDb, organizationId: string, input
   name: string; scraperKey: string; baseUrl: string; type?: string;
   sourceRole?: string; priority?: number; scheduleMinutes?: number; config?: Record<string, unknown>;
 }, adminEmail: string): Promise<string> {
+  if (!isSafePublicUrl(input.baseUrl)) {
+    throw new Error('Source URL failed the security guard (public http/s hosts only).');
+  }
   const source = await db.importSource.create({
     data: {
       name: input.name,

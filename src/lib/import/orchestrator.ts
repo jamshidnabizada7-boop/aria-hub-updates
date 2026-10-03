@@ -35,6 +35,7 @@ import { resolveCrossSource, mergeIntoCanonical, extractVacancyNumber } from './
 import { ensureSourceObservation, parseSourcePublishedAt, resolveSourceRole } from './source-observations';
 import { resolveApplyDestination } from '@/lib/apply-resolver';
 import { detectChanges, explicitCloseStatus } from './freshness';
+import { isSafePublicUrl } from '../security/url-guard';
 import { resolveOrganization } from '@/lib/organizations/resolve';
 
 /** True when this source has ever produced imported/updated opportunities. */
@@ -204,6 +205,12 @@ async function runOneSource(
 
   try {
     if (!scraper) throw new Error(`No scraper registered for key "${source.scraperKey}"`);
+
+    // Phase 22 SSRF guard: scraper configuration may never target internal
+    // hosts — the source baseUrl must be a public http/s URL.
+    if (!isSafePublicUrl(source.baseUrl)) {
+      throw new Error(`Source baseUrl failed the security guard (public http/s hosts only): ${source.name}`);
+    }
 
     // Keep Vercel's bounded default at 35s; Oracle can use a larger budget
     // without leaving new listings unprocessed after slow source page fetches.

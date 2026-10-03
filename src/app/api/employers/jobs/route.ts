@@ -7,6 +7,7 @@
 import { NextResponse } from 'next/server';
 import { employerFromRequest } from '@/lib/employer-auth';
 import { listOrgJobs, createJob } from '@/lib/employers/jobs';
+import { checkRateLimit, rateLimitKey, clientIpOf } from '@/lib/security/rate-limit';
 import { db } from '@/lib/db';
 
 export async function GET(request: Request) {
@@ -36,6 +37,10 @@ export async function POST(request: Request) {
   }
   const organizationId = String(body.organizationId ?? '');
   if (!organizationId) return NextResponse.json({ error: 'organizationId required' }, { status: 400 });
+
+  if (!checkRateLimit(rateLimitKey('employer-jobs-post', employer.id, clientIpOf(request)), 20, 60_000)) {
+    return NextResponse.json({ error: 'Too many requests — slow down.' }, { status: 429 });
+  }
 
   try {
     const job = await createJob(db, employer.id, organizationId, {
