@@ -66,7 +66,9 @@ export default async function OrganizationPage({ params }: Props) {
 
       <div className="flex flex-wrap items-center gap-3">
         {org.logoUrl
+          ? (
             <img src={org.logoUrl} alt={`${org.name} logo`} className="h-14 w-14 rounded-lg object-contain" />
+          )
           : (
             <div className="grid h-14 w-14 place-items-center rounded-lg bg-primary/10 text-lg font-bold text-primary">
               {org.name.charAt(0)}
