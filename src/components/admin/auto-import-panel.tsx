@@ -285,6 +285,8 @@ export function AutoImportPanel() {
       {/* Dashboard Tab */}
       {activeTab === 'dashboard' && stats && (
         <>
+          {/* Phase 19: source health alerts — silent failures surface here */}
+          <ImportAlertsStrip />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <KpiCard label={t('import.totalImported')} value={String(stats.totalImported)} icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />} />
             <KpiCard label={t('import.successRate')} value={`${stats.successRate}%`} icon={<Play className="h-4 w-4 text-sky-600" />} />
@@ -590,5 +592,49 @@ function StatusBadge({ status, t }: { status: string; t: (k: string) => string }
       {status === 'running' ? <Loader2 className="h-3 w-3 animate-spin" /> : status === 'ok' ? <CheckCircle2 className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
       {t(`import.status.${status}`) || status}
     </span>
+  );
+}
+
+// ─── Phase 19: source health alerts ──────────────────────────────────────────
+interface SourceAlert {
+  sourceId: string; sourceName: string; scraperKey: string; priority: number;
+  severity: 'critical' | 'warning';
+  type: 'consecutive-failures' | 'zero-result-anomaly' | 'stale-success';
+  message: string; lastRunAt: string | null;
+}
+
+function ImportAlertsStrip() {
+  const [alerts, setAlerts] = useState<SourceAlert[] | null>(null);
+
+  useEffect(() => {
+    fetch('/api/admin/import/alerts')
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((json) => setAlerts(json.alerts ?? []))
+      .catch(() => setAlerts([]));
+  }, []);
+
+  if (!alerts?.length) return null;
+  return (
+    <div className="space-y-1.5">
+      {alerts.map((a) => (
+        <div
+          key={a.sourceId + a.type}
+          className={`flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2 text-xs ${
+            a.severity === 'critical'
+              ? 'border-red-500/40 bg-red-500/5 text-red-700 dark:text-red-400'
+              : 'border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-400'
+          }`}
+        >
+          <span className="font-bold uppercase tracking-wider">{a.severity}</span>
+          <span className="font-semibold">{a.sourceName}</span>
+          <span>{a.message}</span>
+          {a.lastRunAt && (
+            <span className="ms-auto text-muted-foreground">
+              last run {new Date(a.lastRunAt).toISOString().slice(0, 16).replace('T', ' ')}
+            </span>
+          )}
+        </div>
+      ))}
+    </div>
   );
 }
