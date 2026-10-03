@@ -11,6 +11,15 @@
  *     `wpApi` scraper. No code needed.
  *   • RSS 2.0 news feed?                          → reuse `rssNews` (type
  *     must be 'news'). No code needed.
+ *   • Official careers page (plain HTML)?         → reuse `officialHtml`
+ *     with a selectors config. No code needed.
+ *   • Official RSS/Atom vacancy feed?             → reuse `rssOpportunity`.
+ *   • Official JSON API with a stable shape?      → reuse `jsonApi` with a
+ *     fields/dot-path config.
+ *   • Greenhouse board?                           → reuse `greenhouse`
+ *     (config.boardToken).
+ *   • Lever board?                                → reuse `lever`
+ *     (config.org).
  *   • Custom site / API?                          → write a subclass of
  *     BaseScraper in `./scrapers/<name>.ts` and register it below (Step 2).
  *
@@ -39,6 +48,11 @@ import { O4afScraper } from './scrapers/o4af';
 import { WpApiScraper } from './scrapers/wp-api';
 import { JobsAfScraper } from './scrapers/jobs-af';
 import { ReliefWebScraper } from './scrapers/reliefweb';
+import { OfficialHtmlScraper } from './scrapers/official-html';
+import { RssOpportunityScraper } from './scrapers/rss-opportunity';
+import { JsonApiScraper } from './scrapers/json-api';
+import { GreenhouseScraper } from './scrapers/greenhouse';
+import { LeverScraper } from './scrapers/lever';
 
 /**
  * Placeholder for `rssNews` sources: news imports are handled by
@@ -72,6 +86,12 @@ export const SCRAPERS: Record<string, new (...args: ConstructorParameters<typeof
   jobsaf: JobsAfScraper,      // jobs.af (Next.js RSC flight payload)
   reliefweb: ReliefWebScraper, // ReliefWeb API v2 (needs approved appname)
   rssNews: RssNewsStubScraper, // RSS → News table (dedicated pipeline)
+  // ── Official-source adapters (Phase 7): zero-code per new source ──
+  officialHtml: OfficialHtmlScraper,       // config-driven careers-page HTML
+  rssOpportunity: RssOpportunityScraper,   // RSS/Atom vacancy feeds
+  jsonApi: JsonApiScraper,                 // configurable JSON field paths
+  greenhouse: GreenhouseScraper,           // Greenhouse boards API (config.boardToken)
+  lever: LeverScraper,                     // Lever postings API (config.org)
 };
 
 /**
