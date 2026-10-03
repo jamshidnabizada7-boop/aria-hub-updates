@@ -827,6 +827,13 @@ async function processListing(
     } catch (e) {
       console.warn('[import] source observation failed (continuing):', (e as Error).message);
     }
+
+    // Phase 17: refresh the internal verification status from live observations
+    try {
+      const { recomputeVerificationStatus } = await import('@/lib/verification');
+      await recomputeVerificationStatus(db, targetId);
+    } catch { // never block an import over the trust label
+    }
   }
 
   if (targetId && !bounded) {

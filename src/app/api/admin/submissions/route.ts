@@ -163,6 +163,12 @@ export async function PATCH(req: NextRequest) {
     },
   });
 
+  // Phase 17: trust label — employer lane rows start as single_source
+  try {
+    const { recomputeVerificationStatus } = await import('@/lib/verification');
+    await recomputeVerificationStatus(db, opportunity.id);
+  } catch { /* label never blocks approval */ }
+
   await db.opportunitySubmission.update({
     where: { id },
     data: {

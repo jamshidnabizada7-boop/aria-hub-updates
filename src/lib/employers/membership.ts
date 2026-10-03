@@ -27,6 +27,7 @@ type MemberDb = {
     delete: (a: any) => Promise<any>;
   };
   organization: { findUnique: (a: any) => Promise<any> };
+  opportunity: { updateMany: (a: any) => Promise<any> };
   auditLog: { create: (a: any) => Promise<any> };
 };
 
@@ -80,6 +81,15 @@ export async function reviewMembership(db: MemberDb, memberId: string, approve: 
       ? { status: 'active', reviewedBy: adminEmail, reviewedAt: new Date() }
       : { status: 'suspended', reviewedBy: adminEmail, reviewedAt: new Date() },
   });
+
+  // Phase 17: an approved owner claim makes the org's employer jobs trusted
+  if (approve) {
+    await db.opportunity.updateMany({
+      where: { organizationId: member.organizationId, sourceName: 'Employer',
+        verificationStatus: { in: ['single_source', 'needs_review', null] } },
+      data: { verificationStatus: 'verified_employer' },
+    }).catch(() => null);
+  }
   await db.auditLog.create({
     data: { entity: 'organization_member', entityId: memberId,
       action: approve ? 'membership.approve' : 'membership.reject',

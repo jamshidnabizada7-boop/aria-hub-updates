@@ -420,5 +420,11 @@ export async function mergeIntoCanonical(
     }
   }
 
+  // Phase 17: refresh the internal verification/trust label after the merge
+  try {
+    const { recomputeVerificationStatus } = await import('@/lib/verification');
+    await recomputeVerificationStatus(db, targetId);
+  } catch { /* label refresh never breaks the merge */ }
+
   return { observationId: res.observation.id, promoted, newPrimary };
 }

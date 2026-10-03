@@ -11,6 +11,7 @@ import {
   CalendarClock,
   CalendarDays,
   CheckCircle2,
+  BadgeCheck,
   Clock,
   Globe,
   GraduationCap,
@@ -519,6 +520,20 @@ export default async function OpportunityDetailPage({
                 {catLabel && (
                   <p dir="auto" className="text-xs font-semibold uppercase tracking-wider text-primary">
                     {catLabel}
+                  </p>
+                )}
+                {/* Phase 17: conservative trust badge — ONLY on genuinely
+                    verified rows; never claims unverified officialness. */}
+                {opp.verificationStatus === 'verified_official' && (
+                  <p className="mb-2 inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                    <BadgeCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                    Official source
+                  </p>
+                )}
+                {opp.verificationStatus === 'verified_employer' && (
+                  <p className="mb-2 inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                    <BadgeCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                    Verified organization
                   </p>
                 )}
                 <h1

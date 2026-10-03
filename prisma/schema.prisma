@@ -391,6 +391,7 @@ model Opportunity {
   ogDescriptionI18n    Json?
   canonicalUrl         String?
   importStatus         String? // imported | updated | skipped | failed | pending
+  verificationStatus   String? // verified_official | verified_employer | aggregator_confirmed | multi_source_confirmed | single_source | needs_review (see src/lib/verification.ts)
   sourceObservations   OpportunitySourceObservation[]
   translationStatus    String? // pending | partial | complete | failed (legacy, recomputed from fa/ps states)
   faStatus             String? // pending | processing | complete | failed — Persian gate

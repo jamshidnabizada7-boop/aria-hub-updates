@@ -56,7 +56,8 @@ export interface DiscoveryInboxItem {
 
 type InboxDb = {
   opportunitySourceObservation: { findMany: (a: any) => Promise<any[]>; findFirst: (a: any) => Promise<any>; findUnique: (a: any) => Promise<any>; update: (a: any) => Promise<any>; updateMany: (a: any) => Promise<any>; delete: (a: any) => Promise<any>; groupBy: (a: any) => Promise<any[]> };
-  opportunity: { findUnique: (a: any) => Promise<any>; findMany: (a: any) => Promise<any[]>; update: (a: any) => Promise<any>; delete: (a: any) => Promise<any>; count: (a: any) => Promise<number> };
+  organization: { findUnique: (a: any) => Promise<any> };
+  opportunity: { findUnique: (a: any) => Promise<any>; findMany: (a: any) => Promise<any[]>; update: (a: any) => Promise<any>; updateMany: (a: any) => Promise<any>; delete: (a: any) => Promise<any>; count: (a: any) => Promise<number> };
   opportunityMatchProfile: { update: (a: any) => Promise<any> };
   importSource: { findUnique: (a: any) => Promise<any>; update: (a: any) => Promise<any> };
   auditLog: { create: (a: any) => Promise<any> };
@@ -248,8 +249,12 @@ export async function mergeInto(db: InboxDb, incomingId: string, candidateId: st
     promoted.push('matchProfile');
   }
 
-  // 4. remove the duplicate
+  // 4. remove the duplicate, then refresh the canonical row's trust label
   await db.opportunity.delete({ where: { id: incomingId } });
+  try {
+    const { recomputeVerificationStatus } = await import('@/lib/verification');
+    await recomputeVerificationStatus(db, candidateId);
+  } catch { /* label never blocks the merge */ }
 
   await db.auditLog.create({
     data: { entity: 'opportunity', entityId: candidateId, action: 'discovery.merge',
