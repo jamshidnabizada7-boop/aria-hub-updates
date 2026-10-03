@@ -34,6 +34,7 @@ import { PRIMARY_OPPORTUNITY_KEYS } from '@/lib/automation/import-selection';
 import { resolveCrossSource, mergeIntoCanonical, extractVacancyNumber } from './canonical-resolver';
 import { ensureSourceObservation, parseSourcePublishedAt, resolveSourceRole } from './source-observations';
 import { resolveApplyDestination } from '@/lib/apply-resolver';
+import { detectChanges, explicitCloseStatus } from './freshness';
 import { resolveOrganization } from '@/lib/organizations/resolve';
 
 /** True when this source has ever produced imported/updated opportunities. */
@@ -719,7 +720,7 @@ async function processListing(
         extractedData: true, extractedDataI18n: true,
         applyUrl: true, sourceUrl: true, originalUrl: true,
         applyUrlEvidence: true, applyConfidence: true,
-        organizationId: true },
+        organizationId: true, status: true },
     });
     // A later import with only a source-article fallback must not erase an
     // application destination or country that an administrator verified.
@@ -732,6 +733,16 @@ async function processListing(
       importFields.applyConfidence = existing.applyConfidence ?? importFields.applyConfidence;
     }
     if (existing?.country && !finalCountry) importFields.country = existing.country;
+
+    // Phase 16: freshness — name what changed and honor explicit close signals.
+    // A job DISAPPEARING from an HTML listing never reaches this path with
+    // action='update', so absence still never closes anything.
+    const freshnessChanges = existing ? detectChanges(existing, listing) : [];
+    if (freshnessChanges.length) {
+      console.log(`[import] changes on ${existing!.slug}: ${freshnessChanges.join(', ')}`);
+    }
+    const closeStatus = explicitCloseStatus(listing);
+    const explicitClose = Boolean(closeStatus) && existing?.status === 'published';
     const hasAdminEdit = source.scraperKey === 'jobsaf' && !!existing && Boolean(await db.auditLog.findFirst({
       where: { entity: 'opportunity', entityId: dedupe.existing.id, action: 'update' },
       select: { id: true },
@@ -752,7 +763,9 @@ async function processListing(
         ...(existing && !existing.organizationId && organizationId ? { organizationId } : {}),
         // Omit status from the UPDATE, including any AI-produced value.
         // Rewriting a previously read status could undo a concurrent admin edit.
-        status: undefined,
+        // EXCEPTION (Phase 16): the source EXPLICITLY marked the listing
+        // closed/expired/inactive — that is authoritative and closes it.
+        ...(explicitClose ? { status: 'expired' as const } : { status: undefined as undefined }),
         importStatus: 'updated',
         locations: {
           deleteMany: {},
