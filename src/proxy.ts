@@ -112,8 +112,9 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  // Exclude API routes, Next internals, admin, and well-known static files (llms\.txt, llms-full\.txt).
+  // Exclude APIs, Next internals, admin, and all static file paths. A file
+  // request never needs language routing, so it should not invoke the proxy.
   matcher: [
-    '/((?!api|_next|admin|robots\\.txt|sitemap\\.xml|ads\\.txt|llms\\.txt|llms-full\\.txt|images|uploads|favicon\\.ico|_rsc|__nextjs).*)',
+    '/((?!api|_next|admin|robots\\.txt|sitemap\\.xml|ads\\.txt|llms\\.txt|llms-full\\.txt|images|uploads|favicon\\.ico|_rsc|__nextjs|.*\\..*).*)',
   ],
 };
