@@ -112,6 +112,22 @@ export async function PATCH(req: NextRequest) {
         ? (submission.location || submission.country)
         : submission.country;
 
+  // Phase 14: professional fields travel into the real Opportunity
+  const prof = (submission.professional ?? null) as Record<string, unknown> | null;
+  const profColumns: Record<string, string> = {};
+  if (prof?.responsibilities) profColumns.responsibilities = String(prof.responsibilities);
+  if (prof?.requirements) profColumns.requirements = String(prof.requirements);
+  if (prof?.guidelines) profColumns.guidelines = String(prof.guidelines);
+  if (prof?.education) profColumns.educationReq = String(prof.education);
+  if (prof?.experience) profColumns.experience = String(prof.experience);
+  const profExtracted: Record<string, unknown> = { sourceForm: 'employer-professional' };
+  for (const key of ['vacancyNumber', 'numberOfVacancies', 'contractType', 'contractDuration', 'genderRequirement', 'nationalityRequirement', 'salaryGrade'] as const) {
+    if (prof?.[key] != null) profExtracted[key] = prof[key];
+  }
+  const profProvince = prof && typeof prof.province === 'string' ? prof.province : null;
+  const profCity = prof && typeof prof.city === 'string' ? prof.city : null;
+  const profDistrict = prof && typeof prof.district === 'string' ? prof.district : null;
+
   const opportunity = await db.opportunity.create({
     data: {
       title: submission.title,
@@ -120,6 +136,18 @@ export async function PATCH(req: NextRequest) {
       country: displayCountry,
       deadline: submission.deadline,
       description: submission.description,
+      ...(Object.keys(profColumns).length ? profColumns : {}),
+      ...(Object.keys(profExtracted).length && isEmployer ? { extractedData: profExtracted as unknown as import('@prisma/client').Prisma.InputJsonValue } : {}),
+      ...(isEmployer && (profProvince || profCity || profDistrict) ? {
+        locations: {
+          create: {
+            country: 'Afghanistan', countryCode: 'AF',
+            province: profProvince, city: profCity, district: profDistrict,
+            rawLabel: [profProvince, profCity, profDistrict].filter(Boolean).join(', ') || 'employer provided',
+            source: 'employer', confidence: 1.0,
+          },
+        },
+      } : {}),
       // NOTE: explicit parens — `a ?? b ? c : d` would bind as `(a ?? b) ? c : d`
       // and produce "mailto:null" whenever an apply link exists without an email.
       applyUrl: submission.applyUrl ?? (submission.applyEmail ? `mailto:${submission.applyEmail}` : null),

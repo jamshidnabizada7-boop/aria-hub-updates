@@ -13,6 +13,9 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { Copy, LogOut, Plus, RefreshCw } from 'lucide-react';
+import { AF_PROVINCES } from '@/lib/geo/provinces';
+
+const PROVINCE_OPTIONS = AF_PROVINCES as readonly string[];
 
 interface EmployerOrg {
   organizationId: string; organizationName: string; organizationSlug: string;
@@ -283,6 +286,10 @@ function PostJobForm({ busy, onSubmit }: { busy: boolean; onSubmit: (form: Recor
   const [form, setForm] = useState({
     title: '', description: '', location: '', salary: '', jobType: 'full-time',
     deadline: '', applyUrl: '', applyEmail: '',
+    vacancyNumber: '', numberOfVacancies: '', province: '', city: '', district: '',
+    contractType: '', contractDuration: '', genderRequirement: '', nationalityRequirement: '',
+    salaryGrade: '', education: '', experience: '', responsibilities: '', requirements: '',
+    guidelines: '',
   });
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm({ ...form, [k]: e.target.value });
@@ -306,6 +313,33 @@ function PostJobForm({ busy, onSubmit }: { busy: boolean; onSubmit: (form: Recor
         <Input placeholder="Application URL (https://…)" value={form.applyUrl} onChange={set('applyUrl')} />
         <Input placeholder="…or application email" value={form.applyEmail} onChange={set('applyEmail')} />
       </div>
+
+      <details className="rounded-md border bg-background/50 p-3">
+        <summary className="cursor-pointer text-xs font-semibold text-muted-foreground">
+          Additional professional details (recommended)
+        </summary>
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <Input placeholder="Vacancy / reference number" value={form.vacancyNumber} onChange={set('vacancyNumber')} />
+          <Input type="number" min={1} max={999} placeholder="Number of vacancies" value={form.numberOfVacancies} onChange={set('numberOfVacancies')} />
+          <select className="h-9 rounded-md border bg-background px-2 text-sm" value={form.province} onChange={set('province')}>
+            <option value="">Province (optional)</option>
+            {PROVINCE_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+          <Input placeholder="City" value={form.city} onChange={set('city')} />
+          <Input placeholder="District" value={form.district} onChange={set('district')} />
+          <Input placeholder="Contract type" value={form.contractType} onChange={set('contractType')} />
+          <Input placeholder="Contract duration" value={form.contractDuration} onChange={set('contractDuration')} />
+          <Input placeholder="Gender requirement (if stated)" value={form.genderRequirement} onChange={set('genderRequirement')} />
+          <Input placeholder="Nationality requirement (if stated)" value={form.nationalityRequirement} onChange={set('nationalityRequirement')} />
+          <Input placeholder="Salary grade" value={form.salaryGrade} onChange={set('salaryGrade')} />
+          <Input placeholder="Education" value={form.education} onChange={set('education')} />
+          <Input placeholder="Experience" value={form.experience} onChange={set('experience')} />
+        </div>
+        <textarea className="mt-3 min-h-24 w-full rounded-md border bg-background p-3 text-sm" placeholder="Responsibilities" value={form.responsibilities} onChange={set('responsibilities')} />
+        <textarea className="mt-2 min-h-24 w-full rounded-md border bg-background p-3 text-sm" placeholder="Requirements / required documents" value={form.requirements} onChange={set('requirements')} />
+        <textarea className="mt-2 min-h-20 w-full rounded-md border bg-background p-3 text-sm" placeholder="Submission guideline" value={form.guidelines} onChange={set('guidelines')} />
+      </details>
+
       <Button className="gap-1" disabled={busy || !valid}
         onClick={() => onSubmit(form)}>
         <Plus className="h-4 w-4" /> Submit for review

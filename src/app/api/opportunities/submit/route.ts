@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { rateLimit, getClientIp } from '@/lib/admin-auth';
+import { parseProfessionalFields } from '@/lib/employers/professional-fields';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -91,6 +92,10 @@ export async function POST(req: NextRequest) {
     const companyWebsiteRaw = submitterType === 'employer' ? clean(body.companyWebsite, 300) : '';
     const jobType = jobTypeRaw && ALLOWED_JOB_TYPES.has(jobTypeRaw) ? jobTypeRaw : null;
 
+    // Phase 14: professional fields (employer lane only) — validated, capped,
+    // province whitelist-checked; carried into Opportunity on approval.
+    const professional = submitterType === 'employer' ? parseProfessionalFields(body).professional : null;
+
     // ── Validation ──────────────────────────────────────────────────────────
     if (title.length < 5 || title.length > 200) {
       return NextResponse.json({ error: 'Title must be between 5 and 200 characters.' }, { status: 400 });
@@ -166,6 +171,7 @@ export async function POST(req: NextRequest) {
         salaryRange,
         location,
         companyWebsite,
+        professional: professional && Object.keys(professional).length ? (professional as unknown as import('@prisma/client').Prisma.InputJsonValue) : undefined,
         referenceCode,
         lang,
       },

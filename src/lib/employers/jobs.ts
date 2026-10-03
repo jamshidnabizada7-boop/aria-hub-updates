@@ -10,6 +10,8 @@
  */
 import { requireMembership } from './membership';
 import { slugify } from '@/lib/import/utils';
+import type { Prisma } from '@prisma/client';
+import { parseProfessionalFields, professionalToExtractedData, professionalToColumns, professionalLocationRow } from './professional-fields';
 
 export interface EmployerJobInput {
   title: string;
@@ -21,6 +23,22 @@ export interface EmployerJobInput {
   applyUrl?: string | null;
   applyEmail?: string | null;
   categorySlug?: string | null;
+  // Phase 14 professional fields (all optional)
+  vacancyNumber?: string | null;
+  numberOfVacancies?: number | string | null;
+  province?: string | null;
+  city?: string | null;
+  district?: string | null;
+  contractType?: string | null;
+  contractDuration?: string | null;
+  genderRequirement?: string | null;
+  nationalityRequirement?: string | null;
+  salaryGrade?: string | null;
+  responsibilities?: string | null;
+  requirements?: string | null;
+  guidelines?: string | null;
+  education?: string | null;
+  experience?: string | null;
 }
 
 type JobsDb = {
@@ -83,6 +101,13 @@ export async function createJob(db: JobsDb, userId: string, organizationId: stri
     : null;
   const org = await db.organization.findUnique({ where: { id: organizationId }, select: { name: true } });
   const slug = await uniqueJobSlug(db, slugify(title));
+
+  // Phase 14: professional bundle → extractedData + columns + location row
+  const prof = parseProfessionalFields(input as unknown as Record<string, unknown>);
+  const profExtracted = professionalToExtractedData(prof.professional);
+  const profColumns = professionalToColumns(prof.professional);
+  const locationRow = professionalLocationRow(prof.professional);
+
   const job = await db.opportunity.create({
     data: {
       title,
@@ -100,6 +125,9 @@ export async function createJob(db: JobsDb, userId: string, organizationId: stri
       applyUrlType: applyUrl.startsWith('mailto:') ? 'application_email' : 'direct_application',
       categoryId: category?.id ?? null,
       language: 'en',
+      extractedData: profExtracted as unknown as Prisma.InputJsonValue,
+      ...profColumns,
+      ...(locationRow ? { locations: { create: locationRow } } : {}),
     },
   });
   await db.auditLog.create({

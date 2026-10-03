@@ -874,6 +874,7 @@ model OpportunitySubmission {
   salaryRange    String? // free text, e.g. "600–900 USD/month"
   location       String? // city / province, e.g. "Kabul"
   companyWebsite String? // https://…
+  professional   Json? // Phase 14: vacancy number, # vacancies, contract, gender/nationality, salary grade, province/city/district, responsibilities/requirements/guidelines/education/experience (mapped to Opportunity columns on approve)
 
   // ─── Submitter tracking & decision notifications ──
   referenceCode String    @unique // human-friendly tracking code, e.g. AR-7K2M9QCX

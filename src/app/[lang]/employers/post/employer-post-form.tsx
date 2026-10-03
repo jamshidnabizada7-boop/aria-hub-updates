@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { AF_PROVINCES } from '@/lib/geo/provinces';
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -37,6 +38,7 @@ const JOB_TYPES = [
   { value: 'remote', key: 'employers.post.jobType.remote' },
 ] as const;
 
+const PROVINCE_OPTIONS = AF_PROVINCES as readonly string[];
 const inputClasses =
   'h-11 w-full rounded-xl border border-border bg-background/80 px-4 text-sm text-foreground shadow-sm outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50';
 
@@ -82,6 +84,22 @@ export function EmployerPostForm({ lang }: { lang: Lang }) {
           salaryRange: fd.get('salaryRange'),
           location: fd.get('location'),
           companyWebsite: fd.get('companyWebsite'),
+          // Phase 14: professional fields (all optional)
+          vacancyNumber: fd.get('vacancyNumber'),
+          numberOfVacancies: fd.get('numberOfVacancies'),
+          province: fd.get('province'),
+          city: fd.get('city'),
+          district: fd.get('district'),
+          contractType: fd.get('contractType'),
+          contractDuration: fd.get('contractDuration'),
+          genderRequirement: fd.get('genderRequirement'),
+          nationalityRequirement: fd.get('nationalityRequirement'),
+          salaryGrade: fd.get('salaryGrade'),
+          education: fd.get('education'),
+          experience: fd.get('experience'),
+          responsibilities: fd.get('responsibilities'),
+          requirements: fd.get('requirements'),
+          guidelines: fd.get('guidelines'),
           website: fd.get('website'), // honeypot
           lang,
         }),
@@ -355,6 +373,80 @@ export function EmployerPostForm({ lang }: { lang: Lang }) {
           </div>
         </div>
       </div>
+
+      {/* ── Professional details (Phase 14, all optional) ────────────────── */}
+      <details className="mt-7 rounded-lg border bg-card/50 p-4">
+        <summary className="cursor-pointer text-sm font-semibold">
+          Additional professional details (recommended — helps your posting rank and match)
+        </summary>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="ep-vac" className={labelClasses}>Vacancy / reference number</label>
+            <input id="ep-vac" name="vacancyNumber" type="text" maxLength={60} className={inputClasses} />
+          </div>
+          <div>
+            <label htmlFor="ep-ncvac" className={labelClasses}>Number of vacancies</label>
+            <input id="ep-ncvac" name="numberOfVacancies" type="number" min={1} max={999} className={inputClasses} />
+          </div>
+          <div>
+            <label htmlFor="ep-prov" className={labelClasses}>Province</label>
+            <select id="ep-prov" name="province" className={inputClasses} defaultValue="">
+              <option value="">—</option>
+              {PROVINCE_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="ep-city" className={labelClasses}>City</label>
+            <input id="ep-city" name="city" type="text" maxLength={80} className={inputClasses} />
+          </div>
+          <div>
+            <label htmlFor="ep-dist" className={labelClasses}>District</label>
+            <input id="ep-dist" name="district" type="text" maxLength={80} className={inputClasses} />
+          </div>
+          <div>
+            <label htmlFor="ep-ct" className={labelClasses}>Contract type</label>
+            <input id="ep-ct" name="contractType" type="text" maxLength={60} className={inputClasses} />
+          </div>
+          <div>
+            <label htmlFor="ep-cd" className={labelClasses}>Contract duration</label>
+            <input id="ep-cd" name="contractDuration" type="text" maxLength={60} className={inputClasses} />
+          </div>
+          <div>
+            <label htmlFor="ep-gen" className={labelClasses}>Gender requirement (if stated)</label>
+            <input id="ep-gen" name="genderRequirement" type="text" maxLength={60} className={inputClasses} />
+          </div>
+          <div>
+            <label htmlFor="ep-nat" className={labelClasses}>Nationality requirement (if stated)</label>
+            <input id="ep-nat" name="nationalityRequirement" type="text" maxLength={80} className={inputClasses} />
+          </div>
+          <div>
+            <label htmlFor="ep-sg" className={labelClasses}>Salary grade</label>
+            <input id="ep-sg" name="salaryGrade" type="text" maxLength={60} className={inputClasses} />
+          </div>
+        </div>
+        <div className="mt-4 grid gap-4">
+          <div>
+            <label htmlFor="ep-edu" className={labelClasses}>Education</label>
+            <input id="ep-edu" name="education" type="text" maxLength={2000} className={inputClasses} />
+          </div>
+          <div>
+            <label htmlFor="ep-exp" className={labelClasses}>Experience</label>
+            <input id="ep-exp" name="experience" type="text" maxLength={2000} className={inputClasses} />
+          </div>
+          <div>
+            <label htmlFor="ep-resp" className={labelClasses}>Responsibilities</label>
+            <textarea id="ep-resp" name="responsibilities" rows={4} maxLength={8000} className={inputClasses} />
+          </div>
+          <div>
+            <label htmlFor="ep-req" className={labelClasses}>Requirements / required documents</label>
+            <textarea id="ep-req" name="requirements" rows={4} maxLength={8000} className={inputClasses} />
+          </div>
+          <div>
+            <label htmlFor="ep-guid" className={labelClasses}>Submission guideline</label>
+            <textarea id="ep-guid" name="guidelines" rows={3} maxLength={4000} className={inputClasses} />
+          </div>
+        </div>
+      </details>
 
       {/* ── Contact details ─────────────────────────────────────────────── */}
       <p className={`${sectionTitleClasses} mt-7`}>

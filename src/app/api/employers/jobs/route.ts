@@ -48,6 +48,22 @@ export async function POST(request: Request) {
       applyUrl: body.applyUrl ? String(body.applyUrl) : null,
       applyEmail: body.applyEmail ? String(body.applyEmail) : null,
       categorySlug: body.categorySlug ? String(body.categorySlug) : null,
+      // Phase 14 professional fields
+      vacancyNumber: body.vacancyNumber != null && body.vacancyNumber !== '' ? String(body.vacancyNumber) : null,
+      numberOfVacancies: body.numberOfVacancies != null && body.numberOfVacancies !== '' ? Number(body.numberOfVacancies) : null,
+      province: body.province ? String(body.province) : null,
+      city: body.city ? String(body.city) : null,
+      district: body.district ? String(body.district) : null,
+      contractType: body.contractType ? String(body.contractType) : null,
+      contractDuration: body.contractDuration ? String(body.contractDuration) : null,
+      genderRequirement: body.genderRequirement ? String(body.genderRequirement) : null,
+      nationalityRequirement: body.nationalityRequirement ? String(body.nationalityRequirement) : null,
+      salaryGrade: body.salaryGrade ? String(body.salaryGrade) : null,
+      responsibilities: body.responsibilities ? String(body.responsibilities) : null,
+      requirements: body.requirements ? String(body.requirements) : null,
+      guidelines: body.guidelines ? String(body.guidelines) : null,
+      education: body.education ? String(body.education) : null,
+      experience: body.experience ? String(body.experience) : null,
     });
     return NextResponse.json({ success: true, ...job });
   } catch (e) {
