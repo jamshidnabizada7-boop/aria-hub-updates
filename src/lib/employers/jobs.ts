@@ -45,6 +45,7 @@ type JobsDb = {
   opportunity: {
     findMany: (a: any) => Promise<any[]>;
     findFirst: (a: any) => Promise<any>;
+    updateMany: (a: any) => Promise<any>;
     findUnique: (a: any) => Promise<any>;
     create: (a: any) => Promise<any>;
     update: (a: any) => Promise<any>;
