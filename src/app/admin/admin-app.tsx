@@ -33,6 +33,7 @@ import { TemplatesPanel } from '@/components/admin/templates-panel';
 import { SubmissionsPanel } from '@/components/admin/submissions-panel';
 import { ContentHealthPanel } from '@/components/admin/content-health-panel';
 import { DiscoveryInboxPanel } from '@/components/admin/discovery-inbox-panel';
+import { OrganizationsPanel } from '@/components/admin/organizations-panel';
 import { OrdersPanel } from '@/components/admin/orders-panel';
 // Social Kit merged into Brand Studio (R26) — one poster tool, one workflow.
 import { BrandStudioPanel } from '@/components/admin/brand-studio-panel';
@@ -54,6 +55,7 @@ const NAV: NavItem[] = [
   { key: 'contentHealth', labelKey: 'admin.nav.contentHealth', icon: Activity },
   { key: 'submissions', labelKey: 'admin.nav.submissions', icon: Inbox },
   { key: 'discovery', labelKey: 'admin.nav.discovery', icon: SearchCheck },
+  { key: 'organizations', labelKey: 'admin.nav.organizations', icon: Building2 },
   // ── Opportunities & Content ──
   { header: 'admin.group.content' },
   { key: 'opportunity', labelKey: 'admin.nav.opportunities', icon: GraduationCap },
