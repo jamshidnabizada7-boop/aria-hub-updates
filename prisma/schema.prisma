@@ -293,7 +293,26 @@ model Organization {
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
+  aliases            OrganizationAlias[]
   opportunities      Opportunity[]
+}
+
+// ─── Controlled organization name aliases ────────────────────────────────────
+// `normalized` is the conservative matching key (see
+// src/lib/organizations/normalize.ts) and is globally unique: one normalized
+// alias resolves to exactly one organization. Merges happen ONLY through an
+// explicit alias row — never through fuzzy name similarity. Examples:
+//   IRC → International Rescue Committee      (curated)
+//   UNICEF → United Nations Children's Fund   (curated / parenthetical)
+model OrganizationAlias {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  alias          String // verbatim alias as written in source data
+  normalized     String       @unique
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
 }
 
 model Opportunity {
