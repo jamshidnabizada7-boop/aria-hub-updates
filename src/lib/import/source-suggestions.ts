@@ -52,7 +52,12 @@ export async function recordSuggestion(
     domainFromUrl(input.website),
     domainFromEmail(input.applyEmail ?? null),
   ]).filter((d) => !NON_APPLY_EMAILS.includes(d));
-  const emails = String(input.applyEmail ?? '').trim() ? [String(input.applyEmail).trim().toLowerCase()] : [];
+  // an email is only evidence when its DOMAIN is plausible — jobs@acbar.org
+  // must never become a suggestion
+  const emailDomain = domainFromEmail(input.applyEmail ?? null);
+  const emails = input.applyEmail && emailDomain && domains.includes(emailDomain)
+    ? [String(input.applyEmail).trim().toLowerCase()]
+    : [];
   if (!domains.length && !emails.length) return 'skipped-no-evidence';
 
   const existing = await db.organizationSourceSuggestion.findUnique({ where: { suggestedName: key } });
