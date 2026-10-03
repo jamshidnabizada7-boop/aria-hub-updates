@@ -20,16 +20,18 @@ import {
   listOrganizations, listPendingMembers, updateOrganization, setVerified, mergeOrganizations,
   addOfficialSource, setSourcePaused,
 } from '@/lib/import/organization-actions';
+import { listSuggestions, confirmSuggestion, dismissSuggestion } from '@/lib/import/source-suggestions';
 import { reviewMembership } from '@/lib/employers/membership';
 
 export async function GET() {
   const admin = await getCurrentAdmin();
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const [organizations, pendingMembers] = await Promise.all([
+  const [organizations, pendingMembers, suggestions] = await Promise.all([
     listOrganizations(db),
     listPendingMembers(db),
+    listSuggestions(db),
   ]);
-  return NextResponse.json({ organizations, pendingMembers });
+  return NextResponse.json({ organizations, pendingMembers, suggestions });
 }
 
 export async function PATCH(request: Request) {
@@ -93,6 +95,18 @@ export async function PATCH(request: Request) {
       }
       case 'resume-source': {
         await setSourcePaused(db, String(body.importSourceId ?? ''), false, email);
+        return NextResponse.json({ success: true, action });
+      }
+      case 'confirm-suggestion': {
+        const suggestionId = String(body.suggestionId ?? '');
+        if (!suggestionId) return NextResponse.json({ error: 'suggestionId required' }, { status: 400 });
+        const result = await confirmSuggestion(db, suggestionId, email, body.organizationName ? String(body.organizationName) : undefined);
+        return NextResponse.json({ success: true, action, ...result });
+      }
+      case 'dismiss-suggestion': {
+        const suggestionId = String(body.suggestionId ?? '');
+        if (!suggestionId) return NextResponse.json({ error: 'suggestionId required' }, { status: 400 });
+        await dismissSuggestion(db, suggestionId, email);
         return NextResponse.json({ success: true, action });
       }
       case 'approve-member':

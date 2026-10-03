@@ -24,6 +24,12 @@ interface OrgSource {
   healthStatus: string; lastRunAt: string | null; lastRunStatus: string | null; lastSuccessAt: string | null;
 }
 
+interface SourceSuggestion {
+  id: string; suggestedName: string; displayName: string;
+  evidenceDomains: string[] | null; evidenceEmails: string[] | null;
+  sampleSourceUrl: string | null; sampleSourceName: string | null;
+  occurrences: number; status: string;
+}
 interface PendingMember {
   id: string; organizationId: string; organizationName: string; role: string;
   status: string; claimEmail: string | null; userName: string | null;
@@ -42,6 +48,7 @@ const fmt = (d: string | null) => (d ? new Date(d).toISOString().slice(0, 16).re
 export function OrganizationsPanel({ onNavigate }: { onNavigate?: (key: string) => void }) {
   const [orgs, setOrgs] = useState<OrgRow[] | null>(null);
   const [pendingMembers, setPendingMembers] = useState<PendingMember[]>([]);
+  const [suggestions, setSuggestions] = useState<SourceSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'orgs' | 'sources'>('orgs');
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -58,6 +65,7 @@ export function OrganizationsPanel({ onNavigate }: { onNavigate?: (key: string) 
       const json = await res.json();
       setOrgs(json.organizations);
       setPendingMembers(json.pendingMembers ?? []);
+      setSuggestions(json.suggestions ?? []);
     } catch (e) {
       toast.error(`Failed to load organizations: ${(e as Error).message}`);
     } finally {
@@ -126,6 +134,37 @@ export function OrganizationsPanel({ onNavigate }: { onNavigate?: (key: string) 
           </Button>
         </div>
       </div>
+
+      {suggestions.length > 0 && (
+        <div className="rounded-lg border border-sky-500/40 bg-sky-500/5 p-3">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wider text-sky-700 dark:text-sky-400">
+            New organization source candidates ({suggestions.length}) — from aggregator discoveries; confirming links the org so you can add an official source
+          </p>
+          <div className="space-y-1.5">
+            {suggestions.map((s) => (
+              <div key={s.id} className="flex flex-wrap items-center gap-2 rounded-md border bg-card px-2 py-1.5 text-xs">
+                <span className="font-medium">{s.displayName}</span>
+                <Badge variant="secondary" className="h-5">{s.occurrences}× seen</Badge>
+                {s.evidenceDomains?.length ? <span className="text-muted-foreground">domains: {s.evidenceDomains.join(', ')}</span> : null}
+                {s.evidenceEmails?.length ? <span className="text-muted-foreground">emails: {s.evidenceEmails.join(', ')}</span> : null}
+                {s.sampleSourceUrl && (
+                  <a className="underline text-muted-foreground" href={s.sampleSourceUrl} target="_blank" rel="noreferrer noopener">sample</a>
+                )}
+                <div className="ml-auto flex gap-1.5">
+                  <Button size="sm" className="h-6 px-2 text-xs" disabled={busy}
+                    onClick={() => void act({ action: 'confirm-suggestion', suggestionId: s.id }, `Confirmed ${s.displayName} — now add its official source`)}>
+                    Confirm
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" disabled={busy}
+                    onClick={() => void act({ action: 'dismiss-suggestion', suggestionId: s.id }, 'Suggestion dismissed')}>
+                    Dismiss
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {pendingMembers.length > 0 && (
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3">

@@ -834,6 +834,23 @@ async function processListing(
       await recomputeVerificationStatus(db, targetId);
     } catch { // never block an import over the trust label
     }
+
+    // Phase 21: an unknown organization with plausible domain evidence
+    // becomes a source-suggestion candidate for the admin to confirm.
+    if (!organizationId && listing.organization?.trim()) {
+      try {
+        const { recordSuggestion } = await import('./source-suggestions');
+        await recordSuggestion(db, {
+          displayName: listing.organization,
+          applyUrl: listing.applyUrl ?? null,
+          applyEmail: listing.extractedData?.applyEmail ?? null,
+          website: listing.website ?? null,
+          sampleSourceUrl: listing.sourceUrl ?? null,
+          sampleSourceName: source.name,
+        });
+      } catch { // suggestions must never break an import
+      }
+    }
   }
 
   if (targetId && !bounded) {
