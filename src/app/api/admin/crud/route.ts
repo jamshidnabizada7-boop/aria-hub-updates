@@ -527,9 +527,13 @@ export async function POST(req: NextRequest) {
     const item = await delegate.create({ data: clean });
     await logAction({ userId: admin.id, action: 'create', entity: model, entityId: item.id, req });
     try {
-      revalidatePath('/', 'layout');
-      if (model === 'opportunity' && item.slug) {
-        for (const lang of ['en', 'fa', 'ps']) revalidatePath(`/${lang}/opportunities/${item.slug}`);
+      if (model === 'opportunity') {
+        for (const lang of ['en', 'fa', 'ps']) {
+          revalidatePath(`/${lang}`);
+          if (item.slug) revalidatePath(`/${lang}/opportunities/${item.slug}`);
+        }
+      } else {
+        revalidatePath('/', 'layout');
       }
     } catch (e) { console.error('[crud] revalidate error:', e); }
     return NextResponse.json({ success: true, item });
@@ -612,9 +616,13 @@ export async function PUT(req: NextRequest) {
     const item = await delegate.update({ where: { id }, data: clean });
     await logAction({ userId: admin.id, action: 'update', entity: model, entityId: id, req });
     try {
-      revalidatePath('/', 'layout');
-      if (model === 'opportunity' && item.slug) {
-        for (const lang of ['en', 'fa', 'ps']) revalidatePath(`/${lang}/opportunities/${item.slug}`);
+      if (model === 'opportunity') {
+        for (const lang of ['en', 'fa', 'ps']) {
+          revalidatePath(`/${lang}`);
+          if (item.slug) revalidatePath(`/${lang}/opportunities/${item.slug}`);
+        }
+      } else {
+        revalidatePath('/', 'layout');
       }
     } catch (e) { console.error('[crud] revalidate error:', e); }
     return NextResponse.json({ success: true, item });

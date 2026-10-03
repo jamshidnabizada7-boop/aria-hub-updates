@@ -55,7 +55,7 @@ const getCachedSettings = unstable_cache(
     }
   },
   ['layout-site-settings'],
-  { revalidate: 600, tags: ['site-settings'] }
+  { revalidate: 1800, tags: ['site-settings'] }
 );
 
 const getLanguages = cache(() => getCachedLanguages());

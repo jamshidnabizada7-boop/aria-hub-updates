@@ -5,7 +5,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.myariahub.com'
 export async function JsonLd() {
   const data = await getSiteData();
   const s = data.settings;
-  const nowIso = new Date().toISOString().slice(0, 10);
+  const lastModified = s?.updatedAt ? new Date(s.updatedAt).toISOString() : undefined;
 
   const fallbackSameAs = [
     'https://www.youtube.com/@myariahub',
@@ -54,7 +54,7 @@ export async function JsonLd() {
     url: SITE_URL,
     description: s?.description,
     datePublished: '2026-01-01T00:00:00Z',
-    dateModified: new Date().toISOString(),
+    dateModified: lastModified,
     inLanguage: ['en', 'fa', 'ps'],
     publisher: {
       '@type': 'Organization',

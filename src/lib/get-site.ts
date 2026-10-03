@@ -165,7 +165,10 @@ const fetchSiteData = async (): Promise<SiteData> => {
 const getCachedSiteData = unstable_cache(
   fetchSiteData,
   ['site-data-bundle'],
-  { revalidate: 300, tags: ['site-data'] }
+  // General site content changes far less often than the opportunity feed.
+  // A five-minute data TTL forced unrelated static pages to regenerate every
+  // five minutes; the live feed has its own independent cache.
+  { revalidate: 1800, tags: ['site-data'] }
 );
 
 export const getSiteData = cache(async (): Promise<SiteData> => {

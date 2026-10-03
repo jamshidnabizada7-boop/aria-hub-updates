@@ -12,6 +12,14 @@ const nextConfig: NextConfig = {
         key: 'Vercel-CDN-Cache-Control',
         value: 's-maxage=60, stale-while-revalidate=120',
       }],
+    }, {
+      // Opportunity details are public and identical for all visitors. Cache
+      // them at the CDN without creating durable ISR writes for every slug.
+      source: '/:lang(en|fa|ps)/opportunities/:slug',
+      headers: [{
+        key: 'Vercel-CDN-Cache-Control',
+        value: 's-maxage=3600, stale-while-revalidate=3600',
+      }],
     }];
   },
   // Standalone output packs a deployable server bundle — for the Linux
