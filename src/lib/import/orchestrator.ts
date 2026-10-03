@@ -549,10 +549,22 @@ async function processListing(
 
   // Fast path: this row was fully detail-checked less than a day ago and the
   // list-page content is unchanged — skip the detail re-fetch. The daily
-  // recheck below is what catches source-side edits (deadline extensions…).
+  // recheck below is what catches source-side edits. EXCEPTION (Phase 25
+  // end-to-end finding): a MOVED deadline always bypasses the fast path —
+  // the plan requires deadline extensions to reach the canonical record
+  // without waiting up to 24h.
   if (dedupe.action === 'update' && !force) {
     const last = dedupe.existing.lastChecked?.getTime() ?? 0;
-    if (Date.now() - last < DETAIL_RECHECK_MS) {
+    let deadlineMoved = false;
+    if (listing.deadline) {
+      const current = await db.opportunity.findUnique({
+        where: { id: dedupe.existing.id },
+        select: { deadline: true },
+      });
+      deadlineMoved = Boolean(current?.deadline) &&
+        new Date(listing.deadline).getTime() !== current!.deadline!.getTime();
+    }
+    if (Date.now() - last < DETAIL_RECHECK_MS && !deadlineMoved) {
       counters.skipped++;
       return;
     }
