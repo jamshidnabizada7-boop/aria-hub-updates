@@ -29,6 +29,7 @@ import { buildLocationRows, resolveCountry } from '@/lib/geo/location-rows';
 import { classifyApplyUrl, isRealApplyLink, shouldHealApplyLink } from '@/lib/apply';
 import type { RawListing, SourceHandle } from './types';
 import { resolveImportedOpportunityStatus } from './publication-policy';
+import { preserveAdminFields } from './preserve-admin-fields';
 import { PRIMARY_OPPORTUNITY_KEYS } from '@/lib/automation/import-selection';
 
 /** True when this source has ever produced imported/updated opportunities. */
@@ -452,18 +453,31 @@ async function processListing(
     const current = await db.opportunity.findUnique({
       where: { id: dedupe.existing.id },
       select: { eligibility: true, requirements: true, educationReq: true, experience: true,
-        benefits: true, guidelines: true, country: true, categoryId: true },
+        benefits: true, guidelines: true, responsibilities: true, salary: true,
+        country: true, categoryId: true, extractedData: true },
     });
     if (current) {
       const data: Record<string, string> = {};
-      for (const field of ['eligibility', 'requirements', 'educationReq', 'experience', 'benefits', 'guidelines'] as const) {
+      for (const field of ['eligibility', 'requirements', 'educationReq', 'experience', 'benefits', 'guidelines', 'responsibilities', 'salary'] as const) {
         if (!current[field] && listing[field]?.trim()) data[field] = listing[field]!.trim();
       }
       const country = resolveCountry(listing);
       if (!current.country && country) data.country = country;
       const categoryId = resolveCategory([], listing.category, listing.jobType, source.defaultCategory, categories);
       if (!current.categoryId && categoryId) data.categoryId = categoryId;
-      if (Object.keys(data).length) await db.opportunity.update({ where: { id: dedupe.existing.id }, data });
+      const incomingFacts = listing.extractedData || {};
+      const currentFacts = current.extractedData && typeof current.extractedData === 'object' && !Array.isArray(current.extractedData)
+        ? current.extractedData as Record<string, unknown> : {};
+      const addedFacts = Object.fromEntries(Object.entries(incomingFacts).filter(([key, value]) =>
+        value != null && value !== '' && (currentFacts[key] == null || currentFacts[key] === '' ||
+          (Array.isArray(currentFacts[key]) && currentFacts[key].length === 0))));
+      if (Object.keys(addedFacts).length) {
+        await db.opportunity.update({ where: { id: dedupe.existing.id }, data: {
+          ...data, extractedData: { ...currentFacts, ...addedFacts },
+        } });
+      } else if (Object.keys(data).length) {
+        await db.opportunity.update({ where: { id: dedupe.existing.id }, data });
+      }
     }
   };
   await healMissingFacts();
@@ -620,7 +634,17 @@ async function processListing(
     // or trusted source already published.
     const existing = await db.opportunity.findUnique({
       where: { id: dedupe.existing.id },
-      select: { slug: true, title: true, applyUrl: true, sourceUrl: true, originalUrl: true, country: true },
+      select: { slug: true, title: true, titleI18n: true, organization: true,
+        country: true, deadline: true, description: true, descriptionI18n: true,
+        responsibilities: true, responsibilitiesI18n: true, requirements: true,
+        requirementsI18n: true, guidelines: true, guidelinesI18n: true,
+        eligibility: true, eligibilityI18n: true, benefits: true, benefitsI18n: true,
+        salary: true, salaryI18n: true, educationReq: true, educationReqI18n: true,
+        experience: true, experienceI18n: true, categoryId: true, image: true,
+        seoTitle: true, seoDescription: true, seoTitleI18n: true, seoDescriptionI18n: true,
+        ogTitle: true, ogDescription: true, ogTitleI18n: true, ogDescriptionI18n: true,
+        extractedData: true, extractedDataI18n: true,
+        applyUrl: true, sourceUrl: true, originalUrl: true },
     });
     // A later import with only a source-article fallback must not erase an
     // application destination or country that an administrator verified.
@@ -630,16 +654,22 @@ async function processListing(
       importFields.applyUrlType = classifyApplyUrl(existing.applyUrl, existing.sourceUrl, existing.originalUrl);
     }
     if (existing?.country && !finalCountry) importFields.country = existing.country;
+    const hasAdminEdit = source.scraperKey === 'jobsaf' && !!existing && Boolean(await db.auditLog.findFirst({
+      where: { entity: 'opportunity', entityId: dedupe.existing.id, action: 'update' },
+      select: { id: true },
+    }));
     let newSlug = existing?.slug || slugBase;
-    if (existing && slugify(listing.title) !== slugify(existing.title)) {
+    if (existing && !hasAdminEdit && slugify(listing.title) !== slugify(existing.title)) {
       newSlug = await ensureUniqueSlug(db, slugBase, dedupe.existing.id);
     }
+    const sourceData = { ...pipeline.data, ...importFields, ...(categoryId ? { categoryId } : {}) };
+    const updateData = hasAdminEdit && existing
+      ? preserveAdminFields(sourceData, existing as Record<string, unknown>)
+      : sourceData;
     await db.opportunity.update({
       where: { id: dedupe.existing.id },
       data: {
-        ...pipeline.data,
-        ...importFields,
-        ...(categoryId ? { categoryId } : {}),
+        ...updateData,
         slug: newSlug,
         // Omit status from the UPDATE, including any AI-produced value.
         // Rewriting a previously read status could undo a concurrent admin edit.

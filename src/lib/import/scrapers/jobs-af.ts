@@ -39,7 +39,12 @@ interface JobsAfJob {
   educationLevel?: string | null;
   workType?: string | null;
   contractType?: string | null;
+  contractDuration?: string | null;
   gender?: string | null;
+  nationality?: string | null;
+  language?: string[] | null;
+  travelRequired?: boolean | null;
+  announcementType?: string | null;
   minimumSalary?: number | null;
   maximumSalary?: number | null;
   fixedSalary?: number | null;
@@ -55,7 +60,7 @@ interface JobsAfJob {
   company?: { name?: string; slug?: string; profile?: { logoUrl?: string } | null } | null;
   country?: { name?: string } | null;
   provinces?: Array<{ province?: { name?: string } | null } | null> | null;
-  functionalAreas?: Array<{ area?: { name?: string } | null } | null> | null;
+  functionalAreas?: Array<{ name?: string; area?: { name?: string } | null } | null> | null;
   description?: string | null;
   howToApply?: string | null;
   applyInstructions?: string | null;
@@ -166,9 +171,7 @@ export class JobsAfScraper extends BaseScraper {
       const provinces = (job.provinces || [])
         .map((p) => p?.province?.name)
         .filter((n): n is string => Boolean(n));
-      const areas = (job.functionalAreas || [])
-        .map((f) => f?.area?.name)
-        .filter((n): n is string => Boolean(n));
+      const areas = this.functionalAreas(job);
       const organization = job.company?.name?.trim() || null;
       const salary = this.buildSalary(job);
 
@@ -195,7 +198,12 @@ export class JobsAfScraper extends BaseScraper {
           vacancies: job.numberOfVacancies ?? null,
           workType: this.humanize(job.workType),
           contractType: this.humanize(job.contractType),
+          contractDuration: this.humanize(job.contractDuration),
           gender: this.humanize(job.gender),
+          nationality: this.humanize(job.nationality),
+          languages: job.language?.map((value) => this.humanize(value) || value) || null,
+          travelRequired: job.travelRequired == null ? null : job.travelRequired ? 'Yes' : 'No',
+          announcementType: this.humanize(job.announcementType),
           salary,
           salaryGrade: job.salaryGrade || null,
           probationPeriod: this.humanize(job.probationPeriod),
@@ -271,7 +279,8 @@ export class JobsAfScraper extends BaseScraper {
       if (flight) {
         const jobs = extractFlightObjects<JobsAfJob>(flight, '{"id":"', ['title', 'slug']);
         const match = jobs.find((j) => listing.sourceUrl.endsWith(`/jobs/${j.slug}`));
-        if (match && (match.description || match.howToApply || match.applyInstructions)) {
+        if (match && (match.roleSummary || match.jobRequirements || match.dutiesAndResponsibilities ||
+          match.submissionGuidelines || match.description || match.howToApply || match.applyInstructions)) {
           this.enrichFromPublicApi(listing, match);
           return listing;
         }
@@ -314,6 +323,9 @@ export class JobsAfScraper extends BaseScraper {
   }
 
   private enrichFromPublicApi(listing: RawListing, job: JobsAfJob): void {
+    if (job.company?.name) listing.organization = job.company.name.trim();
+    if (job.company?.profile?.logoUrl) listing.imageUrl = job.company.profile.logoUrl;
+    if (job.title) listing.title = stripHtml(job.title).trim();
     const summary = stripHtml(job.roleSummary || job.description || '').trim();
     if (summary.length > 30) listing.description = summary;
     const responsibilities = stripHtml(job.dutiesAndResponsibilities || '').trim();
@@ -328,6 +340,8 @@ export class JobsAfScraper extends BaseScraper {
         : `${job.minimumExperience}+ years`;
     }
     if (job.educationLevel) listing.educationReq = this.humanize(job.educationLevel);
+    const salary = this.buildSalary(job);
+    if (salary) listing.salary = salary;
     if (job.country?.name) listing.country = job.country.name;
     const provinces = (job.provinces || []).map((p) => p?.province?.name).filter((p): p is string => Boolean(p));
     if (provinces.length) {
@@ -335,6 +349,9 @@ export class JobsAfScraper extends BaseScraper {
       listing.location = provinces.join(', ');
     }
     if (job.expiryDate) listing.deadline = parseDate(job.expiryDate);
+    if (job.publishDate) listing.publishedDate = parseDate(job.publishDate);
+
+    const areas = this.functionalAreas(job);
 
     const explicit = [job.submissionEmail, job.submissionLink]
       .map((value) => normalizeApplyUrl(value))
@@ -347,9 +364,29 @@ export class JobsAfScraper extends BaseScraper {
     )) listing.applyUrl = candidate;
     listing.extractedData = {
       ...(listing.extractedData || {}),
-      submission: job.submissionThroughout || null,
+      reference: job.reference || listing.extractedData?.reference || null,
+      vacancies: job.numberOfVacancies ?? listing.extractedData?.vacancies ?? null,
+      functionalAreas: areas.length ? areas : listing.extractedData?.functionalAreas || null,
+      workType: this.humanize(job.workType) || listing.extractedData?.workType || null,
+      contractType: this.humanize(job.contractType) || listing.extractedData?.contractType || null,
+      contractDuration: this.humanize(job.contractDuration) || null,
+      probationPeriod: this.humanize(job.probationPeriod) || listing.extractedData?.probationPeriod || null,
+      extendable: job.isExtendable == null ? listing.extractedData?.extendable ?? null : job.isExtendable ? 'Yes' : 'No',
+      gender: this.humanize(job.gender) || listing.extractedData?.gender || null,
+      nationality: this.humanize(job.nationality) || null,
+      languages: job.language?.map((value) => this.humanize(value) || value) || null,
+      travelRequired: job.travelRequired == null ? null : job.travelRequired ? 'Yes' : 'No',
+      announcementType: this.humanize(job.announcementType) || null,
+      salaryGrade: job.salaryGrade || listing.extractedData?.salaryGrade || null,
+      submission: this.humanize(job.submissionThroughout) || listing.extractedData?.submission || null,
       jobId: job.id || null,
     };
+  }
+
+  private functionalAreas(job: JobsAfJob): string[] {
+    return (job.functionalAreas || [])
+      .map((area) => area?.name || area?.area?.name)
+      .filter((name): name is string => Boolean(name));
   }
 
   /** Structured fallback description (detail pages are client-rendered). */
@@ -399,7 +436,7 @@ export class JobsAfScraper extends BaseScraper {
     const min = job.minimumSalary ?? null;
     const max = job.maximumSalary ?? null;
     const fixed = job.fixedSalary ?? null;
-    if (min == null && max == null && fixed == null) return null;
+    if (min == null && max == null && fixed == null) return this.humanize(job.salaryType);
     const cur = job.currency || 'AFN';
     let range: string;
     if (min != null && max != null && min !== max) range = `${min} - ${max}`;

@@ -25,6 +25,15 @@ function hashPayload(listing: RawListing): string {
     listing.deadline || '',
     (listing.description || '').slice(0, 500),
   ];
+  // Jobs.af cards can keep the same summary while the public detail API
+  // changes qualifications, duties, application instructions or job facts.
+  if (listing.sourceName.toLowerCase() === 'jobs.af') {
+    parts.push(
+      listing.requirements || '', listing.responsibilities || '', listing.guidelines || '',
+      listing.salary || '', listing.experience || '', listing.educationReq || '',
+      JSON.stringify(listing.extractedData || {}),
+    );
+  }
   return parts.join('|');
 }
 
