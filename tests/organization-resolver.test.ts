@@ -291,5 +291,5 @@ describeIf(dbUp)('resolveOrganization & runBackfill (db)', () => {
     });
     expect(stillUnlinked).toBe(0);
     expect(rerun.connectedOpportunities).toBe(0);
-  });
+  }, 120_000); // whole-table scan over the shared DB — bun's 5s default is too tight
 });

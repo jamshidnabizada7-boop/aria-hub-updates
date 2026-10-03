@@ -22,11 +22,13 @@ describe('Performance Boost & SSR Optimization Suite', () => {
     expect(langLayoutContent).toContain('getCachedSettings');
   });
 
-  it('verifies src/lib/get-site.ts caches site-data bundle with unstable_cache', () => {
+  it('verifies src/lib/get-site.ts caches site-data bundle with unstable_cache (ISR reconciliation: 1800s TTL)', () => {
     const getSiteContent = fs.readFileSync(path.join(root, 'src/lib/get-site.ts'), 'utf8');
     expect(getSiteContent).toContain('unstable_cache');
     expect(getSiteContent).toContain('site-data-bundle');
-    expect(getSiteContent).toContain('revalidate: 300');
+    // Phase 22 ISR reconciliation (commit b3b6d18): 300s forced unrelated
+    // static pages to regenerate every five minutes; the intended TTL is 1800s.
+    expect(getSiteContent).toContain('revalidate: 1800');
   });
 
   it('verifies src/app/api/site/route.ts delegates directly to getSiteData()', () => {
@@ -51,13 +53,19 @@ describe('Performance Boost & SSR Optimization Suite', () => {
     expect(oppQueriesContent).toContain('getCachedDeadlinesData');
   });
 
-  it('verifies homepage uses getHomeStats, exports generateStaticParams for SSG, and has 300s revalidate window', () => {
+  it('verifies homepage uses getHomeStats, exports generateStaticParams, and renders on CDN miss (ISR reconciliation: no durable ISR writes)', () => {
     const pageContent = fs.readFileSync(path.join(root, 'src/app/[lang]/page.tsx'), 'utf8');
-    expect(pageContent).toContain('revalidate = 300');
+    // Phase 22 ISR reconciliation (commits c467d0c + d344570): the home page
+    // renders on a CDN miss (revalidate = 0) behind the next.config.ts CDN
+    // header s-maxage=1800 — home can no longer force ISR writes.
+    expect(pageContent).toContain('revalidate = 0');
     expect(pageContent).toContain('getHomeStats()');
     expect(pageContent).toContain('generateStaticParams');
     expect(pageContent).not.toContain("distinct: ['organization']");
     expect(pageContent).not.toContain("distinct: ['country']");
+    // the CDN header that replaces the ISR window must exist in next.config.ts
+    const nextConfig = fs.readFileSync(path.join(root, 'next.config.ts'), 'utf8');
+    expect(nextConfig).toContain('s-maxage=1800');
   });
 
   it('verifies public landing pages export generateStaticParams for static edge CDN serving', () => {
@@ -139,14 +147,17 @@ describe('Performance Boost & SSR Optimization Suite', () => {
     expect(countUp).toContain('role="status" aria-label=');
   });
 
-  it('verifies llms.txt route handler exists, has correct headers, and proxy config excludes it', () => {
+  it('verifies llms.txt route handler exists, has correct headers, and the proxy excludes ALL static files (ISR reconciliation)', () => {
     const routeContent = fs.readFileSync(path.join(root, 'src/app/llms.txt/route.ts'), 'utf8');
     expect(routeContent).toContain("'Content-Type': 'text/plain; charset=utf-8'");
     expect(routeContent).toContain('Cache-Control');
     expect(routeContent).toContain('public');
 
     const proxyContent = fs.readFileSync(path.join(root, 'src/proxy.ts'), 'utf8');
-    expect(proxyContent).toContain(String.raw`llms\.txt`);
+    // Phase 22 ISR reconciliation (commit 7041013): the proxy matcher now
+    // excludes every dotted (static-file) path instead of listing known files
+    // one by one — a file request never needs language routing.
+    expect(proxyContent).toContain(String.raw`.*\\..*`);
   });
 
   it('verifies home.tsx code-splits below-the-fold sections with next/dynamic', () => {
