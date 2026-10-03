@@ -31,6 +31,9 @@ import type { RawListing, SourceHandle } from './types';
 import { resolveImportedOpportunityStatus } from './publication-policy';
 import { preserveAdminFields } from './preserve-admin-fields';
 import { PRIMARY_OPPORTUNITY_KEYS } from '@/lib/automation/import-selection';
+import { resolveCrossSource, mergeIntoCanonical, extractVacancyNumber } from './canonical-resolver';
+import { ensureSourceObservation, parseSourcePublishedAt, resolveSourceRole } from './source-observations';
+import { resolveOrganization } from '@/lib/organizations/resolve';
 
 /** True when this source has ever produced imported/updated opportunities. */
 async function hasEverImported(sourceId: string): Promise<boolean> {
@@ -425,6 +428,51 @@ async function processListing(
     return;
   }
 
+  // Canonical organization link — only when the organization is ALREADY
+  // canonicalized; creating organizations is a deliberate Phase 2/admin
+  // decision, never an import side effect.
+  let organizationId: string | null = null;
+  if (listing.organization?.trim()) {
+    try {
+      const org = await resolveOrganization(db, listing.organization, { createIfMissing: false });
+      organizationId = org?.organization?.id ?? null;
+    } catch { /* organization resolution must never break an import */ }
+  }
+
+  // Cross-source canonical resolution (Phase 4): when NO same-source match
+  // exists, check whether a DIFFERENT source already carries this vacancy.
+  // High confidence → attach an observation to the canonical row instead of
+  // creating a duplicate; medium confidence → create, but record the candidate
+  // on the observation for the Discovery Inbox. dedupe.ts is untouched.
+  let crossReview: { candidateId: string; confidence: number; reasons: string[] } | null = null;
+  if (dedupe.action === 'create' && listing.organization?.trim()) {
+    try {
+      const incomingRole = resolveSourceRole({ sourceName: source.name, scraperKey: source.scraperKey });
+      const cross = await resolveCrossSource(db, listing, {
+        sourceId: source.id, sourceName: source.name, scraperKey: source.scraperKey, incomingRole,
+      });
+      if (cross.decision === 'merge' && cross.candidate) {
+        const merged = await mergeIntoCanonical(db, listing, {
+          sourceId: source.id, sourceName: source.name, scraperKey: source.scraperKey, incomingRole,
+        }, cross.candidate.opportunityId, {
+          applyUrl: listing.applyUrl || null,
+          deadline: safeDate(listing.deadline),
+          organizationId,
+          contentHash: preHash,
+        });
+        counters.duplicates++;
+        counters.skipped++;
+        console.log(`[import] canonical merge: "${listing.title}" from ${source.name} → opportunity ${cross.candidate.opportunityId} (confidence ${cross.confidence}; promoted: ${merged.promoted.join(', ') || 'none'})`);
+        return;
+      }
+      if (cross.decision === 'review' && cross.candidate) {
+        crossReview = { candidateId: cross.candidate.opportunityId, confidence: cross.confidence, reasons: cross.reasons };
+      }
+    } catch (e) {
+      console.warn('[import] cross-source resolution failed (continuing):', (e as Error).message);
+    }
+  }
+
   // The content hash excludes application links. A feed can add an explicit
   // Apply anchor without changing article text, so heal a fallback before the
   // unchanged-content fast paths below return. Preserve existing real links.
@@ -644,7 +692,8 @@ async function processListing(
         seoTitle: true, seoDescription: true, seoTitleI18n: true, seoDescriptionI18n: true,
         ogTitle: true, ogDescription: true, ogTitleI18n: true, ogDescriptionI18n: true,
         extractedData: true, extractedDataI18n: true,
-        applyUrl: true, sourceUrl: true, originalUrl: true },
+        applyUrl: true, sourceUrl: true, originalUrl: true,
+        organizationId: true },
     });
     // A later import with only a source-article fallback must not erase an
     // application destination or country that an administrator verified.
@@ -671,6 +720,7 @@ async function processListing(
       data: {
         ...updateData,
         slug: newSlug,
+        ...(existing && !existing.organizationId && organizationId ? { organizationId } : {}),
         // Omit status from the UPDATE, including any AI-produced value.
         // Rewriting a previously read status could undo a concurrent admin edit.
         status: undefined,
@@ -696,6 +746,7 @@ async function processListing(
         slug,
         sort: 0,
         categoryId,
+        organizationId,
         locations: { create: locationRows },
       } as unknown as Prisma.OpportunityUncheckedCreateInput,
     });
@@ -708,6 +759,32 @@ async function processListing(
   // Whatever the budget does not finish stays queued for the background tick;
   // public fa/ps fields are only ever written by an atomic 100% commit.
   const targetId = dedupe.action === 'update' ? dedupe.existing.id : createdId;
+
+  // Source observation (Phase 3/4): record WHERE this sighting happened, on
+  // both the create and the update path. A review-band cross-source candidate
+  // rides along in rawData for the Discovery Inbox.
+  if (targetId) {
+    try {
+      await ensureSourceObservation(db, {
+        opportunityId: targetId,
+        sourceName: source.name,
+        sourceRole: resolveSourceRole({ sourceName: source.name, scraperKey: source.scraperKey }),
+        sourceUrl: listing.sourceUrl ?? null,
+        importSourceId: source.id,
+        organizationId,
+        sourcePublishedAt: parseSourcePublishedAt(listing.publishedDate ?? null),
+        contentHash: hash,
+        vacancyNumber: extractVacancyNumber(listing),
+        observedApplyUrl: applyUrl,
+        observedDeadline: importFields.deadline,
+        rawData: crossReview ? { matchReview: crossReview } : undefined,
+        seenAt: new Date(),
+      });
+    } catch (e) {
+      console.warn('[import] source observation failed (continuing):', (e as Error).message);
+    }
+  }
+
   if (targetId && !bounded) {
     try {
       const { processOpportunityNow } = await import('@/lib/ai/translate-engine');
