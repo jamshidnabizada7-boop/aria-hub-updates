@@ -296,6 +296,7 @@ model Organization {
   aliases            OrganizationAlias[]
   opportunities      Opportunity[]
   observations       OpportunitySourceObservation[]
+  sources            ImportSource[]
 }
 
 // ─── Controlled organization name aliases ────────────────────────────────────
@@ -472,6 +473,21 @@ model ImportSource {
   scheduleMinutes Int         @default(60) // informational; runs are admin-triggered
   defaultCategory String? // opportunity category slug hint
   config          String? // JSON: selectors, filters, API options, etc.
+
+  // ── V2 registry (Phase 6): production-grade source management ──
+  organizationId  String? // owning Organization (official sources belong to one)
+  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  sourceRole      String? // explicit role; falls back to the scraperKey→role mapping
+  priority        Int         @default(50) // scheduling priority (100 employer … 20 discovery)
+  trustScore      Int? // 0-100; baseline derived from role when null
+  nextRunAt       DateTime? // due when <= now (worker scheduling, Phase 8)
+  lastSuccessAt   DateTime?
+  lastFailureAt   DateTime?
+  consecutiveFailures Int     @default(0)
+  backoffUntil    DateTime? // exponential backoff after 429/403/5xx/challenges
+  healthStatus    String      @default("healthy") // healthy | degraded | blocked | paused | pending_configuration
+  supportsDelta   Boolean     @default(false) // source can report changes since last run
+
   lastRunAt       DateTime?
   lastRunStatus   String? // ok | error | partial
   lastRunStats    String? // JSON summary of last run
@@ -479,6 +495,10 @@ model ImportSource {
   observations    OpportunitySourceObservation[]
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
+
+  @@index([nextRunAt])
+  @@index([priority])
+  @@index([healthStatus])
 }
 
 // ─── Import run logs (one row per import execution) ──────────────────────────
