@@ -53,12 +53,15 @@ describe('detectChanges', () => {
   });
 
   test('apply URL change (normalized), salary, requirements and description changes detected', () => {
-    const urlChanged = detectChanges(existing, { ...base, applyUrl: 'https://www.acted.org/en/jobs/po/?utm_source=x' });
+    const unchanged: RawListing = {
+      ...base, deadline: '2026-12-31', applyUrl: existing.applyUrl, salary: '1000 USD',
+      country: 'Afghanistan', requirements: 'Three years of experience.',
+    };
     // tracking params are normalized away → NOT a change
-    expect(urlChanged).toEqual([]);
+    expect(detectChanges(existing, { ...unchanged, applyUrl: 'https://www.acted.org/en/jobs/po/?utm_source=x' })).toEqual([]);
 
     const real = detectChanges(existing, {
-      ...base, applyUrl: 'mailto:jobs@acted.org', salary: '1200 USD',
+      ...unchanged, applyUrl: 'mailto:jobs@acted.org', salary: '1200 USD',
       requirements: 'Five years of experience.', description: 'Updated description.',
     });
     expect(real).toContain('apply-url-changed');
