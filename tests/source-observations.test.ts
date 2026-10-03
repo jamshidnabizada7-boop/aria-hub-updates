@@ -148,6 +148,7 @@ describeIf(dbUp)('ensureSourceObservation & backfill (db)', () => {
   });
 
   test('backfill: dry-run by default, apply writes correct roles, legacy fields untouched', async () => {
+    // whole-table scan over the shared DB — needs more than bun's 5s default
     await db.opportunity.create({
       data: { slug: slugs[1], title: 'Obs Job B', description: 'x'.repeat(80), status: 'published', sourceName: 'Employer', applyUrl: 'mailto:hr@company.org' },
     });
@@ -204,5 +205,5 @@ describeIf(dbUp)('ensureSourceObservation & backfill (db)', () => {
     // by obsCount above).
     expect(rerun.created).toBeLessThanOrEqual(5);
     expect(rerun.updated).toBeGreaterThanOrEqual(2);
-  });
+  }, 120_000); // whole-table scan — bun's 5s default times out on the grown shared DB
 });
