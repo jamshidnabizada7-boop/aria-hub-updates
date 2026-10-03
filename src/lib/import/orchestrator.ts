@@ -204,9 +204,12 @@ async function runOneSource(
   try {
     if (!scraper) throw new Error(`No scraper registered for key "${source.scraperKey}"`);
 
-    // Deadline so serverless hosts (Vercel ~60s) don't kill the function mid-run.
-    // Long-running hosts (sandbox / cron workers) set IMPORT_GLOBAL_TIMEOUT_MS.
-    const GLOBAL_TIMEOUT = bounded ? 35_000 : parseInt(process.env.IMPORT_GLOBAL_TIMEOUT_MS || '45000', 10);
+    // Keep Vercel's bounded default at 35s; Oracle can use a larger budget
+    // without leaving new listings unprocessed after slow source page fetches.
+    const boundedTimeoutMs = Number(process.env.IMPORT_BOUNDED_TIMEOUT_MS);
+    const GLOBAL_TIMEOUT = bounded
+      ? (Number.isFinite(boundedTimeoutMs) && boundedTimeoutMs >= 35_000 && boundedTimeoutMs <= 300_000 ? boundedTimeoutMs : 35_000)
+      : parseInt(process.env.IMPORT_GLOBAL_TIMEOUT_MS || '45000', 10);
     scraper.deadline = startedAt + GLOBAL_TIMEOUT;
 
     let remainingNew = 0;
