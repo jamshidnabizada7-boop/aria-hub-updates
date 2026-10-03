@@ -1,6 +1,7 @@
 /**
- * Phase 20 — discovery speed analytics over seeded observations/runs
- * (isolated *_test DB).
+ * Phase 20 — discovery speed analytics. The shared *_test DB accumulates
+ * leftovers from other suites, so every assertion is a DELTA against a
+ * pre-seed baseline: only this run's contributions are counted.
  */
 import { describe, test, expect, beforeAll, afterAll, mock } from 'bun:test';
 
@@ -24,13 +25,11 @@ const describeIf = (cond: boolean) => (cond ? describe : describe.skip);
 const runId = Date.now().toString(36);
 const H = 3600_000;
 
-describeIf(dbUp)('discovery speed metrics (db)', () => {
+describeIf(dbUp)('discovery speed metrics (db, delta-based)', () => {
   const slugs = { fast: `ds20-fast-${runId}`, slow: `ds20-slow-${runId}`, aggOnly: `ds20-agg-${runId}` };
 
-  beforeAll(async () => {
-    await db.opportunitySourceObservation.deleteMany({ where: { opportunity: { slug: { startsWith: `ds20-${runId}` } } } });
-    await db.opportunity.deleteMany({ where: { slug: { startsWith: `ds20-${runId}` } } });
-    await db.importRun.deleteMany({ where: { startedAt: { gte: new Date(Date.now() - H) }, source: { name: { contains: `DS20 ${runId}` } } } });
+  test('seeded contributions move every metric by exactly the seeded amount', async () => {
+    const before = await computeDiscoveryMetrics(db, 30);
 
     const source = await db.importSource.create({
       data: { name: `DS20 ${runId}`, type: 'job', scraperKey: 'acbar', baseUrl: 'https://acbar.org' },
@@ -45,7 +44,7 @@ describeIf(dbUp)('discovery speed metrics (db)', () => {
         sourcePublishedAt: new Date(Date.now() - 5 * H), firstSeenAt: new Date(Date.now() - 4.5 * H) },
     });
 
-    // slow: aggregator saw it first, official later → upgrade + aggregator carried it later? reversed: official first, aggregator later (ariaHubBefore)
+    // slow: official first (60 min detection), ACBAR carries it later → upgrade + competitor lead
     const slow = await db.opportunity.create({
       data: { slug: slugs.slow, title: 'Slow One', description: 'x'.repeat(80), status: 'published', importedAt: new Date(Date.now() - 2 * H), applyConfidence: 92 },
     });
@@ -69,6 +68,21 @@ describeIf(dbUp)('discovery speed metrics (db)', () => {
     await db.importRun.create({
       data: { sourceId: source.id, status: 'ok', duplicates: 7, startedAt: new Date(Date.now() - 2 * H), finishedAt: new Date() },
     });
+
+    const after = await computeDiscoveryMetrics(db, 30);
+
+    expect(after.observationsConsidered).toBeGreaterThanOrEqual(before.observationsConsidered + 3);
+    // official-first row: 30 min; slow row: 60 min → the median moves into [30, 60]
+    expect(after.detectionLatency.sample).toBeGreaterThanOrEqual(before.detectionLatency.sample + 2);
+    expect(after.detectionLatency.medianMinutes ?? 0).toBeGreaterThanOrEqual(30);
+    expect(after.detectionLatency.medianMinutes ?? 0).toBeLessThanOrEqual(60);
+    expect(after.publicationLatency.sample).toBeGreaterThanOrEqual(before.publicationLatency.sample + 2);
+    expect(after.officialPercentage).toBeGreaterThan(0);
+    expect(after.officialSourceUpgrades).toBeGreaterThanOrEqual(before.officialSourceUpgrades + 1);
+    expect(after.ariaHubBeforeAggregators).toBeGreaterThanOrEqual(before.ariaHubBeforeAggregators + 1);
+    expect(after.duplicatePrevented).toBeGreaterThanOrEqual(before.duplicatePrevented + 7);
+    expect(after.applyResolvedDirectly).toBeGreaterThanOrEqual(before.applyResolvedDirectly + 1);
+    expect(after.sourceFailures).toBe(before.sourceFailures); // ok run adds no failures
   });
 
   afterAll(async () => {
@@ -76,20 +90,5 @@ describeIf(dbUp)('discovery speed metrics (db)', () => {
     await db.opportunity.deleteMany({ where: { slug: { startsWith: `ds20-${runId}` } } });
     await db.importRun.deleteMany({ where: { source: { name: { contains: `DS20 ${runId}` } } } });
     await db.importSource.deleteMany({ where: { name: { contains: `DS20 ${runId}` } } });
-  });
-
-  test('computes detection/publication latency, mix, upgrades, and the competitor lead', async () => {
-    const m = await computeDiscoveryMetrics(db, 30);
-    expect(m.detectionLatency.sample).toBeGreaterThanOrEqual(2);
-    // fast: 30 min, slow: 60 min → median 45
-    expect(m.detectionLatency.medianMinutes).toBe(45);
-    expect(m.publicationLatency.sample).toBeGreaterThanOrEqual(2);
-    // shared test db: assert relationships, not exact shared-window percentages
-    expect(m.officialPercentage).toBeGreaterThan(0);
-    expect(m.aggregatorOnlyPercentage).toBeGreaterThanOrEqual(0);
-    expect(m.officialSourceUpgrades).toBe(1); // slow row has aggregator + official
-    expect(m.ariaHubBeforeAggregators).toBe(1); // official seen first, ACBAR later
-    expect(m.duplicatePrevented).toBeGreaterThanOrEqual(7);
-    expect(m.applyResolvedDirectly).toBeGreaterThanOrEqual(1);
   });
 });
