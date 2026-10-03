@@ -8,7 +8,7 @@ import {
   Building, MapPin, ListChecks, Tag, Users, GitCompare, Megaphone,
   Menu as MenuIcon, Settings, LogOut, Plus, Pencil, Trash2, X, Search,
   TrendingUp, Mail, UserPlus, Eye, Loader2, Globe, Layers, Download, KeyRound, FileText,
-  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Activity, Inbox, Trophy, BellRing,
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Activity, Inbox, Trophy, BellRing, SearchCheck,
   BadgeDollarSign, BadgePercent, Bookmark, FolderOpen, History, MessageSquare, Rss, ShieldX, ThumbsUp, Timer,
   Wand2, Lightbulb, Zap,
 } from 'lucide-react';
@@ -32,6 +32,7 @@ import { AutoImportPanel } from '@/components/admin/auto-import-panel';
 import { TemplatesPanel } from '@/components/admin/templates-panel';
 import { SubmissionsPanel } from '@/components/admin/submissions-panel';
 import { ContentHealthPanel } from '@/components/admin/content-health-panel';
+import { DiscoveryInboxPanel } from '@/components/admin/discovery-inbox-panel';
 import { OrdersPanel } from '@/components/admin/orders-panel';
 // Social Kit merged into Brand Studio (R26) — one poster tool, one workflow.
 import { BrandStudioPanel } from '@/components/admin/brand-studio-panel';
@@ -52,6 +53,7 @@ const NAV: NavItem[] = [
   { key: 'automation', labelKey: 'admin.nav.automation', icon: Zap },
   { key: 'contentHealth', labelKey: 'admin.nav.contentHealth', icon: Activity },
   { key: 'submissions', labelKey: 'admin.nav.submissions', icon: Inbox },
+  { key: 'discovery', labelKey: 'admin.nav.discovery', icon: SearchCheck },
   // ── Opportunities & Content ──
   { header: 'admin.group.content' },
   { key: 'opportunity', labelKey: 'admin.nav.opportunities', icon: GraduationCap },
@@ -204,7 +206,7 @@ export function AdminApp({ admin }: { admin: AdminUser }) {
           </div>
         </header>
         <main className="flex-1 overflow-x-hidden p-4 lg:p-6">
-          {active === 'dashboard' ? <Dashboard onNavigate={setActive} /> : active === 'settings' ? <SettingsPanel /> : active === 'autoImport' ? <AutoImportPanel /> : active === 'documentTemplate' ? <TemplatesPanel /> : active === 'submissions' ? <SubmissionsPanel /> : active === 'contentHealth' ? <ContentHealthPanel onEditOpportunity={(id, issue) => { setRepairOpportunity({ id, issue }); setActive('opportunity'); }} /> : active === 'orders' ? <OrdersPanel /> : active === 'brandStudio' ? <BrandStudioPanel /> : active === 'automation' ? <AutomationPanel /> : active === 'opportunity' ? <OpportunityFormPanel focus={repairOpportunity} onFocusHandled={() => setRepairOpportunity(null)} /> : active === 'cvBuilder' ? <CVBuilderAdminPanel /> : <CrudTable model={active} />}
+          {active === 'dashboard' ? <Dashboard onNavigate={setActive} /> : active === 'settings' ? <SettingsPanel /> : active === 'autoImport' ? <AutoImportPanel /> : active === 'documentTemplate' ? <TemplatesPanel /> : active === 'submissions' ? <SubmissionsPanel /> : active === 'discovery' ? <DiscoveryInboxPanel onEditOpportunity={(id) => { setRepairOpportunity({ id, issue: 'core' }); setActive('opportunity'); }} /> : active === 'contentHealth' ? <ContentHealthPanel onEditOpportunity={(id, issue) => { setRepairOpportunity({ id, issue }); setActive('opportunity'); }} /> : active === 'orders' ? <OrdersPanel /> : active === 'brandStudio' ? <BrandStudioPanel /> : active === 'automation' ? <AutomationPanel /> : active === 'opportunity' ? <OpportunityFormPanel focus={repairOpportunity} onFocusHandled={() => setRepairOpportunity(null)} /> : active === 'cvBuilder' ? <CVBuilderAdminPanel /> : <CrudTable model={active} />}
         </main>
       </div>
     </div>
