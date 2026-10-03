@@ -258,12 +258,52 @@ model OpportunityCategory {
   updatedAt     DateTime      @updatedAt
 }
 
+// ─── Canonical organizations (first-class employers / publishers) ────────────
+// Slug convention: deterministic safe slug ("Norwegian Refugee Council" →
+// "norwegian-refugee-council", "UNICEF" → "unicef"); never renamed casually.
+// officialDomains: JSON array of canonical domains, e.g.
+//   ["unicef.org", "jobs.unicef.org"] — used later for apply-URL verification.
+// organizationType: ngo | un_agency | government | university | company |
+//   embassy | scholarship_provider | other (free string until hardened).
+// Backfill happens in a later phase — creation is deliberate, never automatic.
+model Organization {
+  id                 String        @id @default(cuid())
+  name               String
+  slug               String        @unique
+  nameI18n           Json? // { en: "...", fa: "...", ps: "..." }
+
+  logoUrl            String?
+  website            String?
+  careersUrl         String?
+
+  country            String?
+  organizationType   String?
+
+  description        String?
+  descriptionI18n    Json?
+
+  officialDomains    Json?
+
+  verified           Boolean       @default(false)
+  verificationMethod String? // how verified: official_email | manual_review | website_meta | ...
+  verifiedAt         DateTime?
+
+  active             Boolean       @default(true)
+
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  opportunities      Opportunity[]
+}
+
 model Opportunity {
   id              String               @id @default(cuid())
   title           String
   titleI18n       Json?
   slug            String               @unique
-  organization    String?
+  organization    String? // free-text display fallback; canonical link is organizationRef
+  organizationId  String? // FK to Organization — nullable, set only when the org is resolved
+  organizationRef Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
   country         String?
   deadline        DateTime?
   description     String
@@ -338,6 +378,7 @@ model Opportunity {
   extractedDataI18n    Json? // localized dynamic metadata scraped from the source
 
   @@index([categoryId])
+  @@index([organizationId])
   @@index([featured])
   @@index([status])
   @@index([sourceUrl])
