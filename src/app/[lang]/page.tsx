@@ -14,9 +14,9 @@ import {
 } from '@/lib/opportunity-queries';
 import { getFeaturedStoryCard } from '@/lib/success-story-queries';
 
-// The opportunity directory has a separate one-minute CDN cache. The home
-// page can refresh less often without delaying newly imported listings there.
-export const revalidate = 1800;
+// The opportunity directory has a separate one-minute CDN cache. Render home
+// on a CDN miss so its five-minute data caches cannot force ISR writes.
+export const revalidate = 0;
 
 export function generateStaticParams() {
   return [{ lang: 'en' }, { lang: 'fa' }, { lang: 'ps' }];

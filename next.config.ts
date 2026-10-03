@@ -5,6 +5,14 @@ const isDev = process.env.NODE_ENV === "development" || process.env.__NEXT_DEV =
 const nextConfig: NextConfig = {
   async headers() {
     return [{
+      // The public home page is the same for every visitor; the opportunity
+      // directory below retains its faster one-minute refresh.
+      source: '/:lang(en|fa|ps)',
+      headers: [{
+        key: 'Vercel-CDN-Cache-Control',
+        value: 's-maxage=1800, stale-while-revalidate=1800',
+      }],
+    }, {
       // The public feed is identical for visitors with the same URL. Cache
       // query variants separately at Vercel's CDN while keeping browsers live.
       source: '/:lang(en|fa|ps)/opportunities',
