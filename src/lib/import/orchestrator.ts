@@ -33,6 +33,7 @@ import { preserveAdminFields } from './preserve-admin-fields';
 import { PRIMARY_OPPORTUNITY_KEYS } from '@/lib/automation/import-selection';
 import { resolveCrossSource, mergeIntoCanonical, extractVacancyNumber } from './canonical-resolver';
 import { ensureSourceObservation, parseSourcePublishedAt, resolveSourceRole } from './source-observations';
+import { resolveApplyDestination } from '@/lib/apply-resolver';
 import { resolveOrganization } from '@/lib/organizations/resolve';
 
 /** True when this source has ever produced imported/updated opportunities. */
@@ -432,12 +433,16 @@ async function processListing(
   // canonicalized; creating organizations is a deliberate Phase 2/admin
   // decision, never an import side effect.
   let organizationId: string | null = null;
+  let organizationDomains: unknown = null;
   if (listing.organization?.trim()) {
     try {
       const org = await resolveOrganization(db, listing.organization, { createIfMissing: false });
       organizationId = org?.organization?.id ?? null;
+      organizationDomains = org?.organization?.officialDomains ?? null;
     } catch { /* organization resolution must never break an import */ }
   }
+
+  const incomingRole = resolveSourceRole({ sourceName: source.name, scraperKey: source.scraperKey });
 
   // Cross-source canonical resolution (Phase 4): when NO same-source match
   // exists, check whether a DIFFERENT source already carries this vacancy.
@@ -447,7 +452,6 @@ async function processListing(
   let crossReview: { candidateId: string; confidence: number; reasons: string[] } | null = null;
   if (dedupe.action === 'create' && listing.organization?.trim()) {
     try {
-      const incomingRole = resolveSourceRole({ sourceName: source.name, scraperKey: source.scraperKey });
       const cross = await resolveCrossSource(db, listing, {
         sourceId: source.id, sourceName: source.name, scraperKey: source.scraperKey, incomingRole,
       });
@@ -643,6 +647,20 @@ async function processListing(
 
   // Common import-tracking fields
   let applyUrl = (pipeline.data.applyUrl as string | null) || listing.applyUrl || null;
+
+  // Apply Destination Resolver V2 (Phase 5): role/domain-aware classification
+  // of the chosen candidate. Official sources linking to their own /apply/
+  // path classify as direct_application; aggregator same-host links stay
+  // fallbacks. Evidence + confidence are persisted for audit and for the
+  // later verification workflow (applyVerifiedAt is set only by checks).
+  const applyResolution = resolveApplyDestination({
+    applyUrl,
+    sourceUrl: listing.sourceUrl,
+    originalUrl: listing.originalUrl || null,
+    sourceRole: incomingRole,
+    organizationDomains,
+  });
+
   const finalCountry = resolveCountry(listing);
   const importFields = {
     sourceName: source.name,
@@ -663,7 +681,9 @@ async function processListing(
     organization: listing.organization || null,
     website: listing.website || null,
     applyUrl,
-    applyUrlType: classifyApplyUrl(applyUrl, listing.sourceUrl, listing.originalUrl),
+    applyUrlType: applyResolution.applyUrlType,
+    applyUrlEvidence: applyResolution.evidence,
+    applyConfidence: applyResolution.confidence,
     image: featured.path,
     logoUrl: logo.path || null,
     publishedDate: listing.publishedDate || null,  // String field in schema, no conversion needed
@@ -693,6 +713,7 @@ async function processListing(
         ogTitle: true, ogDescription: true, ogTitleI18n: true, ogDescriptionI18n: true,
         extractedData: true, extractedDataI18n: true,
         applyUrl: true, sourceUrl: true, originalUrl: true,
+        applyUrlEvidence: true, applyConfidence: true,
         organizationId: true },
     });
     // A later import with only a source-article fallback must not erase an
@@ -701,6 +722,9 @@ async function processListing(
       applyUrl = existing.applyUrl;
       importFields.applyUrl = existing.applyUrl;
       importFields.applyUrlType = classifyApplyUrl(existing.applyUrl, existing.sourceUrl, existing.originalUrl);
+      // keep the recorded provenance of a preserved destination
+      importFields.applyUrlEvidence = existing.applyUrlEvidence ?? importFields.applyUrlEvidence;
+      importFields.applyConfidence = existing.applyConfidence ?? importFields.applyConfidence;
     }
     if (existing?.country && !finalCountry) importFields.country = existing.country;
     const hasAdminEdit = source.scraperKey === 'jobsaf' && !!existing && Boolean(await db.auditLog.findFirst({

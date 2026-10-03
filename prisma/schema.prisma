@@ -335,6 +335,9 @@ model Opportunity {
   website         String?
   applyUrl        String?
   applyUrlType    String? // application_email | application_form | direct_application | source_article_fallback | unknown
+  applyUrlEvidence String? // machine-readable reason the destination was chosen (see src/lib/apply-resolver.ts)
+  applyConfidence Int?    // 0-100 trust in the destination (official ATS ≫ aggregator fallback)
+  applyVerifiedAt DateTime? // set when a human or an automated check confirms the destination
   locations       OpportunityLocation[]
   image           String?
   attachments     String? // JSON

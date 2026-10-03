@@ -14,7 +14,7 @@ import { normalizeOrgName } from './normalize';
 import type { OrgDbClient } from './types';
 
 export interface ResolveResult {
-  organization: { id: string; name: string; slug: string } | null;
+  organization: { id: string; name: string; slug: string; officialDomains?: unknown } | null;
   created: boolean;
   matchedVia: 'alias' | 'created' | null;
 }
@@ -60,6 +60,7 @@ export async function resolveOrganization(
         id: alias.organization.id,
         name: alias.organization.name,
         slug: alias.organization.slug,
+        officialDomains: alias.organization.officialDomains,
       },
       created: false,
       matchedVia: 'alias',
@@ -93,6 +94,7 @@ export async function resolveOrganization(
           id: raced.organization.id,
           name: raced.organization.name,
           slug: raced.organization.slug,
+          officialDomains: raced.organization.officialDomains,
         },
         created: false,
         matchedVia: 'alias',
@@ -100,7 +102,7 @@ export async function resolveOrganization(
     }
     throw new Error(`organization alias race unresolved for key "${key}"`);
   }
-  return { organization: { id: org.id, name: org.name, slug: org.slug }, created: true, matchedVia: 'created' };
+  return { organization: { id: org.id, name: org.name, slug: org.slug, officialDomains: org.officialDomains }, created: true, matchedVia: 'created' };
 }
 
 /**
