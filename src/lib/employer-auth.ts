@@ -103,3 +103,13 @@ export async function getCurrentEmployer(cookieValue: string | undefined | null)
   if (!user?.email) return null;
   return { id: user.id, email: user.email, name: user.name };
 }
+
+/** Pull the employer session straight off a Request (API routes). */
+export async function employerFromRequest(request: Request): Promise<EmployerUser | null> {
+  const header = request.headers.get('cookie') ?? '';
+  for (const part of header.split(';')) {
+    const [k, ...rest] = part.trim().split('=');
+    if (k === EMPLOYER_SESSION_COOKIE) return getCurrentEmployer(rest.join('='));
+  }
+  return null;
+}
