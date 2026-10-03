@@ -8,6 +8,7 @@
  *   bun run scripts/run-import.ts --source=o4af         # one source (scraperKey or name)
  *   bun run scripts/run-import.ts --all                 # run every enabled source sequentially
  *   bun run scripts/run-import.ts --source=acbar --force
+ *   bun run scripts/run-import.ts --source=X --bounded    # no AI calls (manual-translation policy)
  */
 
 import { readFileSync } from 'node:fs';
@@ -48,6 +49,7 @@ const flag = (name: string): string | undefined => {
 const sourceArg = flag('source');
 const runAll = args.includes('--all');
 const force = args.includes('--force');
+const bounded = args.includes('--bounded'); // no AI calls: enrichment skipped, translation stays pending
 
 async function main(): Promise<void> {
   const { runImport } = await import('../src/lib/import/orchestrator');
@@ -58,7 +60,7 @@ async function main(): Promise<void> {
     for (const s of sources) {
       console.log(`\n=== Import: ${s.name} (${s.scraperKey}) ===`);
       try {
-        const summary = await runImport({ sourceId: s.id, triggeredBy: 'cli', force });
+        const summary = await runImport({ sourceId: s.id, triggeredBy: 'cli', force, bounded });
         console.log(JSON.stringify(summary));
       } catch (e) {
         console.error(`FAILED: ${(e as Error).message}`);
@@ -70,10 +72,10 @@ async function main(): Promise<void> {
     });
     if (!s) throw new Error(`Import source "${sourceArg}" not found`);
     console.log(`\n=== Import: ${s.name} (${s.scraperKey}) ===`);
-    const summary = await runImport({ sourceId: s.id, triggeredBy: 'cli', force });
+    const summary = await runImport({ sourceId: s.id, triggeredBy: 'cli', force, bounded });
     console.log(JSON.stringify(summary, null, 2));
   } else {
-    const summary = await runImport({ triggeredBy: 'cli', force });
+    const summary = await runImport({ triggeredBy: 'cli', force, bounded });
     console.log(JSON.stringify(summary, null, 2));
   }
 }

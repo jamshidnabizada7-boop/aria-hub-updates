@@ -124,8 +124,8 @@ try {
   console.error('REFUSING: DATABASE_URL is not parseable.');
   process.exit(1);
 }
-if (!['127.0.0.1', 'localhost', '::1'].includes(host)) {
-  console.error(`REFUSING: DATABASE_URL points at "${host}" — this seed is local-only in this phase.`);
+if (!['127.0.0.1', 'localhost', '::1'].includes(host) && process.env.BACKFILL_ALLOW_REMOTE !== '1') {
+  console.error(`REFUSING: DATABASE_URL points at "${host}" — set BACKFILL_ALLOW_REMOTE=1 to override (authorized production rollout).`);
   process.exit(1);
 }
 

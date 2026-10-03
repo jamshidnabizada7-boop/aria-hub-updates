@@ -53,6 +53,10 @@ try {
   dbUp = true;
 } catch { dbUp = false; }
 
+// The E2E story asserts Persian commits at import time — opt into
+// translation-on-import for this suite only (default is manual-only).
+process.env.IMPORT_TRANSLATE_ON_IMPORT = '1';
+
 const describeIf = (cond: boolean) => (cond ? describe : describe.skip);
 const runId = Date.now().toString(36);
 const DAY = 24 * 3600_000;

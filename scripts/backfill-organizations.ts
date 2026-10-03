@@ -31,8 +31,8 @@ try {
   console.error('REFUSING TO RUN: DATABASE_URL is not a parseable connection string.');
   process.exit(1);
 }
-if (!['127.0.0.1', 'localhost', '::1'].includes(host)) {
-  console.error(`REFUSING TO RUN: DATABASE_URL points at "${host}" — this script is local-only.`);
+if (!['127.0.0.1', 'localhost', '::1'].includes(host) && process.env.BACKFILL_ALLOW_REMOTE !== '1') {
+  console.error(`REFUSING TO RUN: DATABASE_URL points at "${host}" — set BACKFILL_ALLOW_REMOTE=1 to override (authorized production rollout).`);
   console.error('Override DATABASE_URL to a local database if you really mean it.');
   process.exit(1);
 }

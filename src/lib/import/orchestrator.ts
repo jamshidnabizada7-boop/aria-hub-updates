@@ -872,7 +872,11 @@ async function processListing(
     }
   }
 
-  if (targetId && !bounded) {
+  // Translation-on-import is OPT-IN (release policy: MANUAL-ONLY translation).
+  // New rows enter faStatus/psStatus 'pending' and stay there until the
+  // approved translation workflow handles them. Set IMPORT_TRANSLATE_ON_IMPORT=1
+  // only in environments where automatic AI translation is explicitly wanted.
+  if (targetId && !bounded && process.env.IMPORT_TRANSLATE_ON_IMPORT === '1') {
     try {
       const { processOpportunityNow } = await import('@/lib/ai/translate-engine');
       await processOpportunityNow(targetId, 90_000);
