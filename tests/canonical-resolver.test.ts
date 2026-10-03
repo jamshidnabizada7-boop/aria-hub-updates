@@ -147,6 +147,28 @@ describeIf(dbUp)('resolveCrossSource & mergeIntoCanonical (db)', () => {
     expect(result.candidate?.opportunityId).toBe(existing.id);
   });
 
+  test('mandatory case: DIFFERENT vacancy numbers stay separate even when title+deadline match', async () => {
+    const org = (await resolveOrganization(db, orgName)).organization!;
+    await db.opportunity.create({
+      data: {
+        slug: `canon-vacdiff-${runId}`, title: 'Programme Officer', description: 'x'.repeat(80),
+        status: 'published', sourceName: 'Test Org Careers', organization: orgName,
+        organizationId: org.id, deadline: new Date(deadline),
+        extractedData: { vacancyNumber: 'VA-2026-001' },
+      },
+    });
+    oppSlugs.push(`canon-vacdiff-${runId}`);
+
+    const result = await resolveCrossSource(db, {
+      title: 'Programme Officer', organization: orgName, sourceName: 'ACBAR',
+      sourceUrl: `https://acbar.org/ad/vd-${runId}`, deadline,
+      extractedData: { vacancyNumber: 'VA-2026-999' },
+    } as any, ctxAgg);
+    // the employer stated two different vacancy numbers — never merge
+    expect(result.decision).toBe('new');
+    expect(result.reasons).toContain('different vacancy numbers');
+  });
+
   test('Level B — same organization + vacancy-specific apply URL merges at 92', async () => {
     const org = (await resolveOrganization(db, orgName)).organization!;
     await db.opportunity.create({

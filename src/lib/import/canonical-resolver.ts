@@ -183,6 +183,11 @@ export function scoreCandidate(
     // Level A — organization + official vacancy/reference number
     return [100, [...reasons, 'same vacancy number']];
   }
+  if (incoming.vacancyNumber && candVacancy) {
+    // mandatory case: BOTH sides state a vacancy number and they differ —
+    // the employer said these are different vacancies. Never merge.
+    return [60, [...reasons, 'different vacancy numbers']];
+  }
 
   const inApply = normalizeApplyUrl(incoming.applyUrl);
   const candApply = normalizeApplyUrl(candidate.applyUrl);
