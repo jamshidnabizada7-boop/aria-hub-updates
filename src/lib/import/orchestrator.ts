@@ -177,7 +177,7 @@ export async function runImport(opts: RunImportOptions = {}): Promise<RunSummary
 /** Run the pipeline for a single source. */
 async function runOneSource(
   db: PrismaClient,
-  source: { id: string; name: string; type: string; scraperKey: string; baseUrl: string; config: string | null; defaultCategory: string | null; autoPublish: boolean },
+  source: { id: string; name: string; type: string; scraperKey: string; baseUrl: string; config: string | null; defaultCategory: string | null; autoPublish: boolean; sourceRole: string | null },
   triggeredBy: string,
   force: boolean,
   bounded: boolean,
@@ -386,7 +386,7 @@ async function processListing(
   db: PrismaClient,
   scraper: any,
   listing: RawListing,
-  source: { id: string; name: string; type: string; scraperKey: string; baseUrl: string; config: string | null; defaultCategory: string | null; autoPublish: boolean },
+  source: { id: string; name: string; type: string; scraperKey: string; baseUrl: string; config: string | null; defaultCategory: string | null; autoPublish: boolean; sourceRole: string | null },
   categories: Array<{ id: string; slug: string; name: string }>,
   knownSlugs: string[],
   counters: { found: number; imported: number; updated: number; skipped: number; duplicates: number; failed: number },
@@ -442,7 +442,9 @@ async function processListing(
     } catch { /* organization resolution must never break an import */ }
   }
 
-  const incomingRole = resolveSourceRole({ sourceName: source.name, scraperKey: source.scraperKey });
+  const incomingRole = resolveSourceRole({
+    sourceName: source.name, scraperKey: source.scraperKey, explicitRole: source.sourceRole,
+  });
 
   // Cross-source canonical resolution (Phase 4): when NO same-source match
   // exists, check whether a DIFFERENT source already carries this vacancy.
@@ -792,7 +794,9 @@ async function processListing(
       await ensureSourceObservation(db, {
         opportunityId: targetId,
         sourceName: source.name,
-        sourceRole: resolveSourceRole({ sourceName: source.name, scraperKey: source.scraperKey }),
+        sourceRole: resolveSourceRole({
+          sourceName: source.name, scraperKey: source.scraperKey, explicitRole: source.sourceRole,
+        }),
         sourceUrl: listing.sourceUrl ?? null,
         importSourceId: source.id,
         organizationId,
