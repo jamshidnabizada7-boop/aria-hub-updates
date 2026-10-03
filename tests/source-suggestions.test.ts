@@ -85,7 +85,7 @@ describeIf(dbUp)('source suggestions (db)', () => {
     expect(after!.status).toBe('confirmed');
     expect(after!.organizationId).toBeTruthy();
     // and the org now resolves by the suggested name
-    expect((await resolveOrganization(db, displayName, { createIfMissing: false })).organization?.id).toBe(after!.organizationId);
+    expect((await resolveOrganization(db, displayName, { createIfMissing: false })).organization?.id ?? null).toBe(after!.organizationId ?? null);
 
     // dismissal path
     await recordSuggestion(db, { displayName: `Dismissed Org ${runId}`, applyEmail: `contact@dismissed-${runId}.org` });
