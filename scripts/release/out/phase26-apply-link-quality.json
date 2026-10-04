@@ -1,0 +1,2837 @@
+{
+  "summary": {
+    "ACBAR": {
+      "sampled": 182,
+      "nullApply": 17,
+      "genericEmail": 2,
+      "sameHost": 0,
+      "staleDeadline": 0
+    },
+    "Wazifaha Jobs": {
+      "sampled": 189,
+      "nullApply": 0,
+      "genericEmail": 4,
+      "sameHost": 55,
+      "staleDeadline": 0
+    },
+    "Jobs.af": {
+      "sampled": 76,
+      "nullApply": 0,
+      "genericEmail": 0,
+      "sameHost": 73,
+      "staleDeadline": 0
+    },
+    "Scholarships Corner": {
+      "sampled": 92,
+      "nullApply": 0,
+      "genericEmail": 1,
+      "sameHost": 19,
+      "staleDeadline": 0
+    },
+    "Opportunities For Youth": {
+      "sampled": 113,
+      "nullApply": 0,
+      "genericEmail": 0,
+      "sameHost": 76,
+      "staleDeadline": 0
+    },
+    "Employer": {
+      "sampled": 0,
+      "nullApply": 0,
+      "genericEmail": 0,
+      "sameHost": 0,
+      "staleDeadline": 0
+    },
+    "ReliefWeb Jobs (OCHA)": {
+      "sampled": 0,
+      "nullApply": 0,
+      "genericEmail": 0,
+      "sameHost": 0,
+      "staleDeadline": 0
+    },
+    "Acted Vacancies": {
+      "sampled": 0,
+      "nullApply": 0,
+      "genericEmail": 0,
+      "sameHost": 0,
+      "staleDeadline": 0
+    }
+  },
+  "distribution": {
+    "ACBAR": {
+      "sampled": 182,
+      "types": {
+        "application_email": 126,
+        "unknown": 17,
+        "application_form": 24,
+        "direct_application": 15
+      }
+    },
+    "Wazifaha Jobs": {
+      "sampled": 189,
+      "types": {
+        "source_article_fallback": 54,
+        "application_email": 109,
+        "application_form": 20,
+        "direct_application": 6
+      }
+    },
+    "Jobs.af": {
+      "sampled": 76,
+      "types": {
+        "application_email": 2,
+        "direct_application": 1,
+        "source_article_fallback": 73
+      }
+    },
+    "Scholarships Corner": {
+      "sampled": 92,
+      "types": {
+        "direct_application": 67,
+        "application_form": 3,
+        "application_email": 3,
+        "source_article_fallback": 19
+      }
+    },
+    "Opportunities For Youth": {
+      "sampled": 113,
+      "types": {
+        "application_email": 33,
+        "source_article_fallback": 76,
+        "direct_application": 2,
+        "application_form": 2
+      }
+    },
+    "Employer": {
+      "sampled": 0,
+      "types": {}
+    },
+    "ReliefWeb Jobs (OCHA)": {
+      "sampled": 0,
+      "types": {}
+    },
+    "Acted Vacancies": {
+      "sampled": 0,
+      "types": {}
+    }
+  },
+  "flagged": [
+    {
+      "source": "ACBAR",
+      "slug": "job-opportunity-dairy-plant-operator-mido-dairy",
+      "title": "Job Opportunity: Dairy Plant Operator – MIDO Dairy",
+      "applyUrl": "mailto:info@mido-dairy.com",
+      "sourceUrl": "https://www.acbar.org/en/jobs/details/135649/job-opportunity-dairy-plant-operator-mido-dairy",
+      "applyUrlType": "application_email",
+      "reasons": [
+        "generic email (info@…)"
+      ]
+    },
+    {
+      "source": "ACBAR",
+      "slug": "security-guard-supervisor",
+      "title": "Security Guard Supervisor",
+      "applyUrl": null,
+      "sourceUrl": "https://www.acbar.org/en/jobs/details/138420/security-guard-supervisor",
+      "applyUrlType": "unknown",
+      "reasons": [
+        "applyUrl NULL on published"
+      ]
+    },
+    {
+      "source": "ACBAR",
+      "slug": "ai-teacher-2",
+      "title": "AI TEACHER",
+      "applyUrl": null,
+      "sourceUrl": "https://www.acbar.org/en/jobs/details/142322/ai-teacher",
+      "applyUrlType": "unknown",
+      "reasons": [
+        "applyUrl NULL on published"
+      ]
+    },
+    {
+      "source": "ACBAR",
+      "slug": "quality-control-quality-assurance-consultant",
+      "title": "Quality Control & Quality Assurance Consultant",
+      "applyUrl": null,
+      "sourceUrl": "https://www.acbar.org/en/jobs/details/144428/quality-control-quality-assurance-consultant",
+      "applyUrlType": "unknown",
+      "reasons": [
+        "applyUrl NULL on published"
+      ]
+    },
+    {
+      "source": "ACBAR",
+      "slug": "online-sales-representative",
+      "title": "فروشنده آنلاین (Online Sales Representative)",
+      "applyUrl": null,
+      "sourceUrl": "https://www.acbar.org/en/jobs/details/145418/froshndh-anlayn-online-sales-representative",
+      "applyUrlType": "unknown",
+      "reasons": [
+        "applyUrl NULL on published"
+      ]
+    },
+    {
+      "source": "ACBAR",
+      "slug": "chief-financial-officer-cfo",
+      "title": "Chief Financial Officer (CFO)",
+      "applyUrl": null,
+      "sourceUrl": "https://www.acbar.org/en/jobs/details/145593/chief-financial-officer-cfo",
+      "applyUrlType": "unknown",
+      "reasons": [
+        "applyUrl NULL on published"
+      ]
+    },
+    {
+      "source": "ACBAR",
+      "slug": "senior-programme-associate-gender-inclusion-and-aap-2",
+      "title": "Senior Programme Associate (Gender Inclusion and AAP)",
+      "applyUrl": null,
+      "sourceUrl": "https://www.acbar.org/en/jobs/details/145736/senior-programme-associate-gender-inclusion-and-aap",
+      "applyUrlType": "unknown",
+      "reasons": [
+        "applyUrl NULL on published"
+      ]
+    },
+    {
+      "source": "ACBAR",
+      "slug": "community-mobilizers-contingent-to-the-project-approval-by-the-donor-4",
+      "title": "Community Mobilizers (Contingent to the project approval by the donor)",
+      "applyUrl": null,
+      "sourceUrl": "https://www.acbar.org/en/jobs/details/145852/community-mobilizers-contingent-to-the-project-approval-by-the-donor",
+      "applyUrlType": "unknown",
+      "reasons": [
+        "applyUrl NULL on published"
+      ]
+    },
+    {
+      "source": "ACBAR",
+      "slug": "civil-engineer-2",
+      "title": "Civil Engineer",
+      "applyUrl": "mailto:info@professionaltrack.net",
+      "sourceUrl": "https://www.acbar.org/en/jobs/details/145869/civil-engineer",
+      "applyUrlType": "application_email",
+      "reasons": [
+        "generic email (info@…)"
+      ]
+    },
+    {
+      "source": "ACBAR",
+      "slug": "help-desk-assistant",
+      "title": "Help Desk Assistant",
+      "applyUrl": null,
+      "sourceUrl": "https://www.acbar.org/en/jobs/details/145940/help-desk-assistant",
+      "applyUrlType": "unknown",
+      "reasons": [
+        "applyUrl NULL on published"
+      ]
+    },
+    {
+      "source": "ACBAR",
+      "slug": "cleaner",
+      "title": "Cleaner",
+      "applyUrl": null,
+      "sourceUrl": "https://www.acbar.org/en/jobs/details/145846/cleaner",
+      "applyUrlType": "unknown",
+      "reasons": [
+        "applyUrl NULL on published"
+      ]
+    },
+    {
+      "source": "ACBAR",
+      "slug": "project-manager-5",
+      "title": "Project Manager",
+      "applyUrl": null,
+      "sourceUrl": "https://www.acbar.org/en/jobs/details/145930/project-manager",
+      "applyUrlType": "unknown",
+      "reasons": [
+        "applyUrl NULL on published"
+      ]
+    },
+    {
+      "source": "ACBAR",
+      "slug": "opportunity-28",
+      "title": "مدیر ارشد رعایت و پیروی از قانون",
+      "applyUrl": null,
+      "sourceUrl": "https://www.acbar.org/en/jobs/details/145884/mdyr-arshd-raaayt-o-pyroy-az-kanon",
+      "applyUrlType": "unknown",
+      "reasons": [
+        "applyUrl NULL on published"
+      ]
+    },
+    {
+      "source": "ACBAR",
+      "slug": "opportunity-27",
+      "title": "مدیر ارشد تحقیق و انکشاف",
+      "applyUrl": null,
+      "sourceUrl": "https://www.acbar.org/en/jobs/details/145885/mdyr-arshd-thkyk-o-ankshaf",
+      "applyUrlType": "unknown",
+      "reasons": [
+        "applyUrl NULL on published"
+      ]
+    },
+    {
+      "source": "ACBAR",
+      "slug": "opportunity-24",
+      "title": "مدیر ارشد تحلیل ریسک تکنالوژی معلوماتی",
+      "applyUrl": null,
+      "sourceUrl": "https://www.acbar.org/en/jobs/details/145886/mdyr-arshd-thlyl-rysk-tknalozhy-maalomaty",
+      "applyUrlType": "unknown",
+      "reasons": [
+        "applyUrl NULL on published"
+      ]
+    },
+    {
+      "source": "ACBAR",
+      "slug": "opportunity-23",
+      "title": "مدیر تحقیق و انکشاف رعایت قانون",
+      "applyUrl": null,
+      "sourceUrl": "https://www.acbar.org/en/jobs/details/145888/mdyr-thkyk-o-ankshaf-raaayt-kanon",
+      "applyUrlType": "unknown",
+      "reasons": [
+        "applyUrl NULL on published"
+      ]
+    },
+    {
+      "source": "ACBAR",
+      "slug": "opportunity-22",
+      "title": "مدیر ارزیابی ریسک حقوقی",
+      "applyUrl": null,
+      "sourceUrl": "https://www.acbar.org/en/jobs/details/145889/mdyr-arzyaby-rysk-hkoky",
+      "applyUrlType": "unknown",
+      "reasons": [
+        "applyUrl NULL on published"
+      ]
+    },
+    {
+      "source": "ACBAR",
+      "slug": "opportunity-21",
+      "title": "مدیر ارزیابی ریسک مارکیت",
+      "applyUrl": null,
+      "sourceUrl": "https://www.acbar.org/en/jobs/details/145890/mdyr-arzyaby-rysk-markyt",
+      "applyUrlType": "unknown",
+      "reasons": [
+        "applyUrl NULL on published"
+      ]
+    },
+    {
+      "source": "ACBAR",
+      "slug": "opportunity-18",
+      "title": "مدیر ارزیابی ریسک نقدینګی",
+      "applyUrl": null,
+      "sourceUrl": "https://www.acbar.org/en/jobs/details/145892/mdyr-arzyaby-rysk-nkdyny",
+      "applyUrlType": "unknown",
+      "reasons": [
+        "applyUrl NULL on published"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "procurement-assistant-re-announced",
+      "title": "Procurement Assistant (Re Announced)",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31684/procurement-assistant-re-announced",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31684/procurement-assistant-re-announced",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "finance-officer-5",
+      "title": "Finance Officer",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31687/finance-officer",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31687/finance-officer",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "admin-and-finance-officer",
+      "title": "Admin and Finance Officer",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31682/admin-and-finance-officer",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31682/admin-and-finance-officer",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "liaison-and-custom-clearance-officer",
+      "title": "Liaison and Custom Clearance Officer",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31678/liaison-and-custom-clearance-officer",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31678/liaison-and-custom-clearance-officer",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "hr-manager",
+      "title": "HR Manager",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31679/hr-manager",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31679/hr-manager",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "job-opportunity-dairy-plant-operator-mido-dairy-3",
+      "title": "Job Opportunity: Dairy Plant Operator – MIDO Dairy",
+      "applyUrl": "mailto:info@mido-dairy.com",
+      "sourceUrl": "https://www.wazifaha.org/jobs/22319/position-title-job-opportunity-dairy-plant-operator-mido-dairy",
+      "applyUrlType": "application_email",
+      "reasons": [
+        "generic email (info@…)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "para-veterinarian",
+      "title": "Para-veterinarian",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/27048/position-title-para-veterinarian",
+      "sourceUrl": "https://www.wazifaha.org/jobs/27048/position-title-para-veterinarian",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "veterinarian",
+      "title": "Veterinarian",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/27051/position-title-veterinarian",
+      "sourceUrl": "https://www.wazifaha.org/jobs/27051/position-title-veterinarian",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "chemistry-biology-geology-dari-math-physics-oxford-is-a-must-2",
+      "title": "Chemistry, Biology, Geology, Dari, Math, Physics, Oxford is a must",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/27832/position-title-chemistry-biology-geology-dari-math-physics-oxford-is-a-must",
+      "sourceUrl": "https://www.wazifaha.org/jobs/27832/position-title-chemistry-biology-geology-dari-math-physics-oxford-is-a-must",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "security-guard-supervisor-2",
+      "title": "Security Guard Supervisor",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/28865/security-guard-supervisor",
+      "sourceUrl": "https://www.wazifaha.org/jobs/28865/security-guard-supervisor",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "chemistry-biology-geology-dari-math-physics-oxford-is-a-must",
+      "title": "Chemistry, Biology, Geology, Dari, Math, Physics, Oxford is a must",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/28958/chemistry-biology-geology-dari-math-physics-oxford-is-a-must",
+      "sourceUrl": "https://www.wazifaha.org/jobs/28958/chemistry-biology-geology-dari-math-physics-oxford-is-a-must",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "job-opportunity-dairy-plant-operator-mido-dairy-2",
+      "title": "Job Opportunity: Dairy Plant Operator – MIDO Dairy",
+      "applyUrl": "mailto:info@mido-dairy.com",
+      "sourceUrl": "https://www.wazifaha.org/jobs/28961/job-opportunity-dairy-plant-operator-mido-dairy",
+      "applyUrlType": "application_email",
+      "reasons": [
+        "generic email (info@…)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "accountant-afghan-murad-high-school",
+      "title": "Accountant Afghan Murad High School",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/30576/accountant-afghan-murad-high-school",
+      "sourceUrl": "https://www.wazifaha.org/jobs/30576/accountant-afghan-murad-high-school",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "ai-teacher",
+      "title": "AI TEACHER",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/30958/ai-teacher",
+      "sourceUrl": "https://www.wazifaha.org/jobs/30958/ai-teacher",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "ecd-master-trainer-herat-female-only",
+      "title": "ECD-Master Trainer -Herat (Female Only )",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31206/ecd-master-trainer-herat-female-only",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31206/ecd-master-trainer-herat-female-only",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "chief-financial-officer-cfo-2",
+      "title": "Chief Financial Officer (CFO)",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31368/chief-financial-officer-cfo",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31368/chief-financial-officer-cfo",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "chief-operating-officer-coo-2",
+      "title": "Chief Operating Officer (COO)",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31370/chief-operating-officer-coo",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31370/chief-operating-officer-coo",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "help-desk-assistant-2",
+      "title": "Help Desk Assistant",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31672/help-desk-assistant",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31672/help-desk-assistant",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "partnership-coordinator-admin-finance-2",
+      "title": "Partnership Coordinator - Admin & Finance",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31674/partnership-coordinator-admin-finance",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31674/partnership-coordinator-admin-finance",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "facility-supervisor-2",
+      "title": "Facility Supervisor",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31527/facility-supervisor",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31527/facility-supervisor",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "hospital-director-2",
+      "title": "Hospital Director",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31532/hospital-director",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31532/hospital-director",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "qa-engineer-civil-site-supervision-2",
+      "title": "QA Engineer (Civil) – Site Supervision",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31533/qa-engineer-civil-site-supervision",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31533/qa-engineer-civil-site-supervision",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "payment-collection-officer",
+      "title": "Payment Collection Officer",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/29635/payment-collection-officer",
+      "sourceUrl": "https://www.wazifaha.org/jobs/29635/payment-collection-officer",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "translation-and-language-editing-specialist-pashto-dari-english-2",
+      "title": "Translation and Language Editing Specialist (Pashto, Dari, English)",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31547/translation-and-language-editing-specialist-pashto-dari-english",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31547/translation-and-language-editing-specialist-pashto-dari-english",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "finance-admin-officer",
+      "title": "Finance & Admin Officer",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31546/finance-admin-officer",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31546/finance-admin-officer",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "cleaner-office-support-staff",
+      "title": "Cleaner / Office Support Staff",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31545/cleaner-office-support-staff",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31545/cleaner-office-support-staff",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "sales-social-media-officer-1-female-1-male",
+      "title": "Sales & Social Media Officer (1 Female & 1 Male )",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31544/sales-social-media-officer-1-female-1-male",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31544/sales-social-media-officer-1-female-1-male",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "field-surveyor-2",
+      "title": "Field Surveyor",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31550/field-surveyor",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31550/field-surveyor",
+      "applyUrlType": "application_form",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "senior-programme-associate-gender-inclusion-and-aap-3",
+      "title": "Senior Programme Associate (Gender Inclusion and AAP)",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31552/senior-programme-associate-gender-inclusion-and-aap",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31552/senior-programme-associate-gender-inclusion-and-aap",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "technical-assistant-project-focal-point-echo-tor",
+      "title": "Technical Assistant (Project Focal Point/ECHO) TOR",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31595/technical-assistant-project-focal-pointecho-tor",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31595/technical-assistant-project-focal-pointecho-tor",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "mining-engineer",
+      "title": "Mining Engineer",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31596/mining-engineer",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31596/mining-engineer",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "cleaner-3",
+      "title": "Cleaner",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31597/cleaner",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31597/cleaner",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "specialized-board-administrative-and-professional-officer-2",
+      "title": "Specialized Board Administrative and Professional Officer",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31656/specialized-board-administrative-and-professional-officer",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31656/specialized-board-administrative-and-professional-officer",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "cleaner-2",
+      "title": "Cleaner",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31659/cleaner",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31659/cleaner",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "communications-specialist-2",
+      "title": "Communications Specialist",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31660/communications-specialist",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31660/communications-specialist",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "russian-pashto-dari-translator-interpreter",
+      "title": "Russian–Pashto–Dari Translator & Interpreter",
+      "applyUrl": "mailto:info@noorafroz.com",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31664/russian-pashto-dari-translator-interpreter",
+      "applyUrlType": "application_email",
+      "reasons": [
+        "generic email (info@…)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "logistics-officer-2",
+      "title": "Logistics Officer",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31661/logistics-officer",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31661/logistics-officer",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "project-manager-8",
+      "title": "Project Manager",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31663/project-manager",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31663/project-manager",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "communications-and-partnerships-senior-officer-2",
+      "title": "Communications and Partnerships Senior Officer",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31641/communications-and-partnerships-senior-officer",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31641/communications-and-partnerships-senior-officer",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "mental-health-promoter-2",
+      "title": "Mental Health Promoter",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31642/mental-health-promoter",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31642/mental-health-promoter",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "grants-finance-specialist-2",
+      "title": "Grants & Finance Specialist",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31643/grants-finance-specialist",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31643/grants-finance-specialist",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "medical-doctor-nawbahar-bhc-fixed-shahjoy-dh-backup-2",
+      "title": "Medical Doctor (Nawbahar BHC Fixed & Shahjoy DH Backup)",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31645/medical-doctor-nawbahar-bhc-fixed-shahjoy-dh-backup",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31645/medical-doctor-nawbahar-bhc-fixed-shahjoy-dh-backup",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "medical-doctor-female-re-announced-2",
+      "title": "Medical Doctor (Female) (Re Announced)",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31646/medical-doctor-female-re-announced",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31646/medical-doctor-female-re-announced",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "project-management-support-senior-officer-2",
+      "title": "Project Management Support - Senior Officer",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31647/project-management-support-senior-officer",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31647/project-management-support-senior-officer",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "nurse-3",
+      "title": "Nurse",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31649/nurse",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31649/nurse",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "clic-operator",
+      "title": "CLIC Operator",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31652/clic-operator",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31652/clic-operator",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "community-mobilizers-contingent-to-the-project-approval-by-the-donor-3",
+      "title": "Community Mobilizers (Contingent to the project approval by the donor)",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31599/community-mobilizers-contingent-to-the-project-approval-by-the-donor",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31599/community-mobilizers-contingent-to-the-project-approval-by-the-donor",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "community-mobilizers-contingent-to-the-project-approval-by-the-donor-2",
+      "title": "Community Mobilizers (Contingent to the project approval by the donor)",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31601/community-mobilizers-contingent-to-the-project-approval-by-the-donor",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31601/community-mobilizers-contingent-to-the-project-approval-by-the-donor",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "community-mobilizers-contingent-to-the-project-approval-by-the-donor",
+      "title": "Community Mobilizers (Contingent to the project approval by the donor)",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31603/community-mobilizers-contingent-to-the-project-approval-by-the-donor",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31603/community-mobilizers-contingent-to-the-project-approval-by-the-donor",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "technical-assistant-project-focal-point-echo",
+      "title": "Technical Assistant (Project Focal Point/ECHO)",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31609/technical-assistant-project-focal-pointecho",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31609/technical-assistant-project-focal-pointecho",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "civil-engineer",
+      "title": "Civil Engineer",
+      "applyUrl": "mailto:info@professionaltrack.net",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31618/civil-engineer",
+      "applyUrlType": "application_email",
+      "reasons": [
+        "generic email (info@…)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "monitoring-evaluation-specialist",
+      "title": "Monitoring & Evaluation Specialist",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31518/monitoring-evaluation-specialist",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31518/monitoring-evaluation-specialist",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "financing-assistant",
+      "title": "Financing Assistant",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31519/financing-assistant",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31519/financing-assistant",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "personnel-affairs-assistant",
+      "title": "Personnel Affairs Assistant",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31520/personnel-affairs-assistant",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31520/personnel-affairs-assistant",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "office-cleaner",
+      "title": "Office Cleaner",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31522/office-cleaner",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31522/office-cleaner",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "security-guard",
+      "title": "Security Guard",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31523/security-guard",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31523/security-guard",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "civil-engineer-specialist-officer",
+      "title": "Civil Engineer Specialist & Officer",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31524/civil-engineer-specialist-officer",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31524/civil-engineer-specialist-officer",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "driver",
+      "title": "Driver",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31525/driver",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31525/driver",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Wazifaha Jobs",
+      "slug": "senior-programme-associate-gender-inclusion-and-aap",
+      "title": "Senior Programme Associate (Gender Inclusion and AAP)",
+      "applyUrl": "https://www.wazifaha.org/jobs/apply/31493/senior-programme-associate-gender-inclusion-and-aap",
+      "sourceUrl": "https://www.wazifaha.org/jobs/31493/senior-programme-associate-gender-inclusion-and-aap",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (wazifaha.org)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "financing-expert",
+      "title": "Financing Expert",
+      "applyUrl": "https://www.jobs.af/jobs/financing-expert-48",
+      "sourceUrl": "https://www.jobs.af/jobs/financing-expert-48",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "senior-mern-full-stack-developer",
+      "title": "Senior MERN Full Stack Developer",
+      "applyUrl": "https://www.jobs.af/jobs/senior-mern-full-stack-developer-16",
+      "sourceUrl": "https://www.jobs.af/jobs/senior-mern-full-stack-developer-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "general-manager",
+      "title": "General Manager",
+      "applyUrl": "https://www.jobs.af/jobs/general-manager-63",
+      "sourceUrl": "https://www.jobs.af/jobs/general-manager-63",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "sourcing-r-d-engineer",
+      "title": "Sourcing & R&D Engineer",
+      "applyUrl": "https://www.jobs.af/jobs/sourcing-and-randd-engineer-16",
+      "sourceUrl": "https://www.jobs.af/jobs/sourcing-and-randd-engineer-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "opportunity-53",
+      "title": "آمریت تجارتی",
+      "applyUrl": "https://www.jobs.af/jobs/aamryt-tjarty-31",
+      "sourceUrl": "https://www.jobs.af/jobs/aamryt-tjarty-31",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "project-assistant",
+      "title": "Project Assistant",
+      "applyUrl": "https://www.jobs.af/jobs/project-assistant-78",
+      "sourceUrl": "https://www.jobs.af/jobs/project-assistant-78",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "opportunity-42",
+      "title": "مدیر ارزیابی ریسک نقدینګی",
+      "applyUrl": "https://www.jobs.af/jobs/mdyr-arzyaby-rysk-nqdyny-16",
+      "sourceUrl": "https://www.jobs.af/jobs/mdyr-arzyaby-rysk-nqdyny-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "pediatrician-child-specialist",
+      "title": "Pediatrician (Child Specialist)",
+      "applyUrl": "https://www.jobs.af/jobs/pediatrician-child-specialist-32",
+      "sourceUrl": "https://www.jobs.af/jobs/pediatrician-child-specialist-32",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "unarmed-guard-security-casual-3",
+      "title": "Unarmed Guard - Security (Casual)",
+      "applyUrl": "https://www.jobs.af/jobs/unarmed-guard-security-casual-31",
+      "sourceUrl": "https://www.jobs.af/jobs/unarmed-guard-security-casual-31",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "community-mobilizer-officer",
+      "title": "Community Mobilizer Officer",
+      "applyUrl": "https://www.jobs.af/jobs/community-mobilizer-officer-31",
+      "sourceUrl": "https://www.jobs.af/jobs/community-mobilizer-officer-31",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "opportunity-41",
+      "title": "آفیسر ارشد روابط بین الملل",
+      "applyUrl": "https://www.jobs.af/jobs/aafysr-arshd-rwabt-byn-almll-16",
+      "sourceUrl": "https://www.jobs.af/jobs/aafysr-arshd-rwabt-byn-almll-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "m-e-livelihood-officer",
+      "title": "M&E Livelihood Officer",
+      "applyUrl": "https://www.jobs.af/jobs/mande-livelihood-officer-16",
+      "sourceUrl": "https://www.jobs.af/jobs/mande-livelihood-officer-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "opportunity-40",
+      "title": "آفیسر فوتو گرافر",
+      "applyUrl": "https://www.jobs.af/jobs/aafysr-fwtw-grafr-31",
+      "sourceUrl": "https://www.jobs.af/jobs/aafysr-fwtw-grafr-31",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "group-financing-expert",
+      "title": "Group Financing Expert",
+      "applyUrl": "https://www.jobs.af/jobs/group-financing-expert-46",
+      "sourceUrl": "https://www.jobs.af/jobs/group-financing-expert-46",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "sales-officer-herat",
+      "title": "Sales Officer (Herat)",
+      "applyUrl": "https://www.jobs.af/jobs/sales-officer-herat-16",
+      "sourceUrl": "https://www.jobs.af/jobs/sales-officer-herat-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "sales-officer-kabul",
+      "title": "Sales Officer (Kabul)",
+      "applyUrl": "https://www.jobs.af/jobs/sales-officer-107",
+      "sourceUrl": "https://www.jobs.af/jobs/sales-officer-107",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "opportunity-35",
+      "title": "انجنیر ساحوی برق (تضمین و کنترول از کیفیت) - باالمقطع",
+      "applyUrl": "https://www.jobs.af/jobs/anjnyr-sahwy-brq-tdhmyn-w-kntrwl-az-kyfyt-baalmqta-16",
+      "sourceUrl": "https://www.jobs.af/jobs/anjnyr-sahwy-brq-tdhmyn-w-kntrwl-az-kyfyt-baalmqta-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "risk-manager",
+      "title": "Risk Manager",
+      "applyUrl": "https://www.jobs.af/jobs/risk-manager-63",
+      "sourceUrl": "https://www.jobs.af/jobs/risk-manager-63",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "opportunity-34",
+      "title": "(د آ ی سی یو مسؤل( ننگرهار",
+      "applyUrl": "https://www.jobs.af/jobs/d-aa-y-sy-yw-msul-nngrhar-16",
+      "sourceUrl": "https://www.jobs.af/jobs/d-aa-y-sy-yw-msul-nngrhar-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "opportunity-33",
+      "title": "انجنیر ساحوی سیول (تضمین و کنترول از کیفیت) - باالمقطع",
+      "applyUrl": "https://www.jobs.af/jobs/anjnyr-sahwy-sywl-tdhmyn-w-kntrwl-az-kyfyt-baalmqta-31",
+      "sourceUrl": "https://www.jobs.af/jobs/anjnyr-sahwy-sywl-tdhmyn-w-kntrwl-az-kyfyt-baalmqta-31",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "driver-2",
+      "title": "Driver (راننده)",
+      "applyUrl": "https://www.jobs.af/jobs/driver-ranndh",
+      "sourceUrl": "https://www.jobs.af/jobs/driver-ranndh",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "truck-kamaz-driver",
+      "title": "Truck/Kamaz Driver - راننده موتر کاماز",
+      "applyUrl": "https://www.jobs.af/jobs/truckkamaz-driver-ranndh-mwtr-kamaz",
+      "sourceUrl": "https://www.jobs.af/jobs/truckkamaz-driver-ranndh-mwtr-kamaz",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "it-graphic-design-officer",
+      "title": "IT & Graphic Design Officer",
+      "applyUrl": "https://www.jobs.af/jobs/it-and-graphic-design-officer-16",
+      "sourceUrl": "https://www.jobs.af/jobs/it-and-graphic-design-officer-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "enrollment-officer-2",
+      "title": "Enrollment Officer",
+      "applyUrl": "https://www.jobs.af/jobs/enrollment-officer-31",
+      "sourceUrl": "https://www.jobs.af/jobs/enrollment-officer-31",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "specialist-customer-value-management-cvm",
+      "title": "Specialist – Customer Value Management (CVM)",
+      "applyUrl": "https://www.jobs.af/jobs/specialist-customer-value-management-cvm",
+      "sourceUrl": "https://www.jobs.af/jobs/specialist-customer-value-management-cvm",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "project-coordinator-procurement-pcio-2",
+      "title": "Project Coordinator Procurement – PCIO",
+      "applyUrl": "https://www.jobs.af/jobs/project-coordinator-procurement-pcio-16",
+      "sourceUrl": "https://www.jobs.af/jobs/project-coordinator-procurement-pcio-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "specialist-digital-services",
+      "title": "Specialist – Digital Services",
+      "applyUrl": "https://www.jobs.af/jobs/specialist-digital-services",
+      "sourceUrl": "https://www.jobs.af/jobs/specialist-digital-services",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "deputy-general-manager-finance",
+      "title": "Deputy General Manager – Finance",
+      "applyUrl": "https://www.jobs.af/jobs/deputy-general-manager-finance-16",
+      "sourceUrl": "https://www.jobs.af/jobs/deputy-general-manager-finance-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "manager-customer-value-management-cvm",
+      "title": "Manager – Customer Value Management (CVM)",
+      "applyUrl": "https://www.jobs.af/jobs/manager-customer-value-management-cvm",
+      "sourceUrl": "https://www.jobs.af/jobs/manager-customer-value-management-cvm",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "audit-officer",
+      "title": "Audit Officer",
+      "applyUrl": "https://www.jobs.af/jobs/audit-officer-47",
+      "sourceUrl": "https://www.jobs.af/jobs/audit-officer-47",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "opportunity-26",
+      "title": "د پلټنې مسؤل",
+      "applyUrl": "https://www.jobs.af/jobs/d-pln-msul",
+      "sourceUrl": "https://www.jobs.af/jobs/d-pln-msul",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "opportunity-25",
+      "title": "د کمپلاینس او مالوماتي ټکنالوجۍ په برخه کې د کورنۍ پلټنې لوی مدیریت",
+      "applyUrl": "https://www.jobs.af/jobs/d-kmplayns-aw-malwmaty-knalwj-ph-brkhh-k-d-kwrn-pln-lwy-mdyryt",
+      "sourceUrl": "https://www.jobs.af/jobs/d-kmplayns-aw-malwmaty-knalwj-ph-brkhh-k-d-kwrn-pln-lwy-mdyryt",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "coordinator-communication-regional-kabul-kandahar-herat-balkh-nangarha",
+      "title": "Coordinator – Communication (Regional) [Kabul, Kandahar, Herat, Balkh, Nangarhar]",
+      "applyUrl": "https://www.jobs.af/jobs/coordinator-communication-regional-kabul-kandahar-herat-balkh-nangarhar",
+      "sourceUrl": "https://www.jobs.af/jobs/coordinator-communication-regional-kabul-kandahar-herat-balkh-nangarhar",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "specialist-bi-reporting",
+      "title": "Specialist – BI Reporting",
+      "applyUrl": "https://www.jobs.af/jobs/specialist-bi-reporting",
+      "sourceUrl": "https://www.jobs.af/jobs/specialist-bi-reporting",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "financial-audit-manager",
+      "title": "Financial Audit Manager",
+      "applyUrl": "https://www.jobs.af/jobs/financial-audit-manager-16",
+      "sourceUrl": "https://www.jobs.af/jobs/financial-audit-manager-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "livelihood-officer",
+      "title": "Livelihood Officer",
+      "applyUrl": "https://www.jobs.af/jobs/livelihood-officer-31",
+      "sourceUrl": "https://www.jobs.af/jobs/livelihood-officer-31",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "human-resource-manager",
+      "title": "Human Resource Manager",
+      "applyUrl": "https://www.jobs.af/jobs/human-resource-manager-46",
+      "sourceUrl": "https://www.jobs.af/jobs/human-resource-manager-46",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "qa-qc-engineer-quality-assurance-220kv-hv-substation-transmission-line",
+      "title": "QA/QC Engineer (Quality Assurance) – 220kV HV Substation & Transmission Line",
+      "applyUrl": "https://www.jobs.af/jobs/qaqc-engineer-quality-assurance-220kv-hv-substation-and-transmission-line-16",
+      "sourceUrl": "https://www.jobs.af/jobs/qaqc-engineer-quality-assurance-220kv-hv-substation-and-transmission-line-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "opportunity-20",
+      "title": "آمریت انکشاف سیستم ها",
+      "applyUrl": "https://www.jobs.af/jobs/aamryt-ankshaf-systm-ha-16",
+      "sourceUrl": "https://www.jobs.af/jobs/aamryt-ankshaf-systm-ha-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "opportunity-19",
+      "title": "مدیر امنیت شبکه",
+      "applyUrl": "https://www.jobs.af/jobs/mdyr-amnyt-shbkh-16",
+      "sourceUrl": "https://www.jobs.af/jobs/mdyr-amnyt-shbkh-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "opportunity-17",
+      "title": "مدیر حفظ و مراقبت شبکه",
+      "applyUrl": "https://www.jobs.af/jobs/mdyr-hfz-w-mraqbt-shbkh-16",
+      "sourceUrl": "https://www.jobs.af/jobs/mdyr-hfz-w-mraqbt-shbkh-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "operations-officer-cross-border-cargo",
+      "title": "Operations Officer - Cross Border Cargo",
+      "applyUrl": "https://www.jobs.af/jobs/operations-officer-cross-border-cargo-16",
+      "sourceUrl": "https://www.jobs.af/jobs/operations-officer-cross-border-cargo-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "operations-officer-courier-services",
+      "title": "Operations Officer - Courier Services",
+      "applyUrl": "https://www.jobs.af/jobs/operations-officer-courier-services-16",
+      "sourceUrl": "https://www.jobs.af/jobs/operations-officer-courier-services-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "larp-specialist-engineer",
+      "title": "LARP Specialist/Engineer",
+      "applyUrl": "https://www.jobs.af/jobs/larp-specialistengineer-16",
+      "sourceUrl": "https://www.jobs.af/jobs/larp-specialistengineer-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "business-development-engineer",
+      "title": "Business Development Engineer",
+      "applyUrl": "https://www.jobs.af/jobs/business-development-engineer-16",
+      "sourceUrl": "https://www.jobs.af/jobs/business-development-engineer-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "project-manager-4",
+      "title": "Project Manager",
+      "applyUrl": "https://www.jobs.af/jobs/project-manager-525",
+      "sourceUrl": "https://www.jobs.af/jobs/project-manager-525",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "internal-medicine-specialist-emergency-department",
+      "title": "Internal Medicine Specialist – Emergency Department",
+      "applyUrl": "https://www.jobs.af/jobs/internal-medicine-specialist-emergency-department-16",
+      "sourceUrl": "https://www.jobs.af/jobs/internal-medicine-specialist-emergency-department-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "internal-medicine-specialist-intensive-care-unit-icu",
+      "title": "Internal Medicine Specialist – Intensive Care Unit (ICU)",
+      "applyUrl": "https://www.jobs.af/jobs/internal-medicine-specialist-intensive-care-unit-icu-16",
+      "sourceUrl": "https://www.jobs.af/jobs/internal-medicine-specialist-intensive-care-unit-icu-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "cardiovascular-medicine-specialist",
+      "title": "Cardiovascular Medicine Specialist",
+      "applyUrl": "https://www.jobs.af/jobs/cardiovascular-medicine-specialist-16",
+      "sourceUrl": "https://www.jobs.af/jobs/cardiovascular-medicine-specialist-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "branch-manager",
+      "title": "Branch Manager",
+      "applyUrl": "https://www.jobs.af/jobs/branch-manager-214",
+      "sourceUrl": "https://www.jobs.af/jobs/branch-manager-214",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "recruitmen-consultant",
+      "title": "Recruitmen Consultant",
+      "applyUrl": "https://www.jobs.af/jobs/recruitmen-consultant-16",
+      "sourceUrl": "https://www.jobs.af/jobs/recruitmen-consultant-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "senior-full-stack-developer-re-announced",
+      "title": "Senior Full Stack Developer (Re - Announced)",
+      "applyUrl": "https://www.jobs.af/jobs/senior-full-stack-developer-re-announced-32",
+      "sourceUrl": "https://www.jobs.af/jobs/senior-full-stack-developer-re-announced-32",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "industrial-electrician",
+      "title": "برقی صنعتی (Industrial Electrician)",
+      "applyUrl": "https://www.jobs.af/jobs/brqy-snaty-industrial-electrician-31",
+      "sourceUrl": "https://www.jobs.af/jobs/brqy-snaty-industrial-electrician-31",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "opportunity-16",
+      "title": "مدیر اجرایی مکتب",
+      "applyUrl": "https://www.jobs.af/jobs/mdyr-ajrayy-mktb",
+      "sourceUrl": "https://www.jobs.af/jobs/mdyr-ajrayy-mktb",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "chief-compliance-officer",
+      "title": "Chief Compliance Officer",
+      "applyUrl": "https://www.jobs.af/jobs/chief-compliance-officer-61",
+      "sourceUrl": "https://www.jobs.af/jobs/chief-compliance-officer-61",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "procurement-specialist",
+      "title": "Procurement specialist",
+      "applyUrl": "https://www.jobs.af/jobs/procurement-specialist-189",
+      "sourceUrl": "https://www.jobs.af/jobs/procurement-specialist-189",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "procurement-manager",
+      "title": "Procurement Manager",
+      "applyUrl": "https://www.jobs.af/jobs/procurement-manager-107",
+      "sourceUrl": "https://www.jobs.af/jobs/procurement-manager-107",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "estimation-engineer",
+      "title": "Estimation Engineer",
+      "applyUrl": "https://www.jobs.af/jobs/estimation-engineer-31",
+      "sourceUrl": "https://www.jobs.af/jobs/estimation-engineer-31",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "medical-officers",
+      "title": "Medical Officers",
+      "applyUrl": "https://www.jobs.af/jobs/medical-officers-31",
+      "sourceUrl": "https://www.jobs.af/jobs/medical-officers-31",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "house-officers",
+      "title": "House Officers",
+      "applyUrl": "https://www.jobs.af/jobs/house-officers-31",
+      "sourceUrl": "https://www.jobs.af/jobs/house-officers-31",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "business-development-manager",
+      "title": "Business Development Manager",
+      "applyUrl": "https://www.jobs.af/jobs/business-development-manager-power-sector-16",
+      "sourceUrl": "https://www.jobs.af/jobs/business-development-manager-power-sector-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "chief-executive-officer-ceo",
+      "title": "Chief Executive Officer (CEO)",
+      "applyUrl": "https://www.jobs.af/jobs/chief-executive-officer-ceo-46",
+      "sourceUrl": "https://www.jobs.af/jobs/chief-executive-officer-ceo-46",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "chief-operations-officer-coo",
+      "title": "Chief Operations Officer (COO)",
+      "applyUrl": "https://www.jobs.af/jobs/chief-operations-officer-coo-16",
+      "sourceUrl": "https://www.jobs.af/jobs/chief-operations-officer-coo-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "branch-manager-dasht-e-barchi",
+      "title": "Branch Manager Dasht e Barchi",
+      "applyUrl": "https://www.jobs.af/jobs/branch-manager-dasht-e-barchi-16",
+      "sourceUrl": "https://www.jobs.af/jobs/branch-manager-dasht-e-barchi-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "field-officer-mobile-money",
+      "title": "Field Officer – Mobile Money",
+      "applyUrl": "https://www.jobs.af/jobs/field-officer-mobile-money-16",
+      "sourceUrl": "https://www.jobs.af/jobs/field-officer-mobile-money-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "booth-in-charge-abu-nasr-farahi-custom-booth-farah",
+      "title": "Booth In-Charge - Abu Nasr Farahi Custom Booth (Farah)",
+      "applyUrl": "https://www.jobs.af/jobs/booth-in-charge-abu-nasr-farahi-custom-booth-farah-31",
+      "sourceUrl": "https://www.jobs.af/jobs/booth-in-charge-abu-nasr-farahi-custom-booth-farah-31",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "neurologist-permanent",
+      "title": "Neurologist (Permanent)",
+      "applyUrl": "https://www.jobs.af/jobs/neurologist-permanent-16",
+      "sourceUrl": "https://www.jobs.af/jobs/neurologist-permanent-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "nurse-icu-emergency-ot",
+      "title": "Nurse (ICU, Emergency & OT)",
+      "applyUrl": "https://www.jobs.af/jobs/nurse-clinical-services-16",
+      "sourceUrl": "https://www.jobs.af/jobs/nurse-clinical-services-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "nursing-station-manager",
+      "title": "Nursing Station Manager",
+      "applyUrl": "https://www.jobs.af/jobs/nursing-station-manager-16",
+      "sourceUrl": "https://www.jobs.af/jobs/nursing-station-manager-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "technical-support-officer-noc",
+      "title": "Technical Support Officer – NOC",
+      "applyUrl": "https://www.jobs.af/jobs/microwave-technician-32",
+      "sourceUrl": "https://www.jobs.af/jobs/microwave-technician-32",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "pharmacist",
+      "title": "Pharmacist - فارمسست",
+      "applyUrl": "https://www.jobs.af/jobs/pharmacist-farmsst-16",
+      "sourceUrl": "https://www.jobs.af/jobs/pharmacist-farmsst-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "medical-laboratory-technologist",
+      "title": "د لابراتوار تکنالوژیست (Medical Laboratory Technologist)",
+      "applyUrl": "https://www.jobs.af/jobs/d-labratwar-tknalwzhyst-medical-laboratory-technologist-16",
+      "sourceUrl": "https://www.jobs.af/jobs/d-labratwar-tknalwzhyst-medical-laboratory-technologist-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Jobs.af",
+      "slug": "pharmacy-supervisor",
+      "title": "د فارمسي سوپروایزر (Pharmacy Supervisor )",
+      "applyUrl": "https://www.jobs.af/jobs/d-farmsy-swprwayzr-pharmacy-supervisor-16",
+      "sourceUrl": "https://www.jobs.af/jobs/d-farmsy-swprwayzr-pharmacy-supervisor-16",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (jobs.af)"
+      ]
+    },
+    {
+      "source": "Scholarships Corner",
+      "slug": "nextgen-icann88-program-2027-in-portugal-fully-funded",
+      "title": "NextGen ICANN88 Program 2027 in Portugal (Fully Funded)",
+      "applyUrl": "mailto:no-reply@email.zenginehq.com",
+      "sourceUrl": "https://scholarshipscorner.website/nextgen-icann88-program-portugal/",
+      "applyUrlType": "application_email",
+      "reasons": [
+        "generic email (no-reply@…)"
+      ]
+    },
+    {
+      "source": "Scholarships Corner",
+      "slug": "kut-special-scholarship-program-in-japan-fully-funded",
+      "title": "KUT Special Scholarship Program in Japan | Fully Funded",
+      "applyUrl": "https://scholarshipscorner.website/kut-special-scholarship-program-japan/",
+      "sourceUrl": "https://scholarshipscorner.website/kut-special-scholarship-program-japan/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (scholarshipscorner.website)"
+      ]
+    },
+    {
+      "source": "Scholarships Corner",
+      "slug": "skoll-mba-scholarship-2027-in-the-uk-fully-funded-study-in-uk",
+      "title": "Skoll MBA Scholarship 2027 in the UK | Fully Funded | Study in UK",
+      "applyUrl": "https://scholarshipscorner.website/skoll-mba-scholarship/",
+      "sourceUrl": "https://scholarshipscorner.website/skoll-mba-scholarship/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (scholarshipscorner.website)"
+      ]
+    },
+    {
+      "source": "Scholarships Corner",
+      "slug": "apu-mext-university-recommendation-scholarship-2027-in-japan-fully-fun",
+      "title": "APU MEXT University Recommendation Scholarship 2027 in Japan (Fully Funded)",
+      "applyUrl": "https://scholarshipscorner.website/apu-mext-university-recommendation-scholarship-japan/",
+      "sourceUrl": "https://scholarshipscorner.website/apu-mext-university-recommendation-scholarship-japan/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (scholarshipscorner.website)"
+      ]
+    },
+    {
+      "source": "Scholarships Corner",
+      "slug": "yale-peace-fellowship-2027-in-usa-uk-fully-funded",
+      "title": "Yale Peace Fellowship 2027 in USA & UK (Fully Funded)",
+      "applyUrl": "https://scholarshipscorner.website/yale-peace-fellowship/",
+      "sourceUrl": "https://scholarshipscorner.website/yale-peace-fellowship/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (scholarshipscorner.website)"
+      ]
+    },
+    {
+      "source": "Scholarships Corner",
+      "slug": "wipo-fellowship-program-2026-in-switzerland-fully-funded",
+      "title": "WIPO Fellowship Program 2026 in Switzerland (Fully Funded)",
+      "applyUrl": "https://scholarshipscorner.website/wipo-fellowship-program-switzerland/",
+      "sourceUrl": "https://scholarshipscorner.website/wipo-fellowship-program-switzerland/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (scholarshipscorner.website)"
+      ]
+    },
+    {
+      "source": "Scholarships Corner",
+      "slug": "asef-linkup-program-2026-in-slovenia-fully-funded",
+      "title": "ASEF LinkUp Program 2026 in Slovenia (Fully Funded)",
+      "applyUrl": "https://scholarshipscorner.website/asef-linkup-program-slovenia/",
+      "sourceUrl": "https://scholarshipscorner.website/asef-linkup-program-slovenia/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (scholarshipscorner.website)"
+      ]
+    },
+    {
+      "source": "Scholarships Corner",
+      "slug": "chevening-scholarship-2027-in-uk-fully-funded-study-in-uk",
+      "title": "Chevening Scholarship 2027 in UK | Fully Funded | Study in UK",
+      "applyUrl": "https://scholarshipscorner.website/chevening-scholarship/",
+      "sourceUrl": "https://scholarshipscorner.website/chevening-scholarship/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (scholarshipscorner.website)"
+      ]
+    },
+    {
+      "source": "Scholarships Corner",
+      "slug": "how-to-apply-for-chevening-scholarship-2027-chevening-application-proc",
+      "title": "How to Apply for Chevening Scholarship 2027 | Chevening Application Process: A Step-by-Step Guide",
+      "applyUrl": "https://scholarshipscorner.website/how-to-apply-for-chevening-scholarship/",
+      "sourceUrl": "https://scholarshipscorner.website/how-to-apply-for-chevening-scholarship/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (scholarshipscorner.website)"
+      ]
+    },
+    {
+      "source": "Scholarships Corner",
+      "slug": "how-to-prepare-your-chevening-scholarship-application-2027-step-by-ste",
+      "title": "How to Prepare your Chevening Scholarship Application 2027 (Step-by-Step Guide)",
+      "applyUrl": "https://scholarshipscorner.website/how-to-prepare-chevening-scholarship-application/",
+      "sourceUrl": "https://scholarshipscorner.website/how-to-prepare-chevening-scholarship-application/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (scholarshipscorner.website)"
+      ]
+    },
+    {
+      "source": "Scholarships Corner",
+      "slug": "wipo-internship-2026-27-in-geneva-switzerland-fully-funded",
+      "title": "WIPO Internship 2026-27 in Geneva, Switzerland (Fully Funded)",
+      "applyUrl": "https://scholarshipscorner.website/wipo-internship-switzerland/",
+      "sourceUrl": "https://scholarshipscorner.website/wipo-internship-switzerland/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (scholarshipscorner.website)"
+      ]
+    },
+    {
+      "source": "Scholarships Corner",
+      "slug": "daad-re-invitation-program-2027-in-germany-fully-funded",
+      "title": "DAAD Re-Invitation Program 2027 in Germany (Fully Funded)",
+      "applyUrl": "https://scholarshipscorner.website/daad-re-invitation-program-germany/",
+      "sourceUrl": "https://scholarshipscorner.website/daad-re-invitation-program-germany/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (scholarshipscorner.website)"
+      ]
+    },
+    {
+      "source": "Scholarships Corner",
+      "slug": "ohchr-indigenous-fellowship-program-2027-in-switzerland-fully-funded",
+      "title": "OHCHR Indigenous Fellowship Program 2027 in Switzerland | Fully Funded",
+      "applyUrl": "https://scholarshipscorner.website/ohchr-indigenous-fellowship-program/",
+      "sourceUrl": "https://scholarshipscorner.website/ohchr-indigenous-fellowship-program/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (scholarshipscorner.website)"
+      ]
+    },
+    {
+      "source": "Scholarships Corner",
+      "slug": "one-future-conference-2027-in-toronto-canada",
+      "title": "One Future Conference 2027 in Toronto, Canada",
+      "applyUrl": "https://scholarshipscorner.website/one-future-conference-2027-canada/",
+      "sourceUrl": "https://scholarshipscorner.website/one-future-conference-2027-canada/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (scholarshipscorner.website)"
+      ]
+    },
+    {
+      "source": "Scholarships Corner",
+      "slug": "commonwealth-master-s-scholarships-2027-28-in-uk-fully-funded",
+      "title": "Commonwealth Master’s Scholarships 2027/28 in UK | Fully Funded",
+      "applyUrl": "https://scholarshipscorner.website/commonwealth-masters-scholarships/",
+      "sourceUrl": "https://scholarshipscorner.website/commonwealth-masters-scholarships/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (scholarshipscorner.website)"
+      ]
+    },
+    {
+      "source": "Scholarships Corner",
+      "slug": "commonwealth-scholarship-2027-28-in-the-uk-fully-funded",
+      "title": "Commonwealth Scholarship 2027-28 in the UK | Fully Funded",
+      "applyUrl": "https://scholarshipscorner.website/commonwealth-scholarship-uk/",
+      "sourceUrl": "https://scholarshipscorner.website/commonwealth-scholarship-uk/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (scholarshipscorner.website)"
+      ]
+    },
+    {
+      "source": "Scholarships Corner",
+      "slug": "erasmus-mundus-scholarship-guide-2027-complete-application-guide",
+      "title": "Erasmus Mundus Scholarship Guide 2027 (Complete Application Guide)",
+      "applyUrl": "https://scholarshipscorner.website/erasmus-mundus-scholarship-guide/",
+      "sourceUrl": "https://scholarshipscorner.website/erasmus-mundus-scholarship-guide/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (scholarshipscorner.website)"
+      ]
+    },
+    {
+      "source": "Scholarships Corner",
+      "slug": "erasmus-mundus-scholarship-2027-fully-funded-emjm-scholarship",
+      "title": "Erasmus Mundus Scholarship 2027 | Fully Funded | EMJM Scholarship",
+      "applyUrl": "https://scholarshipscorner.website/erasmus-mundus-scholarship/",
+      "sourceUrl": "https://scholarshipscorner.website/erasmus-mundus-scholarship/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (scholarshipscorner.website)"
+      ]
+    },
+    {
+      "source": "Scholarships Corner",
+      "slug": "smart-scholarship-2027-in-usa-full-tuition-30-000-46-000-annual-stipen",
+      "title": "SMART Scholarship 2027 in USA (Full Tuition + $30,000–$46,000 Annual Stipend)",
+      "applyUrl": "https://scholarshipscorner.website/smart-scholarship-usa/",
+      "sourceUrl": "https://scholarshipscorner.website/smart-scholarship-usa/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (scholarshipscorner.website)"
+      ]
+    },
+    {
+      "source": "Scholarships Corner",
+      "slug": "open-doors-russian-scholarship-2027-study-in-russia",
+      "title": "Open Doors Russian Scholarship 2027 | Study in Russia",
+      "applyUrl": "https://scholarshipscorner.website/open-doors-russian-scholarship/",
+      "sourceUrl": "https://scholarshipscorner.website/open-doors-russian-scholarship/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (scholarshipscorner.website)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "gilman-mccain-scholarship-2026-apply-for-a-5-000-study-abroad-scholars",
+      "title": "Gilman-McCain Scholarship 2026: Apply for a $5,000 Study Abroad Scholarship for U.S. Military Family Dependents",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/17/gilman-mccain-scholarship-2026-apply-for-a-5000-study-abroad-scholarship-for-u-s-military-family-dependents/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/17/gilman-mccain-scholarship-2026-apply-for-a-5000-study-abroad-scholarship-for-u-s-military-family-dependents/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "cfj-fellowship-programme-2027-legal-fellowship-for-early-career-women",
+      "title": "CFJ Fellowship Programme 2027: Legal Fellowship for Early-Career Women Lawyers Across Africa",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/17/waging-justice-for-women-fellowships-applications-for-the-2025-fellowship-are-now-open/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/17/waging-justice-for-women-fellowships-applications-for-the-2025-fellowship-are-now-open/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "lawai-seasonal-fellowships-research-opportunities-in-ai-law-and-policy",
+      "title": "LawAI Seasonal Fellowships: Research Opportunities in AI, Law and Policy for Law Students, Professionals and Academics",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/17/senior-research-scholar-us-institute-for-law-ai/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/17/senior-research-scholar-us-institute-for-law-ai/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "resist-urgent-action-fund-grant-2026-apply-for-up-to-5-000-in-rapid-re",
+      "title": "Resist Urgent Action Fund Grant 2026: Apply for Up to $5,000 in Rapid-Response Funding for Grassroots Organizations",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/17/resist-urgent-action-fund-grant-2026-apply-for-up-to-5000-in-rapid-response-funding-for-grassroots-organizations/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/17/resist-urgent-action-fund-grant-2026-apply-for-up-to-5000-in-rapid-response-funding-for-grassroots-organizations/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "2026-2027-better-life-lab-multimedia-reporting-grants-for-journalists",
+      "title": "2026–2027 Better Life Lab Multimedia Reporting Grants for Journalists and Storytellers",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/17/2026-2027-better-life-lab-multimedia-reporting-grants-for-journalists-and-storytellers/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/17/2026-2027-better-life-lab-multimedia-reporting-grants-for-journalists-and-storytellers/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "nuffield-medical-fellowships-2026-at-the-university-of-oxford-fully-fu",
+      "title": "Nuffield Medical Fellowships 2026 at the University of Oxford: Fully Funded Medical Research Fellowship for Early-Career Researchers",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/17/nuffield-medical-fellowships-2026-at-the-university-of-oxford-fully-funded-medical-research-fellowship-for-early-career-researchers/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/17/nuffield-medical-fellowships-2026-at-the-university-of-oxford-fully-funded-medical-research-fellowship-for-early-career-researchers/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "2027-mandela-washington-fellowship-for-young-african-leaders-fully-fun",
+      "title": "2027 Mandela Washington Fellowship for Young African Leaders – Fully Funded Leadership Opportunity in the United States",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/18/mandela-washington-fellowship-yali-application-2024/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/18/mandela-washington-fellowship-yali-application-2024/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "africa-economic-analyst-job-at-nrgi-in-ghana-earn-34-236-per-year-and",
+      "title": "Africa Economic Analyst Job at NRGI in Ghana: Earn $34,236 Per Year and Work on Natural Resource Governance",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/18/africa-economic-analyst-job-at-nrgi-in-ghana-earn-34236-per-year-and-work-on-natural-resource-governance/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/18/africa-economic-analyst-job-at-nrgi-in-ghana-earn-34236-per-year-and-work-on-natural-resource-governance/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "europe-defence-and-security-fellowship-2027-fully-funded-leadership-pr",
+      "title": "Europe Defence and Security Fellowship 2027: Fully Funded Leadership Programme for Mid-Career Security and Defence Professionals",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/18/europe-defence-and-security-fellowship-2027-fully-funded-leadership-programme-for-mid-career-security-and-defence-professionals/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/18/europe-defence-and-security-fellowship-2027-fully-funded-leadership-programme-for-mid-career-security-and-defence-professionals/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "commonwealth-master-s-scholarships-2027-28-fully-funded-uk-scholarship",
+      "title": "Commonwealth Master’s Scholarships 2027/28: Fully Funded UK Scholarships for Students from Developing Commonwealth Countries",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/18/40-fully-funded-commonwealth-masters-scholarships-for-small-island-developing-states-sids/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/18/40-fully-funded-commonwealth-masters-scholarships-for-small-island-developing-states-sids/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "leverhulme-trust-research-fellowships-2027-up-to-70-000-for-experience",
+      "title": "Leverhulme Trust Research Fellowships 2027: Up to £70,000 for Experienced Researchers in Any Discipline",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/18/leverhulme-trust-research-fellowships-2027-up-to-70000-for-experienced-researchers-in-any-discipline/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/18/leverhulme-trust-research-fellowships-2027-up-to-70000-for-experienced-researchers-in-any-discipline/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "morgan-stanley-2027-investment-management-sophomore-summer-analyst-pro",
+      "title": "Morgan Stanley 2027 Investment Management Sophomore Summer Analyst Program in New York: Private Credit & Equity Internship",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/18/morgan-stanley-2027-investment-management-sophomore-summer-analyst-program-in-new-york-private-credit-equity-internship/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/18/morgan-stanley-2027-investment-management-sophomore-summer-analyst-program-in-new-york-private-credit-equity-internship/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "fcdo-research-advisory-group-2026-part-time-remote-opportunity-for-sen",
+      "title": "FCDO Research Advisory Group 2026: Part-Time Remote Opportunity for Senior Global Research and Policy Experts",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/18/fcdo-research-advisory-group-2026-part-time-remote-opportunity-for-senior-global-research-and-policy-experts/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/18/fcdo-research-advisory-group-2026-part-time-remote-opportunity-for-senior-global-research-and-policy-experts/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "disney-associate-product-manager-program-2027-early-career-product-man",
+      "title": "Disney Associate Product Manager Program 2027: Early-Career Product Management Job in the USA With Up to $130,700 Salary",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/19/disney-associate-product-manager-program-2027-early-career-product-management-job-in-the-usa-with-up-to-130700-salary/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/19/disney-associate-product-manager-program-2027-early-career-product-management-job-in-the-usa-with-up-to-130700-salary/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "undp-paid-internships-2026-for-students-and-graduates-launch-your-glob",
+      "title": "UNDP Paid Internships 2026 for Students and Graduates – Launch Your Global Development Career",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/20/undp-paid-internship-program-2022-23/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/20/undp-paid-internship-program-2022-23/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "amazon-solutions-architect-intern-awsi-2027",
+      "title": "Amazon Solutions Architect Intern, AWSI – 2027",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/20/amazon-solutions-architect-intern-awsi-2027/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/20/amazon-solutions-architect-intern-awsi-2027/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "activate-fellowship-2027-100-000-annual-stipend-and-100-000-r-d-suppor",
+      "title": "Activate Fellowship 2027: $100,000 Annual Stipend and $100,000 R&D Support for Hard-Tech Founders",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/20/activate-fellowship-2027-100000-annual-stipend-and-100000-rd-support-for-hard-tech-founders/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/20/activate-fellowship-2027-100000-annual-stipend-and-100000-rd-support-for-hard-tech-founders/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "cgbd-research-fellowship-2026-2027-apply-for-diffvelopment-s-global-bl",
+      "title": "CGBD Research Fellowship 2026–2027: Apply for DIFFvelopment’s Global Black Community Research Fellowship",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/20/cgbd-research-fellowship-2026-2027-apply-for-diffvelopments-global-black-community-research-fellowship/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/20/cgbd-research-fellowship-2026-2027-apply-for-diffvelopments-global-black-community-research-fellowship/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "fulcrum-fellowship-2026-leadership-fellowship-for-community-investment",
+      "title": "Fulcrum Fellowship 2026 | Leadership Fellowship for Community Investment Leaders",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/20/fulcrum-fellowship-2026-leadership-fellowship-for-community-investment-leaders/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/20/fulcrum-fellowship-2026-leadership-fellowship-for-community-investment-leaders/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "cardiff-university-phd-studentships-and-projects-2026-100-doctoral-sch",
+      "title": "Cardiff University PhD Studentships and Projects 2026 | 100 Doctoral Scholarship Opportunities",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/20/cardiff-university-phd-studentships-and-projects-2026-100-doctoral-opportunities/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/20/cardiff-university-phd-studentships-and-projects-2026-100-doctoral-opportunities/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "google-for-startups-immersion-emea-2026-apply-for-the-google-x-antler",
+      "title": "Google for Startups Immersion EMEA 2026: Apply for the Google x Antler Program for High-Growth Startups",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/21/google-for-startups-immersion-2026-powered-by-antler-ai-founders-program-for-scaling-startups-opens-applications/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/21/google-for-startups-immersion-2026-powered-by-antler-ai-founders-program-for-scaling-startups-opens-applications/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "fapesp-young-investigator-grant-for-international-researchers-2026-up",
+      "title": "FAPESP Young Investigator Grant for International Researchers 2026: Up to BRL 2.5 Million for Researchers to Establish Research Programs in Brazil",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/21/fapesp-young-investigator-grant-for-international-researchers-2026-up-to-brl-2-5-million-for-researchers-to-establish-research-programs-in-brazil/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/21/fapesp-young-investigator-grant-for-international-researchers-2026-up-to-brl-2-5-million-for-researchers-to-establish-research-programs-in-brazil/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "max-planck-institute-visiting-researchers-program-2027-research-opport",
+      "title": "Max Planck Institute Visiting Researchers Program 2027 | Research Opportunity in Germany",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/21/visiting-researchers-program-2026-2027-at-the-max-planck-institute-for-the-study-of-societies-mpifg/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/21/visiting-researchers-program-2026-2027-at-the-max-planck-institute-for-the-study-of-societies-mpifg/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "2026-impact-grant-50-000-in-unrestricted-funding-for-arts-nonprofits-s",
+      "title": "2026 Impact Grant: €50,000 in Unrestricted Funding for Arts Nonprofits Supporting Underrepresented Emerging Artists",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/21/2026-impact-grant-e50000-in-unrestricted-funding-for-arts-nonprofits-supporting-underrepresented-emerging-artists/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/21/2026-impact-grant-e50000-in-unrestricted-funding-for-arts-nonprofits-supporting-underrepresented-emerging-artists/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "marc-impact-programme-2026-high-impact-enterprise-scaling-programme-fo",
+      "title": "MARC Impact Programme 2026: High-Impact Enterprise Scaling Programme for Social Enterprises and Startups in 7 European Countries",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/21/marc-impact-programme-2026-high-impact-enterprise-scaling-programme-for-social-enterprises-and-startups-in-7-european-countries/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/21/marc-impact-programme-2026-high-impact-enterprise-scaling-programme-for-social-enterprises-and-startups-in-7-european-countries/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "bennington-college-young-scientists-awards-2026-win-up-to-2-000",
+      "title": "Bennington College Young Scientists Awards 2026 | Win Up to $2,000",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/21/bennington-college-young-scientists-awards-2026-win-up-to-2000/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/21/bennington-college-young-scientists-awards-2026-win-up-to-2000/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "2027-bee-grant-program-up-to-2-000-and-educational-hive-support-for-sc",
+      "title": "2027 Bee Grant Program: Up to $2,000 and Educational Hive Support for Schools and Nonprofit Organizations",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/21/2027-bee-grant-program-up-to-2000-and-educational-hive-support-for-schools-and-nonprofit-organizations/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/21/2027-bee-grant-program-up-to-2000-and-educational-hive-support-for-schools-and-nonprofit-organizations/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "gist-graduate-scholarship-2027-in-south-korea-apply-for-master-s-phd-a",
+      "title": "GIST Graduate Scholarship 2027 in South Korea: Apply for Master’s, PhD and Integrated MS–PhD Programs with Full Tuition and Monthly Support",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/21/gist-scholarship-2027/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/21/gist-scholarship-2027/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "the-nature-conservancy-strategic-content-and-storytelling-manager-afri",
+      "title": "The Nature Conservancy Strategic Content and Storytelling Manager – Africa Region 2026: Full-Time Communications Role Across Six African Countries",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/21/africa-strategic-content-2026/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/21/africa-strategic-content-2026/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "british-red-cross-youth-engagement-early-careers-internship-2026-paid",
+      "title": "British Red Cross Youth Engagement & Early Careers Internship 2026: Paid London Opportunity for Young People",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/21/british-red-cross-youth-engagement-early-careers-internship-2026-paid-london-opportunity-for-young-people/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/21/british-red-cross-youth-engagement-early-careers-internship-2026-paid-london-opportunity-for-young-people/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "bloomberg-harvard-visiting-scholars-program-2026-visiting-research-opp",
+      "title": "Bloomberg Harvard Visiting Scholars Program 2026: Visiting Research Opportunity at Harvard University for Urban Problem-Solving and City Leadership",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/21/bloomberg-harvard-visiting-scholars-program-2026-visiting-research-opportunity-at-harvard-university-for-urban-problem-solving-and-city-leadership/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/21/bloomberg-harvard-visiting-scholars-program-2026-visiting-research-opportunity-at-harvard-university-for-urban-problem-solving-and-city-leadership/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "charles-darwin-university-rtp-scholarship-2026-27-research-funding-for",
+      "title": "Charles Darwin University RTP Scholarship 2026/27: Research Funding for PhD and Master by Research Students in Australia",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/11/charles-darwin-scholarship/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/11/charles-darwin-scholarship/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "nfl-careers-43-current-job-openings-at-the-national-football-league-ac",
+      "title": "NFL Careers: 43 Current Job Openings at the National Football League Across the United States and Europe",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/11/nfl-careers-43-current-job-openings-at-the-national-football-league-across-the-united-states-and-europe/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/11/nfl-careers-43-current-job-openings-at-the-national-football-league-across-the-united-states-and-europe/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "wmo-internships-2026-paid-internship-opportunities-at-the-world-meteor",
+      "title": "WMO Internships 2026: Paid Internship Opportunities at the World Meteorological Organization for Students and Recent Graduates",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/12/wmo-internships-2026-paid-internship-opportunities-at-the-world-meteorological-organization-for-students-and-recent-graduates/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/12/wmo-internships-2026-paid-internship-opportunities-at-the-world-meteorological-organization-for-students-and-recent-graduates/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "j-pal-2026-2027-recruitment-drive-apply-for-research-associate-jobs-an",
+      "title": "J-PAL 2026–2027 Recruitment Drive: Apply for Research Associate Jobs and Join a Global Network Advancing Evidence-Based Policy",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/12/j-pal-2026-2027-recruitment-drive-apply-for-research-associate-jobs-and-join-a-global-network-advancing-evidence-based-policy/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/12/j-pal-2026-2027-recruitment-drive-apply-for-research-associate-jobs-and-join-a-global-network-advancing-evidence-based-policy/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "nasa-jpl-internship-programs-explore-stem-internship-and-research-oppo",
+      "title": "NASA JPL Internship Programs: Explore STEM Internship and Research Opportunities for Undergraduate and Graduate Students",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/07/internship-nasa/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/07/internship-nasa/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "unilever-singapore-early-careers-2027-applications-open-for-future-lea",
+      "title": "Unilever Singapore Early Careers 2027: Applications Open for Future Leaders Programme and Leadership Internships",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/07/unilever-singapore-early-careers-2027-applications-open-for-future-leaders-programme-and-leadership-internships/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/07/unilever-singapore-early-careers-2027-applications-open-for-future-leaders-programme-and-leadership-internships/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "orr-fellowship-2027-launch-your-career-with-a-two-year-corporate-fello",
+      "title": "Orr Fellowship 2027: Launch Your Career With a Two-Year Corporate Fellowship in Indianapolis or Evansville",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/07/orr-fellowship-2027/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/07/orr-fellowship-2027/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "yenching-academy-of-peking-university-scholarship-2027-fully-funded-ma",
+      "title": "Yenching Academy of Peking University Scholarship 2027: Fully Funded Master’s Fellowship in China for International Students",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/07/yenching-academy-of-peking-university-scholarship-2027-fully-funded-masters-fellowship-in-china-for-international-students/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/07/yenching-academy-of-peking-university-scholarship-2027-fully-funded-masters-fellowship-in-china-for-international-students/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "united-airlines-student-and-early-career-jobs-2027-45-internships-and",
+      "title": "United Airlines Student and Early Career Jobs 2027: 45+ Internships and Early Career Opportunities in the United States",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/07/united-airlines-summer-2025-internships-explore-career-opportunities/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/07/united-airlines-summer-2025-internships-explore-career-opportunities/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "nextgen-icann88-programme-2026-fully-supported-opportunity-for-young-s",
+      "title": "NextGen@ICANN88 Programme 2026: Fully Supported Opportunity for Young Students Interested in Internet Governance",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/07/icann87-fellowship-2026-fully-funded-global-opportunity-to-attend-the-icann-annual-general-meeting-in-oman/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/07/icann87-fellowship-2026-fully-funded-global-opportunity-to-attend-the-icann-annual-general-meeting-in-oman/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "harvard-academy-scholars-program-2027-2028-fully-funded-postdoctoral-f",
+      "title": "Harvard Academy Scholars Program 2027–2028: Fully Funded Postdoctoral Fellowship at Harvard University",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/07/harvard-academy-scholars-program-2027-2028-fully-funded-postdoctoral-fellowship-at-harvard-university/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/07/harvard-academy-scholars-program-2027-2028-fully-funded-postdoctoral-fellowship-at-harvard-university/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "cop17-youth-pavilion-side-events-2026-in-armenia-apply-to-host-a-youth",
+      "title": "COP17 Youth Pavilion Side Events 2026 in Armenia | Apply to Host a Youth Event",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/08/cop17-youth-pavilion-side-events-2026-in-armenia-apply-to-host-a-youth-event/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/08/cop17-youth-pavilion-side-events-2026-in-armenia-apply-to-host-a-youth-event/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "american-express-ai-engineer-summer-internship-2027-in-usa-apply-for-1",
+      "title": "American Express AI Engineer Summer Internship 2027 in USA | Apply for 10-Week Technology Internship",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/08/american-express-ai-engineer-summer-internship-2027-in-usa-apply-for-10-week-technology-internship/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/08/american-express-ai-engineer-summer-internship-2027-in-usa-apply-for-10-week-technology-internship/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "egen-research-prize-2026-win-up-to-3-000-for-cutting-edge-research-on",
+      "title": "EGEN Research Prize 2026: Win Up to $3,000 for Cutting-Edge Research on Gender and Politics",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/08/egen-research-prize-2026-win-up-to-3000-for-cutting-edge-research-on-gender-and-politics/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/08/egen-research-prize-2026-win-up-to-3000-for-cutting-edge-research-on-gender-and-politics/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "datadog-software-engineering-internship-2027-apply-for-software-engine",
+      "title": "Datadog Software Engineering Internship 2027 | Apply for Software Engineering Intern Roles in New York or Boston",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/08/datadog-software-engineering-internship-2027-apply-for-software-engineering-intern-roles-in-new-york-or-boston/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/08/datadog-software-engineering-internship-2027-apply-for-software-engineering-intern-roles-in-new-york-or-boston/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "aias-auff-fellowships-2027-2029-fully-funded-research-fellowship-at-aa",
+      "title": "AIAS-AUFF Fellowships 2027–2029: Fully Funded Research Fellowship at Aarhus University in Denmark",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/08/aarhus-institute-of-advanced-studies-opens-applications-for-aias-auff-fellowships-2026/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/08/aarhus-institute-of-advanced-studies-opens-applications-for-aias-auff-fellowships-2026/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "university-of-rochester-political-science-professor-job-2027-tenure-tr",
+      "title": "University of Rochester Political Science Professor Job 2027: Tenure-Track Assistant Professor Position in Political Methodology",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/08/university-of-rochester-political-science-professor-job-2027-tenure-track-assistant-professor-position-in-political-methodology/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/08/university-of-rochester-political-science-professor-job-2027-tenure-track-assistant-professor-position-in-political-methodology/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "hong-kong-phd-fellowship-scheme-2027-28-hk-344-400-annual-stipend-for",
+      "title": "Hong Kong PhD Fellowship Scheme 2027/28: HK$344,400 Annual Stipend for International PhD Students in Hong Kong",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/08/hong-kong-phd-fellowship-scheme-2027-28-hk344400-annual-stipend-for-international-phd-students-in-hong-kong/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/08/hong-kong-phd-fellowship-scheme-2027-28-hk344400-annual-stipend-for-international-phd-students-in-hong-kong/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "dartmouth-neukom-postdoctoral-fellows-program-2027-70-000-fellowship-f",
+      "title": "Dartmouth Neukom Postdoctoral Fellows Program 2027: $70,000 Fellowship for Interdisciplinary Researchers in Computation",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/08/dartmouth-neukom-postdoctoral-fellows-program-2027-70000-fellowship-for-interdisciplinary-researchers-in-computation/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/08/dartmouth-neukom-postdoctoral-fellows-program-2027-70000-fellowship-for-interdisciplinary-researchers-in-computation/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "charlotte-community-foundation-fall-2026-grants-up-to-15-000-for-local",
+      "title": "Charlotte Community Foundation Fall 2026 Grants | Up to $15,000 for Local Nonprofits",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/09/charlotte-community-foundation-fall-2026-grants-up-to-15000-for-local-nonprofits/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/09/charlotte-community-foundation-fall-2026-grants-up-to-15000-for-local-nonprofits/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "ey-foundation-smart-futures-2026-27-paid-work-experience-training-and",
+      "title": "EY Foundation Smart Futures 2026/27 | Paid Work Experience, Training and Mentoring for Young People in the UK",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/09/ey-foundation-smart-futures-2026-27-paid-work-experience-training-and-mentoring-for-young-people-in-the-uk/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/09/ey-foundation-smart-futures-2026-27-paid-work-experience-training-and-mentoring-for-young-people-in-the-uk/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "doria-feminist-fund-grantmaking-cycle-7-2026-funding-for-feminist-grou",
+      "title": "Doria Feminist Fund Grantmaking Cycle 7 2026: Funding for Feminist Groups and Organisations in the MENA Region",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/09/doria-feminist-fund-grantmaking-cycle-7-2026-funding-for-feminist-groups-and-organisations-in-the-mena-region/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/09/doria-feminist-fund-grantmaking-cycle-7-2026-funding-for-feminist-groups-and-organisations-in-the-mena-region/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "stanford-graduate-school-of-business-research-fellows-program-2026-27",
+      "title": "Stanford Graduate School of Business Research Fellows Program 2026–27: Research Projects, Eligibility, Requirements and Application Guide",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/09/stanford-graduate-school-of-business-research-fellows-program-2026-27-research-projects-eligibility-requirements-and-application-guide/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/09/stanford-graduate-school-of-business-research-fellows-program-2026-27-research-projects-eligibility-requirements-and-application-guide/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "rise-justice-labs-2025-winter-cohort-apply-for-a-12-week-legislative-a",
+      "title": "Rise Justice Labs 2025 Winter Cohort: Apply for a 12-Week Legislative Advocacy Accelerator and Learn How to Pass Your Own Law",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/09/rise-justice-labs-2025-winter-cohort-apply-for-a-12-week-legislative-advocacy-accelerator-and-learn-how-to-pass-your-own-law/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/09/rise-justice-labs-2025-winter-cohort-apply-for-a-12-week-legislative-advocacy-accelerator-and-learn-how-to-pass-your-own-law/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "leading-change-fellowship-2026-27-in-canada-build-leadership-skills-fo",
+      "title": "Leading Change Fellowship 2026-27 in Canada: Build Leadership Skills for Sustainability, Environmental and Social Impact",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/09/leading-change-fellowship/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/09/leading-change-fellowship/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "temporary-staff-positions-at-nato-headquarters-in-brussels-belgium-app",
+      "title": "Temporary Staff Positions at NATO Headquarters in Brussels, Belgium – Apply to the NATO Temporary Staff Candidate Pool",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/09/temporary-staff-positions-at-nato-headquarters-in-brussels-belgium-apply-to-the-nato-temporary-staff-candidate-pool/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/09/temporary-staff-positions-at-nato-headquarters-in-brussels-belgium-apply-to-the-nato-temporary-staff-candidate-pool/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "nordic-baltic-youth-summit-2026-in-tallinn-estonia-applications-open-f",
+      "title": "Nordic Baltic Youth Summit 2026 in Tallinn, Estonia: Applications Open for 200 Young Changemakers",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/09/nordic-baltic-youth-summit-2026-in-tallinn-estonia-applications-open-for-200-young-changemakers/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/09/nordic-baltic-youth-summit-2026-in-tallinn-estonia-applications-open-for-200-young-changemakers/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "2027-chase-leadership-development-program-summer-analyst-opportunity-i",
+      "title": "2027 Chase Leadership Development Program – Summer Analyst Opportunity in the USA",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/09/2027-chase-leadership-development-program-summer-analyst-opportunity-in-the-usa/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/09/2027-chase-leadership-development-program-summer-analyst-opportunity-in-the-usa/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "wfp-ethics-officer-p-3-in-rome-italy-international-professional-job-in",
+      "title": "WFP Ethics Officer P-3 in Rome, Italy: International Professional Job in Ethics, Compliance and Risk Management",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/09/job-opportunity-ethics-officer-p3-rome-italy/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/09/job-opportunity-ethics-officer-p3-rome-italy/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "british-academy-elevate-programme-leadership-stream-apply-for-an-inten",
+      "title": "British Academy Elevate Programme Leadership Stream: Apply for an Intensive Leadership Development Programme for Early Career Researchers",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/09/british-academy-elevate-programme-leadership-stream-apply-for-an-intensive-leadership-development-programme-for-early-career-researchers/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/09/british-academy-elevate-programme-leadership-stream-apply-for-an-intensive-leadership-development-programme-for-early-career-researchers/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "fully-funded-commonwealth-master-s-and-phd-scholarships-2027-28-in-the",
+      "title": "Fully Funded Commonwealth Master’s and PhD Scholarships 2027/28 in the UK: Applications Now Open",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/10/commonwealth-scholarships-for-the-university-of-londons-ma-in-refugee-protection-and-forced-migration-studies/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/10/commonwealth-scholarships-for-the-university-of-londons-ma-in-refugee-protection-and-forced-migration-studies/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "mastercard-foundation-scholars-program-at-arizona-state-university-202-2",
+      "title": "Mastercard Foundation Scholars Program at Arizona State University 2027: Fully Funded Innovation and Technology Master’s Scholarship for African Students",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/10/asu-and-mastercard-foundation-scholars-program-announce-remote-africa-based-coordinator-position/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/10/asu-and-mastercard-foundation-scholars-program-announce-remote-africa-based-coordinator-position/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "camargo-fellowship-2027-2028-10-week-residency-in-france-for-artists-s",
+      "title": "Camargo Fellowship 2027–2028: 10-Week Residency in France for Artists, Scholars and Thinkers",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/10/camargo-fellowship-2027-2028-10-week-residency-in-france-for-artists-scholars-and-thinkers/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/10/camargo-fellowship-2027-2028-10-week-residency-in-france-for-artists-scholars-and-thinkers/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "unu-merit-mmpaf-programme-2026-apply-for-online-training-in-migration",
+      "title": "UNU-MERIT MMPAF Programme 2026: Apply for Online Training in Migration and Asylum Policy",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/10/fall-2024-scholarship-application-moving-the-migration-policy-agenda-forward-mmpaf-programme/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/10/fall-2024-scholarship-application-moving-the-migration-policy-agenda-forward-mmpaf-programme/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "royal-commonwealth-society-recruitment-2026-apply-for-the-digital-comm",
+      "title": "Royal Commonwealth Society Recruitment 2026: Apply for the Digital Communications and Public Affairs Officer Role in London",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/10/royal-commonwealth-society-recruitment-2026-apply-for-the-digital-communications-and-public-affairs-officer-role-in-london/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/10/royal-commonwealth-society-recruitment-2026-apply-for-the-digital-communications-and-public-affairs-officer-role-in-london/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "nga-summer-2027-college-internship-contracts-career-field-paid-u-s-fed",
+      "title": "NGA Summer 2027 College Internship – Contracts Career Field: Paid U.S. Federal Internship Applications Open",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/10/nga-summer-2027-college-internship-contracts-career-field-paid-u-s-federal-internship-applications-open/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/10/nga-summer-2027-college-internship-contracts-career-field-paid-u-s-federal-internship-applications-open/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "archbishop-tutu-leadership-fellowship-2027-prestigious-african-leaders",
+      "title": "Archbishop Tutu Leadership Fellowship 2027: Prestigious African Leadership Fellowship for Emerging Leaders Across Africa",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/10/empowering-the-next-generation-of-african-leaders-archbishop-tutu-leadership-programme/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/10/empowering-the-next-generation-of-african-leaders-archbishop-tutu-leadership-programme/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "jet-programme-2027-apply-to-teach-english-in-japan-for-at-least-one-ye",
+      "title": "JET Programme 2027: Apply to Teach English in Japan for at Least One Year as an Assistant Language Teacher",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/10/jet-programme-2027-apply-to-teach-english-in-japan-for-at-least-one-year-as-an-assistant-language-teacher/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/10/jet-programme-2027-apply-to-teach-english-in-japan-for-at-least-one-year-as-an-assistant-language-teacher/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "seed-solar-pv-installation-training-2026-free-solar-energy-training-in",
+      "title": "SEED Solar PV Installation Training 2026: Free Solar Energy Training in Lagos and Abeokuta with COREN Certification",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/10/seed-solar-pv-installation-training-2026-free-solar-energy-training-in-lagos-and-abeokuta-with-coren-certification/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/10/seed-solar-pv-installation-training-2026-free-solar-energy-training-in-lagos-and-abeokuta-with-coren-certification/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "undp-communications-paid-internship-2026-in-italy-6-month-internship-i",
+      "title": "UNDP Communications Paid Internship 2026 in Italy | 6-Month Internship in Rome",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/11/undp-rome-centre-internship-2025-climate-energy-portfolio/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/11/undp-rome-centre-internship-2025-climate-energy-portfolio/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "aja-foundation-grants-2026-funding-for-water-education-and-healthcare",
+      "title": "AJA Foundation Grants 2026 | Funding for Water, Education and Healthcare Projects Worldwide",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/11/aja-foundation-grants-2026-funding-for-water-education-and-healthcare-projects-worldwide/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/11/aja-foundation-grants-2026-funding-for-water-education-and-healthcare-projects-worldwide/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "global-health-emerging-scholars-ghes-fellowship-2027-28-nih-supported",
+      "title": "Global Health Emerging Scholars (GHES) Fellowship 2027–28: NIH-Supported Global Health Research Fellowship for U.S. and LMIC Scholars",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/11/stanford-global-health-emerging-scholars-ghes-fellowship/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/11/stanford-global-health-emerging-scholars-ghes-fellowship/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "university-of-saskatchewan-toxicology-msc-and-phd-2026-2027-funded-gra",
+      "title": "University of Saskatchewan Toxicology MSc and PhD 2026–2027: Funded Graduate Study in Canada With Guaranteed Stipends",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/11/university-of-saskatchewan-toxicology-msc-and-phd-2026-2027-funded-graduate-study-in-canada-with-guaranteed-stipends/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/11/university-of-saskatchewan-toxicology-msc-and-phd-2026-2027-funded-graduate-study-in-canada-with-guaranteed-stipends/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "2027-tools-competition-multi-million-dollar-funding-opportunity-for-in",
+      "title": "2027 Tools Competition: Multi-Million-Dollar Funding Opportunity for Innovative Education Technology, AI Tools and Learning Datasets",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/11/2027-tools-competition-multi-million-dollar-funding-opportunity-for-innovative-education-technology-ai-tools-and-learning-datasets/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/11/2027-tools-competition-multi-million-dollar-funding-opportunity-for-innovative-education-technology-ai-tools-and-learning-datasets/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    },
+    {
+      "source": "Opportunities For Youth",
+      "slug": "uc-berkeley-packard-foundation-philanthropy-fellow-2026-apply-for-a-90",
+      "title": "UC Berkeley–Packard Foundation Philanthropy Fellow 2026: Apply for a $90,000 Professional Opportunity in Civil Society and Leadership",
+      "applyUrl": "https://opportunitiesforyouth.org/2026/09/11/uc-berkeley-packard-foundation-philanthropy-fellow-2026-apply-for-a-90000-professional-opportunity-in-civil-society-and-leadership/",
+      "sourceUrl": "https://opportunitiesforyouth.org/2026/09/11/uc-berkeley-packard-foundation-philanthropy-fellow-2026-apply-for-a-90000-professional-opportunity-in-civil-society-and-leadership/",
+      "applyUrlType": "source_article_fallback",
+      "reasons": [
+        "applyUrl host == sourceUrl host (opportunitiesforyouth.org)"
+      ]
+    }
+  ]
+}

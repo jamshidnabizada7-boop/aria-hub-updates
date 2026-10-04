@@ -1,0 +1,1108 @@
+[
+  {
+    "a": "arcs",
+    "b": "afghan red crescent society",
+    "reason": "acronym-match",
+    "sides": {
+      "a": {
+        "key": "arcs",
+        "resolved": true,
+        "via": "OrganizationAlias.normalized",
+        "id": "cmut7xanr0010ubbc6wdrfylk",
+        "name": "ARCS",
+        "slug": "arcs",
+        "website": null,
+        "careersUrl": null,
+        "officialDomains": null,
+        "verified": false,
+        "organizationType": null,
+        "country": null,
+        "active": true,
+        "createdAt": "2026-10-03T21:45:10.072Z",
+        "oppCounts": {
+          "published": 5,
+          "expired": 3,
+          "draft": 0
+        },
+        "freeTextUsage": 0,
+        "samples": [
+          {
+            "title": "Technical Assistant (Project Focal Point/ECHO)",
+            "status": "published",
+            "deadline": "2026-10-03T19:00:00.000Z",
+            "applyHost": "",
+            "applyUrlType": "application_email"
+          },
+          {
+            "title": "Technical Assistant (Project Focal Point/ECHO) TOR",
+            "status": "published",
+            "deadline": "2026-10-03T19:00:00.000Z",
+            "applyHost": "wazifaha.org",
+            "applyUrlType": "source_article_fallback"
+          },
+          {
+            "title": "د زړه داخلی متخصص ډاکټر",
+            "status": "published",
+            "deadline": "2026-10-04T19:00:00.000Z",
+            "applyHost": "",
+            "applyUrlType": "application_email"
+          },
+          {
+            "title": "واکسیناتور(کندهار)",
+            "status": "published",
+            "deadline": "2026-10-05T19:00:00.000Z",
+            "applyHost": "",
+            "applyUrlType": "application_email"
+          },
+          {
+            "title": "Technical Assistant (Project Focal Point/ECHO)",
+            "status": "published",
+            "deadline": "2026-10-03T19:00:00.000Z",
+            "applyHost": "wazifaha.org",
+            "applyUrlType": "source_article_fallback"
+          },
+          {
+            "title": "داکتر زنانه کلینیک صحی ثابت (فقط برای باشندگان نیمروز)",
+            "status": "expired",
+            "deadline": "2026-10-01T19:00:00.000Z",
+            "applyHost": "",
+            "applyUrlType": "application_email"
+          }
+        ]
+      },
+      "b": {
+        "key": "afghan red crescent society",
+        "resolved": true,
+        "via": "OrganizationAlias.normalized",
+        "id": "cmut7z4z100coubbcuxgsjx6f",
+        "name": "Afghan Red Crescent Society (ARCS)",
+        "slug": "afghan-red-crescent-society-arcs",
+        "website": null,
+        "careersUrl": null,
+        "officialDomains": null,
+        "verified": false,
+        "organizationType": null,
+        "country": null,
+        "active": true,
+        "createdAt": "2026-10-03T21:46:36.013Z",
+        "oppCounts": {
+          "published": 1,
+          "expired": 0,
+          "draft": 0
+        },
+        "freeTextUsage": 0,
+        "samples": [
+          {
+            "title": "Job Announcement: 9 Vacancies at the Afghan Red Crescent Society",
+            "status": "published",
+            "deadline": null,
+            "applyHost": "asanwazifa.af",
+            "applyUrlType": "direct_application"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "a": "irc",
+    "b": "international rescue committee",
+    "reason": "acronym-match",
+    "sides": {
+      "a": {
+        "key": "irc",
+        "resolved": true,
+        "via": "OrganizationAlias.normalized",
+        "id": "cmut7xprh003lubbcxq2od072",
+        "name": "IRC (International Rescue Committee)",
+        "slug": "irc-international-rescue-committee",
+        "website": null,
+        "careersUrl": null,
+        "officialDomains": null,
+        "verified": false,
+        "organizationType": null,
+        "country": null,
+        "active": true,
+        "createdAt": "2026-10-03T21:45:29.646Z",
+        "oppCounts": {
+          "published": 3,
+          "expired": 1,
+          "draft": 0
+        },
+        "freeTextUsage": 0,
+        "samples": [
+          {
+            "title": "Cleaner",
+            "status": "published",
+            "deadline": "2026-10-03T19:00:00.000Z",
+            "applyHost": "wazifaha.org",
+            "applyUrlType": "source_article_fallback"
+          },
+          {
+            "title": "Cleaner",
+            "status": "published",
+            "deadline": "2026-10-05T19:00:00.000Z",
+            "applyHost": "wazifaha.org",
+            "applyUrlType": "source_article_fallback"
+          },
+          {
+            "title": "Cleaner",
+            "status": "published",
+            "deadline": "2026-10-03T19:00:00.000Z",
+            "applyHost": null,
+            "applyUrlType": "unknown"
+          },
+          {
+            "title": "Vaccinator",
+            "status": "expired",
+            "deadline": "2026-09-13T19:00:00.000Z",
+            "applyHost": "wazifaha.org",
+            "applyUrlType": "source_article_fallback"
+          }
+        ]
+      },
+      "b": {
+        "key": "international rescue committee",
+        "resolved": true,
+        "via": "OrganizationAlias.normalized",
+        "id": "cmut7zqy100glubbc422wgtei",
+        "name": "International Rescue Committee",
+        "slug": "international-rescue-committee",
+        "website": null,
+        "careersUrl": null,
+        "officialDomains": null,
+        "verified": false,
+        "organizationType": null,
+        "country": null,
+        "active": true,
+        "createdAt": "2026-10-03T21:47:04.489Z",
+        "oppCounts": {
+          "published": 0,
+          "expired": 1,
+          "draft": 0
+        },
+        "freeTextUsage": 0,
+        "samples": [
+          {
+            "title": "Education Officer — Nangarhar",
+            "status": "expired",
+            "deadline": "2026-09-28T16:49:43.205Z",
+            "applyHost": "example.org",
+            "applyUrlType": "direct_application"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "a": "afghan murad high school",
+    "b": "afghan murad high school ansar",
+    "reason": "token-containment",
+    "sides": {
+      "a": {
+        "key": "afghan murad high school",
+        "resolved": true,
+        "via": "OrganizationAlias.normalized",
+        "id": "cmut7xwy2004uubbc0d5333kh",
+        "name": "Afghan Murad High School",
+        "slug": "afghan-murad-high-school",
+        "website": null,
+        "careersUrl": null,
+        "officialDomains": null,
+        "verified": false,
+        "organizationType": null,
+        "country": null,
+        "active": true,
+        "createdAt": "2026-10-03T21:45:38.954Z",
+        "oppCounts": {
+          "published": 3,
+          "expired": 0,
+          "draft": 0
+        },
+        "freeTextUsage": 0,
+        "samples": [
+          {
+            "title": "Operations & Programs Supervisor",
+            "status": "published",
+            "deadline": "2027-05-02T19:00:00.000Z",
+            "applyHost": "",
+            "applyUrlType": "application_email"
+          },
+          {
+            "title": "School Operations & Programs Supervisor",
+            "status": "published",
+            "deadline": "2027-05-02T19:00:00.000Z",
+            "applyHost": "",
+            "applyUrlType": "application_email"
+          },
+          {
+            "title": "Accountant Afghan Murad High School",
+            "status": "published",
+            "deadline": "2027-07-30T19:00:00.000Z",
+            "applyHost": "wazifaha.org",
+            "applyUrlType": "source_article_fallback"
+          }
+        ]
+      },
+      "b": {
+        "key": "afghan murad high school ansar",
+        "resolved": true,
+        "via": "OrganizationAlias.normalized",
+        "id": "cmut7y8oq006xubbcgwcjtjcc",
+        "name": "Afghan Murad High School / Ansar",
+        "slug": "afghan-murad-high-school-ansar",
+        "website": null,
+        "careersUrl": null,
+        "officialDomains": null,
+        "verified": false,
+        "organizationType": null,
+        "country": null,
+        "active": true,
+        "createdAt": "2026-10-03T21:45:54.170Z",
+        "oppCounts": {
+          "published": 2,
+          "expired": 0,
+          "draft": 0
+        },
+        "freeTextUsage": 0,
+        "samples": [
+          {
+            "title": "Chemistry, Biology, Geology, Dari, Math, Physics, Oxford is a must",
+            "status": "published",
+            "deadline": "2027-03-30T19:00:00.000Z",
+            "applyHost": "wazifaha.org",
+            "applyUrlType": "source_article_fallback"
+          },
+          {
+            "title": "Chemistry, Biology, Geology, Dari, Math, Physics, Oxford is a must",
+            "status": "published",
+            "deadline": "2027-03-30T19:00:00.000Z",
+            "applyHost": "wazifaha.org",
+            "applyUrlType": "source_article_fallback"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "a": "ctg",
+    "b": "ctg afghanistan",
+    "reason": "token-containment",
+    "sides": {
+      "a": {
+        "key": "ctg",
+        "resolved": true,
+        "via": "OrganizationAlias.normalized",
+        "id": "cmut7xyrz0056ubbcwdk48tyn",
+        "name": "CTG",
+        "slug": "ctg",
+        "website": null,
+        "careersUrl": null,
+        "officialDomains": null,
+        "verified": false,
+        "organizationType": null,
+        "country": null,
+        "active": true,
+        "createdAt": "2026-10-03T21:45:41.327Z",
+        "oppCounts": {
+          "published": 2,
+          "expired": 1,
+          "draft": 0
+        },
+        "freeTextUsage": 0,
+        "samples": [
+          {
+            "title": "Para-veterinarian",
+            "status": "published",
+            "deadline": "2026-11-02T19:00:00.000Z",
+            "applyHost": "wazifaha.org",
+            "applyUrlType": "source_article_fallback"
+          },
+          {
+            "title": "Veterinarian",
+            "status": "published",
+            "deadline": "2026-11-02T19:00:00.000Z",
+            "applyHost": "wazifaha.org",
+            "applyUrlType": "source_article_fallback"
+          },
+          {
+            "title": "National Rapid Response Team Support Extender (Re Announced) (Re Announced)",
+            "status": "expired",
+            "deadline": "2026-09-13T19:00:00.000Z",
+            "applyHost": "wazifaha.org",
+            "applyUrlType": "source_article_fallback"
+          }
+        ]
+      },
+      "b": {
+        "key": "ctg afghanistan",
+        "resolved": true,
+        "via": "OrganizationAlias.normalized",
+        "id": "cmut7xz890059ubbcar1bhizh",
+        "name": "CTG Afghanistan",
+        "slug": "ctg-afghanistan",
+        "website": null,
+        "careersUrl": null,
+        "officialDomains": null,
+        "verified": false,
+        "organizationType": null,
+        "country": null,
+        "active": true,
+        "createdAt": "2026-10-03T21:45:41.913Z",
+        "oppCounts": {
+          "published": 3,
+          "expired": 0,
+          "draft": 0
+        },
+        "freeTextUsage": 0,
+        "samples": [
+          {
+            "title": "Senior Programme Associate (Gender Inclusion and AAP)",
+            "status": "published",
+            "deadline": "2026-10-06T19:00:00.000Z",
+            "applyHost": "wazifaha.org",
+            "applyUrlType": "source_article_fallback"
+          },
+          {
+            "title": "Senior Programme Associate (Gender Inclusion and AAP)",
+            "status": "published",
+            "deadline": "2026-10-05T19:00:00.000Z",
+            "applyHost": null,
+            "applyUrlType": "unknown"
+          },
+          {
+            "title": "Senior Programme Associate (Gender Inclusion and AAP)",
+            "status": "published",
+            "deadline": "2026-10-05T19:00:00.000Z",
+            "applyHost": "wazifaha.org",
+            "applyUrlType": "source_article_fallback"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "a": "western isp and ict solutions",
+    "b": "western",
+    "reason": "token-containment",
+    "sides": {
+      "a": {
+        "key": "western isp and ict solutions",
+        "resolved": true,
+        "via": "OrganizationAlias.normalized",
+        "id": "cmut7y6r1006lubbcnwsmje37",
+        "name": "Western ISP & ICT Solutions",
+        "slug": "western-isp-ict-solutions",
+        "website": null,
+        "careersUrl": null,
+        "officialDomains": null,
+        "verified": false,
+        "organizationType": null,
+        "country": null,
+        "active": true,
+        "createdAt": "2026-10-03T21:45:51.661Z",
+        "oppCounts": {
+          "published": 3,
+          "expired": 0,
+          "draft": 0
+        },
+        "freeTextUsage": 0,
+        "samples": [
+          {
+            "title": "IT Technician",
+            "status": "published",
+            "deadline": "2026-10-04T19:00:00.000Z",
+            "applyHost": "",
+            "applyUrlType": "application_email"
+          },
+          {
+            "title": "مدیر مالی",
+            "status": "published",
+            "deadline": "2026-10-09T19:00:00.000Z",
+            "applyHost": "",
+            "applyUrlType": "application_email"
+          },
+          {
+            "title": "IT Technician",
+            "status": "published",
+            "deadline": "2026-10-04T19:00:00.000Z",
+            "applyHost": "",
+            "applyUrlType": "application_email"
+          }
+        ]
+      },
+      "b": {
+        "key": "western",
+        "resolved": true,
+        "via": "OrganizationAlias.normalized",
+        "id": "cmut80xzx00o6ubbc17egtgw1",
+        "name": "Western",
+        "slug": "western",
+        "website": null,
+        "careersUrl": null,
+        "officialDomains": null,
+        "verified": false,
+        "organizationType": null,
+        "country": null,
+        "active": true,
+        "createdAt": "2026-10-03T21:48:00.285Z",
+        "oppCounts": {
+          "published": 1,
+          "expired": 0,
+          "draft": 0
+        },
+        "freeTextUsage": 0,
+        "samples": [
+          {
+            "title": "Western University Scholarships 2027 | Canada",
+            "status": "published",
+            "deadline": "2027-01-14T19:00:00.000Z",
+            "applyHost": "scholarshiproar.com",
+            "applyUrlType": "source_article_fallback"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "a": "daad the german academic exchange services",
+    "b": "daad",
+    "reason": "token-containment",
+    "sides": {
+      "a": {
+        "key": "daad the german academic exchange services",
+        "resolved": true,
+        "via": "OrganizationAlias.normalized",
+        "id": "cmut7ydri007uubbcpk96xt4o",
+        "name": "DAAD- the German Academic Exchange Services",
+        "slug": "daad-the-german-academic-exchange-services",
+        "website": null,
+        "careersUrl": null,
+        "officialDomains": null,
+        "verified": false,
+        "organizationType": null,
+        "country": null,
+        "active": true,
+        "createdAt": "2026-10-03T21:46:00.751Z",
+        "oppCounts": {
+          "published": 2,
+          "expired": 0,
+          "draft": 0
+        },
+        "freeTextUsage": 0,
+        "samples": [
+          {
+            "title": "DAAD Scholarships 2027-2028 for PhD at German Universities of Applied Sciences (HAWs)",
+            "status": "published",
+            "deadline": null,
+            "applyHost": "www2.daad.de",
+            "applyUrlType": "direct_application"
+          },
+          {
+            "title": "DAAD - Summer courses in Germany 2027",
+            "status": "published",
+            "deadline": "2026-10-29T19:00:00.000Z",
+            "applyHost": "www2.daad.de",
+            "applyUrlType": "direct_application"
+          }
+        ]
+      },
+      "b": {
+        "key": "daad",
+        "resolved": true,
+        "via": "OrganizationAlias.normalized",
+        "id": "cmut7zh2x00euubbcsg8sqyku",
+        "name": "DAAD",
+        "slug": "daad",
+        "website": null,
+        "careersUrl": null,
+        "officialDomains": null,
+        "verified": false,
+        "organizationType": null,
+        "country": null,
+        "active": true,
+        "createdAt": "2026-10-03T21:46:51.706Z",
+        "oppCounts": {
+          "published": 1,
+          "expired": 0,
+          "draft": 0
+        },
+        "freeTextUsage": 0,
+        "samples": [
+          {
+            "title": "DAAD University Summer Courses Scholarship 2027 in Germany for Foreign Students and Graduates",
+            "status": "published",
+            "deadline": "2026-10-25T19:00:00.000Z",
+            "applyHost": "afterschoolafrica.com",
+            "applyUrlType": "source_article_fallback"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "a": "maastricht",
+    "b": "maastricht university",
+    "reason": "token-containment",
+    "sides": {
+      "a": {
+        "key": "maastricht",
+        "resolved": true,
+        "via": "OrganizationAlias.normalized",
+        "id": "cmut7yjss008xubbcox807oyl",
+        "name": "Maastricht",
+        "slug": "maastricht",
+        "website": null,
+        "careersUrl": null,
+        "officialDomains": null,
+        "verified": false,
+        "organizationType": null,
+        "country": null,
+        "active": true,
+        "createdAt": "2026-10-03T21:46:08.572Z",
+        "oppCounts": {
+          "published": 2,
+          "expired": 0,
+          "draft": 0
+        },
+        "freeTextUsage": 0,
+        "samples": [
+          {
+            "title": "UM Social Justice Scholarship – Maastricht University, 2027 for Global Students",
+            "status": "published",
+            "deadline": "2026-12-09T19:00:00.000Z",
+            "applyHost": "",
+            "applyUrlType": "application_email"
+          },
+          {
+            "title": "Maastricht University NL-High Potential Scholarship in the Netherlands 2027 (Opens: 1 Oct 2026)",
+            "status": "published",
+            "deadline": "2026-10-23T19:00:00.000Z",
+            "applyHost": "afterschoolafrica.com",
+            "applyUrlType": "source_article_fallback"
+          }
+        ]
+      },
+      "b": {
+        "key": "maastricht university",
+        "resolved": true,
+        "via": "OrganizationAlias.normalized",
+        "id": "cmut7zvke00hfubbcx3txpnj1",
+        "name": "Maastricht University",
+        "slug": "maastricht-university",
+        "website": null,
+        "careersUrl": null,
+        "officialDomains": null,
+        "verified": false,
+        "organizationType": null,
+        "country": null,
+        "active": true,
+        "createdAt": "2026-10-03T21:47:10.478Z",
+        "oppCounts": {
+          "published": 1,
+          "expired": 0,
+          "draft": 0
+        },
+        "freeTextUsage": 0,
+        "samples": [
+          {
+            "title": "Maastricht University Global Studies Scholarship for Bachelor’s Degree 2027–2028",
+            "status": "published",
+            "deadline": "2027-01-31T19:00:00.000Z",
+            "applyHost": "",
+            "applyUrlType": "application_email"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "a": "maastricht",
+    "b": "maastricht university mu",
+    "reason": "token-containment",
+    "sides": {
+      "a": {
+        "key": "maastricht",
+        "resolved": true,
+        "via": "OrganizationAlias.normalized",
+        "id": "cmut7yjss008xubbcox807oyl",
+        "name": "Maastricht",
+        "slug": "maastricht",
+        "website": null,
+        "careersUrl": null,
+        "officialDomains": null,
+        "verified": false,
+        "organizationType": null,
+        "country": null,
+        "active": true,
+        "createdAt": "2026-10-03T21:46:08.572Z",
+        "oppCounts": {
+          "published": 2,
+          "expired": 0,
+          "draft": 0
+        },
+        "freeTextUsage": 0,
+        "samples": [
+          {
+            "title": "UM Social Justice Scholarship – Maastricht University, 2027 for Global Students",
+            "status": "published",
+            "deadline": "2026-12-09T19:00:00.000Z",
+            "applyHost": "",
+            "applyUrlType": "application_email"
+          },
+          {
+            "title": "Maastricht University NL-High Potential Scholarship in the Netherlands 2027 (Opens: 1 Oct 2026)",
+            "status": "published",
+            "deadline": "2026-10-23T19:00:00.000Z",
+            "applyHost": "afterschoolafrica.com",
+            "applyUrlType": "source_article_fallback"
+          }
+        ]
+      },
+      "b": {
+        "key": "maastricht university mu",
+        "resolved": true,
+        "via": "OrganizationAlias.normalized",
+        "id": "cmut7zw2t00hiubbc6mcdmlxj",
+        "name": "Maastricht University MU",
+        "slug": "maastricht-university-mu",
+        "website": null,
+        "careersUrl": null,
+        "officialDomains": null,
+        "verified": false,
+        "organizationType": null,
+        "country": null,
+        "active": true,
+        "createdAt": "2026-10-03T21:47:11.142Z",
+        "oppCounts": {
+          "published": 1,
+          "expired": 0,
+          "draft": 0
+        },
+        "freeTextUsage": 0,
+        "samples": [
+          {
+            "title": "Maastricht University Holland-High Potential Scholarship 2027-2028 to study Master's degree in the Netherlands",
+            "status": "published",
+            "deadline": "2027-01-31T19:00:00.000Z",
+            "applyHost": "corsa-forms.mumc.maastrichtuniversity.nl",
+            "applyUrlType": "direct_application"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "a": "brown",
+    "b": "brown university",
+    "reason": "token-containment",
+    "sides": {
+      "a": {
+        "key": "brown",
+        "resolved": true,
+        "via": "OrganizationAlias.normalized",
+        "id": "cmut7zeag00ecubbcnqtbah6o",
+        "name": "Brown",
+        "slug": "brown",
+        "website": null,
+        "careersUrl": null,
+        "officialDomains": null,
+        "verified": false,
+        "organizationType": null,
+        "country": null,
+        "active": true,
+        "createdAt": "2026-10-03T21:46:48.088Z",
+        "oppCounts": {
+          "published": 1,
+          "expired": 0,
+          "draft": 0
+        },
+        "freeTextUsage": 0,
+        "samples": [
+          {
+            "title": "Brown University Scholarships 2027 for International Students | USA",
+            "status": "published",
+            "deadline": "2026-10-31T19:00:00.000Z",
+            "applyHost": "commonapp.org",
+            "applyUrlType": "direct_application"
+          }
+        ]
+      },
+      "b": {
+        "key": "brown university",
+        "resolved": true,
+        "via": "OrganizationAlias.normalized",
+        "id": "cmut7zerb00efubbc09bjl1wd",
+        "name": "Brown University",
+        "slug": "brown-university",
+        "website": null,
+        "careersUrl": null,
+        "officialDomains": null,
+        "verified": false,
+        "organizationType": null,
+        "country": null,
+        "active": true,
+        "createdAt": "2026-10-03T21:46:48.695Z",
+        "oppCounts": {
+          "published": 1,
+          "expired": 0,
+          "draft": 0
+        },
+        "freeTextUsage": 0,
+        "samples": [
+          {
+            "title": "Pembroke Center Postdoctoral Research Associate 2027–28 at Brown University, USA",
+            "status": "published",
+            "deadline": "2026-11-22T19:00:00.000Z",
+            "applyHost": "dossier.interfolio.com",
+            "applyUrlType": "direct_application"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "a": "fully funded monash",
+    "b": "monash",
+    "reason": "token-containment",
+    "sides": {
+      "a": {
+        "key": "fully funded monash",
+        "resolved": true,
+        "via": "OrganizationAlias.normalized",
+        "id": "cmut7zkqc00fiubbcfitvqpzi",
+        "name": "Fully Funded Monash",
+        "slug": "fully-funded-monash",
+        "website": null,
+        "careersUrl": null,
+        "officialDomains": null,
+        "verified": false,
+        "organizationType": null,
+        "country": null,
+        "active": true,
+        "createdAt": "2026-10-03T21:46:56.436Z",
+        "oppCounts": {
+          "published": 1,
+          "expired": 0,
+          "draft": 0
+        },
+        "freeTextUsage": 0,
+        "samples": [
+          {
+            "title": "Multiple Fully Funded Monash University Indonesia Masters Scholarships 2026 – Full Details",
+            "status": "published",
+            "deadline": "2026-10-23T19:00:00.000Z",
+            "applyHost": "afterschoolafrica.com",
+            "applyUrlType": "source_article_fallback"
+          }
+        ]
+      },
+      "b": {
+        "key": "monash",
+        "resolved": true,
+        "via": "OrganizationAlias.normalized",
+        "id": "cmut800c500i9ubbc9lb42z3y",
+        "name": "Monash",
+        "slug": "monash",
+        "website": null,
+        "careersUrl": null,
+        "officialDomains": null,
+        "verified": false,
+        "organizationType": null,
+        "country": null,
+        "active": true,
+        "createdAt": "2026-10-03T21:47:16.662Z",
+        "oppCounts": {
+          "published": 1,
+          "expired": 0,
+          "draft": 0
+        },
+        "freeTextUsage": 0,
+        "samples": [
+          {
+            "title": "Monash University Sir John Monash Scholarships for Excellence for International Students (up to $40,000 stipend)",
+            "status": "published",
+            "deadline": "2026-10-23T19:00:00.000Z",
+            "applyHost": "afterschoolafrica.com",
+            "applyUrlType": "source_article_fallback"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "a": "maastricht university",
+    "b": "maastricht university mu",
+    "reason": "token-containment",
+    "sides": {
+      "a": {
+        "key": "maastricht university",
+        "resolved": true,
+        "via": "OrganizationAlias.normalized",
+        "id": "cmut7zvke00hfubbcx3txpnj1",
+        "name": "Maastricht University",
+        "slug": "maastricht-university",
+        "website": null,
+        "careersUrl": null,
+        "officialDomains": null,
+        "verified": false,
+        "organizationType": null,
+        "country": null,
+        "active": true,
+        "createdAt": "2026-10-03T21:47:10.478Z",
+        "oppCounts": {
+          "published": 1,
+          "expired": 0,
+          "draft": 0
+        },
+        "freeTextUsage": 0,
+        "samples": [
+          {
+            "title": "Maastricht University Global Studies Scholarship for Bachelor’s Degree 2027–2028",
+            "status": "published",
+            "deadline": "2027-01-31T19:00:00.000Z",
+            "applyHost": "",
+            "applyUrlType": "application_email"
+          }
+        ]
+      },
+      "b": {
+        "key": "maastricht university mu",
+        "resolved": true,
+        "via": "OrganizationAlias.normalized",
+        "id": "cmut7zw2t00hiubbc6mcdmlxj",
+        "name": "Maastricht University MU",
+        "slug": "maastricht-university-mu",
+        "website": null,
+        "careersUrl": null,
+        "officialDomains": null,
+        "verified": false,
+        "organizationType": null,
+        "country": null,
+        "active": true,
+        "createdAt": "2026-10-03T21:47:11.142Z",
+        "oppCounts": {
+          "published": 1,
+          "expired": 0,
+          "draft": 0
+        },
+        "freeTextUsage": 0,
+        "samples": [
+          {
+            "title": "Maastricht University Holland-High Potential Scholarship 2027-2028 to study Master's degree in the Netherlands",
+            "status": "published",
+            "deadline": "2027-01-31T19:00:00.000Z",
+            "applyHost": "corsa-forms.mumc.maastrichtuniversity.nl",
+            "applyUrlType": "direct_application"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "a": "swinburne university of technology",
+    "b": "university of technology",
+    "reason": "token-containment",
+    "sides": {
+      "a": {
+        "key": "swinburne university of technology",
+        "resolved": true,
+        "via": "OrganizationAlias.normalized",
+        "id": "cmut80f1100kuubbc2l2r5yiz",
+        "name": "Swinburne University of Technology",
+        "slug": "swinburne-university-of-technology",
+        "website": null,
+        "careersUrl": null,
+        "officialDomains": null,
+        "verified": false,
+        "organizationType": null,
+        "country": null,
+        "active": true,
+        "createdAt": "2026-10-03T21:47:35.702Z",
+        "oppCounts": {
+          "published": 1,
+          "expired": 0,
+          "draft": 0
+        },
+        "freeTextUsage": 0,
+        "samples": [
+          {
+            "title": "Swinburne Research Stipend Scholarships 2026- 2027 in Australia",
+            "status": "published",
+            "deadline": "2026-10-06T19:00:00.000Z",
+            "applyHost": "",
+            "applyUrlType": "application_email"
+          }
+        ]
+      },
+      "b": {
+        "key": "university of technology",
+        "resolved": true,
+        "via": "OrganizationAlias.normalized",
+        "id": "cmut80vnb00nrubbcix2getx7",
+        "name": "University of Technology",
+        "slug": "university-of-technology",
+        "website": null,
+        "careersUrl": null,
+        "officialDomains": null,
+        "verified": false,
+        "organizationType": null,
+        "country": null,
+        "active": true,
+        "createdAt": "2026-10-03T21:47:57.239Z",
+        "oppCounts": {
+          "published": 1,
+          "expired": 0,
+          "draft": 0
+        },
+        "freeTextUsage": 0,
+        "samples": [
+          {
+            "title": "Apply for the Helmut Veith Stipend at Vienna University of Technology 2027 (Masters Scholarship)",
+            "status": "published",
+            "deadline": "2026-10-25T19:00:00.000Z",
+            "applyHost": "afterschoolafrica.com",
+            "applyUrlType": "source_article_fallback"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "a": "united nations",
+    "b": "united nations institute for training and research",
+    "reason": "token-containment",
+    "sides": {
+      "a": {
+        "key": "united nations",
+        "resolved": true,
+        "via": "OrganizationAlias.normalized",
+        "id": "cmut80mra00m6ubbc7idx7m7f",
+        "name": "United Nations",
+        "slug": "united-nations",
+        "website": null,
+        "careersUrl": null,
+        "officialDomains": null,
+        "verified": false,
+        "organizationType": null,
+        "country": null,
+        "active": true,
+        "createdAt": "2026-10-03T21:47:45.718Z",
+        "oppCounts": {
+          "published": 0,
+          "expired": 1,
+          "draft": 0
+        },
+        "freeTextUsage": 0,
+        "samples": [
+          {
+            "title": "Remote Research Internship at United Nations University (UNU) in Neuroscience, Learning and AI in Higher Education",
+            "status": "expired",
+            "deadline": "2026-09-17T19:00:00.000Z",
+            "applyHost": "opportunitiesforyouth.org",
+            "applyUrlType": "source_article_fallback"
+          }
+        ]
+      },
+      "b": {
+        "key": "united nations institute for training and research",
+        "resolved": true,
+        "via": "OrganizationAlias.normalized",
+        "id": "cmut80n7h00m9ubbciy3pt14c",
+        "name": "United Nations Institute for Training and Research(UNITAR)",
+        "slug": "united-nations-institute-for-training-and-research-unitar",
+        "website": null,
+        "careersUrl": null,
+        "officialDomains": null,
+        "verified": false,
+        "organizationType": null,
+        "country": null,
+        "active": true,
+        "createdAt": "2026-10-03T21:47:46.302Z",
+        "oppCounts": {
+          "published": 0,
+          "expired": 1,
+          "draft": 0
+        },
+        "freeTextUsage": 0,
+        "samples": [
+          {
+            "title": "Apply for UNITAR Youth Ambassador Asia Pacific Program 2026",
+            "status": "expired",
+            "deadline": "2026-10-02T19:00:00.000Z",
+            "applyHost": "itseducation.asia",
+            "applyUrlType": "direct_application"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "a": "university of dundee",
+    "b": "university of dundee vice chancellor",
+    "reason": "token-containment",
+    "sides": {
+      "a": {
+        "key": "university of dundee",
+        "resolved": true,
+        "via": "OrganizationAlias.normalized",
+        "id": "cmut80o6y00mfubbchlcs9da4",
+        "name": "University of Dundee",
+        "slug": "university-of-dundee",
+        "website": null,
+        "careersUrl": null,
+        "officialDomains": null,
+        "verified": false,
+        "organizationType": null,
+        "country": null,
+        "active": true,
+        "createdAt": "2026-10-03T21:47:47.578Z",
+        "oppCounts": {
+          "published": 1,
+          "expired": 0,
+          "draft": 0
+        },
+        "freeTextUsage": 0,
+        "samples": [
+          {
+            "title": "Apply for the Global Excellence Scholarship for International Students at the University of Dundee 2027",
+            "status": "published",
+            "deadline": "2026-10-23T19:00:00.000Z",
+            "applyHost": "afterschoolafrica.com",
+            "applyUrlType": "source_article_fallback"
+          }
+        ]
+      },
+      "b": {
+        "key": "university of dundee vice chancellor",
+        "resolved": true,
+        "via": "OrganizationAlias.normalized",
+        "id": "cmut80onb00miubbczmwfj0as",
+        "name": "University of Dundee Vice Chancellor",
+        "slug": "university-of-dundee-vice-chancellor",
+        "website": null,
+        "careersUrl": null,
+        "officialDomains": null,
+        "verified": false,
+        "organizationType": null,
+        "country": null,
+        "active": true,
+        "createdAt": "2026-10-03T21:47:48.167Z",
+        "oppCounts": {
+          "published": 1,
+          "expired": 0,
+          "draft": 0
+        },
+        "freeTextUsage": 0,
+        "samples": [
+          {
+            "title": "The University of Dundee Vice Chancellor’s Africa Scholarship 2027 for African Students in Scotland",
+            "status": "published",
+            "deadline": "2026-10-23T19:00:00.000Z",
+            "applyHost": "afterschoolafrica.com",
+            "applyUrlType": "source_article_fallback"
+          }
+        ]
+      }
+    }
+  }
+]

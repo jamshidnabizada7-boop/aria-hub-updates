@@ -1,0 +1,406 @@
+{
+  "totals": {
+    "orgs": 305,
+    "missingWebsite": 305,
+    "missingCareersUrl": 304,
+    "missingOfficialDomains": 303,
+    "fallbackSlugs": 8,
+    "verified": 2,
+    "unverified": 303,
+    "inactive": 0,
+    "withOpportunities": 303,
+    "zeroOpportunities": 2
+  },
+  "methods": {
+    "(null)": 303,
+    "manual_review_phase9": 2
+  },
+  "verifiedRows": [
+    {
+      "name": "Acted",
+      "slug": "acted",
+      "website": null,
+      "method": "manual_review_phase9"
+    },
+    {
+      "name": "ReliefWeb (UN OCHA)",
+      "slug": "reliefweb-un-ocha",
+      "website": null,
+      "method": "manual_review_phase9"
+    }
+  ],
+  "dupDomains": [],
+  "dupWebHosts": [],
+  "top20": [
+    {
+      "name": "Ghazanfar Bank",
+      "slug": "ghazanfar-bank",
+      "published": 19,
+      "expired": 0,
+      "website": null,
+      "careersUrl": null,
+      "officialDomains": null,
+      "verified": false,
+      "gaps": [
+        "website",
+        "careersUrl",
+        "officialDomains",
+        "verified"
+      ]
+    },
+    {
+      "name": "INTERSOS",
+      "slug": "intersos",
+      "published": 13,
+      "expired": 11,
+      "website": null,
+      "careersUrl": null,
+      "officialDomains": null,
+      "verified": false,
+      "gaps": [
+        "website",
+        "careersUrl",
+        "officialDomains",
+        "verified"
+      ]
+    },
+    {
+      "name": "Agricultural Development Fund",
+      "slug": "agricultural-development-fund",
+      "published": 13,
+      "expired": 0,
+      "website": null,
+      "careersUrl": null,
+      "officialDomains": null,
+      "verified": false,
+      "gaps": [
+        "website",
+        "careersUrl",
+        "officialDomains",
+        "verified"
+      ]
+    },
+    {
+      "name": "HPL",
+      "slug": "hpl",
+      "published": 12,
+      "expired": 0,
+      "website": null,
+      "careersUrl": null,
+      "officialDomains": null,
+      "verified": false,
+      "gaps": [
+        "website",
+        "careersUrl",
+        "officialDomains",
+        "verified"
+      ]
+    },
+    {
+      "name": "Ummat International Hospital - UIH",
+      "slug": "ummat-international-hospital-uih",
+      "published": 10,
+      "expired": 2,
+      "website": null,
+      "careersUrl": null,
+      "officialDomains": null,
+      "verified": false,
+      "gaps": [
+        "website",
+        "careersUrl",
+        "officialDomains",
+        "verified"
+      ]
+    },
+    {
+      "name": "Da Afghanistan Bank",
+      "slug": "da-afghanistan-bank",
+      "published": 10,
+      "expired": 0,
+      "website": null,
+      "careersUrl": null,
+      "officialDomains": null,
+      "verified": false,
+      "gaps": [
+        "website",
+        "careersUrl",
+        "officialDomains",
+        "verified"
+      ]
+    },
+    {
+      "name": "Environmental Protection Trainings and Development Organization (EPTDO)",
+      "slug": "environmental-protection-trainings-and-development-organizat",
+      "published": 7,
+      "expired": 0,
+      "website": null,
+      "careersUrl": null,
+      "officialDomains": null,
+      "verified": false,
+      "gaps": [
+        "website",
+        "careersUrl",
+        "officialDomains",
+        "verified"
+      ]
+    },
+    {
+      "name": "Equal Rights Trust Organization (ERTO) موسسه باور به حقوق مساوی",
+      "slug": "equal-rights-trust-organization-erto",
+      "published": 7,
+      "expired": 0,
+      "website": null,
+      "careersUrl": null,
+      "officialDomains": null,
+      "verified": false,
+      "gaps": [
+        "website",
+        "careersUrl",
+        "officialDomains",
+        "verified"
+      ]
+    },
+    {
+      "name": "Organization for Community Coordination and Development (OCCD)",
+      "slug": "organization-for-community-coordination-and-development-occd",
+      "published": 7,
+      "expired": 0,
+      "website": null,
+      "careersUrl": null,
+      "officialDomains": null,
+      "verified": false,
+      "gaps": [
+        "website",
+        "careersUrl",
+        "officialDomains",
+        "verified"
+      ]
+    },
+    {
+      "name": "HealthNet TPO",
+      "slug": "healthnet-tpo",
+      "published": 6,
+      "expired": 5,
+      "website": null,
+      "careersUrl": null,
+      "officialDomains": null,
+      "verified": false,
+      "gaps": [
+        "website",
+        "careersUrl",
+        "officialDomains",
+        "verified"
+      ]
+    },
+    {
+      "name": "Relief International (RI)",
+      "slug": "relief-international-ri",
+      "published": 6,
+      "expired": 4,
+      "website": null,
+      "careersUrl": null,
+      "officialDomains": null,
+      "verified": false,
+      "gaps": [
+        "website",
+        "careersUrl",
+        "officialDomains",
+        "verified"
+      ]
+    },
+    {
+      "name": "Action Against Hunger",
+      "slug": "action-against-hunger",
+      "published": 6,
+      "expired": 3,
+      "website": null,
+      "careersUrl": null,
+      "officialDomains": null,
+      "verified": false,
+      "gaps": [
+        "website",
+        "careersUrl",
+        "officialDomains",
+        "verified"
+      ]
+    },
+    {
+      "name": "(CHA), Coordination of Humanitarian Assistance موسسه همکاری",
+      "slug": "cha-coordination-of-humanitarian-assistance",
+      "published": 6,
+      "expired": 0,
+      "website": null,
+      "careersUrl": null,
+      "officialDomains": null,
+      "verified": false,
+      "gaps": [
+        "website",
+        "careersUrl",
+        "officialDomains",
+        "verified"
+      ]
+    },
+    {
+      "name": "ALSO",
+      "slug": "also",
+      "published": 6,
+      "expired": 0,
+      "website": null,
+      "careersUrl": null,
+      "officialDomains": null,
+      "verified": false,
+      "gaps": [
+        "website",
+        "careersUrl",
+        "officialDomains",
+        "verified"
+      ]
+    },
+    {
+      "name": "UNOPS",
+      "slug": "unops",
+      "published": 6,
+      "expired": 0,
+      "website": null,
+      "careersUrl": null,
+      "officialDomains": null,
+      "verified": false,
+      "gaps": [
+        "website",
+        "careersUrl",
+        "officialDomains",
+        "verified"
+      ]
+    },
+    {
+      "name": "Westgate Consultancy",
+      "slug": "westgate-consultancy",
+      "published": 6,
+      "expired": 0,
+      "website": null,
+      "careersUrl": null,
+      "officialDomains": null,
+      "verified": false,
+      "gaps": [
+        "website",
+        "careersUrl",
+        "officialDomains",
+        "verified"
+      ]
+    },
+    {
+      "name": "ریاست عمومی شرکت های امارتی",
+      "slug": "opportunity",
+      "published": 6,
+      "expired": 0,
+      "website": null,
+      "careersUrl": null,
+      "officialDomains": null,
+      "verified": false,
+      "gaps": [
+        "website",
+        "careersUrl",
+        "officialDomains",
+        "verified"
+      ]
+    },
+    {
+      "name": "ARCS",
+      "slug": "arcs",
+      "published": 5,
+      "expired": 3,
+      "website": null,
+      "careersUrl": null,
+      "officialDomains": null,
+      "verified": false,
+      "gaps": [
+        "website",
+        "careersUrl",
+        "officialDomains",
+        "verified"
+      ]
+    },
+    {
+      "name": "ATOMA",
+      "slug": "atoma",
+      "published": 5,
+      "expired": 0,
+      "website": null,
+      "careersUrl": null,
+      "officialDomains": null,
+      "verified": false,
+      "gaps": [
+        "website",
+        "careersUrl",
+        "officialDomains",
+        "verified"
+      ]
+    },
+    {
+      "name": "ZOODPAY",
+      "slug": "zoodpay",
+      "published": 5,
+      "expired": 0,
+      "website": null,
+      "careersUrl": null,
+      "officialDomains": null,
+      "verified": false,
+      "gaps": [
+        "website",
+        "careersUrl",
+        "officialDomains",
+        "verified"
+      ]
+    }
+  ],
+  "fallbackRows": [
+    {
+      "name": "اتاق تجارت و سرمایه گذاری بلخ",
+      "slug": "opportunity-4",
+      "published": 1,
+      "expired": 0
+    },
+    {
+      "name": "افغان تیلی کام",
+      "slug": "opportunity-2",
+      "published": 0,
+      "expired": 2
+    },
+    {
+      "name": "الفلاح پوهنتون",
+      "slug": "opportunity-5",
+      "published": 1,
+      "expired": 0
+    },
+    {
+      "name": "انستیتیوت بانکداری و مالی افغانستان",
+      "slug": "opportunity-6",
+      "published": 1,
+      "expired": 0
+    },
+    {
+      "name": "ریاست عمومی انسجام امور شاروالی‌ها",
+      "slug": "opportunity-7",
+      "published": 0,
+      "expired": 1
+    },
+    {
+      "name": "شرکت آسیاهرت گروپ",
+      "slug": "opportunity-3",
+      "published": 2,
+      "expired": 0
+    },
+    {
+      "name": "شفاخانه معالجوی بیست بستر حضرت خاتم النبیین (ص) نیمروز",
+      "slug": "opportunity-8",
+      "published": 1,
+      "expired": 0
+    },
+    {
+      "name": "له خصوصی سکتورونو څخه د څارنی عمومی  ریاست",
+      "slug": "opportunity-9",
+      "published": 1,
+      "expired": 0
+    }
+  ]
+}
