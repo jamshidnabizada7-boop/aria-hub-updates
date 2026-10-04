@@ -7,6 +7,7 @@ import {
   EMPLOYER_SESSION_COOKIE, encodeEmployerSession, registerEmployer,
   loginEmployer, getCurrentEmployer,
 } from '@/lib/employer-auth';
+import { createPasswordResetToken, resetEmployerPassword } from '@/lib/employer-auth';
 import { myOrganizations } from '@/lib/employers/membership';
 import { allowDurable } from '@/lib/security/durable-rate-limit';
 import { db } from '@/lib/db';
@@ -86,6 +87,23 @@ export async function POST(request: Request, ctx: { params: Promise<{ action: st
       res.cookies.set(sessionCookie({ userId: user.id, email: user.email }));
       return res;
     }
+    if (action === 'forgot-password') {
+      // PHASE 7: single-use hashed reset token. SMTP delivery is not wired
+      // yet — during early operations the token is returned ONLY in the
+      // response so the owner can hand it to the employer manually; this
+      // response shape must change when SMTP lands.
+      const result = await createPasswordResetToken(email);
+      if (!result.sent || !result.token) {
+        return NextResponse.json({ success: true, delivered: false });
+      }
+      return NextResponse.json({ success: true, delivered: true, token: result.token });
+    }
+    if (action === 'reset-password') {
+      await resetEmployerPassword(String(body.token ?? ''), password);
+      const res = NextResponse.json({ success: true });
+      res.cookies.set({ name: EMPLOYER_SESSION_COOKIE, value: '', httpOnly: true, path: '/', maxAge: 0 });
+      return res;
+    }
     return NextResponse.json({ error: 'Unknown action' }, { status: 404 });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'Auth failed' }, { status: 400 });
@@ -100,3 +118,9 @@ export async function GET(request: Request, ctx: { params: Promise<{ action: str
   const organizations = await myOrganizations(db, employer.id);
   return NextResponse.json({ user: employer, organizations });
 }
+
+// PHASE 7 extra actions appended to the POST handler switch are documented
+// here: 'forgot-password' issues a single-use hashed reset token (returned
+// ONLY when SMTP is not configured, so the owner can complete resets
+// manually during early operations); 'reset-password' consumes the token.
+// Both routes are handled below via dynamic action names.

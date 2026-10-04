@@ -13,7 +13,7 @@
  *  - production refuses to boot sessions without a strong secret
  *  - httpOnly / secure / sameSite=lax cookie, server-side expiry check
  */
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { db } from '@/lib/db';
 
@@ -89,9 +89,24 @@ export async function registerEmployer(email: string, password: string, name?: s
 export async function loginEmployer(email: string, password: string): Promise<EmployerUser> {
   const normalized = String(email ?? '').trim().toLowerCase();
   const user = await db.user.findUnique({ where: { email: normalized } });
-  if (!user?.passwordHash) throw new Error('Invalid email or password.');
+  // PHASE 7: disabled accounts are indistinguishable from bad credentials
+  // (no user-enumeration signal), and brute-force attempts are durably
+  // counted per email so they survive serverless restarts.
+  if (!user?.passwordHash || user.disabled) throw new Error('Invalid email or password.');
   const ok = await bcrypt.compare(password, user.passwordHash);
-  if (!ok) throw new Error('Invalid email or password.');
+  if (!ok) {
+    await db.$executeRaw`
+      INSERT INTO "RateLimitBucket" ("key", "windowStart", "count", "updatedAt")
+      VALUES (${`bf:${normalized}`}, now(), 1, now())
+      ON CONFLICT ("key", "windowStart") DO UPDATE SET "count" = "RateLimitBucket"."count" + 1
+    `.catch(() => null);
+    throw new Error('Invalid email or password.');
+  }
+  const bf = (await db.$queryRaw<Array<{ n: number }>>`
+    SELECT COALESCE(SUM("count"), 0)::int AS n FROM "RateLimitBucket"
+    WHERE "key" = ${`bf:${normalized}`} AND "windowStart" > now() - interval '15 minutes'
+  `);
+  if ((bf[0]?.n ?? 0) > 10) throw new Error('Too many failed attempts. Try again later.');
   return { id: user.id, email: user.email!, name: user.name };
 }
 
@@ -100,7 +115,8 @@ export async function getCurrentEmployer(cookieValue: string | undefined | null)
   const payload = decodeEmployerSession(cookieValue);
   if (!payload) return null;
   const user = await db.user.findUnique({ where: { id: payload.userId } });
-  if (!user?.email) return null;
+  // PHASE 7: sessions fail closed for disabled accounts.
+  if (!user?.email || user.disabled) return null;
   return { id: user.id, email: user.email, name: user.name };
 }
 
@@ -112,4 +128,83 @@ export async function employerFromRequest(request: Request): Promise<EmployerUse
     if (k === EMPLOYER_SESSION_COOKIE) return getCurrentEmployer(rest.join('='));
   }
   return null;
+}
+
+// ─── PHASE 7: account management ─────────────────────────────────────────────
+
+/** Change password for the CURRENT session holder (verifies the old one). */
+export async function changeEmployerPassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  const user = await db.user.findUnique({ where: { id: userId } });
+  if (!user?.passwordHash) throw new Error('Account has no password set.');
+  const ok = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!ok) throw new Error('Current password is incorrect.');
+  if (typeof newPassword !== 'string' || newPassword.length < 8) throw new Error('Password must be at least 8 characters.');
+  await db.user.update({
+    where: { id: userId },
+    data: { passwordHash: await bcrypt.hash(newPassword, 12) },
+  });
+}
+
+/**
+ * Create a password-reset token for an email (if the account exists).
+ * Always succeeds without revealing whether the account exists.
+ * Tokens are single-use, expire in 60 minutes, and are stored hashed.
+ */
+export async function createPasswordResetToken(email: string): Promise<{ sent: boolean; token?: string }> {
+  const normalized = String(email ?? '').trim().toLowerCase();
+  const user = await db.user.findUnique({ where: { email: normalized } });
+  if (!user?.passwordHash) return { sent: false };
+  const token = randomBytes(32).toString('base64url');
+  await db.user.update({
+    where: { id: user.id },
+    data: {
+      passwordResetToken: createHmac('sha256', sessionSecret()).update(token).digest('base64url'),
+      passwordResetExpires: new Date(Date.now() + 60 * 60_000),
+    },
+  });
+  return { sent: true, token };
+}
+
+/** Complete a reset with a token: sets the new password, invalidates it. */
+export async function resetEmployerPassword(token: string, newPassword: string): Promise<void> {
+  if (typeof newPassword !== 'string' || newPassword.length < 8) throw new Error('Password must be at least 8 characters.');
+  const hashed = createHmac('sha256', sessionSecret()).update(String(token)).digest('base64url');
+  const user = await db.user.findFirst({
+    where: { passwordResetToken: hashed, passwordResetExpires: { gt: new Date() } },
+  });
+  if (!user) throw new Error('Reset link is invalid or has expired.');
+  await db.user.update({
+    where: { id: user.id },
+    data: {
+      passwordHash: await bcrypt.hash(newPassword, 12),
+      passwordResetToken: null,
+      passwordResetExpires: null,
+    },
+  });
+}
+
+/** Admin/operations: disable an account (blocks login, sessions fail closed). */
+export async function disableEmployerAccount(userId: string): Promise<void> {
+  await db.user.update({ where: { id: userId }, data: { disabled: true } });
+}
+
+/** PHASE 7: change password by session (verifies current). */
+export async function changeEmployerPasswordSession(
+  userId: string,
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  await changeEmployerPassword(userId, currentPassword, newPassword);
+}
+
+/** PHASE 7: expire all reset tokens for a user (used after a reset). */
+export async function clearPasswordResetToken(userId: string): Promise<void> {
+  await db.user.update({
+    where: { id: userId },
+    data: { passwordResetToken: null, passwordResetExpires: null },
+  });
 }

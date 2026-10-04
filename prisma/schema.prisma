@@ -1150,6 +1150,9 @@ model User {
   emailVerified DateTime?
   image         String?
   passwordHash  String? // employer credentials login (Phase 12; null = no password set)
+  disabled      Boolean @default(false) // account disable (PHASE 7: blocks login + invalidates sessions)
+  passwordResetToken   String?
+  passwordResetExpires DateTime?
   members       OrganizationMember[]
   accounts      Account[]
   sessions      Session[]
