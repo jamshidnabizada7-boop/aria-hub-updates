@@ -79,6 +79,10 @@ async function loadDueCandidates(now: Date): Promise<WorkerCandidate[]> {
   const rows = await db.importSource.findMany({
     where: {
       enabled: true,
+      // News sources go through the dedicated admin news pipeline — the
+      // opportunity worker schedules job/scholarship sources only (matches
+      // the old scheduler's filter in automation/scheduled-import.ts).
+      type: { in: ['job', 'scholarship'] },
       healthStatus: { notIn: ['paused', 'pending_configuration'] },
       OR: [{ nextRunAt: { lte: now } }, { nextRunAt: null }],
     },
