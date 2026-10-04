@@ -1,0 +1,716 @@
+{
+  "measuredAt": "2026-10-04T06:42:06.369Z",
+  "totalBytes": 37078366312,
+  "rows": [
+    {
+      "route": "app/api/cv-builder/pdf",
+      "files": 231,
+      "bytes": 347528114
+    },
+    {
+      "route": "/",
+      "files": 347,
+      "bytes": 297214912
+    },
+    {
+      "route": "app/api/admin/pipeline/tick",
+      "files": 321,
+      "bytes": 287172400
+    },
+    {
+      "route": "app/api/admin/pipeline/translate",
+      "files": 320,
+      "bytes": 287130017
+    },
+    {
+      "route": "app/api/admin/pipeline/import",
+      "files": 320,
+      "bytes": 287129960
+    },
+    {
+      "route": "app/api/admin/automation",
+      "files": 224,
+      "bytes": 284924589
+    },
+    {
+      "route": "app/api/admin/facebook-groups",
+      "files": 213,
+      "bytes": 284554471
+    },
+    {
+      "route": "app/api/admin/pipeline/social",
+      "files": 213,
+      "bytes": 284542518
+    },
+    {
+      "route": "app/api/admin/import/run",
+      "files": 301,
+      "bytes": 280639792
+    },
+    {
+      "route": "app/[lang]",
+      "files": 237,
+      "bytes": 279147837
+    },
+    {
+      "route": "app/api/admin/submissions",
+      "files": 203,
+      "bytes": 278874948
+    },
+    {
+      "route": "app/api/admin/ai-translate",
+      "files": 199,
+      "bytes": 278640681
+    },
+    {
+      "route": "app/[lang]/visa-prep/calculator",
+      "files": 218,
+      "bytes": 278463869
+    },
+    {
+      "route": "app/[lang]/opportunities/[slug]",
+      "files": 221,
+      "bytes": 278430880
+    },
+    {
+      "route": "app/[lang]/advertise",
+      "files": 221,
+      "bytes": 278389258
+    },
+    {
+      "route": "app/[lang]/opportunities",
+      "files": 221,
+      "bytes": 278383879
+    },
+    {
+      "route": "app/[lang]/visas",
+      "files": 217,
+      "bytes": 278362625
+    },
+    {
+      "route": "app/[lang]/success-stories",
+      "files": 218,
+      "bytes": 278341382
+    },
+    {
+      "route": "app/[lang]/deadlines",
+      "files": 218,
+      "bytes": 278336739
+    },
+    {
+      "route": "app/[lang]/visa-prep/rejections",
+      "files": 217,
+      "bytes": 278327733
+    },
+    {
+      "route": "app/[lang]/track",
+      "files": 217,
+      "bytes": 278320423
+    },
+    {
+      "route": "app/[lang]/visa-prep",
+      "files": 218,
+      "bytes": 278317215
+    },
+    {
+      "route": "app/[lang]/interview-prep/questions/[id]",
+      "files": 217,
+      "bytes": 278316461
+    },
+    {
+      "route": "app/[lang]/interview-prep",
+      "files": 218,
+      "bytes": 278314826
+    },
+    {
+      "route": "app/[lang]/services",
+      "files": 218,
+      "bytes": 278314697
+    },
+    {
+      "route": "app/[lang]/interview-prep/category/[slug]",
+      "files": 217,
+      "bytes": 278313752
+    },
+    {
+      "route": "app/[lang]/blog",
+      "files": 217,
+      "bytes": 278312611
+    },
+    {
+      "route": "app/[lang]/success-stories/[id]",
+      "files": 218,
+      "bytes": 278312083
+    },
+    {
+      "route": "app/[lang]/employers/post",
+      "files": 218,
+      "bytes": 278306121
+    },
+    {
+      "route": "app/[lang]/employers",
+      "files": 217,
+      "bytes": 278300865
+    },
+    {
+      "route": "app/[lang]/blog/[slug]",
+      "files": 217,
+      "bytes": 278298945
+    },
+    {
+      "route": "app/[lang]/submit-opportunity",
+      "files": 216,
+      "bytes": 278296624
+    },
+    {
+      "route": "app/[lang]/opportunities/saved",
+      "files": 218,
+      "bytes": 278296109
+    },
+    {
+      "route": "app/[lang]/success-stories/share",
+      "files": 217,
+      "bytes": 278287061
+    },
+    {
+      "route": "app/[lang]/interview-prep/practice",
+      "files": 216,
+      "bytes": 278263640
+    },
+    {
+      "route": "app/api/admin/import/news",
+      "files": 188,
+      "bytes": 278249086
+    },
+    {
+      "route": "app/admin",
+      "files": 213,
+      "bytes": 278208473
+    },
+    {
+      "route": "app/[lang]/cv-builder",
+      "files": 218,
+      "bytes": 278191899
+    },
+    {
+      "route": "app/[lang]/templates/[slug]",
+      "files": 216,
+      "bytes": 278175254
+    },
+    {
+      "route": "app/[lang]/opportunity-matcher",
+      "files": 218,
+      "bytes": 278125132
+    },
+    {
+      "route": "app/[lang]/visa-prep/community",
+      "files": 218,
+      "bytes": 278087841
+    },
+    {
+      "route": "app/[lang]/webinar",
+      "files": 217,
+      "bytes": 278083328
+    },
+    {
+      "route": "app/[lang]/ambassador",
+      "files": 216,
+      "bytes": 278079211
+    },
+    {
+      "route": "app/[lang]/partners",
+      "files": 216,
+      "bytes": 278079177
+    },
+    {
+      "route": "app/[lang]/press",
+      "files": 216,
+      "bytes": 278079131
+    },
+    {
+      "route": "app/[lang]/visa-prep/[country]",
+      "files": 217,
+      "bytes": 278074950
+    },
+    {
+      "route": "app/[lang]/letters",
+      "files": 217,
+      "bytes": 278055141
+    },
+    {
+      "route": "app/[lang]/privacy-policy",
+      "files": 216,
+      "bytes": 278047356
+    },
+    {
+      "route": "app/[lang]/interview-prep/community",
+      "files": 216,
+      "bytes": 278047228
+    },
+    {
+      "route": "app/[lang]/terms-of-service",
+      "files": 216,
+      "bytes": 278046686
+    },
+    {
+      "route": "app/[lang]/about",
+      "files": 216,
+      "bytes": 278046431
+    },
+    {
+      "route": "app/[lang]/contact",
+      "files": 216,
+      "bytes": 278045387
+    },
+    {
+      "route": "app/[lang]/templates",
+      "files": 216,
+      "bytes": 278043255
+    },
+    {
+      "route": "app/[lang]/visa-prep/practice",
+      "files": 216,
+      "bytes": 278035697
+    },
+    {
+      "route": "app/[lang]/pages/[slug]",
+      "files": 215,
+      "bytes": 278025321
+    },
+    {
+      "route": "app/api/opportunities/matcher",
+      "files": 200,
+      "bytes": 278024368
+    },
+    {
+      "route": "app/[lang]/interview-prep/practice/session",
+      "files": 215,
+      "bytes": 278013527
+    },
+    {
+      "route": "app/[lang]/studio-render",
+      "files": 214,
+      "bytes": 277930897
+    },
+    {
+      "route": "app/[lang]/social-poster",
+      "files": 211,
+      "bytes": 277815100
+    },
+    {
+      "route": "app/[lang]/templates/[slug]/editor",
+      "files": 212,
+      "bytes": 277782073
+    },
+    {
+      "route": "app/api/tools/writing-assist",
+      "files": 198,
+      "bytes": 277762969
+    },
+    {
+      "route": "app/[lang]/visa-prep/practice/session",
+      "files": 212,
+      "bytes": 277743193
+    },
+    {
+      "route": "app/api/matcher-alerts/subscribe",
+      "files": 191,
+      "bytes": 277620122
+    },
+    {
+      "route": "app/[lang]/employers/dashboard",
+      "files": 213,
+      "bytes": 277533307
+    },
+    {
+      "route": "app/api/admin/content-health",
+      "files": 198,
+      "bytes": 277511135
+    },
+    {
+      "route": "app/[lang]/employers/login",
+      "files": 210,
+      "bytes": 277493098
+    },
+    {
+      "route": "app/[lang]/organizations/[slug]",
+      "files": 208,
+      "bytes": 277473293
+    },
+    {
+      "route": "app/api/opportunities/list",
+      "files": 188,
+      "bytes": 277446373
+    },
+    {
+      "route": "app/api/opportunities/by-slugs",
+      "files": 188,
+      "bytes": 277445711
+    },
+    {
+      "route": "app/api/social/caption",
+      "files": 191,
+      "bytes": 277443413
+    },
+    {
+      "route": "app/api/partners/feed",
+      "files": 187,
+      "bytes": 277427152
+    },
+    {
+      "route": "app/api/opportunities/[slug]/calendar",
+      "files": 187,
+      "bytes": 277401218
+    },
+    {
+      "route": "app/rss.xml",
+      "files": 186,
+      "bytes": 277400768
+    },
+    {
+      "route": "app/api/social/plan",
+      "files": 189,
+      "bytes": 277396086
+    },
+    {
+      "route": "app/api/opportunities/matcher/feedback",
+      "files": 188,
+      "bytes": 277392822
+    },
+    {
+      "route": "app/api/alerts/subscribe",
+      "files": 190,
+      "bytes": 277341417
+    },
+    {
+      "route": "app/api/admin/crud",
+      "files": 188,
+      "bytes": 277231716
+    },
+    {
+      "route": "app/api/admin/cv-builder",
+      "files": 188,
+      "bytes": 277215674
+    },
+    {
+      "route": "app/api/admin/settings",
+      "files": 188,
+      "bytes": 277208331
+    },
+    {
+      "route": "app/api/site",
+      "files": 186,
+      "bytes": 277169983
+    },
+    {
+      "route": "app/api/admin/discovery",
+      "files": 191,
+      "bytes": 277147737
+    },
+    {
+      "route": "app/api/admin/organizations",
+      "files": 188,
+      "bytes": 277139873
+    },
+    {
+      "route": "app/api/opportunities/submit",
+      "files": 187,
+      "bytes": 277124071
+    },
+    {
+      "route": "app/api/admin/seed",
+      "files": 187,
+      "bytes": 277120072
+    },
+    {
+      "route": "app/api/admin/orders",
+      "files": 187,
+      "bytes": 277118309
+    },
+    {
+      "route": "app/api/admin/studio/design",
+      "files": 187,
+      "bytes": 277117527
+    },
+    {
+      "route": "app/api/interviews/generate-question",
+      "files": 187,
+      "bytes": 277116951
+    },
+    {
+      "route": "app/api/admin/studio/visuals",
+      "files": 187,
+      "bytes": 277116396
+    },
+    {
+      "route": "app/api/monetization/orders",
+      "files": 187,
+      "bytes": 277116254
+    },
+    {
+      "route": "app/api/admin/analytics/discovery",
+      "files": 187,
+      "bytes": 277116012
+    },
+    {
+      "route": "app/api/employers/jobs",
+      "files": 187,
+      "bytes": 277115786
+    },
+    {
+      "route": "app/api/admin/stats",
+      "files": 187,
+      "bytes": 277115724
+    },
+    {
+      "route": "app/api/ai/template",
+      "files": 187,
+      "bytes": 277115717
+    },
+    {
+      "route": "app/api/visas/evaluate",
+      "files": 187,
+      "bytes": 277115412
+    },
+    {
+      "route": "app/api/opportunities/ai-search",
+      "files": 187,
+      "bytes": 277115338
+    },
+    {
+      "route": "app/api/visas/generate-question",
+      "files": 187,
+      "bytes": 277115259
+    },
+    {
+      "route": "app/api/visa-prep/ai-rejection-advice",
+      "files": 187,
+      "bytes": 277115232
+    },
+    {
+      "route": "app/api/admin/import/alerts",
+      "files": 187,
+      "bytes": 277115083
+    },
+    {
+      "route": "app/api/interviews/evaluate",
+      "files": 187,
+      "bytes": 277115006
+    },
+    {
+      "route": "app/api/employers/jobs/[id]",
+      "files": 186,
+      "bytes": 277114911
+    },
+    {
+      "route": "app/api/success-stories",
+      "files": 187,
+      "bytes": 277114809
+    },
+    {
+      "route": "app/api/admin/import/sources",
+      "files": 187,
+      "bytes": 277114711
+    },
+    {
+      "route": "app/api/opportunities/track",
+      "files": 187,
+      "bytes": 277114609
+    },
+    {
+      "route": "app/api/admin/import/sources/[id]",
+      "files": 187,
+      "bytes": 277114543
+    },
+    {
+      "route": "app/api/admin/import/stats",
+      "files": 187,
+      "bytes": 277114398
+    },
+    {
+      "route": "app/api/templates",
+      "files": 187,
+      "bytes": 277114365
+    },
+    {
+      "route": "app/api/admin/social-kit-opps",
+      "files": 187,
+      "bytes": 277114246
+    },
+    {
+      "route": "app/api/contact",
+      "files": 187,
+      "bytes": 277114113
+    },
+    {
+      "route": "app/api/admin/auth/login",
+      "files": 187,
+      "bytes": 277114112
+    },
+    {
+      "route": "app/api/admin/auth/change-password",
+      "files": 187,
+      "bytes": 277114110
+    },
+    {
+      "route": "app/api/newsletter",
+      "files": 187,
+      "bytes": 277113922
+    },
+    {
+      "route": "app/api/admin/import/sources/[id]/toggle",
+      "files": 187,
+      "bytes": 277113839
+    },
+    {
+      "route": "app/api/admin/import/runs",
+      "files": 187,
+      "bytes": 277113826
+    },
+    {
+      "route": "app/api/success-stories/[id]/like",
+      "files": 187,
+      "bytes": 277113822
+    },
+    {
+      "route": "app/api/social/poster",
+      "files": 187,
+      "bytes": 277113789
+    },
+    {
+      "route": "app/api/track",
+      "files": 187,
+      "bytes": 277113719
+    },
+    {
+      "route": "app/api/admin/import/runs/[id]",
+      "files": 187,
+      "bytes": 277113593
+    },
+    {
+      "route": "app/api/admin/auth/me",
+      "files": 186,
+      "bytes": 277113203
+    },
+    {
+      "route": "app/api/admin/auth/logout",
+      "files": 186,
+      "bytes": 277113135
+    },
+    {
+      "route": "app/api/employers/claims",
+      "files": 185,
+      "bytes": 277095829
+    },
+    {
+      "route": "app/api/employers/auth/[action]",
+      "files": 185,
+      "bytes": 277095542
+    },
+    {
+      "route": "app/sitemap.xml",
+      "files": 185,
+      "bytes": 277077173
+    },
+    {
+      "route": "app/api/alerts/confirm",
+      "files": 185,
+      "bytes": 277072966
+    },
+    {
+      "route": "app/api/matcher-alerts/confirm",
+      "files": 184,
+      "bytes": 277072237
+    },
+    {
+      "route": "app/api/search",
+      "files": 185,
+      "bytes": 277071506
+    },
+    {
+      "route": "app/api/indexnow",
+      "files": 184,
+      "bytes": 277070722
+    },
+    {
+      "route": "app/api/matcher-alerts/unsubscribe",
+      "files": 184,
+      "bytes": 277070588
+    },
+    {
+      "route": "app/api/alerts/unsubscribe",
+      "files": 184,
+      "bytes": 277070313
+    },
+    {
+      "route": "app/api/visas/questions",
+      "files": 184,
+      "bytes": 277069529
+    },
+    {
+      "route": "app/api/interviews/questions",
+      "files": 184,
+      "bytes": 277069524
+    },
+    {
+      "route": "app/api/templates/[slug]",
+      "files": 184,
+      "bytes": 277069448
+    },
+    {
+      "route": "app/api/visa-prep/stories/vote",
+      "files": 184,
+      "bytes": 277069427
+    },
+    {
+      "route": "app/api/health",
+      "files": 184,
+      "bytes": 277069169
+    },
+    {
+      "route": "app/_not-found",
+      "files": 116,
+      "bytes": 2012162
+    },
+    {
+      "route": "app/icon.png",
+      "files": 101,
+      "bytes": 1888588
+    },
+    {
+      "route": "app/robots.txt",
+      "files": 101,
+      "bytes": 1804009
+    },
+    {
+      "route": "app/api/visa-prep/exchange",
+      "files": 101,
+      "bytes": 1799720
+    },
+    {
+      "route": "app/_global-error",
+      "files": 105,
+      "bytes": 1750138
+    },
+    {
+      "route": "app/llms.txt",
+      "files": 100,
+      "bytes": 1711311
+    },
+    {
+      "route": "/",
+      "files": 93,
+      "bytes": 1645110
+    }
+  ],
+  "fileHits": {
+    "chromium-bin": {
+      "count": 29,
+      "bytes": 70082354
+    },
+    "playwright-core": {
+      "count": 105,
+      "bytes": 11477075
+    }
+  }
+}

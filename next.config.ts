@@ -43,6 +43,24 @@ const nextConfig: NextConfig = {
       'node_modules/playwright-core/browsers.json',
     ],
   },
+  // Function Storage reconciliation (2026-10-04): output tracing was pulling
+  // playwright-core (~99 MB) into ~140 route traces via the scraper import
+  // graph, and the repo-root .env (API keys!) into one API route. Browser
+  // automation is Oracle's responsibility now — these exclusions remove the
+  // dead weight from every non-PDF function and close the .env leak.
+  // The CV PDF function keeps its includes above and is NOT matched here.
+  outputFileTracingExcludes: {
+    '*': ['.env', '.env.*'],
+    '/api/admin/**': [
+      'node_modules/playwright-core/**',
+      'node_modules/@sparticuz/chromium/**',
+    ],
+    '/api/opportunities/**': ['node_modules/playwright-core/**'],
+    '/api/employers/**': ['node_modules/playwright-core/**'],
+    '/api/cv-builder/pdf/../**': ['node_modules/playwright-core/**'],
+    '/[lang]/**': ['node_modules/playwright-core/**', 'node_modules/@sparticuz/chromium/**'],
+    '/': ['node_modules/playwright-core/**'],
+  },
   // Type errors now fail the build — the codebase compiles clean under
   // `tsc --noEmit` (scripts/ and examples/ are excluded from type-checking).
   reactStrictMode: true,
