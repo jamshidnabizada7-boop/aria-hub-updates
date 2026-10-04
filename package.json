@@ -10,6 +10,7 @@
     "worker:social": "bun --conditions=react-server scripts/social-publish-worker.ts",
     "worker:opportunities": "bun --conditions=react-server scripts/opportunity-schedule-worker.ts",
     "worker:imports": "bun --conditions=react-server scripts/opportunity-import-worker.ts",
+    "release:check-functions": "bun scripts/release/measure-function-sizes.ts --check",
     "lint": "eslint .",
     "test": "bun test ./tests/",
     "db:push": "prisma db push",

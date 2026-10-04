@@ -256,7 +256,7 @@ describeIf(dbUp)('resolveOrganization & runBackfill (db)', () => {
     });
 
     // dry-run default: no writes
-    const dry = await runBackfill(db, { limit: 500 });
+    const dry = await runBackfill(db, { slugPrefix: 'test-org-bf-' });
     expect(dry.dryRun).toBe(true);
     expect(dry.createdOrganizations).toBe(0);
     const carePlainKey = normalizeOrgName(carePlain);
@@ -266,7 +266,7 @@ describeIf(dbUp)('resolveOrganization & runBackfill (db)', () => {
       ((p.a === carePlainKey && p.b === careIntlKey) || (p.a === careIntlKey && p.b === carePlainKey)),
     )).toBe(true);
 
-    const result = await runBackfill(db, { apply: true, limit: 500 });
+    const result = await runBackfill(db, { apply: true, slugPrefix: 'test-org-bf-' });
     expect(result.createdOrganizations).toBeGreaterThanOrEqual(1);
 
     const a = await db.opportunity.findUnique({ where: { slug: oppSlugs[0] } });
@@ -285,7 +285,7 @@ describeIf(dbUp)('resolveOrganization & runBackfill (db)', () => {
     expect(c!.organizationId).not.toBe(d!.organizationId);
 
     // idempotent re-run: these opportunities stay connected, nothing re-created
-    const rerun = await runBackfill(db, { apply: true, limit: 500 });
+    const rerun = await runBackfill(db, { apply: true, slugPrefix: 'test-org-bf-' });
     const stillUnlinked = await db.opportunity.count({
       where: { slug: { in: [...oppSlugs, `test-org-bf-4-${runId}`] }, organizationId: null },
     });

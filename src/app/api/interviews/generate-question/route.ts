@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
 import { getClientIp, rateLimit } from '@/lib/admin-auth';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { PrismaClient } from '@prisma/client';
 
 /**
@@ -15,22 +13,13 @@ import { PrismaClient } from '@prisma/client';
  *    or empty, generate one via Groq.
  */
 
-function resolveDatabaseUrl(): string {
+// Security (Function Storage audit, PHASE 4): this route previously read the
+// repo-root `.env` from disk as a DATABASE_URL fallback — that put the file
+// (API keys included) into the deployed function trace. Runtime code must
+// rely on process.env only; there is deliberately no file-based fallback.
+function resolveDatabaseUrl(): string | null {
   const envUrl = process.env.DATABASE_URL || '';
-  if (envUrl.startsWith('postgres')) return envUrl;
-  try {
-    const raw = readFileSync(join(process.cwd(), '.env'), 'utf8');
-    for (const line of raw.split('\n')) {
-      const m = line.match(/^\s*DATABASE_URL\s*=\s*(.*)\s*$/);
-      if (!m) continue;
-      let v = m[1].trim();
-      if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
-        v = v.slice(1, -1);
-      }
-      if (v.startsWith('postgres')) return v;
-    }
-  } catch { /* fallthrough */ }
-  return null as unknown as string;
+  return envUrl.startsWith('postgres') ? envUrl : null;
 }
 
 const globalForDb = globalThis as unknown as { _interviewDb?: PrismaClient };

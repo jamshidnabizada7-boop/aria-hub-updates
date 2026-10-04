@@ -529,6 +529,10 @@ model ImportSource {
   backoffUntil    DateTime? // exponential backoff after 429/403/5xx/challenges
   healthStatus    String      @default("healthy") // healthy | degraded | blocked | paused | pending_configuration
   supportsDelta   Boolean     @default(false) // source can report changes since last run
+  // PHASE 11/23: source certification is separate from autoPublish  14 a
+  // trusted source still imports as drafts until an admin flips autoPublish.
+  certification   String      @default("testing") // testing | reviewed | trusted | paused
+  autoPublishCriteria Json? // PHASE 23: eligibility snapshot evaluated by the admin review
 
   lastRunAt       DateTime?
   lastRunStatus   String? // ok | error | partial

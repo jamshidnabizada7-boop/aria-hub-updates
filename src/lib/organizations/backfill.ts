@@ -93,11 +93,16 @@ function primaryDisplayName(group: OrgGroup): string {
  */
 export async function runBackfill(
   db: OrgDbClient,
-  opts: { apply?: boolean; limit?: number } = {},
+  opts: { apply?: boolean; limit?: number; slugPrefix?: string } = {},
 ): Promise<BackfillResult> {
   const apply = opts.apply === true;
+  // slugPrefix scopes the scan (tests, incremental re-runs) so parallel
+  // suites sharing one database never interfere with each other's counts.
   const rows = await db.opportunity.findMany({
-    where: { organization: { not: null } },
+    where: {
+      organization: { not: null },
+      ...(opts.slugPrefix ? { slug: { startsWith: opts.slugPrefix } } : {}),
+    },
     select: { id: true, organization: true },
   });
   const limited = opts.limit ? rows.slice(0, opts.limit) : rows;
