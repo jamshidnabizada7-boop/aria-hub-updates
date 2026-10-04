@@ -57,6 +57,7 @@ import { GreenhouseScraper } from './scrapers/greenhouse';
 import { LeverScraper } from './scrapers/lever';
 import { WorkdayScraper } from './scrapers/workday';
 import { OracleHcmScraper } from './scrapers/oracle-hcm';
+import { SuccessFactorsScraper } from './scrapers/successfactors';
 
 /**
  * Placeholder for `rssNews` sources: news imports are handled by
@@ -98,6 +99,7 @@ export const SCRAPERS: Record<string, new (...args: ConstructorParameters<typeof
   lever: LeverScraper,                     // Lever postings API (config.org)
   workday: WorkdayScraper,                   // Workday CXS boards (config.tenant/site)
   oracleHcm: OracleHcmScraper,             // Oracle HCM/Recruiting Cloud (config.host/siteNumber)
+  successfactors: SuccessFactorsScraper,   // SAP SuccessFactors career sites (config.host)
 };
 
 /**
