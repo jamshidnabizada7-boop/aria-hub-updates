@@ -30,19 +30,19 @@ export function tierForSource(input: {
   sourceRole?: string | null;
   scraperKey?: string | null;
   type?: string | null;
-}): { tier: ScheduleTierName; scheduleMinutes: number; priority: number } {
+}): { tier: ScheduleTierName; scheduleMinutes: number } {
   const role = input.sourceRole ?? '';
   const key = input.scraperKey ?? '';
   if (role.startsWith('official_')) {
-    if (input.type === 'scholarship') return { tier: 'P1_SCHOLARSHIP_FEEDS', ...SCHEDULE_TIERS.P1_SCHOLARSHIP_FEEDS };
-    if (role === 'official_feed') return { tier: 'P0_BREAKING_FEEDS', ...SCHEDULE_TIERS.P0_BREAKING_FEEDS };
-    return { tier: 'P1_OFFICIAL_ATS', ...SCHEDULE_TIERS.P1_OFFICIAL_ATS };
+    if (input.type === 'scholarship') return { tier: 'P1_SCHOLARSHIP_FEEDS' as const, scheduleMinutes: SCHEDULE_TIERS.P1_SCHOLARSHIP_FEEDS.minutes };
+    if (role === 'official_feed') return { tier: 'P0_BREAKING_FEEDS' as const, scheduleMinutes: SCHEDULE_TIERS.P0_BREAKING_FEEDS.minutes };
+    return { tier: 'P1_OFFICIAL_ATS' as const, scheduleMinutes: SCHEDULE_TIERS.P1_OFFICIAL_ATS.minutes };
   }
   if (['acbar', 'wazifaha', 'jobsaf'].includes(key)) {
-    return { tier: 'AGGREGATORS_PRIMARY', ...SCHEDULE_TIERS.AGGREGATORS_PRIMARY };
+    return { tier: 'AGGREGATORS_PRIMARY' as const, scheduleMinutes: SCHEDULE_TIERS.AGGREGATORS_PRIMARY.minutes };
   }
-  if (role === 'discovery') return { tier: 'LONG_TAIL', ...SCHEDULE_TIERS.LONG_TAIL };
-  return { tier: 'AGGREGATORS_SECONDARY', ...SCHEDULE_TIERS.AGGREGATORS_SECONDARY };
+  if (role === 'discovery') return { tier: 'LONG_TAIL' as const, scheduleMinutes: SCHEDULE_TIERS.LONG_TAIL.minutes };
+  return { tier: 'AGGREGATORS_SECONDARY' as const, scheduleMinutes: SCHEDULE_TIERS.AGGREGATORS_SECONDARY.minutes };
 }
 
 export interface PublicationGateResult {
