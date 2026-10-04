@@ -79,6 +79,7 @@
     "next-themes": "^0.4.6",
     "nodemailer": "^10.0.12",
     "openai": "^7.13.0",
+    "pg-cursor": "^2.22.1",
     "playwright-core": "^1.63.0",
     "prisma": "^6.19.3",
     "qrcode": "^1.5.4",
