@@ -1,4 +1,4 @@
-// ARIA HUB — Professional Business Services Platform
+// ARIA HUB â Professional Business Services Platform
 // Fully dynamic, CMS-driven relational schema (PostgreSQL)
 
 generator client {
@@ -11,7 +11,7 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// ─── Status enums (converted from free-text strings, Phase 2) ───────────────
+// âââ Status enums (converted from free-text strings, Phase 2) âââââââââââââââ
 // Values match every status observed in the database and written by the app.
 
 enum OpportunityStatus {
@@ -39,7 +39,7 @@ enum MonetizationOrderStatus {
   declined
 }
 
-// ─── Site-wide settings (single row, key/value style + structured) ───────────
+// âââ Site-wide settings (single row, key/value style + structured) âââââââââââ
 model SiteSetting {
   id                 String   @id @default(cuid())
   siteName           String   @default("ARIA HUB")
@@ -74,12 +74,12 @@ model SiteSetting {
   updatedAt          DateTime @updatedAt
 }
 
-// ─── Languages ───────────────────────────────────────────────────────────────
+// âââ Languages âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 model Language {
   id           String   @id @default(cuid())
   code         String   @unique // en, fa, ps
   name         String // English, Persian, Pashto
-  nativeName   String // English, فارسی, پښتو
+  nativeName   String // English, ÙØ§Ø±Ø³Û, Ù¾ÚØªÙ
   direction    String   @default("ltr") // ltr | rtl
   enabled      Boolean  @default(true)
   isDefault    Boolean  @default(false)
@@ -90,7 +90,7 @@ model Language {
   updatedAt    DateTime @updatedAt
 }
 
-// ─── Navigation menus (unlimited nested) ─────────────────────────────────────
+// âââ Navigation menus (unlimited nested) âââââââââââââââââââââââââââââââââââââ
 model MenuItem {
   id           String     @id @default(cuid())
   label        String
@@ -111,7 +111,7 @@ model MenuItem {
   @@index([order])
 }
 
-// ─── Page sections (CMS) ─────────────────────────────────────────────────────
+// âââ Page sections (CMS) âââââââââââââââââââââââââââââââââââââââââââââââââââââ
 model Section {
   id        String   @id @default(cuid())
   key       String   @unique // hero, services, whyChooseUs, etc.
@@ -124,7 +124,7 @@ model Section {
   updatedAt DateTime @updatedAt
 }
 
-// ─── Services ────────────────────────────────────────────────────────────────
+// âââ Services ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 model ServiceCategory {
   id          String    @id @default(cuid())
   name        String
@@ -166,7 +166,7 @@ model Service {
   @@index([status])
 }
 
-// ─── Visas ───────────────────────────────────────────────────────────────────
+// âââ Visas âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 model Visa {
   id                     String   @id @default(cuid())
   country                String
@@ -205,7 +205,7 @@ model Visa {
   @@index([country])
 }
 
-// ─── Opportunities (jobs, scholarships, etc.) ────────────────────────────────
+// âââ Opportunities (jobs, scholarships, etc.) ââââââââââââââââââââââââââââââââ
 model MatcherFeedback {
   id            String      @id @default(cuid())
   opportunityId String
@@ -258,14 +258,14 @@ model OpportunityCategory {
   updatedAt     DateTime      @updatedAt
 }
 
-// ─── Canonical organizations (first-class employers / publishers) ────────────
-// Slug convention: deterministic safe slug ("Norwegian Refugee Council" →
-// "norwegian-refugee-council", "UNICEF" → "unicef"); never renamed casually.
+// âââ Canonical organizations (first-class employers / publishers) ââââââââââââ
+// Slug convention: deterministic safe slug ("Norwegian Refugee Council" â
+// "norwegian-refugee-council", "UNICEF" â "unicef"); never renamed casually.
 // officialDomains: JSON array of canonical domains, e.g.
-//   ["unicef.org", "jobs.unicef.org"] — used later for apply-URL verification.
+//   ["unicef.org", "jobs.unicef.org"] â used later for apply-URL verification.
 // organizationType: ngo | un_agency | government | university | company |
 //   embassy | scholarship_provider | other (free string until hardened).
-// Backfill happens in a later phase — creation is deliberate, never automatic.
+// Backfill happens in a later phase â creation is deliberate, never automatic.
 model Organization {
   id                 String        @id @default(cuid())
   name               String
@@ -301,14 +301,28 @@ model Organization {
   sourceSuggestions  OrganizationSourceSuggestion[]
 }
 
-// ─── Source suggestion engine (Phase 21) ─────────────────────────────────────
+// âââ Source suggestion engine (Phase 21) âââââââââââââââââââââââââââââââââââââ
 // Aggregator discoveries become candidates for OFFICIAL monitoring: when an
 // import sees an unknown organization with plausible domain evidence (apply
 // email/URL domain), one suggestion row is kept per normalized name until an
-// admin confirms it (→ organization linked, then add a source) or dismisses.
+// admin confirms it (â organization linked, then add a source) or dismisses.
+// ─── Durable rate limiting (completion mandate, PHASE 6) ────────────────────
+// Fixed-window counters in Postgres — shared across serverless instances and
+// cold starts, unlike the in-memory limiter. Atomic upsert-increment; the
+// first hit of a fresh window opportunistically deletes expired buckets.
+model RateLimitBucket {
+  key         String
+  windowStart DateTime
+  count       Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  @@id([key, windowStart])
+  @@index([windowStart])
+}
+
 model OrganizationSourceSuggestion {
   id               String        @id @default(cuid())
-  suggestedName    String        @unique // normalizeOrgName key — one per org
+  suggestedName    String        @unique // normalizeOrgName key â one per org
   displayName      String // verbatim first-seen name
   organizationId   String?
   organization     Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
@@ -326,13 +340,13 @@ model OrganizationSourceSuggestion {
   @@index([status])
 }
 
-// ─── Controlled organization name aliases ────────────────────────────────────
+// âââ Controlled organization name aliases ââââââââââââââââââââââââââââââââââââ
 // `normalized` is the conservative matching key (see
 // src/lib/organizations/normalize.ts) and is globally unique: one normalized
 // alias resolves to exactly one organization. Merges happen ONLY through an
-// explicit alias row — never through fuzzy name similarity. Examples:
-//   IRC → International Rescue Committee      (curated)
-//   UNICEF → United Nations Children's Fund   (curated / parenthetical)
+// explicit alias row â never through fuzzy name similarity. Examples:
+//   IRC â International Rescue Committee      (curated)
+//   UNICEF â United Nations Children's Fund   (curated / parenthetical)
 model OrganizationAlias {
   id             String       @id @default(cuid())
   organizationId String
@@ -350,7 +364,7 @@ model Opportunity {
   titleI18n       Json?
   slug            String               @unique
   organization    String? // free-text display fallback; canonical link is organizationRef
-  organizationId  String? // FK to Organization — nullable, set only when the org is resolved
+  organizationId  String? // FK to Organization â nullable, set only when the org is resolved
   organizationRef Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
   country         String?
   deadline        DateTime?
@@ -364,7 +378,7 @@ model Opportunity {
   applyUrl        String?
   applyUrlType    String? // application_email | application_form | direct_application | source_article_fallback | unknown
   applyUrlEvidence String? // machine-readable reason the destination was chosen (see src/lib/apply-resolver.ts)
-  applyConfidence Int?    // 0-100 trust in the destination (official ATS ≫ aggregator fallback)
+  applyConfidence Int?    // 0-100 trust in the destination (official ATS â« aggregator fallback)
   applyVerifiedAt DateTime? // set when a human or an automated check confirms the destination
   locations       OpportunityLocation[]
   image           String?
@@ -382,7 +396,7 @@ model Opportunity {
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
 
-  // ─── Automated import tracking (all optional; populated by import pipeline) ──
+  // âââ Automated import tracking (all optional; populated by import pipeline) ââ
   sourceName           String?
   sourceUrl            String? @unique // canonical listing URL on source site
   originalUrl          String? // deep link to the original post
@@ -420,9 +434,9 @@ model Opportunity {
   verificationStatus   String? // verified_official | verified_employer | aggregator_confirmed | multi_source_confirmed | single_source | needs_review (see src/lib/verification.ts)
   sourceObservations   OpportunitySourceObservation[]
   translationStatus    String? // pending | partial | complete | failed (legacy, recomputed from fa/ps states)
-  faStatus             String? // pending | processing | complete | failed — Persian gate
-  psStatus             String? // pending | processing | complete | failed — never started before faStatus === 'complete'
-  translationSourceHash String? // sha256 of all translated source fields; mismatch ⇒ statuses reset
+  faStatus             String? // pending | processing | complete | failed â Persian gate
+  psStatus             String? // pending | processing | complete | failed â never started before faStatus === 'complete'
+  translationSourceHash String? // sha256 of all translated source fields; mismatch â statuses reset
   translationProgress  Json? // { fa: {done,total,failed,attempts,updatedAt}, ps: {...} } observability
   language             String? // original source language code (en, fa, ps, ...)
   logoUrl              String?
@@ -443,7 +457,7 @@ model Opportunity {
   @@index([psStatus])
 }
 
-// ─── Structured opportunity locations (one-to-many; multi-province = rows) ───
+// âââ Structured opportunity locations (one-to-many; multi-province = rows) âââ
 model OpportunityLocation {
   id            String      @id @default(cuid())
   opportunityId String
@@ -455,7 +469,7 @@ model OpportunityLocation {
   district      String?
   rawLabel      String? // verbatim source string, for auditability
   source        String? // scraper | detail | backfill-extractedData | backfill-description | inferred | admin
-  confidence    Float? // 1.0 deterministic … 0.5 whitelist-inferred
+  confidence    Float? // 1.0 deterministic â¦ 0.5 whitelist-inferred
   createdAt     DateTime    @default(now())
 
   @@unique([opportunityId, province, city, district, rawLabel])
@@ -464,19 +478,19 @@ model OpportunityLocation {
   @@index([country])
 }
 
-// ─── Translation chunk staging (atomic per-language commits) ─────────────────
+// âââ Translation chunk staging (atomic per-language commits) âââââââââââââââââ
 // Every source chunk of every translatable field is staged here. A language's
-// public i18n fields are committed ONLY when 100% of its chunks succeeded —
+// public i18n fields are committed ONLY when 100% of its chunks succeeded â
 // a failed chunk can never silently vanish from a published translation.
 model TranslationChunk {
   id        String   @id @default(cuid())
   ownerType String // opportunity | news
   ownerId   String
-  lang      String // fa | ps (one language per chunk row — Persian-first gating)
+  lang      String // fa | ps (one language per chunk row â Persian-first gating)
   fieldKey  String // title | description | summary | eligibility | benefits | ...
   chunkIndex Int
   chunkTotal Int
-  chunkHash String // sha256 of the source chunk text; mismatch ⇒ re-translate
+  chunkHash String // sha256 of the source chunk text; mismatch â re-translate
   status    String   @default("pending") // pending | done | failed
   result    String? // translated text when status = done
   attempts  Int      @default(0)
@@ -489,7 +503,7 @@ model TranslationChunk {
   @@index([status, updatedAt])
 }
 
-// ─── Automated import sources ────────────────────────────────────────────────
+// âââ Automated import sources ââââââââââââââââââââââââââââââââââââââââââââââââ
 model ImportSource {
   id              String      @id @default(cuid())
   name            String      @unique // "Wazifaha Jobs", "Scholarships.af"
@@ -502,11 +516,11 @@ model ImportSource {
   defaultCategory String? // opportunity category slug hint
   config          String? // JSON: selectors, filters, API options, etc.
 
-  // ── V2 registry (Phase 6): production-grade source management ──
+  // ââ V2 registry (Phase 6): production-grade source management ââ
   organizationId  String? // owning Organization (official sources belong to one)
   organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  sourceRole      String? // explicit role; falls back to the scraperKey→role mapping
-  priority        Int         @default(50) // scheduling priority (100 employer … 20 discovery)
+  sourceRole      String? // explicit role; falls back to the scraperKeyârole mapping
+  priority        Int         @default(50) // scheduling priority (100 employer â¦ 20 discovery)
   trustScore      Int? // 0-100; baseline derived from role when null
   nextRunAt       DateTime? // due when <= now (worker scheduling, Phase 8)
   lastSuccessAt   DateTime?
@@ -529,7 +543,7 @@ model ImportSource {
   @@index([healthStatus])
 }
 
-// ─── Import run logs (one row per import execution) ──────────────────────────
+// âââ Import run logs (one row per import execution) ââââââââââââââââââââââââââ
 model ImportRun {
   id           String       @id @default(cuid())
   sourceId     String
@@ -552,10 +566,10 @@ model ImportRun {
   @@index([startedAt])
 }
 
-// ─── Source observations (Phase 3): where ARIA HUB saw an opportunity ───────
-// The Opportunity is the canonical record; every place it was discovered —
+// âââ Source observations (Phase 3): where ARIA HUB saw an opportunity âââââââ
+// The Opportunity is the canonical record; every place it was discovered â
 // official careers page, ATS, government portal, employer submission, or an
-// aggregator like ACBAR/Wazifaha — becomes ONE observation row here. Several
+// aggregator like ACBAR/Wazifaha â becomes ONE observation row here. Several
 // observations may point at one Opportunity; the most authoritative one is
 // isPrimary. Legacy Opportunity.sourceName/sourceUrl/originalUrl stay in
 // place for backwards compatibility until observations are proven stable.
@@ -571,7 +585,7 @@ model OpportunitySourceObservation {
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 
-  sourceName String // "ACBAR", "Employer", "UNICEF Careers", "Manual" …
+  sourceName String // "ACBAR", "Employer", "UNICEF Careers", "Manual" â¦
   sourceRole String // see sourceRole comment above (see also src/lib/import/source-observations.ts)
   sourceUrl  String?
 
@@ -600,7 +614,7 @@ model OpportunitySourceObservation {
   @@index([vacancyNumber])
 }
 
-// ─── Gallery ─────────────────────────────────────────────────────────────────
+// âââ Gallery âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 model GalleryAlbum {
   id          String        @id @default(cuid())
   title       String
@@ -632,7 +646,7 @@ model GalleryItem {
   @@index([category])
 }
 
-// ─── Payments ────────────────────────────────────────────────────────────────
+// âââ Payments ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 model PaymentMethod {
   id            String   @id @default(cuid())
   name          String
@@ -652,7 +666,7 @@ model PaymentMethod {
   @@index([status])
 }
 
-// ─── Testimonials ────────────────────────────────────────────────────────────
+// âââ Testimonials ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 model Testimonial {
   id          String   @id @default(cuid())
   name        String
@@ -675,7 +689,7 @@ model Testimonial {
   @@index([status])
 }
 
-// ─── Partners ────────────────────────────────────────────────────────────────
+// âââ Partners ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 model Partner {
   id        String   @id @default(cuid())
   name      String
@@ -687,7 +701,7 @@ model Partner {
   updatedAt DateTime @updatedAt
 }
 
-// ─── Counters / Stats ────────────────────────────────────────────────────────
+// âââ Counters / Stats ââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 model Counter {
   id         String   @id @default(cuid())
   label      String
@@ -701,7 +715,7 @@ model Counter {
   updatedAt  DateTime @updatedAt
 }
 
-// ─── FAQs ────────────────────────────────────────────────────────────────────
+// âââ FAQs ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 model Faq {
   id           String   @id @default(cuid())
   question     String
@@ -715,7 +729,7 @@ model Faq {
   updatedAt    DateTime @updatedAt
 }
 
-// ─── News / Blog ─────────────────────────────────────────────────────────────
+// âââ News / Blog âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 model NewsCategory {
   id        String   @id @default(cuid())
   name      String
@@ -754,7 +768,7 @@ model News {
   @@index([publishedAt])
 }
 
-// ─── Social Links (floating + footer) ────────────────────────────────────────
+// âââ Social Links (floating + footer) ââââââââââââââââââââââââââââââââââââââââ
 model SocialLink {
   id        String   @id @default(cuid())
   platform  String // whatsapp, facebook, instagram, telegram, linkedin, youtube, tiktok, messenger, phone, email
@@ -768,7 +782,7 @@ model SocialLink {
   updatedAt DateTime @updatedAt
 }
 
-// ─── Footer ──────────────────────────────────────────────────────────────────
+// âââ Footer ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 model FooterLink {
   id        String   @id @default(cuid())
   column    String // quickLinks, services, contact, etc.
@@ -801,7 +815,7 @@ model WhyChooseUsFeature {
   updatedAt       DateTime @updatedAt
 }
 
-// ─── Contact submissions ─────────────────────────────────────────────────────
+// âââ Contact submissions âââââââââââââââââââââââââââââââââââââââââââââââââââââ
 model ContactMessage {
   id         String   @id @default(cuid())
   name       String
@@ -815,7 +829,7 @@ model ContactMessage {
   updatedAt  DateTime @updatedAt
 }
 
-// ─── Departments / Branches ──────────────────────────────────────────────────
+// âââ Departments / Branches ââââââââââââââââââââââââââââââââââââââââââââââââââ
 model Department {
   id          String   @id @default(cuid())
   name        String
@@ -842,7 +856,7 @@ model Branch {
   updatedAt DateTime @updatedAt
 }
 
-// ─── Advertisements (Promote) ────────────────────────────────────────────────
+// âââ Advertisements (Promote) ââââââââââââââââââââââââââââââââââââââââââââââââ
 model Advertisement {
   id          String   @id @default(cuid())
   company     String
@@ -864,7 +878,7 @@ model Advertisement {
   @@index([status])
 }
 
-// ─── Newsletter subscribers ──────────────────────────────────────────────────
+// âââ Newsletter subscribers ââââââââââââââââââââââââââââââââââââââââââââââââââ
 model Subscriber {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -874,7 +888,7 @@ model Subscriber {
   updatedAt DateTime @updatedAt
 }
 
-// ─── Community-submitted opportunities (moderation queue) ───────────────────
+// âââ Community-submitted opportunities (moderation queue) âââââââââââââââââââ
 model OpportunitySubmission {
   id           String    @id @default(cuid())
   title        String
@@ -895,27 +909,27 @@ model OpportunitySubmission {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  // ─── Employer lane (distinct from community submissions) ──
+  // âââ Employer lane (distinct from community submissions) ââ
   submitterType  String  @default("community") // community | employer
   jobType        String? // full-time | part-time | contract | internship | remote
-  salaryRange    String? // free text, e.g. "600–900 USD/month"
+  salaryRange    String? // free text, e.g. "600â900 USD/month"
   location       String? // city / province, e.g. "Kabul"
-  companyWebsite String? // https://…
+  companyWebsite String? // https://â¦
   professional   Json? // Phase 14: vacancy number, # vacancies, contract, gender/nationality, salary grade, province/city/district, responsibilities/requirements/guidelines/education/experience (mapped to Opportunity columns on approve)
 
-  // ─── Submitter tracking & decision notifications ──
+  // âââ Submitter tracking & decision notifications ââ
   referenceCode String    @unique // human-friendly tracking code, e.g. AR-7K2M9QCX
-  lang          String    @default("en") // language the submitter used — drives notification email
-  publishedSlug String? // set on approve → deep link for the /track page + notification email
+  lang          String    @default("en") // language the submitter used â drives notification email
+  publishedSlug String? // set on approve â deep link for the /track page + notification email
   notifiedAt    DateTime? // when the decision email was sent (prevents double sends)
 
   @@index([status, createdAt])
 }
 
-// ─── Monetization Orders (paid postings & promotions — Phase-2 revenue) ──────
+// âââ Monetization Orders (paid postings & promotions â Phase-2 revenue) ââââââ
 // Self-serve order funnel adapted to Afghanistan payment reality: buyer requests a
-// product → pays via hawala/AfPay/hesabPay/bank/cash (or Payoneer/Wise for
-// internationals) → claims payment with a reference → admin verifies → the
+// product â pays via hawala/AfPay/hesabPay/bank/cash (or Payoneer/Wise for
+// internationals) â claims payment with a reference â admin verifies â the
 // platform auto-delivers (features the listing, schedules the sponsored slot).
 model MonetizationOrder {
   id            String    @id @default(cuid())
@@ -929,7 +943,7 @@ model MonetizationOrder {
   buyerEmail    String // follow-up + verification channel
   buyerPhone    String? // Afghan reality: phone/WhatsApp-first communication
   buyerLang     String    @default("fa") // language of the order form used
-  message       String? // free-text requirements (job details, slot copy…)
+  message       String? // free-text requirements (job details, slot copyâ¦)
   opportunityId String? // attached listing (featured/promotion orders)
   opportunity   Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
   paymentMethod String? // hawala | afg_pay | hesab_pay | bank | cash | payoneer | wise | other
@@ -947,11 +961,11 @@ model MonetizationOrder {
   @@index([status, createdAt])
 }
 
-// ─── Opportunity Email Alerts (lead capture until SMTP is configured) ───────
+// âââ Opportunity Email Alerts (lead capture until SMTP is configured) âââââââ
 model AlertSubscriber {
   id           String    @id @default(cuid())
   email        String    @unique
-  lang         String    @default("fa") // en | fa | ps — preferred digest language
+  lang         String    @default("fa") // en | fa | ps â preferred digest language
   categorySlug String? // null = all categories
   frequency    String    @default("weekly") // weekly | daily
   status       String    @default("pending") // pending | active | unsubscribed
@@ -983,7 +997,7 @@ model MatcherAlertSubscriber {
   @@index([status, createdAt])
 }
 
-// ─── Users / Auth ────────────────────────────────────────────────────────────
+// âââ Users / Auth ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 model AdminUser {
   id               String    @id @default(cuid())
   email            String    @unique
@@ -1011,7 +1025,7 @@ model AuditLog {
   @@index([createdAt])
 }
 
-// ─── Analytics ───────────────────────────────────────────────────────────────
+// âââ Analytics âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 model Visit {
   id        String   @id @default(cuid())
   path      String
@@ -1026,7 +1040,7 @@ model Visit {
   @@index([createdAt])
 }
 
-// ─── Process Steps (How It Works) ────────────────────────────────────────────
+// âââ Process Steps (How It Works) ââââââââââââââââââââââââââââââââââââââââââââ
 model ProcessStep {
   id              String   @id @default(cuid())
   title           String
@@ -1043,7 +1057,7 @@ model ProcessStep {
   @@index([order])
 }
 
-// ─── Pricing Packages ────────────────────────────────────────────────────────
+// âââ Pricing Packages ââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 model PricingPackage {
   id              String   @id @default(cuid())
   name            String
@@ -1069,7 +1083,7 @@ model PricingPackage {
   @@index([featured])
 }
 
-// ─── Team Members ────────────────────────────────────────────────────────────
+// âââ Team Members ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 model TeamMember {
   id        String   @id @default(cuid())
   name      String
@@ -1092,14 +1106,14 @@ model TeamMember {
   @@index([featured])
 }
 
-// ─── Comparison Rows (Why us vs others) ──────────────────────────────────────
+// âââ Comparison Rows (Why us vs others) ââââââââââââââââââââââââââââââââââââââ
 model ComparisonRow {
   id              String   @id @default(cuid())
   feature         String
   featureI18n     Json?
-  ariaValue       String   @default("✓")
+  ariaValue       String   @default("â")
   ariaValueI18n   Json?
-  othersValue     String   @default("—")
+  othersValue     String   @default("â")
   othersValueI18n Json?
   order           Int      @default(0)
   status          String   @default("published")
@@ -1109,7 +1123,7 @@ model ComparisonRow {
   @@index([status])
 }
 
-// ─── CTA Banner content (editable marketing band) ────────────────────────────
+// âââ CTA Banner content (editable marketing band) ââââââââââââââââââââââââââââ
 model CtaBanner {
   id                String   @id @default(cuid())
   title             String
@@ -1128,7 +1142,7 @@ model CtaBanner {
   updatedAt         DateTime @updatedAt
 }
 
-// ─── NextAuth Standard Models ────────────────────────────────────────────────
+// âââ NextAuth Standard Models ââââââââââââââââââââââââââââââââââââââââââââââââ
 model User {
   id            String             @id @default(cuid())
   name          String?
@@ -1148,9 +1162,9 @@ model User {
   updatedAt     DateTime           @updatedAt
 }
 
-// ─── Employer organization membership (Phase 12) ─────────────────────────────
+// âââ Employer organization membership (Phase 12) âââââââââââââââââââââââââââââ
 // Claiming = a `pending` row awaiting admin approval. NEVER auto-approved
-// from the organization name alone — an admin (or later, official-domain
+// from the organization name alone â an admin (or later, official-domain
 // email verification) must confirm. Roles: owner > recruiter > viewer.
 model OrganizationMember {
   id             String       @id @default(cuid())
@@ -1204,7 +1218,7 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// ─── Document Template Library ───────────────────────────────────────────────
+// âââ Document Template Library âââââââââââââââââââââââââââââââââââââââââââââââ
 
 model DocumentCategory {
   id          String             @id @default(cuid())
@@ -1294,7 +1308,7 @@ model TemplateBookmark {
   @@unique([templateId, userId])
 }
 
-// ─── Interview Preparation Center ────────────────────────────────────────────
+// âââ Interview Preparation Center ââââââââââââââââââââââââââââââââââââââââââââ
 
 model InterviewCategory {
   id          String              @id @default(cuid())
@@ -1378,7 +1392,7 @@ model InterviewExperience {
   @@index([status])
 }
 
-// ─── Visa Interview Preparation Center ────────────────────────────────────────
+// âââ Visa Interview Preparation Center ââââââââââââââââââââââââââââââââââââââââ
 
 model VisaCountry {
   id              String         @id @default(cuid())
@@ -1419,8 +1433,8 @@ model VisaCategory {
 
 model VisaRejection {
   id                   String   @id @default(cuid())
-  code                 String   @unique // "214b" | "221g" | "financial" …
-  section              String   // "Section 214(b)" — display code
+  code                 String   @unique // "214b" | "221g" | "financial" â¦
+  section              String   // "Section 214(b)" â display code
   title                String
   titleI18n            Json?
   description          String
@@ -1527,7 +1541,7 @@ model SuccessStory {
   @@index([status, storyType])
 }
 
-// ─── Brand Studio: social post ideas (tips / quotes / promos) ────────────────
+// âââ Brand Studio: social post ideas (tips / quotes / promos) ââââââââââââââââ
 // Editorial brand-voice copy used by the code-driven social templates and the
 // daily post planner. Fully trilingual so every generated post is publish-ready
 // in fa / ps / en. Managed from the admin panel (Content group).
@@ -1546,13 +1560,13 @@ model SocialIdea {
   @@index([kind, active])
 }
 
-// ─── Automation: social auto-publish + pipeline (R26) ─────────────────────────
+// âââ Automation: social auto-publish + pipeline (R26) âââââââââââââââââââââââââ
 model PublishChannel {
   id              String    @id @default(cuid())
   platform        String    @unique // telegram | facebook | instagram | x
   label           String
   enabled         Boolean   @default(false)
-  credentials     Json? // { botToken, chatId } / { pageId, accessToken } …
+  credentials     Json? // { botToken, chatId } / { pageId, accessToken } â¦
   lastStatus      String? // ok | error | not_configured
   lastError       String?
   lastPublishedAt DateTime?
@@ -1571,10 +1585,10 @@ model SocialPostQueue {
   imageStatus   String    @default("none") // none | ready | failed
   renderAttempts Int     @default(0)
   nextRenderAttemptAt DateTime?
-  imagePaths    Json? // { square?, portrait? } → /generated-posts/*.png
+  imagePaths    Json? // { square?, portrait? } â /generated-posts/*.png
   status        String    @default("pending") // pending | rendering | ready | publishing | published | partial | failed | cancelled
   results       Json? // per-channel { platform: { ok, error?, downgraded? } }
-  externalIds   Json? // per-channel { platform: { id, permalink? } } — for dedupe/reconciliation
+  externalIds   Json? // per-channel { platform: { id, permalink? } } â for dedupe/reconciliation
   attempts      Int       @default(0)
   error         String?
   publishedAt   DateTime?
@@ -1629,7 +1643,7 @@ model StudioDesign {
   layout        String   @default("classic")
   size          String   @default("square")
   overrides     Json? // { title?, note?, items?, statValue?, statLabel?, personName?, personMeta?, deadlineDate? }
-  captionOverride Json? // { fa?, ps?, en? } — manual caption text per language
+  captionOverride Json? // { fa?, ps?, en? } â manual caption text per language
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -1652,11 +1666,11 @@ model PipelineRun {
 // Single-row automation state (cursors + backoff), kept out of SiteSetting for clarity.
 model AutomationState {
   id        String   @id @default("singleton")
-  state     Json     @default("{}") // { translateBackoffUntil, lastQueueBuildDate, … }
+  state     Json     @default("{}") // { translateBackoffUntil, lastQueueBuildDate, â¦ }
   updatedAt DateTime @updatedAt
 }
 
-// ─── Facebook Group Distribution ──────────────────────────────────────────────
+// âââ Facebook Group Distribution ââââââââââââââââââââââââââââââââââââââââââââââ
 // Meta removed the public Groups API in April 2024. These models intentionally
 // keep destination management/queueing independent from the transport so an
 // official transport can replace today's manual-assist path without changing
@@ -1774,7 +1788,7 @@ model FacebookGroupDistributionJob {
   @@index([groupId, createdAt])
 }
 
-// ─── Static Pages (CMS) ────────────────────────────────────────────────────────
+// âââ Static Pages (CMS) ââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 model Page {
   id              String   @id @default(cuid())
   slug            String   @unique
@@ -1790,7 +1804,7 @@ model Page {
 }
 
 
-/// Reusable branded visuals (statues, scientists, flags, landmarks…) that the
+/// Reusable branded visuals (statues, scientists, flags, landmarksâ¦) that the
 /// Brand Studio can layer behind posters. Admin-managed via /api/admin/studio/visuals.
 model StudioVisual {
   id        String   @id @default(cuid())

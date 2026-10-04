@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { rateLimit, getClientIp } from '@/lib/admin-auth';
 import { parseProfessionalFields } from '@/lib/employers/professional-fields';
+import { allowDurable } from '@/lib/security/durable-rate-limit';
 import { translationPendingFlags } from '@/lib/translation/pending';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -55,7 +56,9 @@ function isMeaningfulText(text: string): boolean {
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req) || 'unknown';
-  if (!rateLimit(`opportunity-submit:${ip}`, 3)) {
+  // PHASE 6: durable counter (shared across instances) + in-memory burst guard.
+  if (!rateLimit(`opportunity-submit:${ip}`, 3) ||
+      !(await allowDurable(db, 'opportunity-submit', [ip], 3, 60_000))) {
     return NextResponse.json(
       { error: 'Too many submissions. Please try again in a few minutes.' },
       { status: 429 }

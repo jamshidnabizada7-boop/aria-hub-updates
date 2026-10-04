@@ -8,6 +8,7 @@ import {
   loginEmployer, getCurrentEmployer,
 } from '@/lib/employer-auth';
 import { myOrganizations } from '@/lib/employers/membership';
+import { allowDurable } from '@/lib/security/durable-rate-limit';
 import { db } from '@/lib/db';
 
 /** Tiny in-memory limiter: 5 auth attempts / minute / IP (per cold start). */
@@ -57,7 +58,9 @@ export async function POST(request: Request, ctx: { params: Promise<{ action: st
     return res;
   }
 
-  if (limited(ipOf(request))) {
+  // PHASE 6: durable limiter (survives cold starts) + the in-memory burst guard.
+  if (limited(ipOf(request)) ||
+      !(await allowDurable(db, 'employer-auth', [action, ipOf(request)], 5, 60_000))) {
     return NextResponse.json({ error: 'Too many attempts — wait a minute.' }, { status: 429 });
   }
 
