@@ -111,3 +111,47 @@ export async function requireMembership(db: MemberDb, userId: string, organizati
   if (!best) return null;
   return ROLE_LEVEL[best] >= ROLE_LEVEL[minRole] ? { role: best } : null;
 }
+
+// ─── PHASE 8: explicit organization-claim lifecycle ─────────────────────────
+// UNCLAIMED → CLAIM REQUESTED (pending) → ADMIN REVIEW → VERIFIED MEMBER
+// (active) → SUSPENDED (admin revoke). Every transition is audit-logged.
+// Verification evidence recorded on the member row: claimEmail domain is
+// compared by the admin against Organization.officialDomains — NEVER
+// auto-verified from the organization name alone.
+
+export type MembershipStatus = 'pending' | 'active' | 'suspended';
+
+/** Admin reassigns the OWNER role to a different active member. */
+export async function reassignOwner(
+  db: MemberDb,
+  organizationId: string,
+  newOwnerUserId: string,
+  adminEmail: string,
+): Promise<void> {
+  const target = await db.organizationMember.findFirst({
+    where: { organizationId, userId: newOwnerUserId, status: 'active' },
+  });
+  if (!target) throw new Error('New owner must hold an ACTIVE membership on this organization.');
+  const previous = await db.organizationMember.findFirst({
+    where: { organizationId, role: 'owner', status: 'active' },
+  });
+  if (previous) {
+    await db.organizationMember.update({ where: { id: previous.id }, data: { role: 'recruiter' } });
+  }
+  await db.organizationMember.update({ where: { id: target.id }, data: { role: 'owner' } });
+  await db.auditLog.create({
+    data: { entity: 'organization_member', entityId: target.id, action: 'membership.reassign-owner',
+      details: JSON.stringify({ by: adminEmail, organizationId, previousOwnerId: previous?.id ?? null, newOwnerUserId }) },
+  });
+}
+
+/** Suspend an ACTIVE member (admin) — sessions keep working but all
+ * ownership checks fail because requireMembership only honors active rows… */
+export async function suspendMember(db: MemberDb, memberId: string, adminEmail: string): Promise<void> {
+  const member = await db.organizationMember.findUnique({ where: { id: memberId } });
+  if (!member) throw new Error('Member not found.');
+  await db.organizationMember.update({ where: { id: memberId }, data: { status: 'suspended', reviewedBy: adminEmail, reviewedAt: new Date() } });
+  await db.auditLog.create({
+    data: { entity: 'organization_member', entityId: memberId, action: 'membership.suspend', details: JSON.stringify({ by: adminEmail }) },
+  });
+}

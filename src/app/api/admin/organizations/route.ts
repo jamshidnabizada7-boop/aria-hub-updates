@@ -21,6 +21,7 @@ import {
   addOfficialSource, setSourcePaused,
 } from '@/lib/import/organization-actions';
 import { listSuggestions, confirmSuggestion, dismissSuggestion } from '@/lib/import/source-suggestions';
+import { evaluateAutoPublishEligibility, setSourceCertification, parseSourceCertification } from '@/lib/import/source-certification';
 import { reviewMembership } from '@/lib/employers/membership';
 
 export async function GET() {
@@ -108,6 +109,24 @@ export async function PATCH(request: Request) {
         if (!suggestionId) return NextResponse.json({ error: 'suggestionId required' }, { status: 400 });
         await dismissSuggestion(db, suggestionId, email);
         return NextResponse.json({ success: true, action });
+      }
+      case 'set-certification': {
+        // PHASE 11: admin certification (testing/reviewed/trusted/paused) —
+        // explicitly separate from autoPublish.
+        const importSourceId = String(body.importSourceId ?? '');
+        const certification = String(body.certification ?? '');
+        if (!importSourceId || !certification) return NextResponse.json({ error: 'importSourceId and certification required' }, { status: 400 });
+        const cert = parseSourceCertification(certification);
+        if (!cert) return NextResponse.json({ error: 'certification must be testing/reviewed/trusted/paused' }, { status: 400 });
+        await setSourceCertification(db, importSourceId, cert, email);
+        return NextResponse.json({ success: true, action });
+      }
+      case 'auto-publish-eligibility': {
+        // PHASE 23: compute the eligibility snapshot; admin still must
+        // explicitly flip autoPublish — nothing is enabled by computing.
+        const importSourceId = String(body.importSourceId ?? '');
+        const snapshot = await evaluateAutoPublishEligibility(db, importSourceId);
+        return NextResponse.json({ success: true, action, snapshot });
       }
       case 'approve-member':
       case 'reject-member': {
