@@ -20,6 +20,8 @@
  *     (config.boardToken).
  *   • Lever board?                                → reuse `lever`
  *     (config.org).
+ *   • Workday career site?                        → reuse `workday`
+ *     (config.tenant/site, or a *.myworkdayjobs.com baseUrl).
  *   • Custom site / API?                          → write a subclass of
  *     BaseScraper in `./scrapers/<name>.ts` and register it below (Step 2).
  *
@@ -53,6 +55,8 @@ import { RssOpportunityScraper } from './scrapers/rss-opportunity';
 import { JsonApiScraper } from './scrapers/json-api';
 import { GreenhouseScraper } from './scrapers/greenhouse';
 import { LeverScraper } from './scrapers/lever';
+import { WorkdayScraper } from './scrapers/workday';
+import { OracleHcmScraper } from './scrapers/oracle-hcm';
 
 /**
  * Placeholder for `rssNews` sources: news imports are handled by
@@ -92,6 +96,8 @@ export const SCRAPERS: Record<string, new (...args: ConstructorParameters<typeof
   jsonApi: JsonApiScraper,                 // configurable JSON field paths
   greenhouse: GreenhouseScraper,           // Greenhouse boards API (config.boardToken)
   lever: LeverScraper,                     // Lever postings API (config.org)
+  workday: WorkdayScraper,                   // Workday CXS boards (config.tenant/site)
+  oracleHcm: OracleHcmScraper,             // Oracle HCM/Recruiting Cloud (config.host/siteNumber)
 };
 
 /**
