@@ -18,9 +18,11 @@ function parseTags(v: string | null): string[] {
   try { return JSON.parse(v); } catch { return []; }
 }
 
-export function NewsSection({ news }: { news: News[] }) {
+export function NewsSection({
+  lang: serverLang, news }: { lang?: string; news: News[] }) {
   const t = useT();
-  const lang = useLangStore((s) => s.code);
+  const storeLang = useLangStore((s) => s.code);
+  const lang = serverLang ?? storeLang;
   const [selected, setSelected] = useState<News | null>(null);
   if (!news.length) return null;
   const [featured, ...rest] = news;
@@ -135,8 +137,9 @@ export function NewsSection({ news }: { news: News[] }) {
   );
 }
 
-function NewsDetail({ news, t }: { news: News; t: (k: string) => string }) {
-  const lang = useLangStore((s) => s.code);
+function NewsDetail({ news, t, lang: serverLang }: { news: News; t: (k: string) => string; lang?: string }) {
+  const storeLang = useLangStore((s) => s.code);
+  const lang = serverLang ?? storeLang;
   
   // Get localized content
   const title = getLocalizedContent(news.title, news.titleI18n as any, lang);

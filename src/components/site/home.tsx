@@ -496,7 +496,7 @@ export function Home({ data, lang, home }: { data: SiteData; lang: Lang; home: H
         {on('payments') && data.paymentMethods.length > 0 && <PaymentsSection methods={data.paymentMethods} />}
 
         {/* E3 — Latest news (DB: News) */}
-        {on('news') && data.news.length > 0 && <NewsSection news={data.news} />}
+        {on('news') && data.news.length > 0 && <NewsSection news={data.news} lang={lang} />}
 
         {/* E4 — Gallery (DB: GalleryItem) + partners (DB: Partner) */}
         {on('gallery') && data.gallery.length > 0 && <GallerySection items={data.gallery} />}
