@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import chromium from '@sparticuz/chromium';
 import { chromium as playwrightChromium } from 'playwright-core';
 import { readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { normalizeDraft, displayDraftName } from '@/app/[lang]/cv-builder/lib/cv-utils';
 import { validateDraft } from '@/app/[lang]/cv-builder/lib/cv-validation';
@@ -36,6 +37,55 @@ function safeFilename(value:string){
   return value.trim().replace(/[\\/:*?"<>|\x00-\x1F]/g,'-').replace(/\s+/g,' ').slice(0,90)||'CV';
 }
 
+// Oracle/standalone: one simultaneous Chromium render; short bounded queue;
+// excess requests are rejected gracefully. PDF_MAX_CONCURRENCY can raise it.
+const MAX_CONCURRENT_PDF = Math.max(1, Number(process.env.PDF_MAX_CONCURRENCY ?? 1) || 1);
+const MAX_PDF_QUEUE = 3;
+let activeRenders = 0;
+const renderWaiters: Array<() => void> = [];
+
+async function acquireRenderSlot(): Promise<boolean> {
+  if (activeRenders < MAX_CONCURRENT_PDF) { activeRenders += 1; return true; }
+  if (renderWaiters.length >= MAX_PDF_QUEUE) return false;
+  return await new Promise<boolean>((resolve) => {
+    let settled = false;
+    const entry = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      activeRenders += 1;
+      resolve(true);
+    };
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      const i = renderWaiters.indexOf(entry);
+      if (i >= 0) renderWaiters.splice(i, 1);
+      resolve(false);
+    }, 15_000);
+    renderWaiters.push(entry);
+  });
+}
+
+function releaseRenderSlot(): void {
+  activeRenders = Math.max(0, activeRenders - 1);
+  const next = renderWaiters.shift();
+  if (next) next();
+}
+
+// Environment-aware browser: self-hosted Oracle uses the system/Playwright
+// Chromium (PDF_CHROMIUM_PATH or CHROME_PATH); Vercel keeps @sparticuz/chromium.
+async function resolveBrowser(): Promise<{ executablePath: string; args: string[] }> {
+  const systemPath = process.env.PDF_CHROMIUM_PATH || process.env.CHROME_PATH || process.env.BROWSER_PATH || '';
+  if (systemPath && existsSync(systemPath)) {
+    return {
+      executablePath: systemPath,
+      args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-blink-features=AutomationControlled'],
+    };
+  }
+  return { executablePath: await chromium.executablePath(), args: chromium.args };
+}
+
 async function fontCss(){
   try{
     const [regular,bold]=await Promise.all([
@@ -68,9 +118,11 @@ export async function POST(request:Request){
 
   let browser;
   try{
+    if(!(await acquireRenderSlot())) return NextResponse.json({error:'PDF renderer is busy. Please retry in a few seconds.'},{status:503,headers:{'Cache-Control':'no-store','Retry-After':'15'}});
+    const browserConfig=await resolveBrowser();
     browser=await playwrightChromium.launch({
-      args:chromium.args,
-      executablePath:await chromium.executablePath(),
+      args:browserConfig.args,
+      executablePath:browserConfig.executablePath,
       headless:true,
     });
     const page=await browser.newPage({viewport:{width:1200,height:1600}});
@@ -97,5 +149,6 @@ export async function POST(request:Request){
     return NextResponse.json({error:'PDF generation failed.'},{status:500,headers:{'Cache-Control':'no-store'}});
   }finally{
     await browser?.close().catch(()=>undefined);
+    releaseRenderSlot();
   }
 }

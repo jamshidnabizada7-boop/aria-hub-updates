@@ -11,6 +11,9 @@ const nextConfig: NextConfig = {
       headers: [{
         key: 'Vercel-CDN-Cache-Control',
         value: 's-maxage=1800, stale-while-revalidate=1800',
+        }, {
+        key: 'Cache-Control',
+        value: 's-maxage=1800, stale-while-revalidate=1800',
       }],
     }, {
       // The public feed is identical for visitors with the same URL. Cache
@@ -18,6 +21,9 @@ const nextConfig: NextConfig = {
       source: '/:lang(en|fa|ps)/opportunities',
       headers: [{
         key: 'Vercel-CDN-Cache-Control',
+        value: 's-maxage=60, stale-while-revalidate=120',
+        }, {
+        key: 'Cache-Control',
         value: 's-maxage=60, stale-while-revalidate=120',
       }],
     }, {
@@ -27,6 +33,9 @@ const nextConfig: NextConfig = {
       headers: [{
         key: 'Vercel-CDN-Cache-Control',
         value: 's-maxage=3600, stale-while-revalidate=3600',
+        }, {
+        key: 'Cache-Control',
+        value: 's-maxage=3600, stale-while-revalidate=3600',
       }],
     }];
   },
@@ -34,6 +43,12 @@ const nextConfig: NextConfig = {
   // container. Set STANDALONE=1 there; on Windows the build fails at the
   // copy step because chunk filenames contain ":" (e.g. node:fs/promises).
   ...(process.env.STANDALONE === "1" ? { output: "standalone" as const } : {}),
+  // Oracle release layout: /opt/aria-hub/releases/<id> sits under the workers'
+  // /opt/aria-hub checkout whose bun.lock makes Next infer that parent as the
+  // workspace root, nesting standalone output under releases/<id>/. Pin the
+  // tracing root to the release directory so standalone lands at
+  // .next/standalone/server.js as the start scripts expect.
+  ...(process.env.STANDALONE === "1" ? { outputFileTracingRoot: process.cwd() } : {}),
   compress: true,
   // Chromium extracts these archives at runtime when CV PDFs are rendered.
   // Static tracing sees the launcher but does not discover its compressed binaries.

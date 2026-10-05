@@ -88,11 +88,17 @@ export function proxy(req: NextRequest) {
       redirect.cookies.set(COOKIE_NAME, heal.split('/')[1], { path: '/', maxAge: ONE_YEAR, sameSite: 'lax' });
       return redirect;
     }
-    res.cookies.set(COOKIE_NAME, segment, {
-      path: '/',
-      maxAge: ONE_YEAR,
-      sameSite: 'lax',
-    });
+    // CDN-cacheable pages must not vary per visitor: only (re)write the
+    // language cookie when it is missing or differs, so returning visitors
+    // get Set-Cookie-free responses that Cloudflare can cache.
+    const priorLang = req.cookies.get(COOKIE_NAME)?.value;
+    if (priorLang !== segment) {
+      res.cookies.set(COOKIE_NAME, segment, {
+        path: '/',
+        maxAge: ONE_YEAR,
+        sameSite: 'lax',
+      });
+    }
     return res;
   }
 
