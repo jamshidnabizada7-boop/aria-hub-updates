@@ -26,7 +26,7 @@ function sampleDraft(id: TemplateType, lang: CVOutputLang): CVDraft {
   data.education = [{ id: 'sample-education', degree: 'Bachelor of Business Administration', institution: 'Kabul University', location: 'Kabul', startDate: '2016-09', endDate: '2020-06', isCurrent: false, description: '' }];
   data.projects = [{ id: 'sample-project', name: 'Digital Learning Access', role: 'Project Lead', startDate: '2023-01', endDate: '2023-09', description: 'Coordinated a learning pilot for 150 students.', link: '', technologies: '' }];
   data.skills = ['Program planning', 'Stakeholder engagement', 'Reporting'].map((name, index) => ({ id: `sample-skill-${index}`, name, level: 'expert' }));
-  data.languages = [{ id: 'sample-language', name: 'English', proficiency: 'fluent' }, { id: 'sample-language-2', name: 'Dari', proficiency: 'native' }];
+  data.languages = [{ id: 'sample-language', name: 'English', proficiency: 'fluent' }, { id: 'sample-language-2', name: 'Persian (Afghanistan)', proficiency: 'native' }];
   data.awards = [{ id: 'sample-award', title: 'Community Leadership Award', issuer: 'Education Partners', date: '2023-06', description: '' }];
   data.research = [{ id: 'sample-research', title: 'Access to Digital Education', organization: 'Kabul University', startDate: '2019-01', endDate: '2020-05', isCurrent: false, description: 'Study of barriers to online learning.', link: '' }];
   return { schemaVersion: 4, id: 'sample', name: '', purpose: id === 'academic-research' || id === 'scholarship-profile' ? 'scholarship' : id === 'tech-profile' ? 'student' : 'professional', template: id, paperSize: 'a4', outputLang: lang, appearance: { accent: 'navy', density: 'comfortable', showPhoto: false }, data, createdAt: '', updatedAt: '' };
