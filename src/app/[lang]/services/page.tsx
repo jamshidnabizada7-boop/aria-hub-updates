@@ -103,7 +103,7 @@ const FALLBACK_SERVICES: {
       ps: 'د اسنادو باوري درې ژبې مسلکي ژباړه',
     },
     excerpt: {
-      en: 'Accurate translations between Dari, Pashto, and English.',
+      en: 'Accurate translations between Persian (Afghanistan), Pashto, and English.',
       fa: 'ترجمه دقیق و روان اسناد، مدارک تحصیلی و مکاتبات اداری.',
       ps: 'د تحصیلي اسنادو، اسنادو او اداري لیکونو دقیقه او روانه ژباړه.',
     },
@@ -150,7 +150,7 @@ const SERVICES_FAQS: {
       ps: 'خدمتونه په کومو ژبو وړاندې کیږي؟',
     },
     a: {
-      en: 'All services, consultations, and document reviews are conducted trilingually in Dari (Farsi), Pashto, and English according to your preference.',
+      en: 'All services, consultations, and document reviews are conducted trilingually in Persian (Afghanistan), Pashto, and English according to your preference.',
       fa: 'تمامی مشاوره‌ها، بررسی اسناد و ارتباطات بر اساس ترجیح شما به سه زبان دری، پشتو و انگلیسی ارائه می‌شوند.',
       ps: 'ټولې مشورې، د اسنادو بیاکتنه او لارښوونې ستاسو په خوښه په دري، پښتو او انګلیسي ژبو ترسره کیږي.',
     },
@@ -269,7 +269,7 @@ export default async function ServicesPage({
                       ? 'همراهی با صدها دانشجو و متقاضی موفق در اخذ بورسیه و ویزا.'
                       : lang === 'ps'
                       ? 'سلګونو زده کوونکو او کار غوښتونکو سره د بورسونو په ترلاسه کولو کې مرسته.'
-                      : 'Guiding hundreds of successful applicants into top universities and global companies.'}
+                      : 'Careful, step-by-step guidance for university admissions and career applications.'}
                   </p>
                 </div>
               </div>
@@ -284,7 +284,7 @@ export default async function ServicesPage({
                       ? 'راهنمایی شفاف به دری، پشتو و انگلیسی بدون هیچ مانع زبانی.'
                       : lang === 'ps'
                       ? 'په دري، پښتو او انګلیسي ژبو بشپړ لارښود پرته له کوم خنډ.'
-                      : 'Clear, compassionate advice in Dari, Pashto, and English with zero language barriers.'}
+                      : 'Clear, compassionate advice in Persian (Afghanistan), Pashto, and English with minimal language barriers.'}
                   </p>
                 </div>
               </div>

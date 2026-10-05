@@ -7,7 +7,7 @@ import {
   EMPLOYER_SESSION_COOKIE, encodeEmployerSession, registerEmployer,
   loginEmployer, getCurrentEmployer,
 } from '@/lib/employer-auth';
-import { createPasswordResetToken, resetEmployerPassword } from '@/lib/employer-auth';
+import { createPasswordResetToken, resetEmployerPassword, changeEmployerPasswordSession } from '@/lib/employer-auth';
 import { myOrganizations } from '@/lib/employers/membership';
 import { allowDurable } from '@/lib/security/durable-rate-limit';
 import { db } from '@/lib/db';
@@ -88,15 +88,38 @@ export async function POST(request: Request, ctx: { params: Promise<{ action: st
       return res;
     }
     if (action === 'forgot-password') {
-      // PHASE 7: single-use hashed reset token. SMTP delivery is not wired
-      // yet — during early operations the token is returned ONLY in the
-      // response so the owner can hand it to the employer manually; this
-      // response shape must change when SMTP lands.
-      const result = await createPasswordResetToken(email);
-      if (!result.sent || !result.token) {
-        return NextResponse.json({ success: true, delivered: false });
+      // PHASE 7 / AUDIT §21: single-use hashed reset token. The token is
+      // NEVER returned over a public endpoint — an authenticated admin
+      // retrieves it via /api/admin/employers/password-reset and hands it
+      // to the employer out-of-band until SMTP delivery is wired.
+      if (!(await allowDurable(db, 'employer-forgot', [ipOf(request)], 3, 10 * 60_000))) {
+        return NextResponse.json({ success: true });
       }
-      return NextResponse.json({ success: true, delivered: true, token: result.token });
+      await createPasswordResetToken(email);
+      // Uniform response — no account-existence leak.
+      return NextResponse.json({ success: true });
+    }
+    if (action === 'change-password') {
+      // AUDIT §22: session-authenticated password change (verifies current
+      // password, rotates the session cookie on success).
+      const employer = await getCurrentEmployer(employerCookieValue(request));
+      if (!employer) return NextResponse.json({ error: 'Not signed in.' }, { status: 401 });
+      const currentPassword = String(body.currentPassword ?? '');
+      const newPassword = String(body.newPassword ?? '');
+      if (newPassword.length < 8) {
+        return NextResponse.json({ error: 'Password must be at least 8 characters.' }, { status: 400 });
+      }
+      if (body.confirmPassword !== undefined && body.confirmPassword !== newPassword) {
+        return NextResponse.json({ error: 'Passwords do not match.' }, { status: 400 });
+      }
+      try {
+        await changeEmployerPasswordSession(employer.id, currentPassword, newPassword);
+      } catch (e) {
+        return NextResponse.json({ error: e instanceof Error ? e.message : 'Password change failed.' }, { status: 400 });
+      }
+      const res = NextResponse.json({ success: true });
+      res.cookies.set(sessionCookie({ userId: employer.id, email: employer.email }));
+      return res;
     }
     if (action === 'reset-password') {
       await resetEmployerPassword(String(body.token ?? ''), password);
@@ -119,8 +142,8 @@ export async function GET(request: Request, ctx: { params: Promise<{ action: str
   return NextResponse.json({ user: employer, organizations });
 }
 
-// PHASE 7 extra actions appended to the POST handler switch are documented
-// here: 'forgot-password' issues a single-use hashed reset token (returned
-// ONLY when SMTP is not configured, so the owner can complete resets
-// manually during early operations); 'reset-password' consumes the token.
-// Both routes are handled below via dynamic action names.
+// PHASE 7 extra actions (dynamic names): 'forgot-password' creates a
+// single-use hashed reset token server-side and NEVER returns it (an
+// authenticated admin retrieves it via /api/admin/employers/password-reset);
+// 'reset-password' consumes the token; 'change-password' rotates the
+// password for the current session and re-issues the session cookie.

@@ -187,9 +187,9 @@ export default async function AdvertisePage({
 
             <div className="mx-auto mt-10 grid max-w-4xl grid-cols-1 gap-4 sm:grid-cols-3">
               {[
-                { icon: EyeIcon, value: activeCount ? `${fmtAfn(Math.max(activeCount, 14) * 3500, lang)}+` : '50K+', label: t('advertise.stat1') },
-                { icon: Send, value: '20K+', label: t('advertise.stat2') },
-                { icon: Hourglass, value: lang === 'en' ? '< 24h' : '۲۴ ساعته', label: t('advertise.stat3') },
+                { icon: EyeIcon, value: activeCount ? `${fmtAfn(activeCount, lang)}` : '', label: t('advertise.stat1') },
+                { icon: Send, value: lang === 'en' ? 'EN · FA · PS' : '۳', label: t('advertise.stat2') },
+                { icon: Hourglass, value: lang === 'en' ? 'Typical review: days' : 'کتنه: ورځې', label: t('advertise.stat3') },
               ].map((s, i) => (
                 <div key={i} className="rounded-2xl border bg-card/80 p-5 text-center shadow-sm">
                   <s.icon className="mx-auto h-5 w-5 text-chart-2" aria-hidden="true" />

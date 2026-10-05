@@ -68,7 +68,7 @@ const SEO_TITLES: Record<string, string> = {
 };
 
 const SEO_DESCRIPTIONS: Record<string, string> = {
-  en: 'Discover verified scholarships, jobs, fellowships, and opportunities in Afghanistan with updates in English, Dari, and Pashto.',
+  en: 'Discover verified scholarships, jobs, fellowships, and opportunities in Afghanistan with updates in English, Persian (Afghanistan), and Pashto.',
   fa: 'مرجع معتبر جدیدترین بورسیه‌های تحصیلی، وظایف و فرصت‌های آموزشی برای افغان‌ها به فارسی، پشتو و انگلیسی در آریا هاب.',
   ps: 'د افغانانو لپاره باوري تحصیلي بورسونه، کاري فرصتونه، انٹرنشیپونه او دندې په پښتو، دري او انګلیسي په آریا هاب کې ومومئ.',
 };

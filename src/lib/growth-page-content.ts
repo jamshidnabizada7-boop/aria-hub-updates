@@ -21,12 +21,12 @@ export const PRESS_DOC: LocalDoc = {
           ps: 'یوه جمله: آریا هاب یو څو ژبی فرصتونو پلیټفارم دی چې د افغانستان خلکو سره دندې، بورسونه، د کار روزنې او نړیوال پروګرامونه د روښانه لنډیزونو او رسمي د غوښتنلیک لینکونو په مرسته پیدا کولو کې مرسته کوي.',
         },
         {
-          en: 'Short description (50 words): ARIA HUB gathers current jobs, scholarships, internships and training programs in one searchable platform. Listings are reviewed, summarized and published in English, Dari and Pashto, always linking to the official application route. Employers and organizations can submit opportunities for free during the launch phase.',
+          en: 'Short description (50 words): ARIA HUB gathers current jobs, scholarships, internships and training programs in one searchable platform. Listings are reviewed, summarized and published in English, Persian (Afghanistan) and Pashto, always linking to the official application route. Employers and organizations can submit opportunities for free during the launch phase.',
           fa: 'توضیح کوتاه (۵۰ کلمه): آریا هاب شغل‌های روز، بورسیه‌ها، کارآموزی‌ها و برنامه‌های آموزشی را در یک پلتفرم جستجوپذیر گردآوری می‌کند. هر آگهی بررسی، خلاصه و به زبان‌های انگلیسی، دری و پشتو منتشر می‌شود و همیشه به مسیر رسمی درخواست لینک می‌دهد. کارفرمایان و مؤسسات در دورهٔ آغاز می‌توانند فرصت‌های خود را رایگان ثبت کنند.',
           ps: 'لنډې شننې (۵۰ کلمې): آریا هاب ورځې دندې، بورسونه، د کار روزنې او زده کړې پروګرامونه په یو لټون وړ پلیټفارم کې راټولوي. هر اعلان بیاکتنه کیږي، لنډیز او په انګلیسي، دري او پښتو خپریږي او تل رسمي د غوښتنلیک لارې ته لینک لري. کارګمارنان او ادارې کولی شي د پیل په دوره کې خپل فرصتونه وړیا ثبت کړي.',
         },
         {
-          en: 'Long description (150 words): ARIA HUB organizes current jobs, scholarships, internships, fellowships, training programs and selected international opportunities into one searchable platform. Listings are reviewed, summarized and made available across English, Dari (Persian) and Pashto, with direct application routes wherever available. ARIA HUB also provides career and application tools for users and a submission pathway for employers and partner organizations.',
+          en: 'Long description (150 words): ARIA HUB organizes current jobs, scholarships, internships, fellowships, training programs and selected international opportunities into one searchable platform. Listings are reviewed, summarized and made available across English, Persian (Afghanistan) and Pashto, with direct application routes wherever available. ARIA HUB also provides career and application tools for users and a submission pathway for employers and partner organizations.',
           fa: 'توضیح بلند (۱۵۰ کلمه): آریا هاب شغل‌های روز، بورسیه‌ها، کارآموزی‌ها، فلوشیپ‌ها، برنامه‌های آموزشی و فرصت‌های برگزیدهٔ بین‌المللی را در یک پلتفرم جستجوپذیر سازمان‌دهی می‌کند. هر آگهی بررسی، خلاصه و به زبان‌های انگلیسی، دری (فارسی) و پشتو عرضه می‌شود و هرجا ممکن باشد مسیر رسمی درخواست ارائه می‌گردد. آریا هاب در کنار آن، ابزارهای حرفه‌ای و درخواست برای کاربران و مسیر ثبت فرصت برای کارفرمایان و مؤسسات همکار فراهم می‌کند.',
           ps: 'اوږده شننه (۱۵۰ کلمې): آریا هاب ورځې دندې، بورسونه، د کار روزنې، فلوشیپونه، روزنیز پروګرامونه او ټاکلي نړیوال فرصتونه په یو لټون وړ پلیټفارم کې تنظیموي. هر اعلان بیاکتنه کیږي، لنډیز او په انګلیسي، دري (فارسي) او پښتو چمتو کیږي او هرچیرې چې وي، رسمي د غوښتنلیک لارې ورسره وي. آریا هاب د کاروونکو لپاره مسلکي او د غوښتنلیک وسایل او د کارګمارنانو او شریکه ادارو لپاره د فرصت ثبت لار هم برابروي.',
         },
@@ -49,7 +49,7 @@ export const PRESS_DOC: LocalDoc = {
           ps: 'د دندو، بورسونو، د کار روزنې، فلوشیپونو او روزنیزو دوره‌و یو بیاکتنی کتلاګ — هر اعلان د خپرولو دمخه د مدیرې ټیم بیاکتنه تېروي.',
         },
         {
-          en: 'Trilingual publishing in English, Dari (Persian) and Pashto with full right-to-left support.',
+          en: 'Trilingual publishing in English, Persian (Afghanistan) and Pashto with full right-to-left support.',
           fa: 'انتشار سه‌زبانه به انگلیسی، دری (فارسی) و پشتو با پشتیبانی کامل از راست‌به‌چپ.',
           ps: 'په انګلیسي، دري (فارسي) او پښتو درې ژبو خپرونه، د ښي-څخه-کیڼ بشپړ ملاتړ سره.',
         },

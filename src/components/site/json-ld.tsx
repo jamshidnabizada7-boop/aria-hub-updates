@@ -72,15 +72,15 @@ export async function JsonLd() {
   const defaultFaqs = [
     {
       q: 'How do I find and apply for scholarships on ARIA HUB?',
-      a: 'To find and apply for international scholarships on ARIA HUB, browse our verified opportunities directory filtered by degree level, host country, and funding type. Each listing provides detailed eligibility requirements, deadline countdowns, required documentation, and direct official application portal links translated into English, Dari, and Pashto to support Afghan students worldwide.',
+      a: 'To find and apply for international scholarships on ARIA HUB, browse our verified opportunities directory filtered by degree level, host country, and funding type. Each listing provides detailed eligibility requirements, deadline countdowns, required documentation, and direct official application portal links translated into English, Persian (Afghanistan), and Pashto to support Afghan students worldwide.',
     },
     {
       q: 'Is posting jobs and scholarships on ARIA HUB free for employers?',
-      a: 'Yes, posting verified job vacancies, internships, fellowships, and scholarship programs on ARIA HUB is completely free for reputable employers and academic institutions. Our editorial team reviews every submission for authenticity and translates all listing details into Dari, Pashto, and English within 24 hours to ensure maximum reach across the community.',
+      a: 'Yes, posting verified job vacancies, internships, fellowships, and scholarship programs on ARIA HUB is completely free for reputable employers and academic institutions. Submissions are subject to automated and editorial quality checks, and key listing details are provided in Persian (Afghanistan), Pashto, and English.',
     },
     {
       q: 'What languages and localization features does ARIA HUB offer?',
-      a: "ARIA HUB is Afghanistan's premier trilingual career and educational gateway, offering complete native support across English, Dari (Persian), and Pashto. Users can seamlessly switch languages with full RTL layout support, localized Gregorian calendar dates, Eastern Arabic numerals, and culturally tailored interfaces designed for desktop and mobile devices.",
+      a: "ARIA HUB is Afghanistan's premier trilingual career and educational gateway, offering complete native support across English, Persian (Afghanistan), and Pashto. Users can seamlessly switch languages with full RTL layout support, localized Gregorian calendar dates, Eastern Arabic numerals, and culturally tailored interfaces designed for desktop and mobile devices.",
     },
     {
       q: 'How often are new job vacancies and educational deadlines updated?',

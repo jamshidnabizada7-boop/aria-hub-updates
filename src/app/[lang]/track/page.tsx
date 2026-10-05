@@ -65,7 +65,7 @@ const PIPELINE_STEPS = [
       ps: 'په درې ژبو مسلکي ژباړه',
     },
     desc: {
-      en: 'Approved listings are translated and adapted into Dari (Farsi), Pashto, and English for maximum community accessibility.',
+      en: 'Approved listings are translated and adapted into Persian (Afghanistan), Pashto, and English for maximum community accessibility.',
       fa: 'موقعیت‌های تأییدشده به زبان‌های دری، پشتو و انگلیسی ترجمه و بومی‌سازی می‌شوند.',
       ps: 'منل شوي اعلانونه په دري، پښتو او انګلیسي ژباړل کیږي ترڅو ټول ورته لاسرسی ولري.',
     },

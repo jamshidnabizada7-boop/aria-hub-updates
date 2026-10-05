@@ -35,7 +35,7 @@ export function EmployerDashboard({ userName, organizations }: { userName: strin
   const [jobs, setJobs] = useState<{ active: JobRow[]; pending: JobRow[]; closed: JobRow[] } | null>(null);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState<'overview' | 'jobs' | 'post' | 'profile' | 'team'>('overview');
+  const [tab, setTab] = useState<'overview' | 'jobs' | 'post' | 'profile' | 'team' | 'account'>('overview');
   const [posting, setPosting] = useState(false);
   const [claimSlug, setClaimSlug] = useState('');
   const [claimEmail, setClaimEmail] = useState('');
@@ -162,11 +162,11 @@ export function EmployerDashboard({ userName, organizations }: { userName: strin
       </div>
 
       <div className="mb-5 flex flex-wrap gap-2">
-        {(['overview', 'jobs', 'post', 'profile', 'team'] as const).map((t) => (
+        {(['overview', 'jobs', 'post', 'profile', 'team', 'account'] as const).map((t) => (
           <Button key={t} variant={tab === t ? 'default' : 'outline'} size="sm"
             className="capitalize"
             onClick={() => setTab(t)}>
-            {t === 'post' ? 'Post job' : t}
+            {t === 'post' ? 'Post job' : t === 'account' ? 'Account' : t}
           </Button>
         ))}
       </div>
@@ -255,6 +255,10 @@ export function EmployerDashboard({ userName, organizations }: { userName: strin
           access for the same organization slug. Every request is reviewed manually by ARIA HUB
           admins before any job access is granted.
         </div>
+      )}
+
+      {tab === 'account' && (
+        <AccountPanel />
       )}
     </div>
   );
@@ -346,8 +350,74 @@ function PostJobForm({ busy, onSubmit }: { busy: boolean; onSubmit: (form: Recor
       </Button>
       <p className="text-xs text-muted-foreground">
         Submissions are created as drafts — the ARIA HUB team reviews and publishes them
-        (usually within a day). Persian and Pashto translations follow automatically.
+        within our stated review window (timing may vary). Persian and Pashto
+        translations are added manually by the team.
       </p>
+    </div>
+  );
+}
+
+
+/** AUDIT §22 — account settings: session-authenticated password change. */
+function AccountPanel() {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      toast.error('New passwords do not match.');
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast.error('Password must be at least 8 characters.');
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch('/api/employers/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ currentPassword, newPassword, confirmPassword }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        toast.success('Password updated.');
+        setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
+      } else {
+        toast.error(data.error || 'Password change failed.');
+      }
+    } catch {
+      toast.error('Network error — please try again.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="max-w-md rounded-lg border bg-card p-4">
+      <h3 className="mb-1 text-sm font-semibold">Change password</h3>
+      <p className="mb-4 text-xs text-muted-foreground">Requires your current password. Other sessions stay signed in until they expire.</p>
+      <form onSubmit={submit} className="grid gap-3">
+        <label className="grid gap-1 text-xs font-medium">
+          Current password
+          <Input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required autoComplete="current-password" className="h-9" />
+        </label>
+        <label className="grid gap-1 text-xs font-medium">
+          New password (min 8 characters)
+          <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={8} autoComplete="new-password" className="h-9" />
+        </label>
+        <label className="grid gap-1 text-xs font-medium">
+          Confirm new password
+          <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={8} autoComplete="new-password" className="h-9" />
+        </label>
+        <Button type="submit" size="sm" disabled={busy || !currentPassword || !newPassword}>
+          {busy ? 'Updating…' : 'Update password'}
+        </Button>
+      </form>
     </div>
   );
 }

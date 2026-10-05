@@ -25,7 +25,7 @@ export const SEO_PAGE_DATA: Record<string, PageSeoEntry> = {
       ps: 'له موږ سره اړیکه او د ملاتړ دفترونه | ARIA HUB',
     },
     description: {
-      en: 'Get in touch with the ARIA HUB team for consultations, support, advertising, and partnership inquiries. Trilingual support in Dari, Pashto, and English.',
+      en: 'Get in touch with the ARIA HUB team for consultations, support, advertising, and partnership inquiries. Trilingual support in Persian (Afghanistan), Pashto, and English.',
       fa: 'با تیم آریا هاب برای مشاوره تحصیلی، فرصت‌های شغلی، ثبت اعلان و همکاری در تماس شوید. پشتیبانی کامل به زبان‌های فارسی دری، پشتو و انگلیسی در خدمت شماست.',
       ps: 'د تحصیلي مشورې، کاري فرصتونو، اعلانونو او همکارۍ لپاره د آریا هاب ټیم سره اړیکه ونیسئ. بشپړ ملاتړ په دري، پښتو او انګلیسي ژبو ستاسو په خدمت کې دی.',
     },
@@ -61,7 +61,7 @@ export const SEO_PAGE_DATA: Record<string, PageSeoEntry> = {
       ps: 'په افغانستان کې باوري استعدادونه وګمارئ | ARIA HUB',
     },
     description: {
-      en: 'Post your job on ARIA HUB to reach thousands of qualified jobseekers in Afghanistan. 24-hour review with trilingual publication in Dari, Pashto & English.',
+      en: 'Post your job on ARIA HUB to reach opportunity seekers across Afghanistan. Submissions are reviewed within our stated window with trilingual publication in Persian (Afghanistan), Pashto & English.',
       fa: 'آگهی شغلی خود را در آریا هاب منتشر کنید و به هزاران جوینده کار افغان برسید — به فارسی، پشتو و انگلیسی. بررسی سریع و انتشار حداکثر ظرف ۲۴ ساعت.',
       ps: 'خپله دنده په آریا هاب کې خپره کړئ او په افغانستان کې زرګونو کار غوښتونکو ته ورسېږئ — په فارسي، پښتو او انګلیسي. په ۲۴ ساعتو کې کره بیاکتنه او خپرونه.',
     },
@@ -73,7 +73,7 @@ export const SEO_PAGE_DATA: Record<string, PageSeoEntry> = {
       ps: 'د کار اعلان خپرول او استخدام | ARIA HUB',
     },
     description: {
-      en: 'Post open positions on ARIA HUB to recruit qualified Afghan talent. Reviewed and published within 24 hours with trilingual reach in Dari, Pashto, and English.',
+      en: 'Post open positions on ARIA HUB to recruit qualified Afghan talent. Reviewed within our stated window with trilingual reach in Persian (Afghanistan), Pashto, and English.',
       fa: 'آگهی شغلی خود را در آریا هاب منتشر کنید و به هزاران متخصص و جوینده کار افغان برسید — بررسی، ویرایش و ترجمه سه‌زبانه ظرف ۲۴ ساعت انجام می‌شود.',
       ps: 'خپل کاري اعلان په آریا هاب کې خپور کړئ او زرګونو افغان مسلکي کسانو ته ورسېږئ — په ۲۴ ساعتو کې کره کتنه او په دري، پښتو او انګلیسي ژباړل کیږي.',
     },

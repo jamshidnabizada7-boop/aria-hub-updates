@@ -51,7 +51,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://www.myariahub.com"),
   title: "ARIA HUB — Jobs, Scholarships & Opportunities in Afghanistan",
   description:
-    "Discover verified scholarships, jobs, fellowships, and opportunities in Afghanistan with updates in English, Dari, and Pashto.",
+    "Discover verified scholarships, jobs, fellowships, and opportunities in Afghanistan with updates in English, Persian (Afghanistan), and Pashto.",
   keywords: [
     "ARIA HUB",
     "آریا هاب",
@@ -74,7 +74,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "ARIA HUB — Jobs, Scholarships & Opportunities in Afghanistan",
     description:
-      "Discover verified scholarships, jobs, fellowships, and opportunities in Afghanistan with updates in English, Dari, and Pashto.",
+      "Discover verified scholarships, jobs, fellowships, and opportunities in Afghanistan with updates in English, Persian (Afghanistan), and Pashto.",
     url: "https://www.myariahub.com",
     siteName: "ARIA HUB",
     type: "website",
@@ -91,7 +91,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "ARIA HUB — Jobs, Scholarships & Opportunities in Afghanistan",
     description:
-      "Discover verified scholarships, jobs, fellowships, and opportunities in Afghanistan with updates in English, Dari, and Pashto.",
+      "Discover verified scholarships, jobs, fellowships, and opportunities in Afghanistan with updates in English, Persian (Afghanistan), and Pashto.",
     images: ["https://www.myariahub.com/og-image.png"],
   },
 };
