@@ -438,6 +438,7 @@ export function Home({ data, lang, home }: { data: SiteData; lang: Lang; home: H
         {/* D — Services strip (6 cards) */}
         {on('services') && services.length > 0 && (
           <ServicesSection
+          lang={lang}
             services={services}
             heading={{
               eyebrow: t('services.eyebrow'),
@@ -508,10 +509,10 @@ export function Home({ data, lang, home }: { data: SiteData; lang: Lang; home: H
         {on('faqs') && data.faqs.length > 0 && <FaqsSection faqs={data.faqs} />}
 
         {/* E7 — Comparison (DB: ComparisonRow) */}
-        {on('comparison') && data.comparisonRows.length > 0 && <ComparisonSection rows={data.comparisonRows} />}
+        {on('comparison') && data.comparisonRows.length > 0 && <ComparisonSection rows={data.comparisonRows} lang={lang} />}
 
         {/* E8 — Why choose us (DB: WhyChooseUsFeature) */}
-        {on('whyChooseUs') && data.whyFeatures.length > 0 && <WhyChooseUsSection features={data.whyFeatures} />}
+        {on('whyChooseUs') && data.whyFeatures.length > 0 && <WhyChooseUsSection features={data.whyFeatures} lang={lang} />}
 
         {/* F — CTA + contact-lite */}
         {on('ctaBanner') && (

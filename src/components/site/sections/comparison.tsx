@@ -9,9 +9,10 @@ import { getLocalizedContent } from '@/lib/i18n-content';
 import type { ComparisonRow } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
-export function ComparisonSection({ rows }: { rows: ComparisonRow[] }) {
+export function ComparisonSection({ lang: serverLang, rows }: { lang?: string; rows: ComparisonRow[] }) {
   const t = useT();
-  const lang = useLangStore((s) => s.code);
+  const storeLang = useLangStore((s) => s.code);
+  const lang = serverLang ?? storeLang;
   if (!rows.length) return null;
 
   return (

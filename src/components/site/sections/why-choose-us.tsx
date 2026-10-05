@@ -11,9 +11,10 @@ import { getLocalizedContent } from '@/lib/i18n-content';
 import { cn } from '@/lib/utils';
 import type { WhyChooseUsFeature } from '@/lib/types';
 
-export function WhyChooseUsSection({ features = [] }: { features?: WhyChooseUsFeature[] }) {
+export function WhyChooseUsSection({ lang: serverLang, features = [] }: { lang?: string; features?: WhyChooseUsFeature[] }) {
   const t = useT();
-  const lang = useLangStore((s) => s.code);
+  const storeLang = useLangStore((s) => s.code);
+  const lang = serverLang ?? storeLang;
   const defaultFeatures = [
     { icon: 'Globe2', key: 'f1', color: 'from-primary to-chart-2', glow: 'bg-primary/20', title: '', description: '' },
     { icon: 'Zap', key: 'f2', color: 'from-chart-2 to-chart-3', glow: 'bg-chart-2/20', title: '', description: '' },

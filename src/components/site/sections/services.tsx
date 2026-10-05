@@ -28,11 +28,14 @@ export interface ServicesHeading {
  * so menu children and cards share the same destination.
  */
 export function ServicesSection({
+  lang: serverLang,
   services,
   heading,
   viewAllHref,
   className,
+  lang,
 }: {
+  lang?: string;
   services: Service[];
   heading?: ServicesHeading;
   /** Absolute (already lang-prefixed) href for the "view all" button. */
@@ -64,7 +67,7 @@ export function ServicesSection({
                 viewport={{ once: true, margin: '0px' }}
                 transition={{ duration: 0.4, delay: (i % 3) * 0.06 }}
               >
-                <ServiceCard service={s} />
+                <ServiceCard service={s} lang={lang} />
               </motion.div>
             ))}
           </div>
@@ -87,11 +90,12 @@ export function ServicesSection({
   );
 }
 
-function ServiceCard({ service }: { service: Service }) {
+function ServiceCard({ service, lang: serverLang }: { service: Service; lang?: string }) {
   const ref = useRef<HTMLAnchorElement>(null);
   const t = useT();
   const hrefFn = useLangHref();
-  const lang = useLangStore((s) => s.code);
+  const storeLang = useLangStore((s) => s.code);
+  const lang = serverLang ?? storeLang;
 
   // Get localized content
   const title = getLocalizedContent(service.title, service.titleI18n as any, lang);

@@ -24,9 +24,10 @@ function AvatarWithFallback({ src, name }: { src: string; name: string }) {
   );
 }
 
-export function TestimonialsSection({ testimonials }: { testimonials: Testimonial[] }) {
+export function TestimonialsSection({ lang: serverLang, testimonials }: { lang?: string; testimonials: Testimonial[] }) {
   const t = useT();
-  const lang = useLangStore((s) => s.code);
+  const storeLang = useLangStore((s) => s.code);
+  const lang = serverLang ?? storeLang;
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
   const items = testimonials.length ? testimonials : [];
