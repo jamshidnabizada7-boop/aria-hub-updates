@@ -706,7 +706,7 @@ export interface BatchResult {
 export async function processBatch(
   maxUnits = 3,
   deadlineAt?: number,
-  opts?: { dryRun?: boolean },
+  opts?: { dryRun?: boolean; psTurn?: boolean },
 ): Promise<BatchResult> {
   let processed = 0;
   let committed = 0;
