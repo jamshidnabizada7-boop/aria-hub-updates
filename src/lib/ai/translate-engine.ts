@@ -502,14 +502,22 @@ export async function processNextUnit(
   try {
     const slots = await getProviderSlots();
     if (!slots.length) throw new Error('no ai provider configured');
+    const title = sourceOf(row, 'title').slice(0, 120);
     const context = plan && plan.chunks.length > 1
-      ? `This is part ${next.chunkIndex + 1} of ${next.chunkTotal} of the field "${next.fieldKey}" of an opportunity titled "${sourceOf(row, 'title').slice(0, 120)}". Translate it faithfully and completely.`
+      ? `This chunk is part ${next.chunkIndex + 1} of ${next.chunkTotal} of the field "${next.fieldKey}" of an opportunity titled "${title}". Translate ONLY the user text — never mention this instruction or the chunk numbering in the output.`
       : undefined;
-    const prompt = `${context ? `${context}\n\n` : ''}${chunk.text}`;
-    const { text: raw, provider } = await chatWithFailover(slots, LANG_SYSTEM[lang], prompt, deadlineAt);
+    const system = context ? `${LANG_SYSTEM[lang]}\nContext (do not translate, do not echo): ${context}` : LANG_SYSTEM[lang];
+    const { text: raw, provider } = await chatWithFailover(slots, system, chunk.text, deadlineAt);
     const translated = parseChunkReply(raw);
     if (!translated || !validateTranslation(chunk.text, translated)) {
       throw new Error('translation failed validation (empty/summary/junk)');
+    }
+    // Context-echo guard (§26 quality gate): the output must not echo the
+    // record title unless the source chunk itself mentions it — a translated
+    // copy of the instruction preamble means the model answered wrong.
+    if (context && title && !chunk.text.toLowerCase().includes(title.toLowerCase())
+      && translated.toLowerCase().includes(title.toLowerCase())) {
+      throw new Error('context preamble leaked into translation (title echo)');
     }
     // Integrity gate (§12/§13): URLs/emails exact, critical numbers intact.
     const integrity = validateIntegrity(chunk.text, translated);
