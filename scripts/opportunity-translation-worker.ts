@@ -46,6 +46,7 @@ const ts = () => new Date().toISOString().slice(11, 19);
 let stopping = false;
 let running = false;
 let processedTotal = 0;
+let tickCount = 0;
 
 process.on('SIGTERM', () => { stopping = true; });
 process.on('SIGINT', () => { stopping = true; });
@@ -111,7 +112,11 @@ async function tick(): Promise<void> {
       stopping = true;
       return;
     }
-    const r = await processBatch(UNITS_PER_TICK, undefined, { dryRun: DRY_RUN });
+    // Fair Pashto interleaving (§5): every 4th tick is a Pashto turn, so
+    // fa-complete rows are not starved by the Persian backlog.
+    tickCount += 1;
+    const psTurn = tickCount % 4 === 0;
+    const r = await processBatch(UNITS_PER_TICK, undefined, { dryRun: DRY_RUN, psTurn });
     processedTotal += r.processed;
     await recordUnits(r.processed, r.rateLimited);
     console.log(

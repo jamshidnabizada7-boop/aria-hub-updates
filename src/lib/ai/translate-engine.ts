@@ -712,8 +712,10 @@ export async function processBatch(
   let committed = 0;
   let rateLimited = false;
   for (let i = 0; i < maxUnits; i++) {
-    // Every 4th unit is a Pashto turn (§5 fairness interleaving).
-    const r = await processNextUnit(deadlineAt, { ...opts, psTurn: i > 0 && i % 4 === 3 });
+    // psTurn override for callers that drive one unit per tick (the worker);
+    // internal default: every 4th unit in multi-unit batches.
+    const psTurn = opts?.psTurn !== undefined ? opts.psTurn : i > 0 && i % 4 === 3;
+    const r = await processNextUnit(deadlineAt, { ...opts, psTurn });
     if (r.rateLimited) { rateLimited = true; break; }
     if (r.skipped && !r.processed && !r.committed && i === 0) {
       return { processed, committed, rateLimited, exhausted: true };
