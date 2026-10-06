@@ -397,14 +397,14 @@ export interface UnitResult {
  */
 export async function processNextUnit(
   deadlineAt?: number,
-  opts?: { dryRun?: boolean },
+  opts?: { dryRun?: boolean; psTurn?: boolean },
 ): Promise<UnitResult> {
   // Daily mercy: parked failed chunks get another chance (free models have
   // bad days; the content must never be lost forever).
   await resetStaleFailures();
   await recoverOrphanClaims();
 
-  const row = await pickNextRow();
+  const row = await pickNextRow(opts?.psTurn);
   if (!row) return { processed: false, committed: false, rateLimited: false, skipped: true };
 
   const plans = planFields(row);
@@ -611,7 +611,7 @@ async function resetStaleFailures(): Promise<void> {
  * before Pashto (a Pashto unit is picked only for rows with
  * faStatus === 'complete').
  */
-async function pickNextRow(): Promise<(TranslateRow & { faStatus: string | null; psStatus: string | null; translationSourceHash: string | null }) | null> {
+async function pickNextRow(preferPs = false): Promise<(TranslateRow & { faStatus: string | null; psStatus: string | null; translationSourceHash: string | null; translationOrigin: unknown }) | null> {
   const now = new Date();
   const base = {
     status: 'published' as const,
@@ -635,6 +635,27 @@ async function pickNextRow(): Promise<(TranslateRow & { faStatus: string | null;
     const v = o && typeof o === 'object' && !Array.isArray(o) ? (o as OriginMap)[lang] : undefined;
     return v === 'MANUAL' || v === 'MANUAL_STALE';
   };
+
+  // Fair interleaving (§5): with a large Persian backlog, strict fa-first
+  // would starve Pashto for fa-complete rows forever. The caller marks every
+  // 4th unit as a "Pashto turn"; per-record fa→ps order is still guaranteed
+  // by the faStatus === 'complete' gate.
+  if (preferPs) {
+    const psFirstRows = (await db.opportunity.findMany({
+      where: {
+        AND: [
+          base,
+          { faStatus: 'complete' },
+          { OR: [{ psStatus: null }, { psStatus: { in: ['pending', 'processing'] } }] },
+        ],
+      },
+      orderBy,
+      take: 5,
+      select: { ...ROW_SELECT, faStatus: true, psStatus: true, translationSourceHash: true, translationOrigin: true },
+    })) as unknown as PickRow[];
+    const psFirst = psFirstRows.find((r) => !isLocked(r, 'ps'));
+    if (psFirst) return psFirst;
+  }
 
   // 1. Persian-incomplete published rows.
   const faRows = (await db.opportunity.findMany({
@@ -691,7 +712,8 @@ export async function processBatch(
   let committed = 0;
   let rateLimited = false;
   for (let i = 0; i < maxUnits; i++) {
-    const r = await processNextUnit(deadlineAt, opts);
+    // Every 4th unit is a Pashto turn (§5 fairness interleaving).
+    const r = await processNextUnit(deadlineAt, { ...opts, psTurn: i > 0 && i % 4 === 3 });
     if (r.rateLimited) { rateLimited = true; break; }
     if (r.skipped && !r.processed && !r.committed && i === 0) {
       return { processed, committed, rateLimited, exhausted: true };
