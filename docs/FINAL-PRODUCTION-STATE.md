@@ -96,11 +96,20 @@ Cloudflare) as secondary.
 
 ## GitHub HEAD
 
-Recorded after the closeout push (see `docs` history / the closeout commit
-message). GitHub contains the exact production source for application code;
-the closeout commit adds only migration/test/ops/docs. Vercel is NOT
-connected for auto-deployment (verified in the closeout) — GitHub push ≠
-Vercel deploy.
+GitHub main = the closeout branch tip (`115dd15` + this documentation commit;
+`git ls-remote origin main` is authoritative). The release branch
+`feature/official-opportunity-ingestion-v1` points to the same tip. The
+deployed production ARTIFACT is the commit `514bd80` — the commits after it
+(closeout `a8fecb2`, guardrail-quoting fix `115dd15`, and this doc) contain
+only the grants migration (already applied manually to production), tests,
+`ops/` assets and documentation: no application-runtime changes, so no
+redeploy is required.
+
+Vercel: Git integration was connected (`jamshidnabizada7-boop/aria-hub-updates`)
+and was **disconnected** during the closeout — verified
+"Disconnected jamshidnabizada7-boop/aria-hub-updates"; no deployment was
+triggered by the push (latest Vercel deployment predates it). The existing
+Vercel production deployment stays available as a warm fallback.
 
 ## Vercel state
 
