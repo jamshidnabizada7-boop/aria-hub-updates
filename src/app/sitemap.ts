@@ -5,7 +5,9 @@ export const revalidate = 86400; // Cache sitemap for 24 hours
 
 const BASE_URL = 'https://www.myariahub.com';
 const LANGS = ['en', 'fa', 'ps'] as const;
-const MAX_URLS = 2000;
+// 2026-10-06 audit §8: raised from 2000 — with ~2000 opportunity/blog URLs the
+// old cap left a zero budget for the organizations section.
+const MAX_URLS = 5000;
 
 type SitemapEntry = MetadataRoute.Sitemap[number];
 
