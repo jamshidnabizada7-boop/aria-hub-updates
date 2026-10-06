@@ -48,7 +48,7 @@ describeIf('worker grant guardrail (closeout §2)', () => {
     for (const [table, privs] of Object.entries(WORKER_REQUIRED)) {
       for (const priv of privs) {
         const ok = await prisma.$queryRawUnsafe<Array<{ allowed: boolean }>>(
-          `SELECT has_table_privilege($1, $2, $3) AS allowed`, ROLE, table, priv,
+          `SELECT has_table_privilege($1, $2, $3) AS allowed`, ROLE, `"${table}"`, priv,
         );
         expect(ok[0]?.allowed).toBe(true);
       }
@@ -71,10 +71,10 @@ describeIf('worker grant guardrail (closeout §2)', () => {
     );
     if (role.length === 0) return; // dev DB — covered by the skip above
     const ins = await prisma.$queryRawUnsafe<Array<{ allowed: boolean }>>(
-      `SELECT has_table_privilege($1, 'AuditLog', 'INSERT') AS allowed`, ROLE,
+      `SELECT has_table_privilege($1, $2, 'INSERT') AS allowed`, ROLE, '"AuditLog"',
     );
     const sel = await prisma.$queryRawUnsafe<Array<{ allowed: boolean }>>(
-      `SELECT has_table_privilege($1, 'AuditLog', 'SELECT') AS allowed`, ROLE,
+      `SELECT has_table_privilege($1, $2, 'SELECT') AS allowed`, ROLE, '"AuditLog"',
     );
     expect(ins[0]?.allowed).toBe(true);
     expect(sel[0]?.allowed).toBe(true);
