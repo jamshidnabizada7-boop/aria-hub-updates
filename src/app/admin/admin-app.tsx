@@ -207,7 +207,7 @@ export function AdminApp({ admin }: { admin: AdminUser }) {
             </Button>
           </div>
         </header>
-        <main className="flex-1 overflow-x-hidden p-4 lg:p-6">
+        <main id="main-content" className="flex-1 overflow-x-hidden p-4 lg:p-6">
           {active === 'dashboard' ? <Dashboard onNavigate={setActive} /> : active === 'settings' ? <SettingsPanel /> : active === 'autoImport' ? <AutoImportPanel /> : active === 'documentTemplate' ? <TemplatesPanel /> : active === 'submissions' ? <SubmissionsPanel /> : active === 'discovery' ? <DiscoveryInboxPanel onEditOpportunity={(id) => { setRepairOpportunity({ id, issue: 'core' }); setActive('opportunity'); }} /> : active === 'contentHealth' ? <ContentHealthPanel onEditOpportunity={(id, issue) => { setRepairOpportunity({ id, issue }); setActive('opportunity'); }} /> : active === 'orders' ? <OrdersPanel /> : active === 'brandStudio' ? <BrandStudioPanel /> : active === 'automation' ? <AutomationPanel /> : active === 'opportunity' ? <OpportunityFormPanel focus={repairOpportunity} onFocusHandled={() => setRepairOpportunity(null)} /> : active === 'cvBuilder' ? <CVBuilderAdminPanel /> : <CrudTable model={active} />}
         </main>
       </div>

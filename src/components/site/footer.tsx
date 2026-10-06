@@ -133,6 +133,7 @@ export function Footer({
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder={t('footer.nameOptional')}
+                    aria-label={t('footer.nameOptional')}
                     className="h-12 rounded-xl sm:w-40"
                   />
                   <Input
@@ -141,6 +142,7 @@ export function Footer({
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder={t('newsletter.placeholder')}
+                    aria-label={t('newsletter.placeholder')}
                     className="h-12 rounded-xl"
                   />
                   <Button type="submit" disabled={loading} aria-label={t('newsletter.subscribe')} className="h-12 shrink-0 rounded-xl bg-gradient-to-r from-primary to-chart-2 px-5 shadow-float">

@@ -28,7 +28,7 @@ export default async function SavedOpportunitiesPage({ params }: { params: Promi
         siteName={data.settings?.siteName || 'ARIA HUB'}
         logoUrl={data.settings?.logoUrl ?? null}
       />
-      <main className="flex-1 pt-24 pb-20">
+      <main id="main-content" className="flex-1 pt-24 pb-20">
         <SavedOpportunities lang={lang} />
       </main>
       <Footer

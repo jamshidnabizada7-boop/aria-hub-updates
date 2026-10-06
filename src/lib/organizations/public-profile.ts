@@ -7,6 +7,7 @@
  * import status, dedupe confidence or run logs.
  */
 import { db } from '@/lib/db';
+import { localizedContentMatchesLang } from '@/lib/i18n-content';
 
 export interface PublicOrgOpportunity {
   slug: string;
@@ -25,6 +26,8 @@ export interface PublicOrganization {
   organizationType: string | null;
   country: string | null;
   description: string | null;
+  /** §7: true when the rendered description is the original source language */
+  descriptionIsOriginal: boolean;
   verified: boolean;
   verifiedAt: Date | null;
   opportunities: PublicOrgOpportunity[];
@@ -61,6 +64,9 @@ export async function getPublicOrganization(slug: string, lang: 'en' | 'fa' | 'p
     organizationType: org.organizationType,
     country: org.country,
     description: i18nDescription || org.description,
+    descriptionIsOriginal: org.description
+      ? !localizedContentMatchesLang(org.description, org.descriptionI18n, lang)
+      : false,
     verified: org.verified,
     verifiedAt: org.verifiedAt,
     opportunities: (org.opportunities as any[]).map((o) => ({

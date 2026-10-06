@@ -6,7 +6,7 @@
 
 import { db } from '@/lib/db';
 import type { News } from '@prisma/client';
-import { getLocalizedContent } from '@/lib/i18n-content';
+import { getLocalizedContent, localizedContentMatchesLang } from '@/lib/i18n-content';
 import type { Lang } from '@/lib/i18n-config';
 
 export interface BlogCard {
@@ -25,6 +25,8 @@ export interface BlogCard {
 
 export interface BlogPostDetail extends BlogCard {
   content: string;
+  /** §7: true when rendered title/content is the original source language */
+  originalLanguage?: boolean;
   tags: string[];
   seoTitle: string | null;
   seoDescription: string | null;
@@ -135,6 +137,10 @@ export async function getBlogPost(slug: string, lang: Lang): Promise<BlogPostDet
     const card = toCard(row, lang);
     return {
       ...card,
+      // §7 original-language indicator: did title or content fall back to
+      // source-language text (no manual translation in the page language)?
+      originalLanguage: !localizedContentMatchesLang(row.title, row.titleI18n as Record<string, string> | null, lang) ||
+        !localizedContentMatchesLang(row.content, row.contentI18n as Record<string, string> | null, lang),
       content: getLocalizedContent(row.content, row.contentI18n as Record<string, string> | null, lang),
       tags: (() => {
         try {

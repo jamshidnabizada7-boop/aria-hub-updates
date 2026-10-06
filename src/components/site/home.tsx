@@ -145,7 +145,7 @@ export function Home({ data, lang, home }: { data: SiteData; lang: Lang; home: H
         ]}
       />
 
-      <main className="flex-1">
+      <main id="main-content" className="flex-1">
         {/* A — Focused, search-first hero with real counts */}
         {on('hero') && <Hero lang={lang} stats={home.stats} />}
 

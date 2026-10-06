@@ -28,6 +28,7 @@ import { getSiteData } from '@/lib/get-site';
 import { Navbar } from '@/components/site/navbar';
 import { Footer } from '@/components/site/footer';
 import { OpportunityCard } from '@/components/site/opportunity-card';
+import { OriginalContentBadge } from '@/components/site/original-content-badge';
 import { AdSlot } from '@/components/site/ad-slot';
 import { ShareBar } from '@/components/site/share-bar';
 import { DetailSaveButton } from '@/components/site/save-button';
@@ -44,7 +45,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { translate } from '@/lib/i18n';
-import { getLocalizedContent } from '@/lib/i18n-content';
+import { getLocalizedContent, localizedContentMatchesLang } from '@/lib/i18n-content';
 import { removeLeadingTitle, renderListingContent } from '@/lib/content-html';
 import { isLang, type Lang } from '@/lib/lang-route';
 import {
@@ -242,6 +243,11 @@ export default async function OpportunityDetailPage({
 
   // ---- localized content ----------------------------------------------------
   const title = localize(opp.title, opp.titleI18n as I18nJson, lang);
+  // §7 original-language indicator: the rendered title or description falls
+  // back to source-language text when the manual translation does not exist.
+  const showOriginalLangBadge =
+    !localizedContentMatchesLang(opp.title, opp.titleI18n as I18nJson, lang) ||
+    !localizedContentMatchesLang(opp.description, opp.descriptionI18n as I18nJson, lang);
   const organization = opp.organization;
   const jobType = localize(opp.jobType, opp.jobTypeI18n as I18nJson, lang) || null;
   const salary = localize(opp.salary, opp.salaryI18n as I18nJson, lang) || null;
@@ -480,7 +486,7 @@ export default async function OpportunityDetailPage({
         logoUrl={data.settings?.logoUrl ?? null}
       />
 
-      <main className="flex-1 pt-24 pb-28 lg:pb-20">
+      <main id="main-content" className="flex-1 pt-24 pb-28 lg:pb-20">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           {/* Breadcrumb */}
           <Breadcrumb>
@@ -542,6 +548,11 @@ export default async function OpportunityDetailPage({
                 >
                   {title}
                 </h1>
+                {showOriginalLangBadge && (
+                  <div className="mt-2">
+                    <OriginalContentBadge lang={lang} />
+                  </div>
+                )}
               </header>
 
               {/* ── KEY FACTS — the scannable summary strip, always at the top ── */}

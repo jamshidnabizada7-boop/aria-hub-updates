@@ -13,6 +13,7 @@ import type { Lang } from '@/lib/i18n-config';
 import { isLang } from '@/lib/lang-route';
 import { formatDateShort } from '@/lib/date-format';
 import LikeButton from '@/components/site/like-button';
+import { OriginalContentBadge } from '@/components/site/original-content-badge';
 
 const LANGS = ['en', 'fa', 'ps'];
 
@@ -119,6 +120,12 @@ export default async function SuccessStoryDetailPage({
           <h1 className="mt-4 text-2xl font-bold leading-tight tracking-tight text-foreground md:text-3xl">
             {story.title}
           </h1>
+
+          {story.originalLanguage && (
+            <div className="mt-3">
+              <OriginalContentBadge lang={typedLang} />
+            </div>
+          )}
 
           {(story.program || story.visaType) && (
             <p className="mt-3 inline-flex items-center gap-2 rounded-lg border border-border/60 bg-muted/40 px-3 py-1.5 text-sm text-foreground/90">

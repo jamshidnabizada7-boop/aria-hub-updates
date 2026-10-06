@@ -1,6 +1,6 @@
 import { unstable_cache } from 'next/cache';
 import { db } from '@/lib/db';
-import { getLocalizedContent } from '@/lib/i18n-content';
+import { getLocalizedContent, localizedContentMatchesLang } from '@/lib/i18n-content';
 import { translate } from '@/lib/i18n';
 import type { Lang } from '@/lib/i18n-config';
 import type { Prisma } from '@prisma/client';
@@ -125,7 +125,7 @@ export async function listSuccessStories(
 export async function getSuccessStory(
   id: string,
   lang: Lang
-): Promise<(StoryCard & { content: string }) | null> {
+): Promise<(StoryCard & { content: string; originalLanguage?: boolean }) | null> {
   try {
     const row = await db.successStory.findFirst({
       where: { id, status: 'published' },
@@ -135,7 +135,14 @@ export async function getSuccessStory(
     const content =
       getLocalizedContent(row.content, row.contentI18n as Record<string, string> | null, lang) ||
       row.content;
-    return { ...card, excerpt: card.excerpt, content };
+    return {
+      ...card,
+      excerpt: card.excerpt,
+      content,
+      // §7 original-language indicator
+      originalLanguage: !localizedContentMatchesLang(row.title, row.titleI18n as Record<string, string> | null, lang) ||
+        !localizedContentMatchesLang(row.content, row.contentI18n as Record<string, string> | null, lang),
+    };
   } catch {
     return null;
   }

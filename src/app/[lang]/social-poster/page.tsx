@@ -64,7 +64,7 @@ export default async function SocialPosterPage({
   }
 
   return (
-    <main
+    <main id="main-content"
       className="flex min-h-screen flex-col items-center justify-center gap-6 bg-[#050a14] p-6"
       aria-label="Social poster canvas"
     >

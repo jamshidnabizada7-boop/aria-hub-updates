@@ -56,6 +56,12 @@ export function OrganizationsPanel({ onNavigate }: { onNavigate?: (key: string) 
   const [addSourceFor, setAddSourceFor] = useState<string | null>(null);
   const [editFor, setEditFor] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // §10 client-side pagination for the orgs table (25 rows/page)
+  const [orgPage, setOrgPage] = useState(0);
+  const orgPageSize = 25;
+  const orgTotal = (orgs ?? []).length;
+  const orgPages = Math.max(1, Math.ceil(orgTotal / orgPageSize));
+  const orgPageSafe = Math.min(orgPage, orgPages - 1);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -198,7 +204,14 @@ export function OrganizationsPanel({ onNavigate }: { onNavigate?: (key: string) 
 
       {tab === 'orgs' && !loading && (
         <div className="space-y-2">
-          {(orgs ?? []).map((org) => (
+          {/* §10: 300+ rows rendered at once took ~5s — paginate client-side
+              (data stays loaded for merge/dedupe lookups, only rendering is
+              windowed). */}
+          {(() => {
+            const slice = (orgs ?? []).slice(orgPageSafe * orgPageSize, orgPageSafe * orgPageSize + orgPageSize);
+            return (
+              <>
+                {slice.map((org) => (
             <div key={org.id} className="rounded-lg border bg-card">
               <button
                 className="flex w-full flex-wrap items-center gap-2 p-3 text-left"
@@ -219,8 +232,7 @@ export function OrganizationsPanel({ onNavigate }: { onNavigate?: (key: string) 
               {expanded === org.id && (
                 <div className="border-t p-3">
                   <div className="mb-3 grid gap-2 text-xs text-muted-foreground md:grid-cols-2">
-                    <p>Website: {org.website ? <a className="underline" href={org.website} target="_blank" rel="noreferrer noopener">{org.website}</a> : '—'}</p>
-                    <p>Careers: {org.careersUrl ? <a className="underline" href={org.careersUrl} target="_blank" rel="noreferrer noopener">{org.careersUrl}</a> : '—'}</p>
+                    <p>Website: {org.website ? <a className="underline" href={org.website} target="_blank" rel="noreferrer noopener">{org.website}</a> : '—'}</p>                    <p>Careers: {org.careersUrl ? <a className="underline" href={org.careersUrl} target="_blank" rel="noreferrer noopener">{org.careersUrl}</a> : '—'}</p>
                     <p>Official domains: {Array.isArray(org.officialDomains) && org.officialDomains.length ? (org.officialDomains as string[]).join(', ') : '—'}</p>
                     <p>Verified: {org.verified ? `yes (${org.verificationMethod}, ${fmt(org.verifiedAt)})` : 'no'}</p>
                   </div>
@@ -322,10 +334,22 @@ export function OrganizationsPanel({ onNavigate }: { onNavigate?: (key: string) 
               )}
             </div>
           ))}
+                </>
+              );
+            })()}
           {!loading && (orgs ?? []).length === 0 && (
             <p className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
               No organizations yet — create them via the Phase 2 backfill or the seed script.
             </p>
+          )}
+          {!loading && orgTotal > orgPageSize && (
+            <div className="flex items-center justify-center gap-3 py-2 text-xs">
+              <Button variant="outline" size="sm" className="h-7" disabled={orgPageSafe === 0}
+                onClick={() => setOrgPage(Math.max(0, orgPageSafe - 1))}>Previous</Button>
+              <span className="text-muted-foreground">Page {orgPageSafe + 1} of {orgPages} · {orgTotal} organizations</span>
+              <Button variant="outline" size="sm" className="h-7" disabled={orgPageSafe >= orgPages - 1}
+                onClick={() => setOrgPage(orgPageSafe + 1)}>Next</Button>
+            </div>
           )}
         </div>
       )}

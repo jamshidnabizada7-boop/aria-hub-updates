@@ -185,7 +185,7 @@ export default async function OpportunitiesPage({
         logoUrl={data.settings?.logoUrl ?? null}
       />
 
-      <main className="flex-1 pt-24 pb-20">
+      <main id="main-content" className="flex-1 pt-24 pb-20">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

@@ -175,7 +175,7 @@ export default async function VisasPage({
         siteName={data.settings?.siteName || 'ARIA HUB'}
         logoUrl={data.settings?.logoUrl ?? null}
       />
-      <main className="flex-1 pt-24 pb-20">
+      <main id="main-content" className="flex-1 pt-24 pb-20">
         <VisasClient
           visas={visas as any}
           currentPage={page}

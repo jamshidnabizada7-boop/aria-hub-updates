@@ -34,7 +34,7 @@ export async function PageShell({
         siteName={data.settings?.siteName || 'ARIA HUB'}
         logoUrl={data.settings?.logoUrl ?? null}
       /></div>
-      <main className={`flex-1 ${className}`}>{children}</main>
+      <main id="main-content" className={`flex-1 ${className}`}>{children}</main>
       <div className="print:hidden"><Footer settings={data.settings} footer={data.footer} socialLinks={data.socialLinks} /></div>
     </div>
   );

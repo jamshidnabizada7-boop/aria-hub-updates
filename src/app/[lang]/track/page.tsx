@@ -137,7 +137,7 @@ export default async function TrackSubmissionPage({ params }: { params: Promise<
         siteName={data.settings?.siteName || 'ARIA HUB'}
         logoUrl={data.settings?.logoUrl ?? null}
       />
-      <main className="flex-1 pt-24 pb-20">
+      <main id="main-content" className="flex-1 pt-24 pb-20">
         <div className="mx-auto w-full max-w-4xl px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="text-center max-w-2xl mx-auto">

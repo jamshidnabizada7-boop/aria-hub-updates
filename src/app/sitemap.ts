@@ -196,5 +196,34 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // DB unavailable — static entries above are still emitted
   }
 
+  // ── Active public organization profiles (trilingual alternates) ──
+  try {
+    const remaining = Math.max(0, MAX_URLS - entries.length);
+    const orgBudget = Math.floor(remaining / LANGS.length);
+
+    const orgs = await db.organization.findMany({
+      where: { active: true },
+      orderBy: { updatedAt: 'desc' },
+      select: { slug: true, updatedAt: true },
+      take: Math.min(orgBudget, 300),
+    });
+
+    for (const item of orgs) {
+      const path = `/organizations/${item.slug}`;
+      for (const lang of LANGS) {
+        if (entries.length >= MAX_URLS) break;
+        entries.push({
+          url: `${BASE_URL}/${lang}${path}`,
+          lastModified: item.updatedAt || now,
+          changeFrequency: 'weekly',
+          priority: 0.6,
+          alternates: { languages: languageAlternates(path) },
+        });
+      }
+    }
+  } catch {
+    // DB unavailable — static entries above are still emitted
+  }
+
   return entries.slice(0, MAX_URLS);
 }

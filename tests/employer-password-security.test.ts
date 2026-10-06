@@ -18,7 +18,7 @@ mock.module('next/headers', () => ({
 }));
 
 // Hard-pin the fully-migrated isolated DB (bun auto-loads .env's dev URL otherwise).
-process.env.DATABASE_URL = 'postgresql://postgres@127.0.0.1:5433/ariahub_fresh?sslmode=disable';
+process.env.DATABASE_URL ||= 'postgresql://postgres@127.0.0.1:5433/ariahub_fresh?sslmode=disable';
 const testUrl = new URL(process.env.DATABASE_URL);
 const isolated = ['127.0.0.1', 'localhost'].includes(testUrl.hostname) && (testUrl.pathname.endsWith('_test') || testUrl.pathname.endsWith('_fresh'));
 

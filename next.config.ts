@@ -3,8 +3,19 @@ import type { NextConfig } from "next";
 const isDev = process.env.NODE_ENV === "development" || process.env.__NEXT_DEV === "true";
 
 const nextConfig: NextConfig = {
+  // Audit §21: don't advertise the framework version.
+  poweredByHeader: false,
   async headers() {
     return [{
+      // Frame protection (audit §21): the app is never a legitimate frame
+      // target — block clickjacking. HSTS/nosniff/referrer-policy are set by
+      // the Caddy edge; these two complete the set at the app layer.
+      source: '/:path*',
+      headers: [
+        { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+        { key: 'Content-Security-Policy', value: "frame-ancestors 'self'" },
+      ],
+    }, {
       // The public home page is the same for every visitor; the opportunity
       // directory below retains its faster one-minute refresh.
       source: '/:lang(en|fa|ps)',

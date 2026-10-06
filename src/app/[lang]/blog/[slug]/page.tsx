@@ -7,6 +7,7 @@ import { getBlogPost, listRelatedPosts } from '@/lib/blog-queries';
 import { translate } from '@/lib/i18n';
 import type { Lang } from '@/lib/i18n-config';
 import { ShareBar } from '@/components/site/share-bar';
+import { OriginalContentBadge } from '@/components/site/original-content-badge';
 import { sanitizeListingHtml } from '@/lib/content-html';
 import { ensureSeoDescription } from '@/lib/seo-metadata';
 
@@ -172,6 +173,11 @@ export default async function BlogPostPage({
             <h1 dir="auto" className="text-2xl font-bold leading-tight tracking-tight text-foreground md:text-4xl">
               {post.title}
             </h1>
+            {post.originalLanguage && (
+              <div className="mt-3">
+                <OriginalContentBadge lang={typedLang} />
+              </div>
+            )}
             {post.excerpt && (
               <p dir="auto" className="mt-4 text-base leading-relaxed text-muted-foreground">
                 {post.excerpt}

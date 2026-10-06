@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 import { isLang, type Lang } from '@/lib/lang-route';
 import { getPublicOrganization } from '@/lib/organizations/public-profile';
 import { BadgeCheck, ExternalLink, MapPin } from 'lucide-react';
+import { OriginalContentBadge } from '@/components/site/original-content-badge';
 
 /**
  * Public organization profile (Phase 15) — "/[lang]/organizations/[slug]".
@@ -19,15 +21,38 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { lang: rawLang, slug } = await params;
   const lang: Lang = isLang(rawLang) ? rawLang : 'en';
   const org = await getPublicOrganization(slug, lang);
-  if (!org) return { title: 'Organization not found | ARIA HUB' };
-  const title = `${org.name} Jobs in Afghanistan | ARIA HUB`;
-  const description = org.description
-    ? `${org.name} — active jobs, scholarships and opportunities, verified and translated on ARIA HUB. ${org.description.slice(0, 140)}`
-    : `Active jobs and opportunities from ${org.name} on ARIA HUB — verified, summarized and translated into Persian and Pashto.`;
+  if (!org) return {};
+  // Title/description are templated per locale; the org name itself stays as
+  // recorded (orgs are usually known by their Latin name in Afghan listings).
+  const titleByLang: Record<Lang, string> = {
+    en: `${org.name} Jobs in Afghanistan | ARIA HUB`,
+    fa: `${org.name} — وظایف و فرصت‌های شغلی در افغانستان | آریا هاب`,
+    ps: `${org.name} — د افغانستان کاري فرصتونه | آریا هاب`,
+  };
+  const descByLang: Record<Lang, string> = {
+    en: org.description
+      ? `${org.name} — active jobs, scholarships and opportunities, verified and translated on ARIA HUB. ${org.description.slice(0, 140)}`
+      : `Active jobs and opportunities from ${org.name} on ARIA HUB — verified, summarized and translated into Persian and Pashto.`,
+    fa: org.description
+      ? `${org.name} — وظایف، بورسیه‌ها و فرصت‌های فعال، بررسی و ترجمه‌شده در آریا هاب. ${org.description.slice(0, 140)}`
+      : `وظایف و فرصت‌های فعال از ${org.name} در آریا هاب — بررسی‌شده و به فارسی دری و پشتو ترجمه شده.`,
+    ps: org.description
+      ? `${org.name} — دندنې، بورسونه او فعال فرصتونه، په آریا هاب کې بیاکتنه او ژباړه شوې. ${org.description.slice(0, 140)}`
+      : `له ${org.name} څخه په آریا هاب کې فعال دندنې او فرصتونه — بیاکتنه شوې او پښتو ژباړه لري.`,
+  };
+  const title = titleByLang[lang];
+  const description = descByLang[lang];
   return {
     title,
     description,
-    alternates: { canonical: `/${lang}/organizations/${slug}` },
+    alternates: {
+      canonical: `/${lang}/organizations/${slug}`,
+      languages: {
+        en: `/en/organizations/${slug}`,
+        fa: `/fa/organizations/${slug}`,
+        ps: `/ps/organizations/${slug}`,
+      },
+    },
     openGraph: { title, description, type: 'website' },
   };
 }
@@ -37,19 +62,9 @@ export default async function OrganizationPage({ params }: Props) {
   const lang: Lang = isLang(rawLang) ? rawLang : 'en';
   const org = await getPublicOrganization(slug, lang);
 
-  if (!org) {
-    return (
-      <div className="mx-auto max-w-2xl px-4 py-20 text-center">
-        <h1 className="text-2xl font-bold">Organization not found</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          This organization does not exist or is not active.
-        </p>
-        <Link href={`/${lang}/opportunities`} className="mt-4 inline-block text-sm underline">
-          Browse all opportunities
-        </Link>
-      </div>
-    );
-  }
+  // A missing/inactive org must return a real HTTP 404 — rendering the shell
+  // with 200 creates a soft-404 that search engines index.
+  if (!org) notFound();
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -100,6 +115,11 @@ export default async function OrganizationPage({ params }: Props) {
       {org.description && (
         <p className="mt-5 whitespace-pre-line rounded-lg border bg-card p-4 text-sm leading-relaxed">
           {org.description}
+          {org.descriptionIsOriginal && (
+            <span className="mt-3 flex">
+              <OriginalContentBadge lang={lang} />
+            </span>
+          )}
         </p>
       )}
 

@@ -108,6 +108,38 @@ export function getLocalizedContent(
 }
 
 /**
+ * Original-language fallback detection (audit §7).
+ *
+ * Manual translations lag behind imports, so getLocalizedContent legitimately
+ * falls back to the i18n.en entry or the base/original value. When what is
+ * then RENDERED is not in the page language, the UI must say so instead of
+ * pretending the content was translated. This helper answers exactly that:
+ * does the value getLocalizedContent would return read as the requested
+ * language? Detection is script-based (Persian/Pashto/Arabic range vs Latin),
+ * which tracks what the visitor actually sees and is robust to mislabeled
+ * i18n keys.
+ */
+export function localizedContentMatchesLang(
+  baseValue: string | null | undefined,
+  i18nValue: unknown,
+  lang: string
+): boolean {
+  const value = getLocalizedContent(baseValue, i18nValue, lang);
+  if (!value) return true; // nothing rendered — nothing to mislabel
+
+  let rtl = 0;
+  let latin = 0;
+  for (const ch of value) {
+    const c = ch.codePointAt(0) ?? 0;
+    // Arabic block + Persian/Urdu extensions + Arabic presentation forms
+    if ((c >= 0x0600 && c <= 0x06ff) || (c >= 0x0750 && c <= 0x077f) || (c >= 0xfb50 && c <= 0xfdff) || (c >= 0xfe70 && c <= 0xfeff)) rtl++;
+    else if ((c >= 0x0041 && c <= 0x005a) || (c >= 0x0061 && c <= 0x007a)) latin++;
+  }
+  const isRtlScript = rtl > latin;
+  return lang === 'en' ? !isRtlScript : isRtlScript;
+}
+
+/**
  * Get localized content from a JSON array field with i18n support
  * 
  * Some fields like 'features', 'requirements', 'documents' are stored as JSON arrays

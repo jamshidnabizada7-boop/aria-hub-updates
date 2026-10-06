@@ -82,7 +82,7 @@ export default async function SubmitOpportunityPage({
         logoUrl={data.settings?.logoUrl ?? null}
       />
 
-      <main className="flex-1">
+      <main id="main-content" className="flex-1">
         <section className="relative overflow-hidden py-14 sm:py-20">
           {/* soft background accents */}
           <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">

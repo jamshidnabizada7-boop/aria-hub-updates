@@ -125,6 +125,7 @@ export function FaqsSection({ faqs }: { faqs: Faq[] }) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('faqs.searchPlaceholder')}
+            aria-label={t('faqs.searchPlaceholder')}
             className="h-12 rounded-xl border-border/60 bg-card/50 ps-11 shadow-premium backdrop-blur-sm"
           />
           {query && (
