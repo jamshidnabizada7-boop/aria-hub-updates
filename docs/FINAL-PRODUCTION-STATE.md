@@ -117,6 +117,31 @@ Untouched, warm, Hobby quota exceeded for new builds; Git integration
 disconnected/disabled in the closeout so pushes cannot trigger builds.
 Existing production deployment remains available as a rollback target.
 
+## Automatic Persian & Pashto translation (2026-10-06)
+
+`aria-hub-translation-worker.service` — independent Oracle worker that drains
+the TranslationChunk queue: Persian completes and commits atomically before
+any Pashto work on the same record; public i18n fields only change in that
+atomic commit; publication/autoPublish is never touched. Provider chain
+`AI_PROVIDERS=groq,gemini,openrouter,cerebras` with 60s cooldowns + failover;
+worker budgets TRANSLATION_WORKER_CONCURRENCY=1, MAX_PER_HOUR=60,
+MAX_PER_DAY=300 (env file `/etc/aria-hub/translation-worker.env`, root:ariahub
+640). Chunk claims + 15-min orphan recovery; MANUAL/MANUAL_STALE translation
+origin is never overwritten by AI (source change marks it stale for human
+refresh); integrity gate rejects lost/changed URLs, emails and critical
+numbers (Persian-digit tolerant); expiry guard skips dead listings; every
+4th unit is a Pashto turn so fa-complete rows are not starved.
+
+**Admin override (§38)** — emergency controls without SSH are systemd:
+`sudo systemctl stop aria-hub-translation-worker` (pause),
+`sudo systemctl start aria-hub-translation-worker` (resume),
+`sudo systemctl restart aria-hub-translation-worker` (retry loop). Failed
+chunks retry automatically after 24h; admin can also requeue via the
+Translation Queue (Content Health shows pending/failed counters).
+**Observability (§39)** — Content Health exposes fa/ps complete + failed +
+pending counters; per-chunk provider/model/attempt audit lives in
+TranslationChunk (provider, model, lastAttemptAt, completedAt).
+
 ## Known deferred items
 
 - Role separation `aria_import_worker` vs `aria_social_worker` — recommended,
