@@ -63,6 +63,59 @@ export function parseChunkReply(raw: string): string | null {
   return null;
 }
 
+
+/** Persian (۰-۹) and Arabic-Indic (٠-٩) digits → ASCII, for integrity checks. */
+export function normalizeDigits(s: string): string {
+  // Currency/percent punctuation that legitimately localizes in RTL output:
+  // Arabic percent sign, Arabic decimal separator, Arabic thousands separator.
+  s = s.replace(/٪/g, '%').replace(/٫/g, '.').replace(/،/g, ',');
+  const fa = '۰۱۲۳۴۵۶۷۸۹';
+  const ar = '٠١٢٣٤٥٦٧٨٩';
+  return s.replace(/[۰-۹٠-٩]/g, (d) => {
+    const i = fa.indexOf(d);
+    return String(i >= 0 ? i : ar.indexOf(d));
+  });
+}
+
+const URL_RE = /https?:\/\/[^\s<>"')\]]+/gi;
+const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
+/**
+ * Numbers that carry meaning: money, percentages, ages, years, vacancy-style
+ * ids (≥2 consecutive digits). Compared with separators/currency stripped so
+ * localized punctuation (۱۰,۰۰۰ / ۵۰٪) never triggers a false rejection.
+ * A lost or changed number rejects the translation for retry — it never
+ * reaches the public fields.
+ */
+const CRITICAL_NUMBER_RE = /\$\s?[\d,]+|\d[\d,.]*\s?%|\b(?:19|20)\d{2}\b|\b\d{2,}\b/g;
+
+export function validateIntegrity(source: string, result: string): string[] {
+  const problems: string[] = [];
+  const src = normalizeDigits(source);
+  const out = normalizeDigits(result);
+
+  const srcUrls = (src.match(URL_RE) || []).map((u) => u.replace(/[.,)]+$/, ''));
+  const outUrls = (out.match(URL_RE) || []).map((u) => u.replace(/[.,)]+$/, ''));
+  for (const u of srcUrls) {
+    if (!outUrls.includes(u)) problems.push(`URL lost/changed: ${u}`);
+  }
+  const srcEmails = src.match(EMAIL_RE) || [];
+  for (const e of srcEmails) {
+    if (!out.includes(e)) problems.push(`email lost/changed: ${e}`);
+  }
+  // Compare numbers on separator/currency-stripped forms: translators
+  // legitimately localize "$10,000" as "۱۰,۰۰۰ دالر" — the AMOUNT must
+  // survive, not the ASCII punctuation.
+  const stripNum = (x: string) => x.replace(/[\s,$€£]/g, '');
+  const outText = stripNum(out);
+  const srcNums = (src.match(CRITICAL_NUMBER_RE) || []).map(stripNum);
+  for (const n of new Set(srcNums)) {
+    if (n.length >= 2 && !outText.includes(n)) {
+      problems.push(`critical number lost/changed: ${n}`);
+    }
+  }
+  return problems;
+}
+
 /** Sanity-check a translation: non-empty, letter-bearing, sane length ratio. */
 export function validateTranslation(source: string, result: string): boolean {
   const out = result.trim();

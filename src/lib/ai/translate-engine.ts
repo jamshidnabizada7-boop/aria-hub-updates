@@ -25,7 +25,7 @@ import { createHash } from 'node:crypto';
 import { db } from '@/lib/db';
 import { getProviderSlots, chatWithFailover } from '@/lib/ai/failover';
 import {
-  chunkText, isSymbolic, parseChunkReply, validateTranslation,
+  chunkText, isSymbolic, parseChunkReply, validateTranslation, validateIntegrity,
   FIELD_ORDER, type FieldKey,
 } from '@/lib/ai/translate-chunks';
 import type { Prisma } from '@prisma/client';
@@ -38,9 +38,46 @@ const CHUNK_SIZE = 900;
 const MAX_ATTEMPTS = 8;
 /** Parked failed chunks are automatically retried after this long. */
 const FAILED_RETRY_MS = 24 * 60 * 60 * 1000;
+/** A chunk claimed by a worker for longer than this is orphaned (crashed worker) and re-claimable. */
+const CLAIM_STALE_MS = 15 * 60 * 1000;
 
 const isRateLimitMsg = (msg: string): boolean =>
   /\b429\b|rate.?limit|quota|too many requests/i.test(msg);
+
+// ─── manual-translation provenance (audit §15) ──────────────────────────────
+
+type OriginMap = { fa?: string; ps?: string };
+
+async function readOrigin(rowId: string): Promise<OriginMap> {
+  const row = (await db.opportunity.findUnique({
+    where: { id: rowId },
+    select: { translationOrigin: true },
+  })) as unknown as { translationOrigin: unknown } | null;
+  const o = row?.translationOrigin;
+  return o && typeof o === 'object' && !Array.isArray(o) ? (o as OriginMap) : {};
+}
+
+/**
+ * MANUAL = a human produced the public translation. It is never overwritten
+ * by the worker while its source is unchanged. MANUAL_STALE = the source
+ * changed underneath a manual translation — re-translation stays halted and
+ * the admin queue surfaces it for human refresh.
+ */
+function isManualOrigin(origin: OriginMap, lang: Lang): boolean {
+  const v = origin[lang];
+  return v === 'MANUAL' || v === 'MANUAL_STALE';
+}
+
+/** Mark a manual translation stale because its source changed materially. */
+async function markManualStale(rowId: string, lang: Lang): Promise<void> {
+  const origin = await readOrigin(rowId);
+  if (origin[lang] !== 'MANUAL') return;
+  origin[lang] = 'MANUAL_STALE';
+  await db.opportunity.update({
+    where: { id: rowId },
+    data: { translationOrigin: origin as Prisma.InputJsonValue },
+  });
+}
 
 // ─── source field extraction ─────────────────────────────────────────────────
 
@@ -358,10 +395,14 @@ export interface UnitResult {
  * highest-priority incomplete row. Persian rows are always processed before
  * any Pashto work starts.
  */
-export async function processNextUnit(deadlineAt?: number): Promise<UnitResult> {
+export async function processNextUnit(
+  deadlineAt?: number,
+  opts?: { dryRun?: boolean },
+): Promise<UnitResult> {
   // Daily mercy: parked failed chunks get another chance (free models have
   // bad days; the content must never be lost forever).
   await resetStaleFailures();
+  await recoverOrphanClaims();
 
   const row = await pickNextRow();
   if (!row) return { processed: false, committed: false, rateLimited: false, skipped: true };
@@ -385,7 +426,12 @@ export async function processNextUnit(deadlineAt?: number): Promise<UnitResult> 
   // Source changed since the plan was stored → invalidate both languages
   // (Pashto is re-derived strictly: it may only run after fa completes).
   const sourceChanged = row.translationSourceHash !== newHash;
+  const origin = await readOrigin(row.id);
   if (sourceChanged) {
+    // A manual translation whose source changed is marked stale for human
+    // refresh — the worker never overwrites it with AI output (§15).
+    await markManualStale(row.id, 'fa');
+    await markManualStale(row.id, 'ps');
     await db.opportunity.update({
       where: { id: row.id },
       data: {
@@ -397,17 +443,26 @@ export async function processNextUnit(deadlineAt?: number): Promise<UnitResult> 
   }
 
   const lang: Lang = sourceChanged ? 'fa' : row.faStatus === 'complete' ? 'ps' : 'fa';
+  if (isManualOrigin(origin, lang) && !sourceChanged) {
+    // Manual translation, source unchanged — permanently skip this row/lang.
+    return { processed: false, committed: false, rateLimited: false, skipped: true };
+  }
   await syncPlan(row.id, lang, plans);
   await db.opportunity.update({
     where: { id: row.id },
     data: lang === 'fa' ? { faStatus: 'processing' } : { psStatus: 'processing' },
   }).catch(() => undefined);
 
-  // Next chunk to work on, in field order then chunk order.
+  // Next chunk to work on, in field order then chunk order. Chunks claimed
+  // by a (crashed) worker for > CLAIM_STALE_MS are re-claimable (§4).
   const next = await db.translationChunk.findFirst({
     where: {
       ownerType: 'opportunity', ownerId: row.id, lang,
-      OR: [{ status: 'pending' }, { status: 'failed', attempts: { lt: MAX_ATTEMPTS } }],
+      OR: [
+        { status: 'pending' },
+        { status: 'processing', claimedAt: { lt: new Date(Date.now() - CLAIM_STALE_MS) } },
+        { status: 'failed', attempts: { lt: MAX_ATTEMPTS } },
+      ],
     },
     orderBy: [{ fieldKey: 'asc' }, { chunkIndex: 'asc' }],
   });
@@ -429,6 +484,19 @@ export async function processNextUnit(deadlineAt?: number): Promise<UnitResult> 
     return { processed: false, committed: false, rateLimited: false, skipped: true };
   }
 
+  // Atomic claim (§4): only one worker can flip pending → processing.
+  const claimed = await db.translationChunk.updateMany({
+    where: {
+      id: next.id,
+      status: { in: ['pending', 'processing'] },
+      OR: [{ status: 'pending' }, { claimedAt: null }, { claimedAt: { lt: new Date(Date.now() - CLAIM_STALE_MS) } }],
+    },
+    data: { status: 'processing', claimedAt: new Date() },
+  });
+  if (claimed.count === 0) {
+    return { processed: false, committed: false, rateLimited: false, skipped: true };
+  }
+
   try {
     const slots = await getProviderSlots();
     if (!slots.length) throw new Error('no ai provider configured');
@@ -436,14 +504,24 @@ export async function processNextUnit(deadlineAt?: number): Promise<UnitResult> 
       ? `This is part ${next.chunkIndex + 1} of ${next.chunkTotal} of the field "${next.fieldKey}" of an opportunity titled "${sourceOf(row, 'title').slice(0, 120)}". Translate it faithfully and completely.`
       : undefined;
     const prompt = `${context ? `${context}\n\n` : ''}${chunk.text}`;
-    const { text: raw } = await chatWithFailover(slots, LANG_SYSTEM[lang], prompt, deadlineAt);
+    const { text: raw, provider } = await chatWithFailover(slots, LANG_SYSTEM[lang], prompt, deadlineAt);
     const translated = parseChunkReply(raw);
     if (!translated || !validateTranslation(chunk.text, translated)) {
       throw new Error('translation failed validation (empty/summary/junk)');
     }
+    // Integrity gate (§12/§13): URLs/emails exact, critical numbers intact.
+    const integrity = validateIntegrity(chunk.text, translated);
+    if (integrity.length) {
+      throw new Error(`integrity validation failed: ${integrity.slice(0, 3).join('; ')}`);
+    }
     await db.translationChunk.update({
       where: { id: next.id },
-      data: { status: 'done', result: translated, error: null, attempts: { increment: 1 } },
+      data: {
+        status: 'done', result: translated, error: null, claimedAt: null,
+        attempts: { increment: 1 },
+        provider, model: provider,
+        lastAttemptAt: new Date(), completedAt: new Date(),
+      },
     });
   } catch (e) {
     const msg = (e instanceof Error ? e.message : String(e)).slice(0, 240);
@@ -453,6 +531,10 @@ export async function processNextUnit(deadlineAt?: number): Promise<UnitResult> 
       data: {
         attempts: { increment: 1 },
         error: msg,
+        claimedAt: null,
+        status: 'pending',
+        lastAttemptAt: new Date(),
+        // Parked failures keep status 'failed' so the daily mercy reset owns them.
         ...(attemptsExhausted(next.attempts + 1) ? { status: 'failed' } : {}),
       },
     });
@@ -463,10 +545,34 @@ export async function processNextUnit(deadlineAt?: number): Promise<UnitResult> 
 
   const st = await writeProgress(row.id, lang);
   if (st.allDone) {
+    // DRY_RUN (§25): translations are produced and stored in the chunk
+    // ledger, but the public i18n fields and completion statuses are left
+    // untouched for human review.
+    if (opts?.dryRun) return { processed: true, committed: false, rateLimited: false, skipped: false };
     await commitLanguage(row.id, lang);
+    await markOrigin(row.id, lang);
     return { processed: true, committed: true, rateLimited: false, skipped: false };
   }
   return { processed: true, committed: false, rateLimited: false, skipped: false };
+}
+
+/** Record AI provenance for a committed language (§22). */
+async function markOrigin(rowId: string, lang: Lang): Promise<void> {
+  const origin = await readOrigin(rowId);
+  if (origin[lang] === 'MANUAL') return; // safety — never relabel a manual translation
+  origin[lang] = 'AI';
+  await db.opportunity.update({
+    where: { id: rowId },
+    data: { translationOrigin: origin as Prisma.InputJsonValue },
+  });
+}
+
+/** Orphan recovery: claims older than CLAIM_STALE_MS return to the queue. */
+async function recoverOrphanClaims(): Promise<void> {
+  await db.translationChunk.updateMany({
+    where: { status: 'processing', claimedAt: { lt: new Date(Date.now() - CLAIM_STALE_MS) } },
+    data: { status: 'pending', claimedAt: null },
+  }).catch(() => undefined);
 }
 
 function attemptsExhausted(attempts: number): boolean {
@@ -504,28 +610,59 @@ async function resetStaleFailures(): Promise<void> {
  * faStatus === 'complete').
  */
 async function pickNextRow(): Promise<(TranslateRow & { faStatus: string | null; psStatus: string | null; translationSourceHash: string | null }) | null> {
+  const now = new Date();
   const base = {
     status: 'published' as const,
+    // Expiry guard (§19): never spend AI capacity on clearly expired
+    // listings — deadline in the future or open-ended only (3-day grace for
+    // timezone skew and rolling closings).
+    OR: [{ deadline: null as Date | null }, { deadline: { gte: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000) } }],
   };
   const orderBy = [
     { deadline: { sort: 'asc' as const, nulls: 'last' as const } },
     { createdAt: 'desc' as const },
   ];
 
+  // Manual-translation protection (§15): rows whose public translation was
+  // produced/locked by a human (origin MANUAL / MANUAL_STALE) are owned by
+  // the manual queue — filtered after fetch (JSON path typing is brittle in
+  // Prisma 6; the candidate slice is tiny so this is effectively free).
+  type PickRow = TranslateRow & { faStatus: string | null; psStatus: string | null; translationSourceHash: string | null; translationOrigin: unknown };
+  const isLocked = (row: PickRow, lang: Lang): boolean => {
+    const o = row.translationOrigin;
+    const v = o && typeof o === 'object' && !Array.isArray(o) ? (o as OriginMap)[lang] : undefined;
+    return v === 'MANUAL' || v === 'MANUAL_STALE';
+  };
+
   // 1. Persian-incomplete published rows.
-  const faRow = (await db.opportunity.findFirst({
-    where: { ...base, OR: [{ faStatus: null }, { faStatus: { in: ['pending', 'processing'] } }] },
+  const faRows = (await db.opportunity.findMany({
+    where: {
+      AND: [
+        base,
+        { OR: [{ faStatus: null }, { faStatus: { in: ['pending', 'processing'] } }] },
+      ],
+    },
     orderBy,
-    select: { ...ROW_SELECT, faStatus: true, psStatus: true, translationSourceHash: true },
-  })) as unknown as TranslateRow & { faStatus: string | null; psStatus: string | null; translationSourceHash: string | null } | null;
+    take: 5,
+    select: { ...ROW_SELECT, faStatus: true, psStatus: true, translationSourceHash: true, translationOrigin: true },
+  })) as unknown as PickRow[];
+  const faRow = faRows.find((r) => !isLocked(r, 'fa'));
   if (faRow) return faRow;
 
-  // 2. Pashto for Persian-complete rows.
-  const psRow = (await db.opportunity.findFirst({
-    where: { ...base, faStatus: 'complete', OR: [{ psStatus: null }, { psStatus: { in: ['pending', 'processing'] } }] },
+  // 2. Pashto for Persian-complete rows (Pashto manual lock checked per lang).
+  const psRows = (await db.opportunity.findMany({
+    where: {
+      AND: [
+        base,
+        { faStatus: 'complete' },
+        { OR: [{ psStatus: null }, { psStatus: { in: ['pending', 'processing'] } }] },
+      ],
+    },
     orderBy,
-    select: { ...ROW_SELECT, faStatus: true, psStatus: true, translationSourceHash: true },
-  })) as unknown as TranslateRow & { faStatus: string | null; psStatus: string | null; translationSourceHash: string | null } | null;
+    take: 5,
+    select: { ...ROW_SELECT, faStatus: true, psStatus: true, translationSourceHash: true, translationOrigin: true },
+  })) as unknown as PickRow[];
+  const psRow = psRows.find((r) => !isLocked(r, 'ps'));
   return psRow ?? null;
 }
 
@@ -543,12 +680,16 @@ export interface BatchResult {
  * caller records a backoff window. Small units keep each LLM call short,
  * which suits free models with tight output/timeout limits.
  */
-export async function processBatch(maxUnits = 3, deadlineAt?: number): Promise<BatchResult> {
+export async function processBatch(
+  maxUnits = 3,
+  deadlineAt?: number,
+  opts?: { dryRun?: boolean },
+): Promise<BatchResult> {
   let processed = 0;
   let committed = 0;
   let rateLimited = false;
   for (let i = 0; i < maxUnits; i++) {
-    const r = await processNextUnit(deadlineAt);
+    const r = await processNextUnit(deadlineAt, opts);
     if (r.rateLimited) { rateLimited = true; break; }
     if (r.skipped && !r.processed && !r.committed && i === 0) {
       return { processed, committed, rateLimited, exhausted: true };
