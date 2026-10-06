@@ -5,6 +5,7 @@ import { isLang, type Lang } from '@/lib/lang-route';
 import { getPublicOrganization } from '@/lib/organizations/public-profile';
 import { BadgeCheck, ExternalLink, MapPin } from 'lucide-react';
 import { OriginalContentBadge } from '@/components/site/original-content-badge';
+import { translate } from '@/lib/i18n';
 
 /**
  * Public organization profile (Phase 15) — "/[lang]/organizations/[slug]".
@@ -60,6 +61,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function OrganizationPage({ params }: Props) {
   const { lang: rawLang, slug } = await params;
   const lang: Lang = isLang(rawLang) ? rawLang : 'en';
+  const t = (key: string) => translate(lang, key);
   const org = await getPublicOrganization(slug, lang);
 
   // A missing/inactive org must return a real HTTP 404 — rendering the shell
@@ -94,20 +96,20 @@ export default async function OrganizationPage({ params }: Props) {
             {org.name}
             {org.verified && (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                <BadgeCheck className="h-3.5 w-3.5" /> Verified organization
+                <BadgeCheck className="h-3.5 w-3.5" /> {t('orgPage.verified')}
               </span>
             )}
           </h1>
           <p className="text-sm text-muted-foreground">
-            {org.organizationType?.replace(/_/g, ' ') ?? 'Organization'}
+            {org.organizationType?.replace(/_/g, ' ') ?? t('orgPage.organizationFallback')}
             {org.country ? ` · ${org.country}` : ''}
-            {` · ${org.opportunities.length} active ${org.opportunities.length === 1 ? 'opportunity' : 'opportunities'}`}
+            {` · ${org.opportunities.length}${org.opportunities.length === 1 ? t('orgPage.activeSummary1') : t('orgPage.activeSummary')}`}
           </p>
         </div>
         {org.website && (
           <a href={org.website} target="_blank" rel="noreferrer noopener nofollow"
             className="ms-auto inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-xs">
-            <ExternalLink className="h-3.5 w-3.5" /> Official website
+            <ExternalLink className="h-3.5 w-3.5" /> {t('orgPage.officialWebsite')}
           </a>
         )}
       </div>
@@ -123,7 +125,7 @@ export default async function OrganizationPage({ params }: Props) {
         </p>
       )}
 
-      <h2 className="mt-8 text-lg font-bold">Active opportunities</h2>
+      <h2 className="mt-8 text-lg font-bold">{t('orgPage.activeHeading')}</h2>
       <div className="mt-3 space-y-2">
         {org.opportunities.map((job) => (
           <Link key={job.slug} href={`/${lang}/opportunities/${job.slug}`}
@@ -132,13 +134,13 @@ export default async function OrganizationPage({ params }: Props) {
             {job.jobType && <span className="text-xs text-muted-foreground">{job.jobType}</span>}
             <span className="ms-auto inline-flex items-center gap-1 text-xs text-muted-foreground">
               {job.location && <><MapPin className="h-3 w-3" /> {job.location} · </>}
-              {job.deadline ? `deadline ${job.deadline.toISOString().slice(0, 10)}` : 'rolling deadline'}
+              {job.deadline ? `${t('orgPage.deadlinePrefix')}${job.deadline.toISOString().slice(0, 10)}` : t('orgPage.rollingDeadline')}
             </span>
           </Link>
         ))}
         {org.opportunities.length === 0 && (
           <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-            No active opportunities right now.
+            {t('orgPage.none')}
           </p>
         )}
       </div>
