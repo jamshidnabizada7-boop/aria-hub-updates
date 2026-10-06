@@ -1,0 +1,333 @@
+openapi: 3.1.0
+info:
+  title: ARIA HUB Translation Gateway
+  version: 1.0.0
+  license:
+    name: Proprietary — ARIA HUB
+    identifier: LicenseRef-Proprietary
+  description: >
+    Restricted translation-queue operations for the ARIA HUB ChatGPT worker.
+    Bearer credential required (issued separately through secure secret
+    configuration — never embedded in this document). Translate English source
+    fields into Persian (Afghanistan) and Pashto; commit only complete,
+    integrity-preserving languages. This API can never publish, never expose
+    database credentials or unrelated data, and offers no arbitrary SQL
+    interface: each action maps to exactly one fixed, parameterized database
+    function. Claims expire after 90 minutes; failed batches are immediately
+    retryable; manual (human) translations are never overwritten; completion
+    has NO publication side effects.
+servers:
+  - url: https://www.myariahub.com/api/translation-gateway
+    description: Production gateway (Cloudflare → Oracle)
+security:
+  - bearerAuth: []
+tags:
+  - name: translation-queue
+    description: The four live production gateway operations
+paths:
+  /claimTranslationBatch:
+    post:
+      operationId: claimTranslationBatch
+      tags: [translation-queue]
+      summary: Claim the next batch of opportunities pending translation
+      description: >
+        Transactional claim (FOR UPDATE SKIP LOCKED — concurrent callers never
+        receive the same row). Priority: publication-ready, then closing-soon,
+        then promoted, then official source, then recent active, then older
+        backlog. A total source-character budget bounds batch size. Claims
+        stamp translationClaimedBy/At/Id and expire after 90 minutes (expired
+        rows become reclaimable; failTranslationBatch releases instantly).
+        Returns ONLY the translatable public source fields of the claimed rows.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 50
+                  default: 30
+                  description: Batch size (values above 50 are rejected with invalid_limit)
+                charBudget:
+                  type: integer
+                  minimum: 2000
+                  maximum: 600000
+                  default: 250000
+                  description: Total source-character budget for the batch
+                includeExpired:
+                  type: boolean
+                  default: false
+                  description: Include opportunities whose deadline has passed
+      responses:
+        '200':
+          description: Batch claimed (count may be 0 when the queue is drained)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, claimId, claimedAt, expiresAt, count, chars, items]
+                properties:
+                  ok: { type: boolean, const: true }
+                  claimId: { type: string, format: uuid }
+                  claimedAt: { type: string, format: date-time }
+                  expiresAt: { type: string, format: date-time }
+                  count: { type: integer }
+                  chars: { type: integer, description: Total source characters claimed }
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ClaimItem'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/NotConfigured' }
+  /commitTranslationBatch:
+    post:
+      operationId: commitTranslationBatch
+      tags: [translation-queue]
+      summary: Atomically commit translated fields for a claimed batch
+      description: >
+        All-or-nothing: every item is validated before anything is written and
+        the whole commit is one database transaction — a language can never be
+        left partially complete. Per item it re-checks claim membership and
+        expiry, the unchanged sourceHash, manual-translation provenance
+        (MANUAL/MANUAL_STALE rows are rejected), the exact planned field set
+        per language (missing or unknown fields rejected), preservation of
+        every URL, email address and critical number (digit-normalized, so
+        Persian numerals are accepted), and sanity length ratios. Persian must
+        be complete (in this commit or already) before Pashto is accepted.
+        Never touches publication state.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [claimId, translations]
+              properties:
+                claimId:
+                  type: string
+                  description: The claimId returned by claimTranslationBatch
+                translations:
+                  type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      minItems: 1
+                      maxItems: 100
+                      items:
+                        $ref: '#/components/schemas/CommitItem'
+      responses:
+        '200':
+          description: Commit applied atomically
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, claimId, committed, faCompleted, psCompleted]
+                properties:
+                  ok: { type: boolean, const: true }
+                  claimId: { type: string }
+                  committed: { type: integer }
+                  faCompleted: { type: integer }
+                  psCompleted: { type: integer }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/UnknownOrExpiredClaim' }
+        '409':
+          description: row_not_in_claim | source_hash_changed | manual_translation_locked
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '422':
+          description: persian_not_complete | field_invalid (URL/email/number/ratio)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/NotConfigured' }
+  /failTranslationBatch:
+    post:
+      operationId: failTranslationBatch
+      tags: [translation-queue]
+      summary: Release a claimed batch so its rows become retryable immediately
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [claimId]
+              properties:
+                claimId: { type: string }
+                errors:
+                  type: array
+                  description: Short machine-readable reasons (logged; never stored with content)
+                  items:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      error: { type: string }
+      responses:
+        '200':
+          description: Released (idempotent — unknown claims release 0 rows)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, claimId, released]
+                properties:
+                  ok: { type: boolean, const: true }
+                  claimId: { type: string }
+                  released: { type: integer }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/NotConfigured' }
+  /translationQueueStatus:
+    post:
+      operationId: translationQueueStatus
+      tags: [translation-queue]
+      summary: Queue counts (cached ~60s)
+      responses:
+        '200':
+          description: Queue buckets
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, queue]
+                properties:
+                  ok: { type: boolean, const: true }
+                  queue: { $ref: '#/components/schemas/QueueCounts' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/NotConfigured' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Gateway credential (TRANSLATION_GATEWAY_TOKENS) — provided separately
+  schemas:
+    ClaimItem:
+      type: object
+      required: [id, sourceHash, needFa, needPs, fields]
+      properties:
+        id: { type: string, description: Opportunity id — echo it back on commit }
+        sourceHash:
+          type: string
+          description: SHA-256 of the chunked source fields; return unchanged with the commit
+        needFa: { type: boolean, description: Persian translation required }
+        needPs: { type: boolean, description: Pashto translation required (Persian already complete) }
+        fields:
+          type: object
+          description: >
+            Source text per translatable field — a subset of: title, description,
+            summary, eligibility, benefits, responsibilities, requirements,
+            guidelines, jobType, salary, educationReq, experience. Provide a
+            translation for EVERY field listed.
+          additionalProperties: { type: string }
+    CommitItem:
+      type: object
+      required: [id, sourceHash]
+      properties:
+        id: { type: string }
+        sourceHash: { type: string, description: The unchanged hash from the claim }
+        fa:
+          type: object
+          description: Persian (Afghanistan) translation of EVERY claimed field
+          additionalProperties: { type: string }
+        ps:
+          type: object
+          description: Pashto translation — only accepted when Persian is complete
+          additionalProperties: { type: string }
+    QueueCounts:
+      type: object
+      required: [pending, pendingFa, pendingPs, stale, processing, claimedExpired, manual, manualStale]
+      properties:
+        pending: { type: integer, description: Rows claimable right now }
+        pendingFa: { type: integer, description: Rows needing Persian }
+        pendingPs: { type: integer, description: Rows needing Pashto only }
+        stale: { type: integer, description: Completed translations whose source changed }
+        processing: { type: integer, description: Rows under an active (unexpired) claim }
+        claimedExpired: { type: integer, description: 'Rows under an expired, reclaimable claim' }
+        manual: { type: integer, description: Rows protected as MANUAL translations }
+        manualStale: { type: integer, description: MANUAL translations flagged for human review after a source change }
+    ErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok: { type: boolean, const: false }
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum:
+                - unauthorized
+                - rate_limited
+                - payload_too_large
+                - invalid_limit
+                - invalid_budget
+                - invalid_claim
+                - invalid_payload
+                - unknown_field
+                - missing_field
+                - unknown_or_expired_claim
+                - row_not_in_claim
+                - source_hash_changed
+                - manual_translation_locked
+                - persian_not_complete
+                - field_invalid
+                - gateway_not_configured
+                - internal_error
+            message: { type: string, description: 'Client-safe detail (no secrets; no source content beyond public data)' }
+  responses:
+    BadRequest:
+      description: invalid_limit | invalid_budget | invalid_claim | invalid_payload | unknown_field | missing_field
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    Unauthorized:
+      description: Missing or invalid bearer credential
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    UnknownOrExpiredClaim:
+      description: Claim does not exist or has expired (rows are already reclaimable)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    PayloadTooLarge:
+      description: Request body exceeds 8 MB
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    RateLimited:
+      description: More than 30 requests per 10 minutes for this credential
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    InternalError:
+      description: Unexpected server error (details logged server-side only)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    NotConfigured:
+      description: Gateway environment not configured (deployment state)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }

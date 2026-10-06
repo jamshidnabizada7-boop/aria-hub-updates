@@ -16,6 +16,16 @@ const nextConfig: NextConfig = {
         { key: 'Content-Security-Policy', value: "frame-ancestors 'self'" },
       ],
     }, {
+      // Translation gateway OpenAPI spec (public, secret-free by scan): a
+      // machine-readable copy of docs/translation-gateway.openapi.yaml for
+      // ChatGPT Plugin Creator discovery. Long public cache — it changes only
+      // with a release.
+      source: '/.well-known/aria-translation-gateway.openapi.yaml',
+      headers: [{
+        key: 'Cache-Control',
+        value: 'public, max-age=3600',
+      }],
+    }, {
       // The public home page is the same for every visitor; the opportunity
       // directory below retains its faster one-minute refresh.
       source: '/:lang(en|fa|ps)',
