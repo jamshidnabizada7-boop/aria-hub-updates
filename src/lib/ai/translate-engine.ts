@@ -443,8 +443,10 @@ export async function processNextUnit(
   }
 
   const lang: Lang = sourceChanged ? 'fa' : row.faStatus === 'complete' ? 'ps' : 'fa';
-  if (isManualOrigin(origin, lang) && !sourceChanged) {
-    // Manual translation, source unchanged — permanently skip this row/lang.
+  // MANUAL and MANUAL_STALE rows are NEVER auto-retranslated — a source edit
+  // parks them for human refresh (the stale marker was applied above);
+  // without this guard the sourceChanged path would overwrite human work.
+  if (isManualOrigin(origin, lang)) {
     return { processed: false, committed: false, rateLimited: false, skipped: true };
   }
   await syncPlan(row.id, lang, plans);
@@ -724,7 +726,12 @@ export async function processOpportunityNow(opportunityId: string, budgetMs = 90
     }
     const newHash = sourceHashOf(plans);
     const sourceChanged = row.translationSourceHash !== newHash;
+    const origin = await readOrigin(row.id);
+    // MANUAL/MANUAL_STALE rows are never auto-retranslated (import lane).
+    if (isManualOrigin(origin, 'fa') || isManualOrigin(origin, 'ps')) return;
     if (sourceChanged) {
+      await markManualStale(row.id, 'fa');
+      await markManualStale(row.id, 'ps');
       await db.opportunity.update({
         where: { id: row.id },
         data: { translationSourceHash: newHash, faStatus: 'pending', psStatus: 'pending' },
@@ -767,6 +774,7 @@ export async function processOpportunityNow(opportunityId: string, budgetMs = 90
       const st = await writeProgress(row.id, lang);
       if (st.allDone) {
         await commitLanguage(row.id, lang);
+        await markOrigin(row.id, lang);
         if (lang === 'fa') continue; // move on to Pashto within the budget
       }
     } catch (e) {
