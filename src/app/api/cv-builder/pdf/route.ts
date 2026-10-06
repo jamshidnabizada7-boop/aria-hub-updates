@@ -8,9 +8,6 @@ import { normalizeDraft, displayDraftName } from '@/app/[lang]/cv-builder/lib/cv
 import { validateDraft } from '@/app/[lang]/cv-builder/lib/cv-validation';
 import { renderCvStandaloneHtml } from '@/app/[lang]/cv-builder/lib/cv-renderer';
 import { getCVBuilderConfig } from '@/lib/cv-builder-config.server';
-import { db } from '@/lib/db';
-import { allowDurable } from '@/lib/security/durable-rate-limit';
-import { getClientIp } from '@/lib/admin-auth';
 
 export const runtime='nodejs';
 export const maxDuration=30;
@@ -99,12 +96,6 @@ async function fontCss(){
 export async function POST(request:Request){
   if(!isSameOrigin(request)) return NextResponse.json({error:'Cross-site PDF requests are not allowed.'},{status:403,headers:{'Cache-Control':'no-store'}});
   if(!allowPdfRequest(request)) return NextResponse.json({error:'Too many PDF requests. Please wait a minute and try again.'},{status:429,headers:{'Cache-Control':'no-store','Retry-After':'60'}});
-  { // PHASE 6: durable limiter — CV PDF is chromium-heavy, protect it across instances.
-    const { allowDurable } = await import('@/lib/security/durable-rate-limit');
-    if(!(await allowDurable(db, 'cv-pdf', [getClientIp(request)], 10, 60_000))) {
-      return NextResponse.json({error:'Too many PDF requests. Please wait a minute and try again.'},{status:429,headers:{'Cache-Control':'no-store','Retry-After':'60'}});
-    }
-  }
   const text=await request.text();
   if(text.length>4_500_000) return NextResponse.json({error:'Draft is too large to render.'},{status:413,headers:{'Cache-Control':'no-store'}});
   let parsed:any;

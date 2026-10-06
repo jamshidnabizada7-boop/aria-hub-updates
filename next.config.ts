@@ -55,6 +55,12 @@ const nextConfig: NextConfig = {
   // copy step because chunk filenames contain ":" (e.g. node:fs/promises).
   ...(process.env.STANDALONE === "1" ? { output: "standalone" as const } : {}),
   // Oracle release layout: /opt/aria-hub/releases/<id> sits under the workers'
+  // /opt/aria-hub checkout, whose bun.lock makes Next infer that parent as the
+  // workspace root — which nests standalone output under releases/<id>/. Pin
+  // the tracing root to the release directory so standalone lands at
+  // .next/standalone/server.js as the start scripts expect.
+  ...(process.env.STANDALONE === "1" ? { outputFileTracingRoot: process.cwd() } : {}),
+  // Oracle release layout: /opt/aria-hub/releases/<id> sits under the workers'
   // /opt/aria-hub checkout whose bun.lock makes Next infer that parent as the
   // workspace root, nesting standalone output under releases/<id>/. Pin the
   // tracing root to the release directory so standalone lands at
