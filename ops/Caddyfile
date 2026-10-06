@@ -1,0 +1,84 @@
+{
+	admin off
+}
+
+# Internal test entry — target for SSH tunnels / ad-hoc testing.
+:8080 {
+	encode zstd gzip
+	request_body {
+		max_size 50MB
+	}
+	reverse_proxy 127.0.0.1:3000
+	header {
+		-Server
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=63072000"
+	}
+}
+
+# cloudflared named-tunnel ingress targets. Only the tunnel reaches these
+# loop backs, and Cloudflare always supplies CF-Connecting-IP, so the
+# request-side X-Forwarded-For is replaced with the edge-verified client IP.
+# The app's rate limiters read XFF's first value, which becomes the real
+# client here.
+
+# Canonical host: apex redirects to www exactly like the Vercel config did.
+http://myariahub.com:8080 {
+	encode zstd gzip
+	request_body {
+		max_size 50MB
+	}
+	redir https://www.myariahub.com{uri} 308
+}
+
+http://www.myariahub.com:8080 {
+	encode zstd gzip
+	request_body {
+		max_size 50MB
+	}
+	reverse_proxy 127.0.0.1:3000 {
+		header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
+		header_up X-Real-IP {http.request.header.CF-Connecting-IP}
+	}
+	header {
+		-Server
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=63072000"
+	}
+}
+
+http://origin-test.myariahub.com:8080 {
+	encode zstd gzip
+	request_body {
+		max_size 50MB
+	}
+	reverse_proxy 127.0.0.1:3000 {
+		header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
+		header_up X-Real-IP {http.request.header.CF-Connecting-IP}
+	}
+	header {
+		-Server
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=63072000"
+	}
+}
+
+http://latest-test.myariahub.com:8080 {
+	encode zstd gzip
+	request_body {
+		max_size 50MB
+	}
+	reverse_proxy 127.0.0.1:3100 {
+		header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
+		header_up X-Real-IP {http.request.header.CF-Connecting-IP}
+	}
+	header {
+		-Server
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=63072000"
+	}
+}

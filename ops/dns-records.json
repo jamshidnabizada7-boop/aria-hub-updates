@@ -1,0 +1,23 @@
+{
+ "spf": [
+  "v=spf1 include:_spf.porkbun.com ~all"
+ ],
+ "dkim": [
+  "v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCpxPegjWqSgRz1UrNY6aqpE2gKvrdvyyJbiZctunENUZUMXsVn36u7990DDcEOEvrEJ6YyRRx4IoZSaqVnSs5A4rgKq8lV0ZzA/30aVXmFStKhAqQy1uQaU1k1lnE+6q3SjrhKEVlsSVxb0H7bnBvWtq0SZGO8cm6C3nWDstKWfQIDAQAB"
+ ],
+ "dmarc": [
+  "v=DMARC1; p=quarantine; rua=mailto:25f8c5e6@mxtoolbox.dmarc-report.com; ruf=mailto:25f8c5e6@forensics.dmarc-report.com; fo=1"
+ ],
+ "mx": [
+  {
+   "priority": 10,
+   "target": "fwd1.porkbun.com."
+  },
+  {
+   "priority": 20,
+   "target": "fwd2.porkbun.com."
+  }
+ ],
+ "apex_a": "216.198.79.1",
+ "www_cname": "3f602c20bd93da93.vercel-dns-017.com"
+}

@@ -1,0 +1,25 @@
+[Unit]
+Description=Cloudflare Named Tunnel for ARIA HUB production
+After=network-online.target
+Wants=network-online.target
+# Staged: the service stays "enabled but inactive" until the owner's tunnel
+# token file exists. It then starts automatically — no further unit changes.
+ConditionPathExists=/etc/cloudflared/aria-hub-production.token
+
+[Service]
+Type=simple
+User=cloudflared
+Group=cloudflared
+ExecStart=/usr/local/bin/cloudflared tunnel run --no-autoupdate --token-file /etc/cloudflared/aria-hub-production.token
+Restart=always
+RestartSec=5
+TimeoutStopSec=15
+LimitNOFILE=1048576
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/var/lib/cloudflared
+
+[Install]
+WantedBy=multi-user.target

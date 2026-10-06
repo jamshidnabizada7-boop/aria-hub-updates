@@ -1,0 +1,28 @@
+{
+  "rules": [
+    {
+      "action": "set_cache_settings",
+      "expression": "starts_with(http.request.uri.path, \"/api/\") or starts_with(http.request.uri.path, \"/admin\") or starts_with(http.request.uri.path, \"/en/employers\") or starts_with(http.request.uri.path, \"/fa/employers\") or starts_with(http.request.uri.path, \"/ps/employers\")",
+      "action_parameters": { "cache": false },
+      "description": "BYPASS: api, admin, employer dashboard/auth - never cache"
+    },
+    {
+      "action": "set_cache_settings",
+      "expression": "http.request.uri.path in {\"/\" \"/en\" \"/fa\" \"/ps\"}",
+      "action_parameters": { "cache": true, "edge_ttl": { "mode": "respect_origin" } },
+      "description": "HOME pages: respect origin s-maxage=1800"
+    },
+    {
+      "action": "set_cache_settings",
+      "expression": "http.request.uri.path in {\"/en/opportunities\" \"/fa/opportunities\" \"/ps/opportunities\"}",
+      "action_parameters": { "cache": true, "edge_ttl": { "mode": "respect_origin" } },
+      "description": "OPPORTUNITY LISTING: respect origin s-maxage=300"
+    },
+    {
+      "action": "set_cache_settings",
+      "expression": "starts_with(http.request.uri.path, \"/en/opportunities/\") or starts_with(http.request.uri.path, \"/fa/opportunities/\") or starts_with(http.request.uri.path, \"/ps/opportunities/\")",
+      "action_parameters": { "cache": true, "edge_ttl": { "mode": "respect_origin" } },
+      "description": "OPPORTUNITY DETAIL: respect origin s-maxage=3600"
+    }
+  ]
+}

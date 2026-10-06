@@ -1,0 +1,8 @@
+[Unit]
+Description=ARIA HUB monitoring probe
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/sbin/aria-hub-monitor.sh

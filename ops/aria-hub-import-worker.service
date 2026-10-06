@@ -1,0 +1,25 @@
+[Unit]
+Description=ARIA HUB Opportunity Import Worker
+After=network-online.target
+Wants=network-online.target
+
+
+[Service]
+Type=simple
+User=ariahub
+WorkingDirectory=/opt/aria-hub
+Environment=NODE_ENV=production
+Environment=WORKER_ALLOW_REMOTE=1
+EnvironmentFile=-/etc/aria-hub/import-worker.env
+ExecStart=/usr/local/bin/bun --conditions=react-server scripts/opportunity-import-worker.ts
+Restart=always
+RestartSec=10
+TimeoutStopSec=900
+KillSignal=SIGTERM
+
+MemoryMax=2500M
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
