@@ -26,6 +26,11 @@ mock.module('@/lib/ai/failover', () => ({
       : 'دا د کار متن په پښتو ژباړل شوی برخه ده. ';
     let out = '';
     while (out.length < Math.max(40, Math.floor(sourceGuess * 0.5))) out += filler;
+    // The engine's integrity gate (§12/§13) rejects translations that drop
+    // critical numbers — a realistic translator preserves them, so the script
+    // must too.
+    const nums = prompt.match(/\$\s?[\d,]+|\d[\d,\.]*\s?%|(?:19|20)\d{2}|\d{2,}/g) || [];
+    if (nums.length) out += ` اعداد: ${nums.join(' ')}`;
     return { text: JSON.stringify({ t: out.trim() }) };
   },
   getProviderSlots: () => [{ name: 'scripted', provider: async () => ({ text: '' }) }],

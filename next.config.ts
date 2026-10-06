@@ -96,6 +96,9 @@ const nextConfig: NextConfig = {
   // Type errors now fail the build — the codebase compiles clean under
   // `tsc --noEmit` (scripts/ and examples/ are excluded from type-checking).
   reactStrictMode: true,
+  // Translation gateway: keep node-postgres external (CJS w/ dynamic requires;
+  // must be traced as a real dependency, not bundled).
+  serverExternalPackages: ["pg"],
   // Allow the sandbox preview proxy + local origins during development
   // (prevents "Cross origin request detected" warnings / aborted requests).
   allowedDevOrigins: ["*.space-z.ai", "http://localhost:3000", "21.0.8.222", "21.0.16.223", "localhost"],

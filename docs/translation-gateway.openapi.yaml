@@ -1,0 +1,165 @@
+openapi: 3.1.0
+info:
+  title: ARIA HUB Translation Gateway
+  version: 1.0.0
+  description: >
+    Restricted translation-queue operations for the ARIA HUB ChatGPT worker.
+    Bearer credential required. Translate English source fields into Persian
+    (Afghanistan) and Pashto; commit only complete, integrity-preserving
+    languages. This API can never publish, read unrelated data, or run SQL.
+servers:
+  - url: https://www.myariahub.com/api/translation-gateway
+security:
+  - bearerAuth: []
+paths:
+  /claimTranslationBatch:
+    post:
+      operationId: claimTranslationBatch
+      summary: Claim the next batch of opportunities pending translation
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                limit: { type: integer, minimum: 1, maximum: 50, default: 30 }
+                charBudget: { type: integer, minimum: 2000, maximum: 600000, default: 250000 }
+                includeExpired: { type: boolean, default: false }
+      responses:
+        '200':
+          description: Batch claimed (may be empty)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  claimId: { type: string }
+                  claimedAt: { type: string, format: date-time }
+                  expiresAt: { type: string, format: date-time }
+                  count: { type: integer }
+                  chars: { type: integer }
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        sourceHash: { type: string }
+                        needFa: { type: boolean }
+                        needPs: { type: boolean }
+                        fields:
+                          type: object
+                          description: Source text per translatable field (title, description, summary, eligibility, benefits, responsibilities, requirements, guidelines, jobType, salary, educationReq, experience)
+                          additionalProperties: { type: string }
+        '401': { description: invalid credential }
+        '429': { description: rate limited }
+  /commitTranslationBatch:
+    post:
+      operationId: commitTranslationBatch
+      summary: Atomically commit translated fields for a claimed batch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [claimId, translations]
+              properties:
+                claimId: { type: string }
+                translations:
+                  type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      maxItems: 100
+                      items:
+                        type: object
+                        required: [id, sourceHash]
+                        properties:
+                          id: { type: string }
+                          sourceHash: { type: string, description: unchanged hash from the claim }
+                          fa:
+                            type: object
+                            additionalProperties: { type: string }
+                            description: Persian translation of EVERY provided source field
+                          ps:
+                            type: object
+                            additionalProperties: { type: string }
+                            description: Pashto — only after Persian is complete
+      responses:
+        '200':
+          description: Commit applied atomically
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  claimId: { type: string }
+                  committed: { type: integer }
+                  faCompleted: { type: integer }
+                  psCompleted: { type: integer }
+        '400': { description: invalid payload or field set }
+        '404': { description: unknown or expired claim }
+        '409': { description: source changed / row not in claim / manual translation locked }
+        '422': { description: integrity validation failed (URL/email/number/ratio) }
+  /failTranslationBatch:
+    post:
+      operationId: failTranslationBatch
+      summary: Release a claimed batch so its rows become retryable
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [claimId]
+              properties:
+                claimId: { type: string }
+                errors:
+                  type: array
+                  description: Short machine-readable reasons (logged, never stored with content)
+                  items: { type: object }
+      responses:
+        '200':
+          description: Released
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  claimId: { type: string }
+                  released: { type: integer }
+  /translationQueueStatus:
+    post:
+      operationId: translationQueueStatus
+      summary: Queue counts (cached ~60s)
+      responses:
+        '200':
+          description: Counts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  queue:
+                    type: object
+                    properties:
+                      pending: { type: integer }
+                      pendingFa: { type: integer }
+                      pendingPs: { type: integer }
+                      stale: { type: integer }
+                      processing: { type: integer }
+                      claimedExpired: { type: integer }
+                      manual: { type: integer }
+                      manualStale: { type: integer }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer

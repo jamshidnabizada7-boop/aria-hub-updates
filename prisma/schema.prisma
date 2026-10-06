@@ -438,6 +438,9 @@ model Opportunity {
   psStatus             String? // pending | processing | complete | failed â never started before faStatus === 'complete'
   translationSourceHash String? // sha256 of all translated source fields; mismatch â statuses reset
   translationOrigin Json? // { fa: "AI"|"MANUAL", ps: "AI"|"MANUAL" } â manual translations are never auto-overwritten while source is unchanged
+  translationClaimedBy String? // identity holding the batch claim (aria_translation_gateway)
+  translationClaimedAt DateTime? // claim timestamp; claims older than 90 minutes are reclaimable
+  translationClaimId String? // unique batch claim token issued by claim_translation_batch
   translationProgress  Json? // { fa: {done,total,failed,attempts,updatedAt}, ps: {...} } observability
   language             String? // original source language code (en, fa, ps, ...)
   logoUrl              String?
@@ -455,6 +458,7 @@ model Opportunity {
   @@index([deadline])
   @@index([createdAt])
   @@index([faStatus])
+  @@index([translationClaimId])
   @@index([psStatus])
 }
 

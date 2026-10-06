@@ -15,27 +15,56 @@ export type FieldKey = (typeof FIELD_ORDER)[number];
 /** Long fields are split into chunks of this size (a chunk SIZE, not a cap). */
 export const CHUNK_SIZE = 900;
 
-/** Split text into ordered chunks on paragraph/line boundaries. */
+/**
+ * Classic (ASCII) whitespace trim, shared with the SQL twin of this algorithm
+ * (aria_tgw_chunk_text). Unicode-aware .trim() is deliberately NOT used: JS
+ * and Postgres disagree on the whitespace class, and the chunk hashes must be
+ * byte-identical across both implementations (tgw-hash-parity test).
+ */
+const TRIM_CHARS_RE = /^[ \t\r\n\v\f]+|[ \t\r\n\v\f]+$/g;
+export function trimClassic(s: string): string {
+  return s.replace(TRIM_CHARS_RE, '');
+}
+
+/**
+ * Split text into ordered chunks on paragraph/line boundaries.
+ *
+ * Operates on UNICODE CODEPOINTS (Array.from), not UTF-16 units: emoji/astral
+ * characters count as one unit here exactly as in char_length() on the
+ * Postgres side. The SQL implementation aria_tgw_chunk_text is a byte-exact
+ * twin — changing one without the other invalidates every stored chunk hash.
+ */
 export function chunkText(text: string, maxLen = CHUNK_SIZE): string[] {
-  const clean = text.replace(/<[^>]+>/g, '').replace(/\n{3,}/g, '\n\n').trim();
-  if (clean.length <= maxLen) return clean ? [clean] : [];
+  const clean = trimClassic(text.replace(/<[^>]+>/g, '').replace(/\n{3,}/g, '\n\n'));
+  if (!clean) return [];
+  if (Array.from(clean).length <= maxLen) return [clean];
   const chunks: string[] = [];
   let current = '';
   for (const para of clean.split('\n')) {
-    if ((current + '\n' + para).trim().length > maxLen && current) {
-      chunks.push(current.trim());
+    const cand = current ? `${current}\n${para}` : para;
+    // Candidate length is measured AFTER trimming (classic set) — this matches
+    // the original engine and the SQL twin aria_tgw_chunk_text.
+    if (Array.from(trimClassic(cand)).length > maxLen && current) {
+      chunks.push(trimClassic(current));
       current = para;
     } else {
-      current = current ? `${current}\n${para}` : para;
+      current = cand;
     }
     // Single oversized line — hard split on spaces so nothing is lost.
-    while (current.length > maxLen * 1.6) {
-      const cut = current.lastIndexOf(' ', maxLen);
-      chunks.push(current.slice(0, cut > 0 ? cut : maxLen).trim());
-      current = current.slice(cut > 0 ? cut : maxLen).trim();
+    while (Array.from(current).length > maxLen * 1.6) {
+      const cps = Array.from(current);
+      // last ' ' at codepoint index <= maxLen (String.lastIndexOf semantics)
+      let cut = -1;
+      for (let i = Math.min(maxLen, cps.length - 1); i >= 0; i--) {
+        if (cps[i] === ' ') { cut = i; break; }
+      }
+      const pushLen = cut > 0 ? cut : maxLen;
+      chunks.push(trimClassic(cps.slice(0, pushLen).join('')));
+      current = trimClassic(cps.slice(pushLen).join(''));
     }
   }
-  if (current.trim()) chunks.push(current.trim());
+  const rest = trimClassic(current);
+  if (rest) chunks.push(rest);
   return chunks;
 }
 
@@ -68,7 +97,10 @@ export function parseChunkReply(raw: string): string | null {
 export function normalizeDigits(s: string): string {
   // Currency/percent punctuation that legitimately localizes in RTL output:
   // Arabic percent sign, Arabic decimal separator, Arabic thousands separator.
+  // Unicode space variants fold to ASCII space so the regex boundaries match
+  // the SQL twin (aria_tgw_normalize_digits) byte for byte.
   s = s.replace(/٪/g, '%').replace(/٫/g, '.').replace(/،/g, ',');
+  s = s.replace(/[\u00a0\u202f\u2002\u2003\u2007\u2009]/g, ' ');
   const fa = '۰۱۲۳۴۵۶۷۸۹';
   const ar = '٠١٢٣٤٥٦٧٨٩';
   return s.replace(/[۰-۹٠-٩]/g, (d) => {
