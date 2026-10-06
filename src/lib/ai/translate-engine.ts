@@ -764,12 +764,20 @@ export async function processOpportunityNow(opportunityId: string, budgetMs = 90
     try {
       const slots = await getProviderSlots();
       if (!slots.length) return;
-      const { text: raw } = await chatWithFailover(slots, LANG_SYSTEM[lang], chunk.text);
+      const { text: raw, provider } = await chatWithFailover(slots, LANG_SYSTEM[lang], chunk.text);
       const translated = parseChunkReply(raw);
       if (!translated || !validateTranslation(chunk.text, translated)) throw new Error('translation failed validation');
+      // Integrity gate (§12/§13) — same rules as the worker path.
+      const integrity = validateIntegrity(chunk.text, translated);
+      if (integrity.length) throw new Error(`integrity validation failed: ${integrity.slice(0, 3).join('; ')}`);
       await db.translationChunk.update({
         where: { id: next.id },
-        data: { status: 'done', result: translated, error: null, attempts: { increment: 1 } },
+        data: {
+          status: 'done', result: translated, error: null, claimedAt: null,
+          attempts: { increment: 1 },
+          provider, model: provider,
+          lastAttemptAt: new Date(), completedAt: new Date(),
+        },
       });
       const st = await writeProgress(row.id, lang);
       if (st.allDone) {
@@ -784,6 +792,9 @@ export async function processOpportunityNow(opportunityId: string, budgetMs = 90
         data: {
           attempts: { increment: 1 },
           error: msg,
+          claimedAt: null,
+          status: 'pending',
+          lastAttemptAt: new Date(),
           ...(attemptsExhausted(((await db.translationChunk.findUnique({ where: { id: next.id }, select: { attempts: true } }))?.attempts ?? 0) + 1) ? { status: 'failed' } : {}),
         },
       });
