@@ -133,7 +133,7 @@ function gatewayLog(fields: Record<string, unknown>): void {
 }
 
 /** HTTP status for a raised RPC error, with a client-safe message. */
-function mapRpcError(err: unknown): { status: number; code: string; message: string } {
+export function mapRpcError(err: unknown): { status: number; code: string; message: string } {
   const message = err instanceof Error ? err.message : String(err);
   const m = message.match(/TGW:([a-z_]+)(?::(.*))?$/i);
   if (m) {
@@ -146,6 +146,50 @@ function mapRpcError(err: unknown): { status: number; code: string; message: str
   }
   gatewayLog({ event: 'rpc_unexpected_error', error: message.slice(0, 400) });
   return { status: 500, code: 'internal_error', message: 'internal error' };
+}
+
+export async function executeQueueStatus(): Promise<Record<string, unknown>> {
+  const cache = globalForGateway.__tgwStatusCache;
+  if (cache && Date.now() - cache.at < STATUS_CACHE_MS) {
+    return (cache.data ?? {}) as Record<string, unknown>;
+  }
+  const pool = getPool();
+  const res = await pool.query(RPC_BY_ACTION.translationQueueStatus, []);
+  const result = (res.rows[0]?.result ?? {}) as Record<string, unknown>;
+  globalForGateway.__tgwStatusCache = { at: Date.now(), data: result };
+  return result;
+}
+
+export async function executeClaimBatch(
+  limit: unknown = 30,
+  charBudget: unknown = 250_000,
+  includeExpired = false,
+  caller = 'chatgpt',
+): Promise<Record<string, unknown>> {
+  const pool = getPool();
+  const l = clampInt(limit, 30, 1, 50);
+  const b = clampInt(charBudget, 250_000, 2_000, 600_000);
+  const res = await pool.query(RPC_BY_ACTION.claimTranslationBatch, [l, b, includeExpired === true, caller]);
+  return (res.rows[0]?.result ?? {}) as Record<string, unknown>;
+}
+
+export async function executeCommitBatch(
+  claimId: string,
+  translations: unknown,
+): Promise<Record<string, unknown>> {
+  const pool = getPool();
+  const t = Array.isArray(translations) ? { items: translations } : translations;
+  const res = await pool.query(RPC_BY_ACTION.commitTranslationBatch, [claimId || '', JSON.stringify(t ?? null)]);
+  return (res.rows[0]?.result ?? {}) as Record<string, unknown>;
+}
+
+export async function executeFailBatch(
+  claimId: string,
+  errors?: unknown,
+): Promise<Record<string, unknown>> {
+  const pool = getPool();
+  const res = await pool.query(RPC_BY_ACTION.failTranslationBatch, [claimId || '', JSON.stringify(errors ?? null)]);
+  return (res.rows[0]?.result ?? {}) as Record<string, unknown>;
 }
 
 export async function handleGatewayRequest(
@@ -195,35 +239,19 @@ export async function handleGatewayRequest(
 
   // ── fixed RPC dispatch ──
   try {
-    const pool = getPool();
     let result: unknown;
 
     if (action === 'translationQueueStatus') {
-      const cache = globalForGateway.__tgwStatusCache;
-      if (cache && Date.now() - cache.at < STATUS_CACHE_MS) {
-        result = cache.data;
-      } else {
-        const res = await pool.query(RPC_BY_ACTION[action], []);
-        result = res.rows[0]?.result;
-        globalForGateway.__tgwStatusCache = { at: Date.now(), data: result };
-      }
+      result = await executeQueueStatus();
     } else if (action === 'claimTranslationBatch') {
-      const limit = clampInt(body.limit, 30, 1, 50);
-      const charBudget = clampInt(body.charBudget, 250_000, 2_000, 600_000);
-      const includeExpired = body.includeExpired === true;
-      const res = await pool.query(RPC_BY_ACTION[action], [limit, charBudget, includeExpired, 'chatgpt']);
-      result = res.rows[0]?.result;
+      result = await executeClaimBatch(body.limit, body.charBudget, body.includeExpired === true, 'chatgpt');
     } else if (action === 'commitTranslationBatch') {
       const claimId = typeof body.claimId === 'string' ? body.claimId : '';
-      const tRaw = body.translations;
-      const translations = Array.isArray(tRaw) ? { items: tRaw } : (tRaw as unknown);
-      const res = await pool.query(RPC_BY_ACTION[action], [claimId, JSON.stringify(translations ?? null)]);
-      result = res.rows[0]?.result;
+      result = await executeCommitBatch(claimId, body.translations);
     } else {
       // failTranslationBatch
       const claimId = typeof body.claimId === 'string' ? body.claimId : '';
-      const res = await pool.query(RPC_BY_ACTION[action], [claimId, JSON.stringify(body.errors ?? null)]);
-      result = res.rows[0]?.result;
+      result = await executeFailBatch(claimId, body.errors);
     }
 
     const r = (result ?? {}) as Record<string, unknown>;
