@@ -50,7 +50,7 @@ sudo -u ariahub bash -ec "cd '$RELEASE' && export PATH=/usr/local/bin:/usr/bin:/
   set -a && . /etc/aria-hub/web.env && set +a && \
   export STANDALONE=1 NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS=--max-old-space-size=3072 && \
   node node_modules/next/dist/bin/next build"
-echo "$SHA" > "$RELEASE/RELEASE_SHA"; echo "$STAMP" > "$RELEASE/RELEASE_TIME"
+echo "$SHA" | sudo tee "$RELEASE/RELEASE_SHA" > /dev/null; echo "$STAMP" | sudo tee "$RELEASE/RELEASE_TIME" > /dev/null
 [ -f "$RELEASE/.next/standalone/server.js" ] || { echo "FATAL: standalone server missing"; exit 1; }
 [ -d "$RELEASE/.next/standalone/.next/static" ] || { echo "FATAL: static assets missing"; exit 1; }
 [ -d "$RELEASE/.next/standalone/public" ] || { echo "FATAL: public assets missing"; exit 1; }
