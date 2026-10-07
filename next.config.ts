@@ -5,6 +5,22 @@ const isDev = process.env.NODE_ENV === "development" || process.env.__NEXT_DEV =
 const nextConfig: NextConfig = {
   // Audit §21: don't advertise the framework version.
   poweredByHeader: false,
+  // Translation gateway OpenAPI spec: Next refuses to serve dot-prefixed
+  // paths from public/, so the file lives at /aria-translation-gateway.openapi.yaml
+  // and the required /.well-known/... discovery URL is rewritten to it
+  // before filesystem resolution.
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: '/.well-known/aria-translation-gateway.openapi.yaml',
+          destination: '/aria-translation-gateway.openapi.yaml',
+        },
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
+  },
   async headers() {
     return [{
       // Frame protection (audit §21): the app is never a legitimate frame
