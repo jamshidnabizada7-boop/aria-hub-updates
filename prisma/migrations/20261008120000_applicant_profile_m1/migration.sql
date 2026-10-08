@@ -20,5 +20,8 @@ REVOKE ALL ON TABLE "ApplicantProfile" FROM PUBLIC, anon, authenticated;
 DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'aria_social_worker') THEN
     GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE "ApplicantProfile" TO aria_social_worker;
+    -- Trusted server-only Prisma role: end-user authorization is enforced by
+    -- the authenticated app endpoints. PUBLIC/anon/authenticated have no grants.
+    EXECUTE 'CREATE POLICY "ApplicantProfile_server_role" ON "ApplicantProfile" FOR ALL TO aria_social_worker USING (true) WITH CHECK (true)';
   END IF;
 END $$;
