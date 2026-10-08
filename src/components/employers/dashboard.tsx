@@ -33,6 +33,7 @@ const fmt = (d: string | null) => (d ? new Date(d).toISOString().slice(0, 10) : 
 export function EmployerDashboard({ userName, organizations }: { userName: string; organizations: EmployerOrg[] }) {
   const [activeOrgId, setActiveOrgId] = useState<string | null>(organizations[0]?.organizationId ?? null);
   const [jobs, setJobs] = useState<{ active: JobRow[]; pending: JobRow[]; closed: JobRow[] } | null>(null);
+  const [analytics,setAnalytics]=useState<{total:number;published:number;pending:number;closed:number;expiringSoon:number}|null>(null);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<'overview' | 'jobs' | 'post' | 'profile' | 'team' | 'account'>('overview');
@@ -50,6 +51,8 @@ export function EmployerDashboard({ userName, organizations }: { userName: strin
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error || `HTTP ${res.status}`);
       setJobs({ active: json.active ?? [], pending: json.pending ?? [], closed: json.closed ?? [] });
+      const metrics=await fetch('/api/employers/jobs/analytics?organizationId='+encodeURIComponent(orgId),{cache:'no-store'});
+      if(metrics.ok)setAnalytics(await metrics.json());else setAnalytics(null);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -172,11 +175,14 @@ export function EmployerDashboard({ userName, organizations }: { userName: strin
       </div>
 
       {tab === 'overview' && jobs && (
-        <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-lg border bg-card p-4"><p className="text-2xl font-bold">{jobs.active.length}</p><p className="text-xs text-muted-foreground">Active jobs</p></div>
-          <div className="rounded-lg border bg-card p-4"><p className="text-2xl font-bold">{jobs.pending.length}</p><p className="text-xs text-muted-foreground">Pending review</p></div>
-          <div className="rounded-lg border bg-card p-4"><p className="text-2xl font-bold">{jobs.closed.length}</p><p className="text-xs text-muted-foreground">Expired / closed</p></div>
-        </div>
+        <section aria-label="Employer vacancy analytics" className="space-y-3">
+         <p className="text-xs text-muted-foreground">Organization-only vacancy counts. These are not applicant views or confirmed applications.</p>
+         <div className="grid gap-3 md:grid-cols-4">
+          {([['Active jobs',analytics?.published??jobs.active.length],['Pending moderation',analytics?.pending??jobs.pending.length],
+             ['Closed jobs',analytics?.closed??jobs.closed.length],['Expiring within 7 days',analytics?.expiringSoon??0]] as const)
+           .map(([label,value])=><div className="rounded-lg border bg-card p-4" key={label}><p className="text-2xl font-bold tabular-nums">{value}</p><p className="text-xs text-muted-foreground">{label}</p></div>)}
+         </div>
+        </section>
       )}
 
       {tab === 'jobs' && (
