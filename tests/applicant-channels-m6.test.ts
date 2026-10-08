@@ -73,15 +73,15 @@ describe('candidate notification channels',()=>{
   const raw=calls[0] as {template:{components:Array<{parameters:Array<{text:string}>}>}};
   const code=raw.template.components[0].parameters[0].text;
   expect(/^\d{6}$/.test(code)).toBe(true);
-  expect((await whatsappGet(req(path,'GET',b.token)).json()).verified).toBe(false);
+  expect((await (await whatsappGet(req(path,'GET',b.token))).json()).verified).toBe(false);
   expect((await whatsappPost(req(path,'POST',a.token,{action:'confirm',code:'999999'}))).status).toBe(403);
   expect((await whatsappPost(req(path,'POST',a.token,{action:'confirm',code}))).status).toBe(200);
-  expect((await whatsappGet(req(path,'GET',a.token)).json()).verified).toBe(true);
+  expect((await (await whatsappGet(req(path,'GET',a.token))).json()).verified).toBe(true);
   expect((await db.applicantNotificationPreference.findUniqueOrThrow({where:{applicantProfileId:a.profileId}})).whatsappEnabled).toBe(true);
   expect((await whatsappDelete(req(path,'DELETE',b.token))).status).toBe(200);
-  expect((await whatsappGet(req(path,'GET',a.token)).json()).verified).toBe(true);
+  expect((await (await whatsappGet(req(path,'GET',a.token))).json()).verified).toBe(true);
   expect((await whatsappDelete(req(path,'DELETE',a.token))).status).toBe(200);
-  expect((await whatsappGet(req(path,'GET',a.token)).json()).verified).toBe(false);
+  expect((await (await whatsappGet(req(path,'GET',a.token))).json()).verified).toBe(false);
   expect((await db.applicantNotificationPreference.findUniqueOrThrow({where:{applicantProfileId:a.profileId}})).whatsappEnabled).toBe(false);
  });
  test('push requires explicit applicant consent and scopes each endpoint to its owner',async()=>{
@@ -95,12 +95,12 @@ describe('candidate notification channels',()=>{
    create:{applicantProfileId:a.profileId,pushEnabled:true},update:{pushEnabled:true}});
   const response=await pushPost(req(path,'POST',a.token,sub));
   expect(response.status).toBe(201);
-  expect((await pushGet(req(path,'GET',a.token)).json()).activeSubscriptions).toBe(1);
-  expect((await pushGet(req(path,'GET',b.token)).json()).activeSubscriptions).toBe(0);
+  expect((await (await pushGet(req(path,'GET',a.token))).json()).activeSubscriptions).toBe(1);
+  expect((await (await pushGet(req(path,'GET',b.token))).json()).activeSubscriptions).toBe(0);
   expect((await pushPost(req(path,'POST',b.token,sub))).status).toBe(403);
-  expect((await pushDelete(req(path,'DELETE',b.token,{endpoint:sub.endpoint})).json()).changed).toBe(0);
-  expect((await pushDelete(req(path,'DELETE',a.token,{endpoint:sub.endpoint})).json()).changed).toBe(1);
-  expect((await pushGet(req(path,'GET',a.token)).json()).activeSubscriptions).toBe(0);
+  expect((await (await pushDelete(req(path,'DELETE',b.token,{endpoint:sub.endpoint}))).json()).changed).toBe(0);
+  expect((await (await pushDelete(req(path,'DELETE',a.token,{endpoint:sub.endpoint}))).json()).changed).toBe(1);
+  expect((await (await pushGet(req(path,'GET',a.token))).json()).activeSubscriptions).toBe(0);
   expect((await db.applicantPushSubscription.findFirstOrThrow({where:{applicantProfileId:a.profileId}})).encryptedSubscription).not.toContain(sub.endpoint);
  });
 });
