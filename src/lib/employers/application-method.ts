@@ -3,6 +3,8 @@ export type EmployerApplyMethod='website'|'email'|'phone'|'whatsapp'|'in_person'
 export function resolveEmployerApplication(input:{
  applyMethod?:string|null;applyUrl?:string|null;applyEmail?:string|null;applyPhone?:string|null;guidelines?:string|null;
 }):{url:string|null;type:string;method:EmployerApplyMethod}{
+ if(!input.applyMethod&&!input.applyUrl?.trim()&&!input.applyEmail?.trim()&&!input.applyPhone?.trim())
+  throw Error('Provide an application URL, email, or phone number.');
  const method=input.applyMethod||(
   input.applyEmail?.trim()?'email':input.applyUrl?.trim()?'website':input.applyPhone?.trim()?'phone':'website'
  );
