@@ -60,7 +60,13 @@ jobs:
           /tmp/aria-cv-corpus-venv/bin/python scripts/tests/generate-cv-validation-corpus.py --out /tmp/aria-cv-corpus
 
       - name: Tests (unit, scraper fixtures, publish safety, security guards*)
-        run: bun --conditions=react-server test tests/
+        run: |
+          # Bun can cache an incompatible module namespace when the AI provider
+          # failover suite shares a process with global provider mocks.
+          # Preserve every test; run that suite in an independent process.
+          mapfile -t test_files < <(find tests -maxdepth 1 -name '*.test.ts' ! -name 'ai-failover.test.ts' -print | sort)
+          bun --conditions=react-server test "${test_files[@]}"
+          bun --conditions=react-server test tests/ai-failover.test.ts
         # * The api-guards tests skip automatically: no running server in CI.
         #   Database/publisher tests are required and fail if setup is missing.
 
