@@ -1,0 +1,12 @@
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { applicantEnabled, currentApplicant } from '@/lib/applicant-auth';
+import { PortalSettings } from './settings/portal-settings';
+export const dynamic = 'force-dynamic';
+export default async function Page({params}:{params:Promise<{lang:string}>}){
+ const {lang:l}=await params; const lang=l==='en'||l==='ps'?l:'fa';
+ if(!applicantEnabled()) redirect('/'+lang+'/get-started');
+ const user=await currentApplicant();if(!user)redirect('/'+lang+'/login');
+ const copy={en:['My dashboard','Welcome','Explore opportunities','My CVs','Opportunity Matcher','Account settings','Your CV drafts are currently saved on this device. Cloud sync will be introduced in a later milestone.'],fa:['داشبورد من','خوش آمدید','فرصت‌ها','سی‌وی‌های من','تطبیق فرصت‌ها','تنظیمات حساب','نسخه‌های سی‌وی فعلاً در همین دستگاه ذخیره می‌شوند. همگام‌سازی آنلاین در مرحله بعد اضافه می‌شود.'],ps:['زما ډشبورډ','ښه راغلاست','فرصتونه','زما سي وي ګانې','د فرصتونو برابرول','د حساب تنظیمات','سي وي ګانې اوس په همدې وسیله کې ساتل کېږي. انلاین ساتنه به وروسته ورزیاته شي.']}[lang];
+ return <main className="mx-auto max-w-5xl px-5 py-12" dir={lang==='en'?'ltr':'rtl'}><h1 className="text-3xl font-bold">{copy[0]}</h1><p className="my-4">{copy[1]}, {user.name||user.email}</p><div className="grid gap-4 md:grid-cols-3">{['/opportunities','/cv-builder','/opportunity-matcher'].map((path,i)=><Link key={path} href={'/'+lang+path} className="rounded-xl border bg-card p-6 font-semibold hover:border-primary">{copy[i+2]}</Link>)}</div><p className="mt-5 text-sm text-muted-foreground">{copy[6]}</p><PortalSettings lang={lang} initialName={user.name||''} /></main>;
+}
