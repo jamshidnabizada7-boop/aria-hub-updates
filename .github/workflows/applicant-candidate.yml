@@ -27,6 +27,10 @@ jobs:
       ARIA_DISABLE_SCHEDULER: '1'
       APPLICANT_AUTH_ENABLED: 'false'
       CLOUD_CV_STORAGE_ENABLED: 'false'
+      APPLICANT_MATCHER_V3_ENABLED: 'false'
+      APPLICANT_NOTIFICATIONS_ENABLED: 'false'
+      APPLICANT_MATCH_ALERT_WORKER_ENABLED: 'false'
+      APPLICANT_MATCH_ALERT_EMAIL_ENABLED: 'false'
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5433/ariahub_test?sslmode=disable
       DIRECT_URL: postgresql://postgres:postgres@127.0.0.1:5433/ariahub_test?sslmode=disable
     steps:
@@ -48,7 +52,7 @@ jobs:
         run: bunx tsc --noEmit
       - name: Applicant and employer regression tests
         run: |
-          bun test tests/applicant-milestone-1.test.ts tests/applicant-cv-m2.test.ts tests/applicant-matcher-m3.test.ts tests/applicant-saved-search-m3.test.ts tests/opportunity-matcher.test.ts tests/employer-jobs.test.ts tests/employer-auth.test.ts tests/employer-auth-completion.test.ts tests/apply-resolver.test.ts
+          bun test tests/applicant-milestone-1.test.ts tests/applicant-cv-m2.test.ts tests/applicant-matcher-m3.test.ts tests/applicant-saved-search-m3.test.ts tests/applicant-notifications-m4.test.ts tests/opportunity-matcher.test.ts tests/employer-jobs.test.ts tests/employer-auth.test.ts tests/employer-auth-completion.test.ts tests/apply-resolver.test.ts
       - name: Compile standalone website without applicant external services
         run: |
           export ADMIN_SESSION_SECRET="$(openssl rand -hex 32)"
