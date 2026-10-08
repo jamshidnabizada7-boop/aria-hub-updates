@@ -194,6 +194,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [applicantSignedIn, setApplicantSignedIn] = useState(false);
   const { setTheme, resolvedTheme } = useTheme();
   const { setLang } = useLangStore();
   const storeCode = useLangStore((s) => s.code);
@@ -252,6 +253,15 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch('/api/applicant/auth/me', { cache: 'no-store', credentials: 'same-origin', signal: controller.signal })
+      .then(r => r.ok ? r.json() : { user: null })
+      .then(body => { if (!controller.signal.aborted) setApplicantSignedIn(Boolean(body.user)); })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [pathname]);
 
   // Keyboard shortcut: Cmd/Ctrl+K opens search
   useEffect(() => {
@@ -360,6 +370,9 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
                 <Moon className="block h-4 w-4 dark:hidden" />
               </Button>
 
+              <a href={hrefFn(applicantSignedIn ? '/portal' : '/login')} className="hidden rounded-xl border border-border px-3 py-2 text-sm font-semibold md:inline-flex">
+                {applicantSignedIn ? (code==='fa'?'داشبورد من':code==='ps'?'زما ډشبورډ':'My Dashboard') : (code==='fa'?'ورود':code==='ps'?'ننوتل':'Log In')}
+              </a>
               <Button
                 size="sm"
                 className="hidden h-9 rounded-xl bg-gradient-to-r from-primary to-chart-2 px-4 text-sm font-semibold shadow-float hover:opacity-90 md:inline-flex"
@@ -388,7 +401,8 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
                       <MobileMenuItem key={item.id} item={item} onNavigate={() => setMobileOpen(false)} />
                     ))}
                   </nav>
-                  <div className="p-4">
+                  <div className="p-4 space-y-3">
+                    <a href={hrefFn(applicantSignedIn ? '/portal' : '/login')} onClick={() => setMobileOpen(false)} className="block rounded-xl border p-3 text-center text-sm font-semibold">{applicantSignedIn ? (code==='fa'?'داشبورد من':code==='ps'?'زما ډشبورډ':'My Dashboard') : (code==='fa'?'ورود':code==='ps'?'ننوتل':'Log In')}</a>
                     <Button asChild className="min-h-[44px] w-full rounded-xl bg-gradient-to-r from-primary to-chart-2">
                       <a href={hrefFn('/get-started')} onClick={() => setMobileOpen(false)}>{t('nav.getStarted')}</a>
                     </Button>
