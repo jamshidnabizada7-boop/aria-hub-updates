@@ -82,7 +82,7 @@ describe('candidate notification channels',()=>{
    process.env.APPLICANT_PUSH_GATEWAY_URL='http://127.0.0.1:3000/evil';
    await expect(deliverPushToGateway(subscription,payload,'notification-123')).rejects.toThrow('push_provider_disabled');
    process.env.APPLICANT_PUSH_GATEWAY_URL='https://candidate-gateway.example.test/webpush';
-   globalThis.fetch=(async()=>new Response('{}',{status:503})) as typeof fetch;
+   globalThis.fetch=(async(_input:RequestInfo|URL,_init?:RequestInit)=>new Response('{}',{status:503})) as typeof fetch;
    await expect(deliverPushToGateway(subscription,payload,'notification-123')).rejects.toThrow('push_provider_rejected');
   }finally{
    globalThis.fetch=beforeFetch;
