@@ -1,3 +1,4 @@
+import { applicantSameOrigin } from '@/lib/applicant-origin';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { allowDurable } from '@/lib/security/durable-rate-limit';
@@ -7,11 +8,6 @@ import { cookies } from 'next/headers';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 const rawIp = (req: Request) => req.headers.get('cf-connecting-ip') || 'unknown';
-function safeOrigin(req: Request) {
-  const origin = req.headers.get('origin');
-  if (!origin) return false;
-  try { const u = new URL(origin); return u.host === new URL(req.url).host && u.protocol === 'https:' || (process.env.NODE_ENV !== 'production' && u.host === new URL(req.url).host); } catch { return false; }
-}
 const json = (data: object, status = 200) => NextResponse.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 export async function GET(_req: Request, ctx: { params: Promise<{ action: string }> }) {
   const { action } = await ctx.params;
@@ -22,7 +18,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ action: string
 }
 export async function POST(req: Request, ctx: { params: Promise<{ action: string }> }) {
   const { action } = await ctx.params;
-  if (!safeOrigin(req)) return json({ error: 'invalid_origin' }, 403);
+  if (!applicantSameOrigin(req)) return json({ error: 'invalid_origin' }, 403);
   try {
     requireApplicantEnabled();
     const ip = rawIp(req);
