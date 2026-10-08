@@ -69,7 +69,7 @@ jobs:
         timeout-minutes: 9
         run: |
           /tmp/aria-cv-corpus-venv/bin/python scripts/tests/generate-cv-validation-corpus.py --out /tmp/aria-cv-corpus
-          bun --conditions=react-server test tests/applicant-cv-real-fixtures.test.ts
+          bun --conditions=react-server test tests/applicant-cv-real-fixtures.test.ts tests/applicant-cv-real-journey.test.ts
       - name: Verify CV processing worker remains safely disabled
         run: bun --conditions=react-server scripts/applicant-cv-extraction-worker.ts
       - name: Smoke-test notification worker dry-run CLI (zero deliveries)
