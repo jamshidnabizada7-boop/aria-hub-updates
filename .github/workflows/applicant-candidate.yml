@@ -53,6 +53,10 @@ jobs:
       - name: Applicant and employer regression tests
         run: |
           bun test tests/applicant-milestone-1.test.ts tests/applicant-cv-m2.test.ts tests/applicant-matcher-m3.test.ts tests/applicant-saved-search-m3.test.ts tests/applicant-notifications-m4.test.ts tests/opportunity-matcher.test.ts tests/employer-jobs.test.ts tests/employer-auth.test.ts tests/employer-auth-completion.test.ts tests/apply-resolver.test.ts
+      - name: Smoke-test notification worker dry-run CLI (zero deliveries)
+        run: |
+          bun --conditions=react-server scripts/applicant-match-alert-worker.ts
+          bun --conditions=react-server scripts/applicant-email-alert-worker.ts
       - name: Compile standalone website without applicant external services
         run: |
           export ADMIN_SESSION_SECRET="$(openssl rand -hex 32)"
