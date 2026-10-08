@@ -21,7 +21,7 @@ export async function GET(req:Request){
   if(!profile)return response({error:'unavailable_or_unauthorized'},401);
   const items=await db.applicantDocument.findMany({
     where:{applicantProfileId:profile.id},orderBy:{createdAt:'desc'},
-    take:25,select:{id:true,originalName:true,mimeType:true,byteSize:true,status:true,createdAt:true}
+    take:25,select:{id:true,originalName:true,mimeType:true,byteSize:true,status:true,createdAt:true,reviewedAt:true,processingError:true}
   });
   return response({items});
  }catch{return response({error:'request_failed'},500);}
