@@ -89,6 +89,11 @@ export async function registerEmployer(email: string, password: string, name?: s
 export async function loginEmployer(email: string, password: string): Promise<EmployerUser> {
   const normalized = String(email ?? '').trim().toLowerCase();
   const user = await db.user.findUnique({ where: { email: normalized } });
+  const recentFailures = await db.$queryRaw<Array<{ n: number }>>`
+    SELECT COALESCE(SUM("count"), 0)::int AS n FROM "RateLimitBucket"
+    WHERE "key" = ${`bf:${normalized}`} AND "windowStart" > now() - interval '15 minutes'
+  `;
+  if ((recentFailures[0]?.n ?? 0) >= 10) throw new Error('Too many failed attempts. Try again later.');
   // PHASE 7: disabled accounts are indistinguishable from bad credentials
   // (no user-enumeration signal), and brute-force attempts are durably
   // counted per email so they survive serverless restarts.
@@ -102,11 +107,6 @@ export async function loginEmployer(email: string, password: string): Promise<Em
     `.catch(() => null);
     throw new Error('Invalid email or password.');
   }
-  const bf = (await db.$queryRaw<Array<{ n: number }>>`
-    SELECT COALESCE(SUM("count"), 0)::int AS n FROM "RateLimitBucket"
-    WHERE "key" = ${`bf:${normalized}`} AND "windowStart" > now() - interval '15 minutes'
-  `);
-  if ((bf[0]?.n ?? 0) > 10) throw new Error('Too many failed attempts. Try again later.');
   return { id: user.id, email: user.email!, name: user.name };
 }
 
@@ -116,7 +116,7 @@ export async function getCurrentEmployer(cookieValue: string | undefined | null)
   if (!payload) return null;
   const user = await db.user.findUnique({ where: { id: payload.userId } });
   // PHASE 7: sessions fail closed for disabled accounts.
-  if (!user?.email || user.disabled) return null;
+  if (!user?.email || user.disabled || user.updatedAt.getTime() > payload.t) return null;
   return { id: user.id, email: user.email, name: user.name };
 }
 
