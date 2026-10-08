@@ -28,7 +28,7 @@ async function scan(){
  const now=new Date(),today=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()));
  const since=new Date(now.getTime()-14*MS_DAY);
  const searches=await db.applicantSavedSearch.findMany({
-  where:{active:true,applicantProfile:{notificationPreference:{OR:[{inAppEnabled:true},{emailEnabled:true}]}}},
+  where:{active:true,applicantProfile:{notificationPreference:{OR:[{inAppEnabled:true},{emailEnabled:true},{pushEnabled:true},{whatsappEnabled:true}]}}},
   include:{applicantProfile:{include:{notificationPreference:true,user:{select:{emailVerified:true,disabled:true}}}}},
   take:MAX_SEARCHES,orderBy:[{updatedAt:'desc'},{id:'asc'}]
  });
@@ -55,7 +55,7 @@ async function scan(){
  for(const search of searches){
   if(search.applicantProfile.user.disabled||!search.applicantProfile.user.emailVerified)continue;
   const pref=search.applicantProfile.notificationPreference;
-  if(!pref||(!pref.inAppEnabled&&!pref.emailEnabled))continue;
+  if(!pref||(!pref.inAppEnabled&&!pref.emailEnabled&&!pref.pushEnabled&&!pref.whatsappEnabled))continue;
   const parsed=MatcherProfileSchema.safeParse(search.profile);
   if(!parsed.success){invalid++;continue;}
   const profile=parsed.data;
@@ -90,6 +90,22 @@ async function scan(){
      // Delivery row exists ONLY when email has explicit opt-in.
      if(pref.emailEnabled){
       await tx.applicantEmailDelivery.create({data:{notificationId:note.id}});
+     }
+     // Channel delivery rows are created only after the notification has an
+     // authorized saved-search match. Verification/consent is rechecked by
+     // the dedicated provider worker immediately before every send.
+     if(pref.pushEnabled){
+      const targets=await tx.applicantPushSubscription.findMany({
+       where:{applicantProfileId:search.applicantProfileId,disabledAt:null},select:{id:true},take:5});
+      if(targets.length)await tx.applicantChannelDelivery.createMany({data:targets.map(target=>({
+       notificationId:note.id,channel:'push',targetId:target.id
+      }))});
+     }
+     if(pref.whatsappEnabled){
+      const target=await tx.applicantWhatsAppContact.findUnique({
+       where:{applicantProfileId:search.applicantProfileId},select:{id:true,verifiedAt:true,consentedAt:true}});
+      if(target?.verifiedAt&&target.consentedAt)await tx.applicantChannelDelivery.create({
+       data:{notificationId:note.id,channel:'whatsapp',targetId:target.id}});
      }
     });
     created++;
