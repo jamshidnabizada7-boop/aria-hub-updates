@@ -87,6 +87,6 @@ fi
 SWITCH
 
 echo "==> pruning old releases (keeping 3 newest)"
-ssh "$HOST" 'cd /opt/aria-hub/releases && ls -1dt */ 2>/dev/null | tail -n +4 | while read -r d; do echo "removing $d"; rm -rf "/opt/aria-hub/releases/$d"; done'
+ssh "$HOST" 'cd /opt/aria-hub/releases && ls -1dt */ 2>/dev/null | tail -n +4 | while read -r d; do echo "removing $d"; sudo rm -rf "/opt/aria-hub/releases/$d"; done'
 rm -f "/tmp/aria-$SHA.tar.gz"
 echo "==> done: $RELEASE_ID deployed"
