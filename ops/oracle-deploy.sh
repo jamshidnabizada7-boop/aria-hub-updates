@@ -55,10 +55,10 @@ echo "$SHA" | sudo tee "$RELEASE/RELEASE_SHA" > /dev/null; echo "$STAMP" | sudo 
 [ -f "$RELEASE/.next/standalone/server.js" ] || { echo "FATAL: standalone server missing"; exit 1; }
 [ -d "$RELEASE/.next/standalone/.next/static" ] || { echo "FATAL: static assets missing"; exit 1; }
 [ -d "$RELEASE/.next/standalone/public" ] || { echo "FATAL: public assets missing"; exit 1; }
-echo "==> pre-switch health check on :3100"
+echo "==> pre-switch health check on :3101"
 sudo -u ariahub bash -ec "cd '$RELEASE' && set -a && . /etc/aria-hub/web.env && set +a && \
-  PORT=3100 HOSTNAME=127.0.0.1 node .next/standalone/server.js & SRV=\$!; sleep 8; \
-  curl -sf --max-time 10 http://127.0.0.1:3100/api/health; RC=\$?; kill \$SRV 2>/dev/null; exit \$RC"
+  PORT=3101 HOSTNAME=127.0.0.1 node .next/standalone/server.js & SRV=\$!; sleep 8; \
+  curl -sf --max-time 10 http://127.0.0.1:3101/api/health; RC=\$?; kill \$SRV 2>/dev/null || true; exit \$RC"
 echo "PRECHECK_OK"
 REMOTE
 
