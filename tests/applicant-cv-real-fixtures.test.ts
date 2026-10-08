@@ -26,6 +26,15 @@ const samples:Spec[]=[
  {name:'en-photo.png',method:'tesseract',language:'en',education:'bachelors'},
  {name:'en-photo.webp',method:'tesseract',language:'en',education:'bachelors'}
 ];
+// Regression floors based on the reviewed, fictional CI reference corpus.
+// RTL camera simulations intentionally have a lower floor; they are not
+// accepted as evidence of real-phone OCR production accuracy.
+const minimumFields:Record<string,number>={
+ 'en-native.pdf':5,'en-native.docx':5,'fa-native.docx':5,'ps-native.docx':5,
+ 'en-scanned.pdf':5,'fa-scanned.pdf':3,'ps-scanned.pdf':4,
+ 'en-photo.jpg':5,'fa-photo.jpg':2,'ps-photo.jpg':2,
+ 'en-photo.png':5,'en-photo.webp':4
+};
 describe('isolated genuine-format CV integration corpus',()=>{
  test('corpus includes expected samples, not mocked file headers',async()=>{
   expect((await readdir(dir)).sort()).toEqual(samples.map(x=>x.name).sort());
@@ -38,7 +47,8 @@ describe('isolated genuine-format CV integration corpus',()=>{
    expect(extraction.requiresUserReview).toBe(true);
    expect(extraction.method).toBe(spec.method);
    expect(extraction.textCharacters).toBeGreaterThanOrEqual(45);
-   if(spec.name.includes('native'))expect(extraction.language).toBe(spec.language);
+   expect(extraction.language).toBe(spec.language);
+   expect(Object.keys(extraction.fields).length).toBeGreaterThanOrEqual(minimumFields[spec.name]);
    if(spec.education)expect(extraction.fields.education).toBe(spec.education);
    if(spec.skill)expect(extraction.fields.skills).toContain(spec.skill);
    expect(JSON.stringify(extraction.fields)).not.toMatch(/nationality|dateOfBirth|gender|experienceYears|admissionProbability/);
