@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { applicantSameOrigin } from '@/lib/applicant-origin';
-import { account, send, SavedSearchRequest } from '../route';
+import {savedSearchAccount as account,sendSavedSearch as send,SavedSearchRequest} from '@/lib/applicants/saved-search-service';
 export const dynamic='force-dynamic';
 type Ctx={params:Promise<{id:string}>};
 const Update=SavedSearchRequest.extend({active:z.boolean().optional()});
