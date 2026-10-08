@@ -1198,6 +1198,8 @@ model ApplicantProfile {
   savedSearches     ApplicantSavedSearch[]
   notificationPreference ApplicantNotificationPreference?
   notifications ApplicantNotification[]
+  pushSubscriptions ApplicantPushSubscription[]
+  whatsappContact ApplicantWhatsAppContact?
   trackedApplications ApplicantApplication[]
   verifiedCareerFacts Json?
   createdAt        DateTime @default(now())
@@ -1267,6 +1269,8 @@ model ApplicantNotificationPreference {
   applicantProfile   ApplicantProfile @relation(fields: [applicantProfileId], references: [id], onDelete: Cascade)
   inAppEnabled       Boolean  @default(false)
   emailEnabled       Boolean  @default(false)
+  pushEnabled        Boolean  @default(false)
+  whatsappEnabled    Boolean  @default(false)
   emailFrequency     String   @default("daily") // daily | weekly
   lastEmailAt        DateTime?
   createdAt          DateTime @default(now())
@@ -1287,6 +1291,7 @@ model ApplicantNotification {
   readAt             DateTime?
   createdAt          DateTime @default(now())
   emailDelivery      ApplicantEmailDelivery?
+  channelDeliveries  ApplicantChannelDelivery[]
 
   @@unique([applicantProfileId, savedSearchId, opportunityId])
   @@index([applicantProfileId, readAt, createdAt])
@@ -1980,4 +1985,49 @@ model StudioVisual {
   enabled   Boolean  @default(true)
   order     Int      @default(0)
   createdAt DateTime @default(now())
+}
+
+model ApplicantPushSubscription {
+  id                    String @id @default(cuid())
+  applicantProfileId    String
+  applicantProfile      ApplicantProfile @relation(fields: [applicantProfileId], references: [id], onDelete: Cascade)
+  endpointHash          String @unique
+  encryptedSubscription String @db.Text
+  consentedAt           DateTime @default(now())
+  disabledAt            DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  @@index([applicantProfileId,disabledAt])
+}
+
+model ApplicantWhatsAppContact {
+  id                 String @id @default(cuid())
+  applicantProfileId String @unique
+  applicantProfile   ApplicantProfile @relation(fields: [applicantProfileId], references: [id], onDelete: Cascade)
+  phoneHash          String
+  encryptedNumber    String @db.Text
+  verifyHash         String?
+  verifyExpiresAt    DateTime?
+  verifiedAt         DateTime?
+  consentedAt        DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model ApplicantChannelDelivery {
+  id             String @id @default(cuid())
+  notificationId String
+  notification   ApplicantNotification @relation(fields: [notificationId],references:[id],onDelete:Cascade)
+  channel        String // push | whatsapp
+  targetId       String // subscription id or whatsapp contact id
+  status         String @default("pending")
+  attempts       Int @default(0)
+  nextAttemptAt  DateTime @default(now())
+  claimedAt      DateTime?
+  sentAt         DateTime?
+  errorCode      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  @@unique([notificationId,channel,targetId])
+  @@index([status,nextAttemptAt])
 }
