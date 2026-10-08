@@ -13,6 +13,12 @@ const CareerFacts=z.object({
   experienceYears:z.number().int().min(0).max(50).optional(),
   preferredRoles:z.array(z.enum(JOB_ROLE_IDS as [JobRole,...JobRole[]])).max(12).optional(),
   skills:z.array(z.string().trim().min(2).max(60)).max(25).optional(),
+  fullName:z.string().trim().min(2).max(120).optional(),
+  headline:z.string().trim().max(160).optional(),
+  languages:z.array(z.string().trim().min(2).max(60)).max(15).optional(),
+  educationHistory:z.array(z.string().trim().min(3).max(240)).max(8).optional(),
+  workHistory:z.array(z.string().trim().min(3).max(240)).max(10).optional(),
+  certifications:z.array(z.string().trim().min(3).max(200)).max(8).optional(),
 }).strict();
 async function owner(req:Request){
  if(!applicantEnabled()||process.env.APPLICANT_MATCHER_V3_ENABLED!=='true')return null;
