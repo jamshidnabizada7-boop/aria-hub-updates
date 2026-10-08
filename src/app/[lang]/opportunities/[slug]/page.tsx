@@ -689,6 +689,11 @@ export default async function OpportunityDetailPage({
 
               {/* Apply CTA — mobile position (desktop lives in the sidebar) */}
               <ApplyCard apply={apply} lang={lang} className="mt-6 lg:hidden print:hidden" />
+              {process.env.APPLICANT_CAREER_V5_ENABLED==='true'&&(
+                <Button asChild variant="outline" className="mt-3 w-full rounded-xl lg:hidden print:hidden">
+                  <Link href={`/${lang}/portal/career?opportunity=${encodeURIComponent(opp.slug)}`}>{lang==='fa'?'پیگیری این فرصت':lang==='ps'?'دا فرصت تعقیب کړئ':'Track this opportunity'}</Link>
+                </Button>
+              )}
               <Button asChild variant="outline" className="mt-3 h-11 w-full rounded-xl lg:hidden print:hidden">
                 <Link href={cvBuilderHref}>
                   <FileText className="me-1.5 h-4 w-4" aria-hidden="true" />
@@ -744,6 +749,11 @@ export default async function OpportunityDetailPage({
             <aside className="hidden space-y-4 lg:block print:block">
               <div className="sticky top-24 space-y-4 print:static">
                 <ApplyCard apply={apply} lang={lang} />
+                {process.env.APPLICANT_CAREER_V5_ENABLED==='true'&&(
+                  <Button asChild variant="outline" className="w-full print:hidden">
+                    <Link href={`/${lang}/portal/career?opportunity=${encodeURIComponent(opp.slug)}`}>{lang==='fa'?'پیگیری این فرصت':lang==='ps'?'دا فرصت تعقیب کړئ':'Track this opportunity'}</Link>
+                  </Button>
+                )}
                 <Button asChild variant="outline" className="w-full print:hidden">
                   <Link href={cvBuilderHref}>
                     <FileText className="me-1.5 h-4 w-4" aria-hidden="true" />
