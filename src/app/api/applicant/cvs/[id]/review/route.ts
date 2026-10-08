@@ -3,6 +3,7 @@ import {applicantEnabled,applicantFromRequest} from '@/lib/applicant-auth';
 import {applicantSameOrigin} from '@/lib/applicant-origin';
 import {ExtractedCVSchema,CVReviewSchema,type CVField} from '@/lib/applicants/cv-extraction-proposals';
 import {NextResponse} from 'next/server';
+import {Prisma} from '@prisma/client';
 export const runtime='nodejs';export const dynamic='force-dynamic';
 type Ctx={params:Promise<{id:string}>};
 const answer=(d:object,status=200)=>NextResponse.json(d,{status,headers:{'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});
@@ -61,7 +62,7 @@ export async function POST(req:Request,{params}:Ctx){
     next[key]=approved;count++;
    }
    if(count===0)return 'nothing_to_save';
-   await tx.applicantProfile.update({where:{id:user.id},data:{verifiedCareerFacts:next}});
+   await tx.applicantProfile.update({where:{id:user.id},data:{verifiedCareerFacts:next as unknown as Prisma.InputJsonObject}});
    await tx.applicantDocument.update({where:{id:doc.id},data:{reviewedAt:new Date()}});
    return 'saved';
   });
