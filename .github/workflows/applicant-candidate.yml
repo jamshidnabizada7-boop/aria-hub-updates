@@ -97,14 +97,18 @@ jobs:
         run: |
           bunx playwright-core install --with-deps chromium
           export ADMIN_SESSION_SECRET="$(openssl rand -hex 32)"
-          PORT=3104 HOSTNAME=127.0.0.1 APPLICANT_AUTH_ENABLED=true APPLICANT_MATCHER_V3_ENABLED=true APPLICANT_NOTIFICATIONS_ENABLED=true bun .next/standalone/server.js >/tmp/aria-browser-server.log 2>&1 &
+          PORT=3104 HOSTNAME=127.0.0.1 NODE_ENV=production APPLICANT_AUTH_ENABLED=true APPLICANT_MATCHER_V3_ENABLED=true APPLICANT_NOTIFICATIONS_ENABLED=true node .next/standalone/server.js >/tmp/aria-browser-server.log 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid" 2>/dev/null || true' EXIT
           for i in $(seq 1 50); do
             if curl -fsS -o /dev/null http://127.0.0.1:3104/en/get-started; then break; fi
             sleep 2
           done
-          curl -fsS -o /dev/null http://127.0.0.1:3104/en/get-started
+          if ! curl -fsS -o /dev/null http://127.0.0.1:3104/en/get-started; then
+            echo 'Loopback standalone failed health check'
+            tail -80 /tmp/aria-browser-server.log | sed -E 's/(password|secret|token|key)=([^ ]+)/\\1=[redacted]/gi'
+            exit 1
+          fi
           bun --conditions=react-server scripts/tests/applicant-browser-acceptance.ts
       - name: Upload anonymized browser acceptance screenshots
         if: always()
