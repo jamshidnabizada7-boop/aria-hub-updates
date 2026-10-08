@@ -33,7 +33,8 @@ export async function POST(req:Request){
    const encrypted=sealChannel(data.phone,a.profile.id,'whatsapp');
    // No fallback to a free-form WhatsApp message. An approved template is
    // required and the recipient must have explicitly requested verification.
-   await sendWhatsAppTemplate(data.phone,process.env.WHATSAPP_VERIFY_TEMPLATE!,'en',[code]);
+   // Save the OTP before transmission: a provider success must never produce
+   // a code with no matching verifier if the subsequent database write fails.
    await db.$transaction(async tx=>{
     await tx.applicantWhatsAppContact.upsert({
      where:{applicantProfileId:a.profile.id},
@@ -51,6 +52,7 @@ export async function POST(req:Request){
      update:{whatsappEnabled:false}
     });
    });
+   await sendWhatsAppTemplate(data.phone,process.env.WHATSAPP_VERIFY_TEMPLATE!,'en',[code]);
    return applicantResponse({verificationSent:true});
   }
   const contact=await db.applicantWhatsAppContact.findUnique({where:{applicantProfileId:a.profile.id}});
