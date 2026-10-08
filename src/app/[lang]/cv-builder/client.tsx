@@ -12,6 +12,7 @@ import { TemplateGallery } from './components/TemplateGallery';
 import { useCVDrafts } from './hooks/use-cv-drafts';
 import { CloudCVSync } from './components/CloudCVSync';
 import { displayDraftName } from './lib/cv-utils';
+import { applyVerifiedCareerFacts } from './lib/cv-profile-import';
 import { validateDraft } from './lib/cv-validation';
 import { CV_TEMPLATE_BY_ID } from './lib/cv-templates';
 import { cvText } from './lib/cv-copy';
@@ -58,24 +59,7 @@ export function CVBuilderClient({ initialLang, initialPurpose='professional', in
   },[]);
   function importReviewedProfile(){
     if(!approvedFacts)return;
-    const take=(name:string,max=20)=>Array.isArray(approvedFacts[name])?(approvedFacts[name] as unknown[]).filter((x):x is string=>typeof x==='string').slice(0,max):[];
-    const fullName=typeof approvedFacts.fullName==='string'?approvedFacts.fullName.slice(0,120):'';
-    const headline=typeof approvedFacts.headline==='string'?approvedFacts.headline.slice(0,160):'';
-    updateActive(draft=>{
-      const skills=take('skills',25).filter(x=>!draft.data.skills.some(y=>y.name.toLowerCase()===x.toLowerCase()));
-      const languages=take('languages',15).filter(x=>!draft.data.languages.some(y=>y.name.toLowerCase()===x.toLowerCase()));
-      const certs=take('certifications',8).filter(x=>!draft.data.certifications.some(y=>y.name.toLowerCase()===x.toLowerCase()));
-      const education=take('educationHistory',8).filter(x=>!draft.data.education.some(y=>y.description.toLowerCase()===x.toLowerCase()));
-      const experience=take('workHistory',10).filter(x=>!draft.data.experience.some(y=>y.description.toLowerCase()===x.toLowerCase()));
-      return {...draft,data:{...draft.data,
-        personal:{...draft.data.personal,fullName:draft.data.personal.fullName||fullName,headline:draft.data.personal.headline||headline},
-        skills:[...draft.data.skills,...skills.map(name=>({id:crypto.randomUUID(),name,level:'beginner' as const}))],
-        languages:[...draft.data.languages,...languages.map(name=>({id:crypto.randomUUID(),name,proficiency:'basic' as const}))],
-        certifications:[...draft.data.certifications,...certs.map(name=>({id:crypto.randomUUID(),name,issuer:'',date:'',credentialUrl:''}))],
-        education:[...draft.data.education,...education.map(description=>({id:crypto.randomUUID(),degree:'',institution:'',location:'',startDate:'',endDate:'',isCurrent:false,description}))],
-        experience:[...draft.data.experience,...experience.map(description=>({id:crypto.randomUUID(),role:'',company:'',location:'',startDate:'',endDate:'',isCurrent:false,description}))]
-      }};
-    });
+    updateActive(draft=>applyVerifiedCareerFacts(draft,approvedFacts));
     toast({title:initialLang==='fa'?'معلومات تأییدشده وارد شد':initialLang==='ps'?'تایید شوي معلومات ورزیات شول':'Reviewed facts imported',
       description:initialLang==='fa'?'سطح مهارت‌ها و زبان‌ها را خودتان دقیق کنید.':initialLang==='ps'?'د مهارتونو او ژبو کچې پخپله سمې کړئ.':'Complete missing institutions, job titles, dates and proficiency levels before exporting.'});
   }
