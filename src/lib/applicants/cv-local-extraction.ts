@@ -17,7 +17,7 @@ class ExtractFailure extends Error {
 function run(command:string,args:string[],input?:Uint8Array,timeout=20000):Promise<string>{
  return new Promise((resolve,reject)=>{
   const child=spawn(command,args,{stdio:['pipe','pipe','pipe'],shell:false,env:{
-   PATH:process.env.PATH||'/usr/bin:/bin',LANG:'C.UTF-8',HOME:'/nonexistent',
+   NODE_ENV:process.env.NODE_ENV||'production',PATH:process.env.PATH||'/usr/bin:/bin',LANG:'C.UTF-8',HOME:'/nonexistent',
    OMP_THREAD_LIMIT:'1',OMP_NUM_THREADS:'1'
   }});
   const stdout:Buffer[]=[],stderr:Buffer[]=[];
