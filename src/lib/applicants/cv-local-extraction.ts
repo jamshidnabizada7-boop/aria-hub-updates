@@ -62,7 +62,7 @@ async function ocrImage(bytes:Uint8Array,langs:string):Promise<string>{
  const png=await sharp(Buffer.from(bytes),{limitInputPixels:25_000_000})
    .rotate().resize({width:2100,height:3000,fit:'inside',withoutEnlargement:true})
    .png({compressionLevel:9}).toBuffer();
- return run('tesseract',['stdin','stdout','-l',langs,'--psm','3'],png,30000);
+ return run('tesseract',['stdin','stdout','-l',langs,'--psm','11'],png,30000);
 }
 async function processPDF(file:string,dir:string):Promise<{text:string;method:ExtractedCV['method']}>{
  const info=await run('pdfinfo',[file],undefined,8000);
@@ -81,10 +81,10 @@ async function processPDF(file:string,dir:string):Promise<{text:string;method:Ex
  }
  return {text,method:'pdf-tesseract'};
 }
-export async function extractStoredCV(
- file:{storageKey:string;originalName:string;sha256:string}
+/** Bounded extraction entrypoint for private worker and isolated byte fixtures. */
+export async function extractCVBytes(
+ file:{originalName:string;sha256:string},bytes:Uint8Array
 ):Promise<ExtractedCV>{
- const bytes=await fetchPrivateCV(file.storageKey);
  const digest=createHash('sha256').update(bytes).digest('hex');
  if(digest!==file.sha256)throw new ExtractFailure('source_hash_mismatch');
  const kind=validateCVUpload(file.originalName,bytes).extension;
@@ -101,6 +101,11 @@ export async function extractStoredCV(
  }finally{
   await rm(dir,{recursive:true,force:true,maxRetries:2});
  }
+}
+export async function extractStoredCV(
+ file:{storageKey:string;originalName:string;sha256:string}
+):Promise<ExtractedCV>{
+ return extractCVBytes(file,await fetchPrivateCV(file.storageKey));
 }
 export function cvProcessingCode(error:unknown):string{
  return error instanceof ExtractFailure?error.code:
