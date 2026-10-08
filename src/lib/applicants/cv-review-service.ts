@@ -29,7 +29,7 @@ export async function approveCVReview(db:PrismaClient,profileId:string,id:string
    next[field]=value;accepted++;
   }
   if(!accepted)return 'nothing_to_save';
-  await tx.applicantProfile.update({where:{id:profileId},data:{verifiedCareerFacts:next as Prisma.InputJsonObject}});
+  await tx.applicantProfile.update({where:{id:profileId},data:{verifiedCareerFacts:next as unknown as Prisma.InputJsonObject}});
   await tx.applicantDocument.update({where:{id:doc.id},data:{reviewedAt:new Date()}});
   return 'saved';
  });
