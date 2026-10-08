@@ -33,6 +33,9 @@ export function AccountClient({lang,mode}:{lang:Lang,mode:Mode}) {
   <button type="submit" disabled={busy} className="w-full rounded-lg bg-primary px-4 py-3 font-semibold text-primary-foreground disabled:opacity-50">{busy?'…':mode==='login'?t.login:mode==='register'?t.register:mode==='forgot-password'?t.forgot:t.reset}</button>
   </form>
   {message&&<p role="status" className="mt-4 rounded-lg border p-3 text-sm">{message}</p>}
+  {mode==='login' && message==='email_not_verified' && <button type="button" className="mt-3 text-sm underline" disabled={busy || !email} onClick={async()=>{
+    setBusy(true);try{const res=await fetch('/api/applicant/auth/resend-verification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,lang})});setMessage(res.ok?t.info:t.error);}catch{setMessage(t.error);}finally{setBusy(false);}
+  }}>{lang==='fa'?'ارسال دوبارۀ ایمیل تأیید':lang==='ps'?'د تایید برېښنالیک بیا لېږل':'Resend verification email'}</button>}
   <div className="mt-5 text-sm"><Link href={'/'+lang+(mode==='login'?'/forgot-password':'/login')} className="underline">{mode==='login'?t.forgot:t.back}</Link></div>
  </main>;
 }
