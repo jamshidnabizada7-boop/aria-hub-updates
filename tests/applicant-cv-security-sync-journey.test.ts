@@ -3,7 +3,8 @@ import {PrismaClient} from '@prisma/client';
 import {createHash} from 'node:crypto';
 import {createDraft} from '../src/app/[lang]/cv-builder/lib/cv-utils';
 import {applyVerifiedCareerFacts} from '../src/app/[lang]/cv-builder/lib/cv-profile-import';
-import {reserveCVUpload,claimCVDeletion,CVLifecycleError} from '../src/lib/applicants/cv-document-lifecycle';
+import {reserveCVUpload,claimCVDeletion} from '../src/lib/applicants/cv-document-lifecycle';
+import {scanCV} from '../src/lib/applicants/cv-scan';
 import {approveCVReview} from '../src/lib/applicants/cv-review-service';
 import {proposeCVFields,CVReviewSchema} from '../src/lib/applicants/cv-extraction-proposals';
 import {checkedCloudDraft,encryptCVDraft,decryptCVDraft,cloudCVEnabled} from '../src/lib/applicants/cv-cloud-crypto';
@@ -22,6 +23,11 @@ const data=(key:string)=>({
 });
 afterAll(async()=>{if(ids.length)await db.user.deleteMany({where:{id:{in:ids}}});await db.$disconnect();});
 describe('tenant ownership, hash and concurrent document lifecycle',()=>{
+ test('malware scanning fails closed when the local scanner is disabled',async()=>{
+  const old=process.env.CV_CLAMAV_ENABLED;delete process.env.CV_CLAMAV_ENABLED;
+  try{expect(await scanCV(new Uint8Array(Buffer.from('not a real CV')))).toBe(false);}
+  finally{if(old!==undefined)process.env.CV_CLAMAV_ENABLED=old;}
+ });
  test('parallel uploads cannot exceed ten reserved documents',async()=>{
   const u=await make();
   const attempts=await Promise.allSettled(Array.from({length:12},(_,i)=>reserveCVUpload(db,u.profileId,data('quota-'+i))));
