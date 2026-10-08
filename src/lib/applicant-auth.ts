@@ -51,7 +51,8 @@ export async function getApplicantSession(raw: string | undefined | null) {
     include: { user: { select: { id: true, name: true, email: true, emailVerified: true, disabled: true } } },
   });
   if (!session || session.expires <= new Date() || session.user.disabled || !session.user.emailVerified) return null;
-  return session.user;
+  const applicant = await db.applicantProfile.findUnique({ where: { userId: session.userId }, select: { id: true } });
+  return applicant ? session.user : null;
 }
 export async function currentApplicant() {
   const jar = await cookies();
@@ -98,7 +99,7 @@ export async function registerApplicant(emailRaw: string, password: string, name
     throw new ApplicantError('invalid_registration');
   const existing = await db.user.findUnique({ where: { email }, select: { id: true } });
   if (existing) return; // non-enumerating; verified users are not silently modified
-  await db.user.create({ data: { email, name: name.trim(), passwordHash: await bcrypt.hash(password, 12) } });
+  await db.user.create({ data: { email, name: name.trim(), passwordHash: await bcrypt.hash(password, 12), applicantProfile: { create: {} } } });
   await sendVerification(email, lang);
 }
 export async function verifyApplicantEmail(emailRaw: string, raw: string): Promise<boolean> {
@@ -120,6 +121,8 @@ export async function loginApplicant(emailRaw: string, password: string): Promis
   const dummy = '$2b$12$C6UzMDM.H6dfI/f/IKcEeOOoN8AwcEJZaU5fg3UJmKcF6bLPydTeS';
   const valid = await bcrypt.compare(password, user?.passwordHash || dummy).catch(() => false);
   if (!user || !valid || user.disabled) throw new ApplicantError('invalid_credentials', 401);
+  const applicant = await db.applicantProfile.findUnique({ where: { userId: user.id }, select: { id: true } });
+  if (!applicant) throw new ApplicantError('invalid_credentials', 401);
   if (!user.emailVerified) throw new ApplicantError('email_not_verified', 403);
   return newApplicantSession(user.id);
 }
@@ -130,6 +133,7 @@ export async function forgotApplicantPassword(emailRaw: string, lang: string): P
   if (!validEmail(email)) return;
   const user = await db.user.findUnique({ where: { email } });
   if (!user?.passwordHash || user.disabled || !user.emailVerified) return;
+  if (!(await db.applicantProfile.findUnique({ where: { userId: user.id }, select: { id: true } }))) return;
   const raw = randomBytes(32).toString('base64url');
   await db.user.update({ where: { id: user.id }, data: { passwordResetToken: tokenHash(raw), passwordResetExpires: new Date(Date.now() + 30 * 60000) } });
   const base = process.env.PUBLIC_SITE_URL || 'https://www.myariahub.com';
