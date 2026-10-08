@@ -1194,6 +1194,7 @@ model ApplicantProfile {
   residence        String?
   preferredLocale  String   @default("fa")
   documents        ApplicantDocument[]
+  cvDrafts         ApplicantCVDraft[]
   savedSearches     ApplicantSavedSearch[]
   notificationPreference ApplicantNotificationPreference?
   notifications ApplicantNotification[]
@@ -1231,6 +1232,20 @@ model ApplicantDocument {
 
 // Applicant-owned Matcher preferences. Saving is NOT a notification subscription;
 // notification delivery requires a later consented notification worker.
+/** Encrypted, opt-in account CVs. No public object links or cross-user grants. */
+model ApplicantCVDraft {
+  id                 String @id @default(cuid())
+  applicantProfileId String
+  applicantProfile   ApplicantProfile @relation(fields:[applicantProfileId],references:[id],onDelete:Cascade)
+  draftId            String
+  encryptedContent   String @db.Text
+  revision           Int @default(1)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  @@unique([applicantProfileId,draftId])
+  @@index([applicantProfileId,updatedAt])
+}
+
 model ApplicantSavedSearch {
   id String @id @default(cuid())
   applicantProfileId String
