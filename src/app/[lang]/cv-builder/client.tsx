@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Copy, Download, FilePlus2, FileText, LayoutTemplate, Save, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -46,6 +46,35 @@ export function CVBuilderClient({ initialLang, initialPurpose='professional', in
   const [templatesOpen,setTemplatesOpen]=useState(initialTemplatesOpen);
   const [mobileTab,setMobileTab]=useState('edit');
   const [generating,setGenerating]=useState(false);
+  const [approvedFacts,setApprovedFacts]=useState<Record<string,unknown>|null>(null);
+  useEffect(()=>{
+    const ac=new AbortController();
+    fetch('/api/applicant/career-facts',{cache:'no-store',signal:ac.signal})
+      .then(r=>r.ok?r.json():null)
+      .then(d=>{if(!ac.signal.aborted&&d?.facts&&typeof d.facts==='object')setApprovedFacts(d.facts);})
+      .catch(()=>{});
+    return ()=>ac.abort();
+  },[]);
+  function importReviewedProfile(){
+    if(!approvedFacts)return;
+    const take=(name:string,max=20)=>Array.isArray(approvedFacts[name])?(approvedFacts[name] as unknown[]).filter((x):x is string=>typeof x==='string').slice(0,max):[];
+    const fullName=typeof approvedFacts.fullName==='string'?approvedFacts.fullName.slice(0,120):'';
+    const headline=typeof approvedFacts.headline==='string'?approvedFacts.headline.slice(0,160):'';
+    updateActive(draft=>{
+      const skills=take('skills',25).filter(x=>!draft.data.skills.some(y=>y.name.toLowerCase()===x.toLowerCase()));
+      const languages=take('languages',15).filter(x=>!draft.data.languages.some(y=>y.name.toLowerCase()===x.toLowerCase()));
+      const certs=take('certifications',8).filter(x=>!draft.data.certifications.some(y=>y.name.toLowerCase()===x.toLowerCase()));
+      return {...draft,data:{...draft.data,
+        personal:{...draft.data.personal,fullName:draft.data.personal.fullName||fullName,headline:draft.data.personal.headline||headline},
+        skills:[...draft.data.skills,...skills.map(name=>({id:crypto.randomUUID(),name,level:'beginner' as const}))],
+        languages:[...draft.data.languages,...languages.map(name=>({id:crypto.randomUUID(),name,proficiency:'basic' as const}))],
+        certifications:[...draft.data.certifications,...certs.map(name=>({id:crypto.randomUUID(),name,issuer:'',date:'',credentialUrl:''}))]
+      }};
+    });
+    toast({title:initialLang==='fa'?'معلومات تأییدشده وارد شد':initialLang==='ps'?'تایید شوي معلومات ورزیات شول':'Reviewed facts imported',
+      description:initialLang==='fa'?'سطح مهارت‌ها و زبان‌ها را خودتان دقیق کنید.':initialLang==='ps'?'د مهارتونو او ژبو کچې پخپله سمې کړئ.':'Please review skill and language proficiency levels.'});
+  }
+
   const readiness=useMemo(()=>activeDraft?validateDraft(activeDraft,config):null,[activeDraft,config]);
   const enabledPurposes=getEnabledPurposeIds(config);
   const enabledTemplateIds=getEnabledTemplateIds(config);
@@ -128,6 +157,10 @@ export function CVBuilderClient({ initialLang, initialPurpose='professional', in
               const purpose=config.purposes[activeDraft.purpose].enabled?activeDraft.purpose:config.defaultPurpose;
               createNewDraft(purpose,activeDraft.outputLang,undefined,{template:config.defaultTemplates[purpose],paperSize:config.defaultPaperSize});
             }}><FilePlus2 className="size-4" />{cvText(initialLang,'New CV')}</Button>
+            {approvedFacts&&<Button type="button" variant="outline" onClick={importReviewedProfile}>
+              {initialLang==='fa'?'وارد کردن معلومات تأییدشده':initialLang==='ps'?'تایید شوي معلومات واردول':'Import reviewed profile'}
+            </Button>}
+
             <Button type="button" variant="outline" onClick={()=>duplicateActive()}><Copy className="size-4" />{cvText(initialLang,'Duplicate')}</Button>
             {config.features.pdfDownload ? <Button type="button" onClick={()=>setExportOpen(true)}><Download className="size-4" />{cvText(initialLang,'Review & download')}</Button> : null}
           </div>
