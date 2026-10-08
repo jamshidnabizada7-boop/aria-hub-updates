@@ -100,7 +100,7 @@ export function proposeCVFields(text:string,method:ExtractedCV['method']):Extrac
  // Unicode headings cannot use JS \\b: Arabic-script letters do not count as ASCII word characters.
  // Stop only at an actual heading, so content from the next section is never
  // falsely attributed to education, employment or a certificate.
- const stop=/^(?:work experience|employment history|professional experience|experience|education|academic background|qualifications|skills|certifications?|certificates?|licenses?|languages?|references|contact|profile|projects|تجربه(?: کاری)?|تجارب کاری|تحصیلات|سوابق تحصیلی|مهارت(?:[‌\s]*ها)?|زبان(?:[‌\s]*ها)?|مراجع|زده کړې|تحصیلي سوابق|کاري تجربې?|ژبې|ژبه|تصدیق[‌-]?نامه|گواهینامه|سندونه(?: او تصدیقونه)?)(?:\s*[:：].*|\s*)$/iu;
+ const stop=/^(?:work experience|employment history|professional experience|experience|education|academic background|qualifications|skills|certifications?|certificates?|licenses?|languages?|references|contact|profile|projects|تجربه(?: کاری)?|تجارب کاری|تحصیلات|سوابق تحصیلی|مهارت(?:[‌\s]*ها)?|زبان(?:[‌\s]*ها)?|مراجع|زده کړې|تحصیلي سوابق|کاري تجرب(?:ه|ې)|ژبې|ژبه|تصدیق[‌-]?نامه|گواهینامه|سندونه(?: او تصدیقونه)?)(?:\s*[:：].*|\s*)$/iu;
  const history=section(startWork,stop,10);
  const school=section(startEducation,stop,8);
  const certs=section(startCert,stop,8);

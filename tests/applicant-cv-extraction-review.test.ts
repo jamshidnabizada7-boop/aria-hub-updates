@@ -59,14 +59,14 @@ describe('CV extraction regressions: document structure and RTL',()=>{
   expect(()=>wordDocumentXmlToText('<!DOCTYPE x [<!ENTITY y SYSTEM "file:///etc/passwd">]>')).toThrow('unsafe_docx_xml');
  });
  test('Persian section boundaries do not mix employment and degrees',()=>{
-  const p=proposeCVFields('فاطمه احمد\\nتحصیلات\\nلیسانس دانشگاه کابل\\nتجربه کاری\\nآموزگار در مکتب\\nمهارت ها\\nتدریس\\nزبان ها: فارسی و انگلیسی','docx-xml');
+  const p=proposeCVFields('فاطمه احمد\nتحصیلات\nلیسانس دانشگاه کابل\nتجربه کاری\nآموزگار در مکتب\nمهارت ها\nتدریس\nزبان ها: فارسی و انگلیسی','docx-xml');
   expect(p.language).toBe('fa');
   expect(p.fields.educationHistory).toEqual(['لیسانس دانشگاه کابل']);
   expect(p.fields.workHistory).toEqual(['آموزگار در مکتب']);
   expect(p.fields.languages).toEqual(['English','Persian']);
  });
  test('Pashto section boundaries and inline languages remain distinct',()=>{
-  const p=proposeCVFields('احمد خان\\nزده کړې\\nلېسانس د کابل پوهنتون\\nکاري تجربه\\nښوونکی په ښوونځي کې\\nژبې: پښتو او انګلیسي\\nسندونه\\nد ښوونې تصدیق','tesseract');
+  const p=proposeCVFields('احمد خان\nزده کړې\nلېسانس د کابل پوهنتون\nکاري تجربه\nښوونکی په ښوونځي کې\nژبې: پښتو او انګلیسي\nسندونه\nد ښوونې تصدیق','tesseract');
   expect(p.language).toBe('ps');
   expect(p.fields.educationHistory).toEqual(['لېسانس د کابل پوهنتون']);
   expect(p.fields.workHistory).toEqual(['ښوونکی په ښوونځي کې']);
@@ -74,7 +74,7 @@ describe('CV extraction regressions: document structure and RTL',()=>{
   expect(p.fields.certifications).toEqual(['د ښوونې تصدیق']);
  });
  test('never treats the next section heading as an invented qualification',()=>{
-  const p=proposeCVFields('Sarah Lee\\nEducation\\nBachelor of Education\\nSkills\\nMicrosoft Word\\nCertifications\\nTeacher Training','pdftotext');
+  const p=proposeCVFields('Sarah Lee\nEducation\nBachelor of Education\nSkills\nMicrosoft Word\nCertifications\nTeacher Training','pdftotext');
   expect(p.fields.educationHistory).toEqual(['Bachelor of Education']);
   expect(p.fields.certifications).toEqual(['Teacher Training']);
  });
