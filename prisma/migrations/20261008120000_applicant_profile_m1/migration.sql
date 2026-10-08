@@ -14,14 +14,14 @@ ALTER TABLE "ApplicantProfile" ADD CONSTRAINT "ApplicantProfile_userId_fkey" FOR
 -- RLS defense-in-depth: server-only Prisma app accesses via its designated DB role.
 ALTER TABLE "ApplicantProfile" ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE "ApplicantProfile" FROM PUBLIC;
-DO $ BEGIN
+DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
     EXECUTE 'REVOKE ALL ON TABLE "ApplicantProfile" FROM anon';
   END IF;
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
     EXECUTE 'REVOKE ALL ON TABLE "ApplicantProfile" FROM authenticated';
   END IF;
-END $;
+END $$;
 
 -- Restrict direct Data API access: applicant profile CRUD is mediated by
 -- authenticated Next.js endpoints, not end-user Supabase JWT claims.
