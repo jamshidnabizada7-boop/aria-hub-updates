@@ -142,7 +142,7 @@ export async function resetApplicantPassword(raw: string, password: string): Pro
   const user = await db.user.findFirst({ where: { passwordResetToken: tokenHash(raw), passwordResetExpires: { gt: new Date() } } });
   if (!user || user.disabled) throw new ApplicantError('invalid_reset', 400);
   await db.$transaction([
-    db.user.update({ where: { id: user.id }, data: { passwordHash: await bcrypt.hash(password, 12), passwordResetToken: null, passwordResetExpires: null, sessionVersion: { increment: 1 } } }),
+    db.user.update({ where: { id: user.id }, data: { passwordHash: await bcrypt.hash(password, 12), passwordResetToken: null, passwordResetExpires: null } }),
     db.session.deleteMany({ where: { userId: user.id } }),
   ]);
 }
@@ -151,7 +151,7 @@ export async function changeApplicantPassword(userId: string, oldPassword: strin
   const user = await db.user.findUnique({ where: { id: userId } });
   if (!user?.passwordHash || !(await bcrypt.compare(oldPassword, user.passwordHash))) throw new ApplicantError('invalid_credentials', 401);
   await db.$transaction([
-    db.user.update({ where: { id: userId }, data: { passwordHash: await bcrypt.hash(newPassword, 12), sessionVersion: { increment: 1 } } }),
+    db.user.update({ where: { id: userId }, data: { passwordHash: await bcrypt.hash(newPassword, 12) } }),
     db.session.deleteMany({ where: { userId } }),
   ]);
   return newApplicantSession(userId);
