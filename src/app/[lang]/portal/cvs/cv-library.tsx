@@ -9,7 +9,7 @@ const dict={
  ps:{title:'زما د سي وي کتابتون',intro:'خپل سي وي د PDF، Word یا انځور په بڼه پورته کړئ. فایلونه یوازې ستاسو لپاره دي.',upload:'سي وي پورته کول',select:'فایل غوره کړئ',camera:'انځور واخلئ',empty:'تر اوسه سي وي نشته.',download:'فایل ښکته کړئ',remove:'تلپاتې ړنګول',confirm:'دا شخصي سي وي تل لپاره ړنګ کړئ؟',busy:'روان دی…',refresh:'تازه کول',error:'غوښتنه ناکامه شوه. بیا هڅه وکړئ.',disabled:'د سي وي شخصي ذخیره په دې چاپېریال کې فعاله نه ده.',uploaded:'فایل خوندي شو. د متن د استخراج لپاره شخصي کارګر باید فعال وي. وړاندیز شوي معلومات پخپله تایید کړئ.',status:'د پروسس حالت',supported:'PDF، DOCX، JPG، PNG او WebP · تر ۸ MB · لس فایلونه'}
 };
 export function CVLibrary({lang}:{lang:Lang}){
- const t=dict[lang];const [items,setItems]=useState<Item[]>([]),[file,setFile]=useState<File|null>(null),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[loading,setLoading]=useState(true);
+ const t=dict[lang];const [items,setItems]=useState<Item[]>([]),[file,setFile]=useState<File|null>(null),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[loading,setLoading]=useState(true),[reviewId,setReviewId]=useState<string|null>(null);
  const refresh=useCallback(async()=>{try{const r=await fetch('/api/applicant/cvs',{cache:'no-store',credentials:'same-origin'});const d=await r.json();if(!r.ok)throw Error(d.error);setItems(d.items||[]);setMessage('');}catch(e){setMessage(e instanceof Error&&e.message==='unavailable_or_unauthorized'?t.disabled:t.error);}finally{setLoading(false);}},[t.disabled,t.error]);
  useEffect(()=>{void refresh();},[refresh]);
  async function upload(e:React.FormEvent){e.preventDefault();if(!file)return;setBusy(true);setMessage('');
