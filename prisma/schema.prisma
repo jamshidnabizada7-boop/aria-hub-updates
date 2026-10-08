@@ -1191,8 +1191,30 @@ model ApplicantProfile {
   headline         String?
   residence        String?
   preferredLocale  String   @default("fa")
+  documents        ApplicantDocument[]
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+}
+
+// Private CV library: metadata only; raw bytes live in a strictly private bucket.
+// Import proposals and confidence remain opt-in and are never automatically applied.
+model ApplicantDocument {
+  id                  String   @id @default(cuid())
+  applicantProfileId  String
+  applicantProfile    ApplicantProfile @relation(fields: [applicantProfileId], references: [id], onDelete: Cascade)
+  originalName        String
+  mimeType            String
+  byteSize            Int
+  sha256              String
+  storageKey          String   @unique
+  status              String   @default("uploaded") // uploaded | processing | review | failed
+  extraction          Json?
+  processingError     String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([applicantProfileId, createdAt])
+  @@index([status, createdAt])
 }
 
 model OrganizationMember {
