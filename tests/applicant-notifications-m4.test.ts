@@ -37,7 +37,11 @@ describe('M4 applicant notification database isolation and deduplication',()=>{
   expect(pref.inAppEnabled).toBe(false);expect(pref.emailEnabled).toBe(false);
   const first=await db.applicantNotification.create({data:{applicantProfileId:a,savedSearchId:search.id,opportunityId:opp.id,evidence:{reasons:['preferred_role','province']}}});
   expect(await db.applicantNotification.count({where:{applicantProfileId:a}})).toBe(1);
-  await expect(db.applicantNotification.create({data:{applicantProfileId:a,savedSearchId:search.id,opportunityId:opp.id}})).rejects.toThrow();
+  let duplicateRejected=false;
+  try{await db.applicantNotification.create({data:{applicantProfileId:a,savedSearchId:search.id,opportunityId:opp.id}});}
+  catch(err){duplicateRejected=err instanceof Error;}
+  expect(duplicateRejected).toBe(true);
+  expect(await db.applicantNotification.count({where:{applicantProfileId:a,savedSearchId:search.id,opportunityId:opp.id}})).toBe(1);
   // The API always applies account ID predicates for read/update.
   expect(await db.applicantNotification.count({where:{id:first.id,applicantProfileId:b}})).toBe(0);
   expect((await db.applicantNotification.updateMany({where:{id:first.id,applicantProfileId:b},data:{readAt:new Date()}})).count).toBe(0);
