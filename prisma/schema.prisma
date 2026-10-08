@@ -312,7 +312,7 @@ model Organization {
 // first hit of a fresh window opportunistically deletes expired buckets.
 model RateLimitBucket {
   key         String
-  windowStart DateTime
+  windowStart DateTime @default(now())
   count       Int      @default(0)
   updatedAt   DateTime @updatedAt
 
@@ -1125,9 +1125,9 @@ model ComparisonRow {
   id              String   @id @default(cuid())
   feature         String
   featureI18n     Json?
-  ariaValue       String   @default("â")
+  ariaValue       String   @default("✓")
   ariaValueI18n   Json?
-  othersValue     String   @default("â")
+  othersValue     String   @default("—")
   othersValueI18n Json?
   order           Int      @default(0)
   status          String   @default("published")
