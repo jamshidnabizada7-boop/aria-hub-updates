@@ -51,6 +51,9 @@ jobs:
           bun audit fix || test "$?" -eq 1
           # Report the remaining unpatched advisory; strict CI still enforces it.
           bun audit --audit-level high || true
+          echo ARIA_AUDIT_PATCH_BEGIN
+          git diff --no-ext-diff -- bun.lock package.json
+          echo ARIA_AUDIT_PATCH_END
       - name: Archive audited package and lockfile proposal
         uses: actions/upload-artifact@v4
         with:
