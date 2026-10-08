@@ -11,7 +11,9 @@ test('applicant mailer sends a complete MIME message via authenticated local ESM
  const keys=['SMTP_HOST','SMTP_PORT','SMTP_USER','SMTP_PASS','SMTP_FROM'] as const;
  for(const k of keys)old[k]=process.env[k];
  const captured:{commands:string[];message:string[]}={commands:[],message:[]};
+ const sockets=new Set<Socket>();
  const server:Server=createServer(socket=>{
+  sockets.add(socket);socket.on('close',()=>sockets.delete(socket));
   socket.setEncoding('utf8');
   socket.write('220 aria-candidate.test ESMTP ready\r\n');
   let buffer='',data=false;
@@ -54,6 +56,7 @@ test('applicant mailer sends a complete MIME message via authenticated local ESM
   expect(captured.message.join('\n')).toContain('Candidate match notice');
   expect(captured.message.join('\n')).toContain('Matched opportunity test');
  }finally{
+  for(const socket of sockets)socket.destroy();
   await new Promise<void>(resolve=>server.close(()=>resolve()));
   for(const k of keys){if(old[k]===undefined)delete process.env[k];else process.env[k]=old[k];}
  }
