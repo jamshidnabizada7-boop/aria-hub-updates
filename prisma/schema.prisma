@@ -1295,8 +1295,11 @@ model ApplicantApplication {
   id                 String @id @default(cuid())
   applicantProfileId String
   applicantProfile   ApplicantProfile @relation(fields: [applicantProfileId], references: [id], onDelete: Cascade)
-  opportunityId      String
-  opportunity        Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Restrict)
+  opportunityId      String?
+  opportunity        Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+  opportunitySlug    String
+  opportunityTitle   String
+  opportunityOrganization String?
   status             String @default("saved")
   notes              String? @db.VarChar(2000)
   nextActionAt       DateTime?
@@ -1304,7 +1307,7 @@ model ApplicantApplication {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  @@unique([applicantProfileId, opportunityId])
+  @@unique([applicantProfileId, opportunitySlug])
   @@index([applicantProfileId, updatedAt])
   @@index([status, nextActionAt])
 }
