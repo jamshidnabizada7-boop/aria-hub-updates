@@ -335,7 +335,10 @@ export function rankOpportunity(profile: MatcherProfile, opportunity: MatcherOpp
   reasons.push('opportunity_type');
   // Selected occupations must match the advertised title or job position;
   // this relevance filter is not evidence of eligibility.
-  const jobRoleRelevant = ['jobs','job','internships','internship'].includes(normalize(opportunity.categorySlug));
+  // Some published employer vacancies have no category relation but DO have
+  // jobType="job". Enforce occupation/province filters for both representations.
+  const jobRoleRelevant = ['jobs','job','internships','internship'].some(kind=>
+    kind===normalize(opportunity.categorySlug)||kind===normalize(opportunity.jobType));
   if (jobRoleRelevant && profile.preferredRoles?.length && !profile.preferredRoles.includes('other')) {
     const roles = roleMatchesPreference(profile.preferredRoles, opportunity.title, opportunity.jobType);
     if (!roles.matched.length) return null;
