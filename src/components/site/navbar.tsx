@@ -365,7 +365,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
                 className="hidden h-9 rounded-xl bg-gradient-to-r from-primary to-chart-2 px-4 text-sm font-semibold shadow-float hover:opacity-90 md:inline-flex"
                 asChild
               >
-                <a href={hrefFn('/contact')}>{t('nav.getStarted')}</a>
+                <a href={hrefFn('/get-started')}>{t('nav.getStarted')}</a>
               </Button>
 
               {/* Mobile menu */}
@@ -390,7 +390,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
                   </nav>
                   <div className="p-4">
                     <Button asChild className="min-h-[44px] w-full rounded-xl bg-gradient-to-r from-primary to-chart-2">
-                      <a href={hrefFn('/contact')} onClick={() => setMobileOpen(false)}>{t('nav.getStarted')}</a>
+                      <a href={hrefFn('/get-started')} onClick={() => setMobileOpen(false)}>{t('nav.getStarted')}</a>
                     </Button>
                   </div>
                 </SheetContent>
