@@ -1,0 +1,55 @@
+name: Applicant Candidate Verification
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  applicant-candidate:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ariahub_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      REQUIRE_TEST_DATABASE: '1'
+      ARIA_DISABLE_SCHEDULER: '1'
+      APPLICANT_AUTH_ENABLED: 'false'
+      CLOUD_CV_STORAGE_ENABLED: 'false'
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5433/ariahub_test?sslmode=disable
+      DIRECT_URL: postgresql://postgres:postgres@127.0.0.1:5433/ariahub_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install frozen dependencies
+        run: bun install --frozen-lockfile
+      - name: Validate Prisma and generate
+        run: |
+          bunx prisma validate
+          bun run db:generate
+      - name: Fresh isolated database
+        run: |
+          bun run db:deploy
+          bunx prisma migrate diff --from-url "$DIRECT_URL" --to-schema-datamodel prisma/schema.prisma --exit-code
+      - name: TypeScript validation
+        run: bunx tsc --noEmit
+      - name: Applicant and employer regression tests
+        run: |
+          bun test tests/applicant-milestone-1.test.ts tests/applicant-cv-m2.test.ts tests/employer-jobs.test.ts tests/employer-auth.test.ts tests/employer-auth-completion.test.ts tests/apply-resolver.test.ts
+      - name: Compile standalone website without applicant external services
+        run: |
+          export ADMIN_SESSION_SECRET="$(openssl rand -hex 32)"
+          bun run build
