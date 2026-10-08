@@ -1,4 +1,3 @@
-import {Prisma} from '@prisma/client';
 import {db} from '@/lib/db';
 import {applicantSameOrigin} from '@/lib/applicant-origin';
 import {CloudDraftId,CloudDraftWrite,checkedCloudDraft,encryptCVDraft,decryptCVDraft} from '@/lib/applicants/cv-cloud-crypto';
@@ -38,15 +37,10 @@ export async function PUT(req:Request,{params}:Ctx){
    const result=await db.$transaction(async tx=>{
     await tx.$queryRawUnsafe('SELECT "id" FROM "ApplicantProfile" WHERE "id"=$1 FOR UPDATE',ctx.owner);
     if(await tx.applicantCVDraft.count({where:{applicantProfileId:ctx.owner}})>=12)return 'limit';
-    try{
-     await tx.applicantCVDraft.create({data:{
+    const inserted=await tx.applicantCVDraft.createMany({data:[{
       applicantProfileId:ctx.owner,draftId:ctx.id,encryptedContent:ciphertext
-     }});
-     return 'created';
-    }catch(err){
-     if(err instanceof Prisma.PrismaClientKnownRequestError&&err.code==='P2002')return 'conflict';
-     throw err;
-    }
+    }],skipDuplicates:true});
+    return inserted.count===1?'created':'conflict';
    });
    if(result==='limit')return cvResponse({error:'cloud_draft_limit'},409);
    if(result==='conflict')return cvResponse({error:'revision_conflict'},409);
