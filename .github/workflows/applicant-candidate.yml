@@ -44,6 +44,21 @@ jobs:
           bun-version: latest
       - name: Install frozen dependencies
         run: bun install --frozen-lockfile
+      # Candidate-only lockfile remediation. Download and commit the validated
+      # lockfile; remove this temporary generator once frozen CI is green.
+      - name: Generate security-patched dependency lock proposal
+        run: |
+          bun audit fix
+          bun audit --audit-level high
+      - name: Archive audited package and lockfile proposal
+        uses: actions/upload-artifact@v4
+        with:
+          name: audited-dependencies-${{ github.sha }}
+          path: |
+            bun.lock
+            package.json
+          if-no-files-found: error
+          retention-days: 2
       - name: Validate Prisma and generate
         run: |
           bunx prisma validate
