@@ -337,8 +337,12 @@ export function rankOpportunity(profile: MatcherProfile, opportunity: MatcherOpp
   // this relevance filter is not evidence of eligibility.
   // Some published employer vacancies have no category relation but DO have
   // jobType="job". Enforce occupation/province filters for both representations.
-  const jobRoleRelevant = ['jobs','job','internships','internship'].some(kind=>
-    kind===normalize(opportunity.categorySlug)||kind===normalize(opportunity.jobType));
+  const jobTypes=['jobs','job','internships','internship'];
+  const listedCategory=normalize(opportunity.categorySlug);
+  // An explicit scholarship/fellowship category outranks stale jobType data.
+  // A category-less employer vacancy can still be classified by jobType.
+  const jobRoleRelevant=profile.intents.some(i=>i==='job'||i==='internship')
+    && (jobTypes.includes(listedCategory)||(!listedCategory&&jobTypes.includes(normalize(opportunity.jobType))));
   if (jobRoleRelevant && profile.preferredRoles?.length && !profile.preferredRoles.includes('other')) {
     const roles = roleMatchesPreference(profile.preferredRoles, opportunity.title, opportunity.jobType);
     if (!roles.matched.length) return null;
