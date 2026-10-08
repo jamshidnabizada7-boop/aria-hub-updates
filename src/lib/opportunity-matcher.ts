@@ -1,3 +1,5 @@
+import { JOB_ROLE_IDS, roleMatchesPreference } from '@/lib/job-role-taxonomy';
+import type { JobRole } from '@/lib/job-role-taxonomy';
 import { z } from 'zod';
 
 export const MATCHER_INTENTS = [
@@ -50,6 +52,10 @@ export const MatcherProfileSchema = z.object({
   destinations: z.array(z.string().trim().min(2).max(80)).min(1).max(8),
   fieldArea: z.enum(FIELD_AREAS).default('any'),
   experienceYears: z.number().int().min(0).max(50).optional(),
+  preferredRoles: z.array(z.enum(JOB_ROLE_IDS as [JobRole, ...JobRole[]])).max(12).default([]),
+  skills: z.array(z.string().trim().min(2).max(60)).max(25).default([]),
+  desiredWorkMode: z.enum(['any', 'on_site', 'remote', 'hybrid']).default('any'),
+  explainWithAi: z.boolean().default(true),
   lang: z.enum(['fa', 'ps', 'en']).default('en'),
 });
 
@@ -324,6 +330,16 @@ export function rankOpportunity(profile: MatcherProfile, opportunity: MatcherOpp
   if (!categoryMatches(profile, opportunity)) return null;
   score += 50;
   reasons.push('opportunity_type');
+  // Selected occupations must match the advertised title or job position;
+  // this relevance filter is not evidence of eligibility.
+  const jobRoleRelevant = ['jobs','job','internships','internship'].includes(normalize(opportunity.categorySlug));
+  if (jobRoleRelevant && profile.preferredRoles?.length && !profile.preferredRoles.includes('other')) {
+    const roles = roleMatchesPreference(profile.preferredRoles, opportunity.title, opportunity.jobType);
+    if (!roles.matched.length) return null;
+    score += 26;
+    reasons.push('preferred_role');
+  }
+
 
   const anywhere = profile.destinations.some((d) => normalize(d) === 'anywhere');
   const destinationMatch = countryMatches(profile, opportunity);
@@ -380,6 +396,30 @@ export function rankOpportunity(profile: MatcherProfile, opportunity: MatcherOpp
     }
   }
 
+
+  if (profile.skills?.length) {
+    const skillsText = normalize(
+      [opportunity.title,opportunity.requirements,opportunity.jobType,flattenJson(opportunity.tags)].filter(Boolean).join(' ')
+    );
+    const present = profile.skills.filter(skill => {
+      const words = normalize(skill);
+      if (words.length < 2) return false;
+      const padded = ' ' + skillsText.replace(/[^\p{L}\p{N}]+/gu, ' ') + ' ';
+      return padded.includes(' ' + words + ' ');
+    });
+    if (present.length) {
+      score += Math.min(12, present.length * 4);
+      reasons.push('skills');
+    } else unknowns.push('skills');
+  }
+  // Work-mode data in imported listings is often incomplete: never invent.
+  if (profile.desiredWorkMode && profile.desiredWorkMode !== 'any') {
+    const advertised = normalize(opportunity.structuredFacts?.locationType).replace(/\s/g,'');
+    const desired = normalize(profile.desiredWorkMode).replace(/\s/g,'');
+    if (advertised && ['remote','onsite','hybrid'].includes(advertised) && advertised === desired) {
+      score += 5; reasons.push('work_mode');
+    } else unknowns.push('work_mode');
+  }
   const structuredNationalities = normalizedStringArray(opportunity.structuredFacts?.eligibleNationalities);
   const nationalityRestriction = extractNationalityRestriction(
     opportunity.extractedData,
