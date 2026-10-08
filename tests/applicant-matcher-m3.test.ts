@@ -47,6 +47,12 @@ describe('M3 role and province relevance with evidence',()=>{
   expect(res?.evidence.reasons).toContain('preferred_role');
   expect(res?.evidence.reasons).toContain('province');
  });
+ test('jobType job without category still enforces teacher role and Kabul province',()=>{
+  const teacher={...profile,preferredRoles:['teacher'] as ['teacher']};
+  expect(rankOpportunity(teacher,vacancy({title:'Delivery Driver',categorySlug:null,categoryName:null,jobType:'job'}))).toBeNull();
+  expect(rankOpportunity(teacher,vacancy({title:'Primary School Teacher',categorySlug:null,categoryName:null,jobType:'job'}))).not.toBeNull();
+  expect(rankOpportunity(teacher,vacancy({title:'Primary School Teacher',categorySlug:null,jobType:'job',locations:[{country:'Afghanistan',province:'Herat'}]}))).toBeNull();
+ });
  test('a teaching vacancy in Kabul is excluded from driver results',()=>{
   expect(rankOpportunity(profile,vacancy({title:'Primary Teacher'}))).toBeNull();
  });
