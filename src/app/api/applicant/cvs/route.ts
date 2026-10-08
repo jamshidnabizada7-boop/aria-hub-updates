@@ -6,6 +6,7 @@ import { applicantSameOrigin } from '@/lib/applicant-origin';
 import { validateCVUpload, MAX_CV_BYTES, CVFileError } from '@/lib/applicants/cv-upload-validation';
 import { scanCV } from '@/lib/applicants/cv-scan';
 import { storePrivateCV, removePrivateCV } from '@/lib/applicants/cv-private-storage';
+import { reserveCVUpload, CVLifecycleError } from '@/lib/applicants/cv-document-lifecycle';
 import { allowDurable } from '@/lib/security/durable-rate-limit';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
@@ -20,7 +21,7 @@ export async function GET(req:Request){
   const profile=await owner(req);
   if(!profile)return response({error:'unavailable_or_unauthorized'},401);
   const items=await db.applicantDocument.findMany({
-    where:{applicantProfileId:profile.id},orderBy:{createdAt:'desc'},
+    where:{applicantProfileId:profile.id,status:{notIn:['storing','deleting']}},orderBy:{createdAt:'desc'},
     take:25,select:{id:true,originalName:true,mimeType:true,byteSize:true,status:true,createdAt:true,reviewedAt:true,processingError:true}
   });
   return response({items});
@@ -33,31 +34,40 @@ export async function POST(req:Request){
  const length=Number(req.headers.get('content-length'));
  if(!Number.isSafeInteger(length)||length<=0)return response({error:'content_length_required'},411);
  if(length>MAX_CV_BYTES+131072)return response({error:'upload_too_large'},413);
- let uploadedKey:string|null=null;
  try{
   const profile=await owner(req);if(!profile)return response({error:'unauthorized'},401);
   if(!(await allowDurable(db,'applicant-cv-upload',[profile.userId],10,86400000)))return response({error:'rate_limited'},429);
-  const existing=await db.applicantDocument.count({where:{applicantProfileId:profile.id}});
-  if(existing>=10)return response({error:'document_limit_reached'},409);
   const body=await req.formData();const file=body.get('file');
   if(!(file instanceof File))return response({error:'file_required'},400);
   if(file.size===0||file.size>MAX_CV_BYTES)return response({error:'invalid_file_size'},413);
   const bytes=new Uint8Array(await file.arrayBuffer());
   const safe=validateCVUpload(file.name,bytes);
   const digest=createHash('sha256').update(bytes).digest('hex');
-  const duplicate=await db.applicantDocument.findFirst({where:{applicantProfileId:profile.id,sha256:digest},select:{id:true}});
-  if(duplicate)return response({error:'already_uploaded',documentId:duplicate.id},409);
   if(!(await scanCV(bytes)))return response({error:'scanner_unavailable_or_file_rejected'},503);
   const key=profile.userId+'/'+randomBytes(20).toString('hex')+'.'+safe.extension;
-  uploadedKey=key;
-  await storePrivateCV(key,bytes,safe.mime);
-  const row=await db.applicantDocument.create({data:{
-    applicantProfileId:profile.id, originalName:file.name.slice(0,180),
-    mimeType:safe.mime,byteSize:bytes.length,sha256:digest,storageKey:key,status:'uploaded'
-  },select:{id:true,originalName:true,mimeType:true,byteSize:true,status:true,createdAt:true}});
+  const reservation=await reserveCVUpload(db,profile.id,{
+    originalName:file.name.slice(0,180),mimeType:safe.mime,byteSize:bytes.length,sha256:digest,storageKey:key
+  });
+  try{
+   await storePrivateCV(key,bytes,safe.mime);
+   const ready=await db.applicantDocument.updateMany({
+    where:{id:reservation.id,applicantProfileId:profile.id,status:'storing'},data:{status:'uploaded'}
+   });
+   if(ready.count!==1)throw new Error('upload_reservation_lost');
+  }catch(error){
+   // Do not delete a DB reference when remote cleanup fails. An authenticated
+   // DELETE can retry the retained reservation after a failed upload.
+   try{
+    await removePrivateCV(key);
+    await db.applicantDocument.deleteMany({where:{id:reservation.id,applicantProfileId:profile.id,status:'storing'}});
+   }catch{}
+   throw error;
+  }
+  const row=await db.applicantDocument.findUniqueOrThrow({where:{id:reservation.id},
+   select:{id:true,originalName:true,mimeType:true,byteSize:true,status:true,createdAt:true}});
   return response({item:row},201);
  }catch(err){
-  if(uploadedKey){try{await removePrivateCV(uploadedKey);}catch{}}
+  if(err instanceof CVLifecycleError)return response({error:err.code,documentId:err.documentId},409);
   if(err instanceof CVFileError)return response({error:err.code},400);
   return response({error:'cv_upload_failed'},503);
  }
