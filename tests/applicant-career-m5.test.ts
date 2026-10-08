@@ -49,19 +49,29 @@ describe('Milestone 5 private application tracking database',()=>{
   users.push(a.id,b.id);
   const opp=await db.opportunity.create({data:{title:'Teacher',slug:'m5-'+crypto.randomUUID(),description:'School teacher',deadline:new Date(Date.now()+5*86400000)}});
   opps.push(opp.id);
-  const row=await db.applicantApplication.create({data:{applicantProfileId:a.applicantProfile!.id,opportunityId:opp.id}});
+  const row=await db.applicantApplication.create({data:{applicantProfileId:a.applicantProfile!.id,opportunityId:opp.id,opportunitySlug:opp.slug,opportunityTitle:opp.title,opportunityOrganization:'Test School'}});
   expect(row.status).toBe('saved');
   expect(row.appliedAt).toBeNull();
   expect(await db.applicantApplication.count({where:{id:row.id,applicantProfileId:b.applicantProfile!.id}})).toBe(0);
   expect((await db.applicantApplication.deleteMany({where:{id:row.id,applicantProfileId:b.applicantProfile!.id}})).count).toBe(0);
   const other=await db.applicantApplication.updateMany({where:{id:row.id,applicantProfileId:b.applicantProfile!.id},data:{status:'applied'}});
   expect(other.count).toBe(0);
-  let rejected=false;try{await db.applicantApplication.create({data:{applicantProfileId:a.applicantProfile!.id,opportunityId:opp.id}});}catch{rejected=true;}
+  let rejected=false;try{await db.applicantApplication.create({data:{applicantProfileId:a.applicantProfile!.id,opportunityId:opp.id,opportunitySlug:opp.slug,opportunityTitle:opp.title,opportunityOrganization:'Test School'}});}catch{rejected=true;}
   expect(rejected).toBe(true);
   expect(await db.applicantApplication.count({where:{applicantProfileId:a.applicantProfile!.id,opportunityId:opp.id}})).toBe(1);
   await db.applicantApplication.update({where:{id:row.id},data:{status:'applied',...nextStatusDates('applied',row,new Date())}});
   const applied=await db.applicantApplication.findUnique({where:{id:row.id}});
   expect(applied?.appliedAt).not.toBeNull();
+ });
+ test('a removed source listing does not erase user notes or application history',async()=>{
+  const u=await db.user.create({data:{email:'m5-history-'+crypto.randomUUID()+'@test.invalid',applicantProfile:{create:{}}},include:{applicantProfile:true}});users.push(u.id);
+  const opp=await db.opportunity.create({data:{title:'Historic driver opening',slug:'m5-old-'+crypto.randomUUID(),description:'Archived opportunity'}});
+  const row=await db.applicantApplication.create({data:{applicantProfileId:u.applicantProfile!.id,opportunityId:opp.id,opportunitySlug:opp.slug,opportunityTitle:opp.title,notes:'I submitted through official form',status:'applied'}});
+  await db.opportunity.delete({where:{id:opp.id}});
+  const restored=await db.applicantApplication.findUnique({where:{id:row.id}});
+  expect(restored?.opportunityId).toBeNull();
+  expect(restored?.opportunityTitle).toBe('Historic driver opening');
+  expect(restored?.notes).toBe('I submitted through official form');
  });
  test('opening or saving a listing never creates an implied application timestamp',()=>{
   const now=new Date('2026-10-08T12:00:00Z');
