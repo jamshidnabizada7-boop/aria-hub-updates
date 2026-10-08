@@ -38,6 +38,9 @@ try{
    const response=await page.goto(root+'/'+lang+'/'+segment,{waitUntil:'domcontentloaded',timeout:30000});
    await page.waitForTimeout(300);
    if(!response||response.status()>=400)issues.push(lang+' '+segment+' HTTP '+(response?.status()??'none'));
+   const html=await page.evaluate(()=>({lang:document.documentElement.lang,dir:document.documentElement.dir}));
+   if(html.lang!==lang)issues.push(lang+' '+segment+' unexpected html lang '+html.lang);
+   if(html.dir!==(lang==='en'?'ltr':'rtl'))issues.push(lang+' '+segment+' unexpected html direction '+html.dir);
    const selected=page.locator('main[dir],main [dir]').first();
    if((await selected.count())>0){
     const direction=await selected.getAttribute('dir');
