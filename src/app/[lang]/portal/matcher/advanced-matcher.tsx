@@ -2,6 +2,7 @@
 import React,{useEffect,useState} from 'react';
 import Link from 'next/link';
 import {JOB_ROLE_IDS,roleName,type JobRole} from '@/lib/job-role-taxonomy';
+import {reviewedCareerMatcherPrefill,suggestedCareerRoles} from '@/lib/applicants/cv-matcher-prefill';
 import {AF_PROVINCES,type AfghanProvince} from '@/lib/geo/provinces';
 import {EDUCATION_LEVELS,FIELD_AREAS,MATCHER_INTENTS,type MatcherProfile,type EducationLevel,type FieldArea,type MatcherIntent} from '@/lib/opportunity-matcher';
 type Lang='en'|'fa'|'ps';
@@ -52,6 +53,7 @@ export function AdvancedMatcher({lang}:{lang:Lang}){
  const t=WORDS[lang],rtl=lang!=='en';
  const [step,setStep]=useState(0),[profile,setProfile]=useState<MatcherProfile>(defaultProfile(lang)),[name,setName]=useState('My career matches'),[roleQuery,setRoleQuery]=useState(''),[saved,setSaved]=useState<Saved[]>([]),[results,setResults]=useState<Match[]>([]),[status,setStatus]=useState(''),[busy,setBusy]=useState(false);
  const [skillsText,setSkillsText]=useState(''),[destText,setDestText]=useState('Anywhere');
+ const [suggestedRoles,setSuggestedRoles]=useState<JobRole[]>([]);
  const set=<K extends keyof MatcherProfile,>(field:K,value:MatcherProfile[K])=>setProfile(p=>({...p,[field]:value}));
  const refresh=async()=>{const r=await fetch('/api/applicant/saved-searches',{cache:'no-store'});if(r.ok){const d=await r.json();setSaved(d.items||[]);}};
  useEffect(()=>{void refresh().catch(()=>{});},[]);
@@ -62,7 +64,7 @@ export function AdvancedMatcher({lang}:{lang:Lang}){
  try{const r=await fetch('/api/opportunities/matcher',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload())});const d=await r.json();if(!r.ok)throw Error(d.error||t.error);setResults(d.results||[]);setStatus((d.results||[]).length?'':t.noMatches);}catch(e){setStatus(e instanceof Error?e.message:t.error);}finally{setBusy(false);}};
  const save=async()=>{if(!valid())return setStatus(t.error);setBusy(true);try{const r=await fetch('/api/applicant/saved-searches',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name.trim()||t.title,profile:payload()})});const d=await r.json();if(!r.ok)throw Error(d.error);await refresh();setStatus(t.saveOk);}catch(e){setStatus(e instanceof Error?e.message:t.error);}finally{setBusy(false);}};
  const facts=async(mode:'load'|'save')=>{setBusy(true);try{if(mode==='save'){const p=payload();const r=await fetch('/api/applicant/career-facts',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({education:p.education,fieldArea:p.fieldArea,experienceYears:p.experienceYears,preferredRoles:p.preferredRoles,skills:p.skills})});if(!r.ok)throw Error('failed');setStatus(t.saveOk);}
- else{const r=await fetch('/api/applicant/career-facts',{cache:'no-store'});const d=await r.json();if(!r.ok||!d.facts)throw Error('No reviewed career facts saved');setProfile(p=>({...p,...d.facts,lang,explainWithAi:false}));setSkillsText((d.facts.skills||[]).join(', '));setStatus(t.saveOk);}
+ else{const r=await fetch('/api/applicant/career-facts',{cache:'no-store'});const d=await r.json();if(!r.ok||!d.facts)throw Error('No reviewed career facts saved');setProfile(p=>reviewedCareerMatcherPrefill(p,d.facts));setSkillsText(Array.isArray(d.facts.skills)?d.facts.skills.join(', '):'');setSuggestedRoles(suggestedCareerRoles(d.facts));setStatus(t.saveOk);}
  }catch(e){setStatus(e instanceof Error?e.message:t.error);}finally{setBusy(false);}};
  const load=(item:Saved)=>{setProfile({...defaultProfile(lang),...item.profile,lang,explainWithAi:false});setSkillsText((item.profile.skills||[]).join(', '));setDestText((item.profile.destinations||['anywhere']).join(', '));setName(item.name);setStep(4);setResults([]);setStatus('');};
  const update=async(item:Saved,remove:boolean)=>{const r=await fetch('/api/applicant/saved-searches/'+encodeURIComponent(item.id),{method:remove?'DELETE':'PATCH',headers:{'Content-Type':'application/json'},body:remove?undefined:JSON.stringify({name:item.name,profile:item.profile,active:!item.active})});if(!r.ok)return setStatus(t.error);await refresh();};
@@ -90,6 +92,10 @@ export function AdvancedMatcher({lang}:{lang:Lang}){
     <label className="block font-semibold">{t.experience}<input type="number" min={0} max={50} value={profile.experienceYears??''} onChange={e=>set('experienceYears',e.target.value===''?undefined:Number(e.target.value))} className="mt-2 w-full rounded-lg border bg-background p-3"/></label>
     <label className="block font-semibold">{t.skills}<textarea value={skillsText} onChange={e=>setSkillsText(e.target.value)} maxLength={1600} rows={4} className="mt-2 w-full rounded-lg border bg-background p-3"/></label>
     <div className="flex flex-wrap gap-2"><button type="button" onClick={()=>void facts('load')} className="rounded-lg border px-3 py-2">{t.profileLoad}</button><button type="button" onClick={()=>void facts('save')} className="rounded-lg border px-3 py-2">{t.profileSave}</button></div><p className="text-sm text-muted-foreground">{t.factsNote}</p>
+    {suggestedRoles.length>0&&<section className="rounded-lg border p-3">
+      <p className="text-sm">{lang==='en'?'Possible occupations from reviewed work history — confirm only if you want them in your matches.':lang==='fa'?'وظایف پیشنهادی از سوابق بازبینی‌شده — فقط در صورت تمایل تأیید کنید.':'د تایید شوې کاري تجربې وړاندیز شوې دندې — یوازې خپله خوښه تایید کړئ.'}</p>
+      <div className="mt-2 flex flex-wrap gap-2">{suggestedRoles.map(role=><button type="button" key={role} aria-pressed={(profile.preferredRoles||[]).includes(role)} className={choiceClass((profile.preferredRoles||[]).includes(role))} onClick={()=>set('preferredRoles',checklist(profile.preferredRoles||[],role,12) as JobRole[])}>{roleName(role,lang)}</button>)}</div>
+    </section>}
    </>}
    {step===3&&<>
     <label className="block font-semibold">{t.nationality}<input maxLength={80} value={profile.nationality} onChange={e=>set('nationality',e.target.value)} className="mt-2 w-full rounded-lg border bg-background p-3" required/></label>
