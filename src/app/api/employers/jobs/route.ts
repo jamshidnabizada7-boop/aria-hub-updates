@@ -54,6 +54,7 @@ export async function POST(request: Request) {
       jobType: body.jobType ? String(body.jobType) : null,
       applyUrl: body.applyUrl ? String(body.applyUrl) : null,
       applyEmail: body.applyEmail ? String(body.applyEmail) : null,
+      applyPhone: body.applyPhone ? String(body.applyPhone) : null,
       categorySlug: body.categorySlug ? String(body.categorySlug) : null,
       // Phase 14 professional fields
       vacancyNumber: body.vacancyNumber != null && body.vacancyNumber !== '' ? String(body.vacancyNumber) : null,
