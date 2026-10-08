@@ -356,7 +356,7 @@ export function rankOpportunity(profile: MatcherProfile, opportunity: MatcherOpp
     unknowns.push('destination');
   }
 
-  if (profile.preferredProvinces?.length && jobRoleRelevant && !anywhere) {
+  if (profile.preferredProvinces?.length && jobRoleRelevant) {
     const explicitProvinces = (opportunity.locations||[]).map(row => normalizeProvince(row.province)).filter((v):v is AfghanProvince=>v!==null);
     if (explicitProvinces.length > 0) {
       if (!explicitProvinces.some(p=>profile.preferredProvinces!.includes(p))) return null;
