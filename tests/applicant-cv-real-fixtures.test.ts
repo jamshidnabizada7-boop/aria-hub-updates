@@ -11,7 +11,7 @@ import {extractCVBytes} from '../src/lib/applicants/cv-local-extraction';
 import {ExtractedCVSchema} from '../src/lib/applicants/cv-extraction-proposals';
 const dir='/tmp/aria-cv-corpus';
 const digest=(bytes:Uint8Array)=>createHash('sha256').update(bytes).digest('hex');
-type Spec={name:string;method:'pdftotext'|'pdf-tesseract'|'docx-xml'|'tesseract';language:'en'|'fa'|'ps';education?:string;skill?:string};
+type Spec={name:string;method:'pdftotext'|'pdf-tesseract'|'docx-xml'|'tesseract';language:'en'|'fa'|'ps';education?:'bachelors';skill?:string};
 const samples:Spec[]=[
  {name:'en-native.pdf',method:'pdftotext',language:'en',education:'bachelors',skill:'Teaching'},
  {name:'en-native.docx',method:'docx-xml',language:'en',education:'bachelors',skill:'Teaching'},
