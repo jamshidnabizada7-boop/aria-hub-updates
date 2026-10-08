@@ -27,7 +27,7 @@ CREATE TABLE "ApplicantNotification" (
   CONSTRAINT "ApplicantNotification_savedSearchId_fkey" FOREIGN KEY ("savedSearchId") REFERENCES "ApplicantSavedSearch"("id") ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT "ApplicantNotification_opportunityId_fkey" FOREIGN KEY ("opportunityId") REFERENCES "Opportunity"("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
-CREATE UNIQUE INDEX "ApplicantNotification_applicantProfileId_savedSearchId_opportunityId_key" ON "ApplicantNotification"("applicantProfileId","savedSearchId","opportunityId");
+CREATE UNIQUE INDEX "ApplicantNotification_applicantProfileId_savedSearchId_oppo_key" ON "ApplicantNotification"("applicantProfileId","savedSearchId","opportunityId");
 CREATE INDEX "ApplicantNotification_applicantProfileId_readAt_createdAt_idx" ON "ApplicantNotification"("applicantProfileId","readAt","createdAt");
 CREATE INDEX "ApplicantNotification_createdAt_idx" ON "ApplicantNotification"("createdAt");
 
