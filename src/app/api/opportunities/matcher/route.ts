@@ -94,6 +94,7 @@ async function fetchCandidates(profile: MatcherProfile) {
     select: {
       id: true,
       slug: true,
+      locations: { select: { country: true, province: true, city: true } },
       title: true,
       titleI18n: true,
       organization: true,
