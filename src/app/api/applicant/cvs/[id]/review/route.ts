@@ -3,7 +3,7 @@ import {applicantEnabled,applicantFromRequest} from '@/lib/applicant-auth';
 import {applicantSameOrigin} from '@/lib/applicant-origin';
 import {ExtractedCVSchema,CVReviewSchema,type CVField} from '@/lib/applicants/cv-extraction-proposals';
 import {NextResponse} from 'next/server';
-import {Prisma} from '@prisma/client';
+import {approveCVReview} from '@/lib/applicants/cv-review-service';
 export const runtime='nodejs';export const dynamic='force-dynamic';
 type Ctx={params:Promise<{id:string}>};
 const answer=(d:object,status=200)=>NextResponse.json(d,{status,headers:{'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});
@@ -34,38 +34,7 @@ export async function POST(req:Request,{params}:Ctx){
   const parsed=CVReviewSchema.safeParse(await req.json().catch(()=>null));
   if(!parsed.success)return answer({error:'invalid_review'},400);
   const review=parsed.data;
-  const outcome=await db.$transaction(async tx=>{
-   // Lock applicant record BEFORE document to serialize concurrent approvals and
-   // prevent overwriting a newer manually-reviewed career profile.
-   const owners=await tx.$queryRaw<Array<{id:string}>>`
-    SELECT "id" FROM "ApplicantProfile" WHERE "id"=${user.id} FOR UPDATE
-   `;
-   if(!owners.length)return 'not_found';
-   const rows=await tx.$queryRaw<Array<{id:string;sha256:string;status:string;reviewedAt:Date|null;extraction:unknown}>>`
-    SELECT "id","sha256","status","reviewedAt","extraction" FROM "ApplicantDocument"
-    WHERE "id"=${id} AND "applicantProfileId"=${user.id} FOR UPDATE
-   `;
-   const doc=rows[0];
-   if(!doc||doc.sha256!==review.sourceSha256||doc.status!=='review'||doc.reviewedAt)return 'stale_review';
-   const p=ExtractedCVSchema.safeParse(doc.extraction);
-   if(!p.success)return 'invalid_extraction';
-   const existing=await tx.applicantProfile.findUnique({where:{id:user.id},select:{verifiedCareerFacts:true}});
-   const previous=existing?.verifiedCareerFacts&&typeof existing.verifiedCareerFacts==='object'&&!Array.isArray(existing.verifiedCareerFacts)
-      ? existing.verifiedCareerFacts as Record<string,unknown> : {};
-   const next:Record<string,unknown>={...previous};
-   let count=0;
-   for(const key of [...new Set(review.acceptedFields)] as CVField[]){
-    const approved=(review.edits as Record<string,unknown>)[key]??(p.data.fields as Record<string,unknown>)[key];
-    if(approved===undefined||approved===null||approved===''||(Array.isArray(approved)&&!approved.length))continue;
-    const current=next[key];
-    if(!review.replaceExisting&&current!==undefined&&current!==null&&current!==''&&(!Array.isArray(current)||current.length))continue;
-    next[key]=approved;count++;
-   }
-   if(count===0)return 'nothing_to_save';
-   await tx.applicantProfile.update({where:{id:user.id},data:{verifiedCareerFacts:next as unknown as Prisma.InputJsonObject}});
-   await tx.applicantDocument.update({where:{id:doc.id},data:{reviewedAt:new Date()}});
-   return 'saved';
-  });
+  const outcome=await approveCVReview(db,user.id,id,review);
   if(outcome==='saved')return answer({success:true,provenance:'USER_VERIFIED',applicationsSubmitted:false});
   return answer({error:outcome},outcome==='nothing_to_save'?409:409);
  }catch{return answer({error:'request_failed'},500);}
