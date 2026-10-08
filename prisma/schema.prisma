@@ -1192,6 +1192,8 @@ model ApplicantProfile {
   residence        String?
   preferredLocale  String   @default("fa")
   documents        ApplicantDocument[]
+  savedSearches     ApplicantSavedSearch[]
+  verifiedCareerFacts Json?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }
@@ -1215,6 +1217,21 @@ model ApplicantDocument {
 
   @@index([applicantProfileId, createdAt])
   @@index([status, createdAt])
+}
+
+// Applicant-owned Matcher preferences. Saving is NOT a notification subscription;
+// notification delivery requires a later consented notification worker.
+model ApplicantSavedSearch {
+  id String @id @default(cuid())
+  applicantProfileId String
+  applicantProfile ApplicantProfile @relation(fields: [applicantProfileId], references: [id], onDelete: Cascade)
+  name String
+  profile Json
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([applicantProfileId, updatedAt])
 }
 
 model OrganizationMember {
