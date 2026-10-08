@@ -1,3 +1,4 @@
+import { applicationPhoneUrl } from './application-phone';
 /**
  * Employer job management (Phase 13) — every mutation passes through
  * requireMembership, so a recruiter from organization A can NEVER touch
@@ -23,6 +24,7 @@ export interface EmployerJobInput {
   jobType?: string | null;
   applyUrl?: string | null;
   applyEmail?: string | null;
+  applyPhone?: string | null;
   categorySlug?: string | null;
   // Phase 14 professional fields (all optional)
   vacancyNumber?: string | null;
@@ -95,8 +97,10 @@ export async function createJob(db: JobsDb, userId: string, organizationId: stri
   const description = String(input.description ?? '').trim();
   if (title.length < 5 || title.length > 200) throw new Error('Title must be 5-200 characters.');
   if (description.length < 80) throw new Error('Description must be at least 80 characters.');
-  const applyUrl = input.applyEmail ? `mailto:${String(input.applyEmail).trim()}` : (input.applyUrl ?? null);
-  if (!applyUrl) throw new Error('Provide an application URL or email.');
+  const phone = input.applyPhone ? applicationPhoneUrl(input.applyPhone) : null;
+  if (input.applyPhone && !phone) throw new Error('Invalid international application phone number.');
+  const applyUrl = input.applyEmail ? `mailto:${String(input.applyEmail).trim()}` : (input.applyUrl?.trim() || phone);
+  if (!applyUrl) throw new Error('Provide an application URL, email, or phone number.');
 
   const category = input.categorySlug
     ? await db.opportunityCategory.findUnique({ where: { slug: input.categorySlug } })
@@ -124,7 +128,7 @@ export async function createJob(db: JobsDb, userId: string, organizationId: stri
       salary: input.salary || null,
       jobType: input.jobType || 'full-time',
       applyUrl,
-      applyUrlType: applyUrl.startsWith('mailto:') ? 'application_email' : 'direct_application',
+      applyUrlType: applyUrl.startsWith('mailto:') ? 'application_email' : applyUrl.startsWith('tel:') ? 'application_phone' : 'direct_application',
       categoryId: category?.id ?? null,
       language: 'en',
       extractedData: profExtracted as unknown as Prisma.InputJsonValue,
