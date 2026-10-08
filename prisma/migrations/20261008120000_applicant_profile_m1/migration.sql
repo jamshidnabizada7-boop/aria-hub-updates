@@ -13,7 +13,15 @@ CREATE UNIQUE INDEX "ApplicantProfile_userId_key" ON "ApplicantProfile"("userId"
 ALTER TABLE "ApplicantProfile" ADD CONSTRAINT "ApplicantProfile_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 -- RLS defense-in-depth: server-only Prisma app accesses via its designated DB role.
 ALTER TABLE "ApplicantProfile" ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON TABLE "ApplicantProfile" FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON TABLE "ApplicantProfile" FROM PUBLIC;
+DO $ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+    EXECUTE 'REVOKE ALL ON TABLE "ApplicantProfile" FROM anon';
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+    EXECUTE 'REVOKE ALL ON TABLE "ApplicantProfile" FROM authenticated';
+  END IF;
+END $;
 
 -- Restrict direct Data API access: applicant profile CRUD is mediated by
 -- authenticated Next.js endpoints, not end-user Supabase JWT claims.
