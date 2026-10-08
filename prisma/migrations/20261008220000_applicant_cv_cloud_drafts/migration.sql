@@ -15,3 +15,15 @@ CREATE INDEX "ApplicantCVDraft_applicantProfileId_updatedAt_idx" ON "ApplicantCV
 ALTER TABLE "ApplicantCVDraft" ADD CONSTRAINT "ApplicantCVDraft_applicantProfileId_fkey"
  FOREIGN KEY ("applicantProfileId") REFERENCES "ApplicantProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "ApplicantCVDraft" ADD CONSTRAINT "ApplicantCVDraft_revision_positive" CHECK ("revision">0);
+
+-- Never grant client-side Supabase roles access to encrypted applicant drafts.
+ALTER TABLE "ApplicantCVDraft" ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE "ApplicantCVDraft" FROM PUBLIC;
+DO $$ BEGIN
+ IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='anon') THEN
+  EXECUTE 'REVOKE ALL ON TABLE "ApplicantCVDraft" FROM anon';
+ END IF;
+ IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='authenticated') THEN
+  EXECUTE 'REVOKE ALL ON TABLE "ApplicantCVDraft" FROM authenticated';
+ END IF;
+END $$;
