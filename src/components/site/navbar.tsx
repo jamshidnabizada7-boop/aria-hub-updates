@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Search, ChevronDown, Sun, Moon, Globe, ChevronRight } from 'lucide-react';
+import { Menu, X, Search, ChevronDown, Sun, Moon, Globe, ChevronRight, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import {
@@ -370,6 +370,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
                 <Moon className="block h-4 w-4 dark:hidden" />
               </Button>
 
+              {applicantSignedIn && <a href={hrefFn('/portal/notifications')} aria-label={code==='fa'?'اطلاع‌رسانی‌ها':code==='ps'?'خبرتیاوې':'Notifications'} className="hidden items-center rounded-xl border border-border px-3 py-2 text-sm font-semibold md:inline-flex"><Bell className="h-4 w-4" /></a>}
               <a href={hrefFn(applicantSignedIn ? '/portal' : '/login')} className="hidden rounded-xl border border-border px-3 py-2 text-sm font-semibold md:inline-flex">
                 {applicantSignedIn ? (code==='fa'?'داشبورد من':code==='ps'?'زما ډشبورډ':'My Dashboard') : (code==='fa'?'ورود':code==='ps'?'ننوتل':'Log In')}
               </a>
@@ -402,6 +403,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
                     ))}
                   </nav>
                   <div className="p-4 space-y-3">
+                    {applicantSignedIn && <a href={hrefFn('/portal/notifications')} onClick={() => setMobileOpen(false)} className="flex items-center justify-center gap-2 rounded-xl border p-3 text-center text-sm font-semibold"><Bell className="h-4 w-4"/>{code==='fa'?'اطلاع‌رسانی‌های من':code==='ps'?'زما خبرتیاوې':'My Notifications'}</a>}
                     <a href={hrefFn(applicantSignedIn ? '/portal' : '/login')} onClick={() => setMobileOpen(false)} className="block rounded-xl border p-3 text-center text-sm font-semibold">{applicantSignedIn ? (code==='fa'?'داشبورد من':code==='ps'?'زما ډشبورډ':'My Dashboard') : (code==='fa'?'ورود':code==='ps'?'ننوتل':'Log In')}</a>
                     <Button asChild className="min-h-[44px] w-full rounded-xl bg-gradient-to-r from-primary to-chart-2">
                       <a href={hrefFn('/get-started')} onClick={() => setMobileOpen(false)}>{t('nav.getStarted')}</a>
