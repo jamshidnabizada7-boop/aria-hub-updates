@@ -2,7 +2,10 @@
 CREATE TABLE "ApplicantApplication" (
  "id" TEXT NOT NULL,
  "applicantProfileId" TEXT NOT NULL,
- "opportunityId" TEXT NOT NULL,
+ "opportunityId" TEXT,
+ "opportunitySlug" TEXT NOT NULL,
+ "opportunityTitle" TEXT NOT NULL,
+ "opportunityOrganization" TEXT,
  "status" TEXT NOT NULL DEFAULT 'saved',
  "notes" VARCHAR(2000),
  "nextActionAt" TIMESTAMP(3),
@@ -11,10 +14,10 @@ CREATE TABLE "ApplicantApplication" (
  "updatedAt" TIMESTAMP(3) NOT NULL,
  CONSTRAINT "ApplicantApplication_pkey" PRIMARY KEY ("id"),
  CONSTRAINT "ApplicantApplication_applicantProfileId_fkey" FOREIGN KEY ("applicantProfileId") REFERENCES "ApplicantProfile"("id") ON DELETE CASCADE ON UPDATE CASCADE,
- CONSTRAINT "ApplicantApplication_opportunityId_fkey" FOREIGN KEY ("opportunityId") REFERENCES "Opportunity"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+ CONSTRAINT "ApplicantApplication_opportunityId_fkey" FOREIGN KEY ("opportunityId") REFERENCES "Opportunity"("id") ON DELETE SET NULL ON UPDATE CASCADE,
  CONSTRAINT "ApplicantApplication_status_check" CHECK ("status" IN ('saved','preparing','applied','interview','offer','rejected','withdrawn'))
 );
-CREATE UNIQUE INDEX "ApplicantApplication_applicantProfileId_opportunityId_key" ON "ApplicantApplication"("applicantProfileId","opportunityId");
+CREATE UNIQUE INDEX "ApplicantApplication_applicantProfileId_opportunitySlug_key" ON "ApplicantApplication"("applicantProfileId","opportunitySlug");
 CREATE INDEX "ApplicantApplication_applicantProfileId_updatedAt_idx" ON "ApplicantApplication"("applicantProfileId","updatedAt");
 CREATE INDEX "ApplicantApplication_status_nextActionAt_idx" ON "ApplicantApplication"("status","nextActionAt");
 ALTER TABLE "ApplicantApplication" ENABLE ROW LEVEL SECURITY;
