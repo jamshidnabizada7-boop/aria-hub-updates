@@ -2,12 +2,12 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { applicantEnabled, applicantFromRequest } from '@/lib/applicant-auth';
 import { applicantSameOrigin } from '@/lib/applicant-origin';
-import { send } from '../saved-searches/route';
+import {sendSavedSearch as send} from '@/lib/applicants/saved-search-service';
 import { JOB_ROLE_IDS, type JobRole } from '@/lib/job-role-taxonomy';
 import { EDUCATION_LEVELS, FIELD_AREAS } from '@/lib/opportunity-matcher';
 export const runtime='nodejs';export const dynamic='force-dynamic';
 // Only user-reviewed facts; no PDF/image inference or automatic overwrite.
-export const CareerFacts=z.object({
+const CareerFacts=z.object({
   education:z.enum(EDUCATION_LEVELS).optional(),
   fieldArea:z.enum(FIELD_AREAS).optional(),
   experienceYears:z.number().int().min(0).max(50).optional(),
