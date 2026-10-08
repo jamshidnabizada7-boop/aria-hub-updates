@@ -1,3 +1,4 @@
+import { AF_PROVINCES, normalizeProvince, type AfghanProvince } from '@/lib/geo/provinces';
 import { JOB_ROLE_IDS, roleMatchesPreference } from '@/lib/job-role-taxonomy';
 import type { JobRole } from '@/lib/job-role-taxonomy';
 import { z } from 'zod';
@@ -53,6 +54,7 @@ export const MatcherProfileSchema = z.object({
   fieldArea: z.enum(FIELD_AREAS).default('any'),
   experienceYears: z.number().int().min(0).max(50).optional(),
   preferredRoles: z.array(z.enum(JOB_ROLE_IDS as [JobRole, ...JobRole[]])).max(12).optional(),
+  preferredProvinces: z.array(z.enum(AF_PROVINCES)).max(34).optional(),
   skills: z.array(z.string().trim().min(2).max(60)).max(25).optional(),
   desiredWorkMode: z.enum(['any', 'on_site', 'remote', 'hybrid']).optional(),
   explainWithAi: z.boolean().optional(),
@@ -88,6 +90,7 @@ export interface MatcherOpportunity {
   categorySlug: string | null;
   categoryName: string | null;
   jobType: string | null;
+  locations?: { country?: string | null; province?: string | null; city?: string | null }[];
   educationReq: string | null;
   experience: string | null;
   eligibility: string | null;
@@ -351,6 +354,14 @@ export function rankOpportunity(profile: MatcherProfile, opportunity: MatcherOpp
     reasons.push('destination');
   } else if (!anywhere && !destinationMatch) {
     unknowns.push('destination');
+  }
+
+  if (profile.preferredProvinces?.length && jobRoleRelevant && !anywhere) {
+    const explicitProvinces = (opportunity.locations||[]).map(row => normalizeProvince(row.province)).filter((v):v is AfghanProvince=>v!==null);
+    if (explicitProvinces.length > 0) {
+      if (!explicitProvinces.some(p=>profile.preferredProvinces!.includes(p))) return null;
+      score += 10; reasons.push('province');
+    } else unknowns.push('province');
   }
 
   const eligibilityText = normalize(
