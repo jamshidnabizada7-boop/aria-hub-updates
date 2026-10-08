@@ -26,10 +26,13 @@ export async function claimCVDeletion(db:PrismaClient,userId:string,id:string){
   const profile=await tx.applicantProfile.findUnique({where:{userId},select:{id:true}});
   if(!profile)return null;
   await tx.$queryRawUnsafe('SELECT "id" FROM "ApplicantProfile" WHERE "id"=$1 FOR UPDATE',profile.id);
-  const rows=await tx.$queryRawUnsafe<Array<{id:string;storageKey:string;status:string}>>(
-    'SELECT "id","storageKey","status" FROM "ApplicantDocument" WHERE "id"=$1 AND "applicantProfileId"=$2 FOR UPDATE',id,profile.id);
+  const rows=await tx.$queryRawUnsafe<Array<{id:string;storageKey:string;status:string;updatedAt:Date}>>(
+    'SELECT "id","storageKey","status","updatedAt" FROM "ApplicantDocument" WHERE "id"=$1 AND "applicantProfileId"=$2 FOR UPDATE',id,profile.id);
   const doc=rows[0];if(!doc)return null;
-  if(doc.status==='storing')throw new CVLifecycleError('document_busy');
+  // A crashed uploader can leave a reservation. Fresh uploads are protected;
+  // the owner can clean up a stale reservation after the upload timeout.
+  if(doc.status==='storing'&&Date.now()-doc.updatedAt.getTime()<10*60_000)
+   throw new CVLifecycleError('document_busy');
   if(doc.status!=='deleting')await tx.applicantDocument.update({where:{id:doc.id},data:{status:'deleting',processingClaimedAt:null}});
   return {id:doc.id,storageKey:doc.storageKey,applicantProfileId:profile.id};
  });
