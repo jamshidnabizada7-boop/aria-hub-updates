@@ -289,7 +289,7 @@ function ExtendButton({ busy, onExtend }: { busy: boolean; onExtend: (date: stri
 function PostJobForm({ busy, onSubmit }: { busy: boolean; onSubmit: (form: Record<string, string>) => void }) {
   const [form, setForm] = useState({
     title: '', description: '', location: '', salary: '', jobType: 'full-time',
-    deadline: '', applyUrl: '', applyEmail: '',
+    deadline: '', applyUrl: '', applyEmail: '', applyPhone: '',
     vacancyNumber: '', numberOfVacancies: '', province: '', city: '', district: '',
     contractType: '', contractDuration: '', genderRequirement: '', nationalityRequirement: '',
     salaryGrade: '', education: '', experience: '', responsibilities: '', requirements: '',
@@ -297,7 +297,7 @@ function PostJobForm({ busy, onSubmit }: { busy: boolean; onSubmit: (form: Recor
   });
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm({ ...form, [k]: e.target.value });
-  const valid = form.title.length >= 5 && form.description.length >= 80 && (form.applyUrl || form.applyEmail);
+  const valid = form.title.length >= 5 && form.description.length >= 80 && (form.applyUrl || form.applyEmail || form.applyPhone);
 
   return (
     <div className="space-y-3 rounded-lg border bg-card p-4">
@@ -316,6 +316,8 @@ function PostJobForm({ busy, onSubmit }: { busy: boolean; onSubmit: (form: Recor
         <Input type="date" value={form.deadline} onChange={set('deadline')} />
         <Input placeholder="Application URL (https://…)" value={form.applyUrl} onChange={set('applyUrl')} />
         <Input placeholder="…or application email" value={form.applyEmail} onChange={set('applyEmail')} />
+        <Input type="tel" dir="ltr" placeholder="…or application phone (+93700123456)" value={form.applyPhone} onChange={set('applyPhone')} />
+        <p className="text-xs text-muted-foreground md:col-span-2">If approved, the application phone number is shown publicly on the job listing.</p>
       </div>
 
       <details className="rounded-md border bg-background/50 p-3">
