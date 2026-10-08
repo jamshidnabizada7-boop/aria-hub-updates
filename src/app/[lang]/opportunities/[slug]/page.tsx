@@ -91,6 +91,7 @@ interface ApplyInfo {
   primaryHref: string | null;
   primaryLabelKey: string;
   isMailto: boolean;
+  isPhone: boolean;
   /** Email address behind a mailto: apply URL. */
   email: string | null;
 }
@@ -101,6 +102,7 @@ function getApplyInfo(opp: OpportunityDetail): ApplyInfo {
   // article as an Apply destination after an admin edits the URL.
   const urlType = classifyApplyUrl(applyUrl, opp.sourceUrl, opp.originalUrl);
   const isMailto = !!applyUrl?.toLowerCase().startsWith('mailto:');
+  const isPhone = !!applyUrl?.toLowerCase().startsWith('tel:');
   const isHttp = !!applyUrl && /^https?:\/\//i.test(applyUrl);
 
   let primaryLabelKey = 'detail.applyNow';
@@ -114,7 +116,7 @@ function getApplyInfo(opp: OpportunityDetail): ApplyInfo {
   // listing was scraped from. Fallback-only links render as guidance instead.
   const primaryHref = isRealApplyLink(urlType) ? applyUrl : null;
 
-  return { primaryHref, primaryLabelKey, isMailto, email };
+  return { primaryHref, primaryLabelKey, isMailto, isPhone, email };
 }
 
 /**
@@ -842,10 +844,10 @@ export default async function OpportunityDetailPage({
         <div className="mx-auto flex max-w-3xl items-center gap-2">
           {apply.primaryHref ? (
             <Button asChild className="h-11 flex-1 rounded-xl bg-gradient-to-r from-primary to-chart-2 font-bold shadow-float transition-opacity hover:opacity-90">
-              <a href={apply.primaryHref} target="_blank" rel="noopener noreferrer">
+              <a href={apply.primaryHref} target={apply.isPhone ? undefined : '_blank'} rel={apply.isPhone ? undefined : 'noopener noreferrer'}>
                 {apply.isMailto ? <Mail className="me-1.5 h-4 w-4" aria-hidden="true" /> : null}
-                {t(apply.primaryLabelKey)}
-                {!apply.isMailto && <ArrowUpRight className="ms-1.5 h-4 w-4 rtl-flip" aria-hidden="true" />}
+                {apply.isPhone ? (lang === 'fa' ? 'تماس با کارفرما' : lang === 'ps' ? 'له کار ورکوونکي سره اړیکه' : 'Call employer') : t(apply.primaryLabelKey)}
+                {!apply.isMailto && !apply.isPhone && <ArrowUpRight className="ms-1.5 h-4 w-4 rtl-flip" aria-hidden="true" />}
               </a>
             </Button>
           ) : null}
@@ -893,10 +895,10 @@ function ApplyCard({
     <Card className={cn('border-primary/25 bg-gradient-to-br from-primary/[0.08] via-card to-chart-2/[0.06] p-4 shadow-sm', className)}>
       <div className="flex flex-col gap-3">
         <Button asChild size="lg" className="h-12 w-full rounded-xl bg-gradient-to-r from-primary to-chart-2 text-base font-bold shadow-float transition-opacity hover:opacity-90">
-          <a href={apply.primaryHref} target="_blank" rel="noopener noreferrer">
+          <a href={apply.primaryHref} target={apply.isPhone ? undefined : '_blank'} rel={apply.isPhone ? undefined : 'noopener noreferrer'}>
             {apply.isMailto ? <Mail className="me-1.5 h-4 w-4" aria-hidden="true" /> : null}
-            {t(apply.primaryLabelKey)}
-            {!apply.isMailto && <ArrowUpRight className="ms-1.5 h-4 w-4 rtl-flip" aria-hidden="true" />}
+            {apply.isPhone ? (lang === 'fa' ? 'تماس با کارفرما' : lang === 'ps' ? 'له کار ورکوونکي سره اړیکه' : 'Call employer') : t(apply.primaryLabelKey)}
+            {!apply.isMailto && !apply.isPhone && <ArrowUpRight className="ms-1.5 h-4 w-4 rtl-flip" aria-hidden="true" />}
           </a>
         </Button>
 
