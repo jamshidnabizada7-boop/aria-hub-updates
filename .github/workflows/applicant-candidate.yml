@@ -68,6 +68,8 @@ jobs:
           bun --conditions=react-server test tests/applicant-cv-cloud-http.test.ts
       - name: Employer job application methods and unsafe URL regression
         run: bun test tests/employer-application-methods-m7.test.ts
+      - name: Exercise authenticated email transport through isolated loopback SMTP
+        run: bun test tests/applicant-smtp-loopback.test.ts
       - name: Isolated push and WhatsApp consent + mocked provider tests
         run: bun --conditions=react-server test tests/applicant-channels-m6.test.ts
       - name: Install isolated CV OCR corpus dependencies
