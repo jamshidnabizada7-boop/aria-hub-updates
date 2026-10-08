@@ -49,25 +49,6 @@ jobs:
           bun-version: latest
       - name: Install frozen dependencies
         run: bun install --frozen-lockfile
-      # Candidate-only lockfile remediation. Download and commit the validated
-      # lockfile; remove this temporary generator once frozen CI is green.
-      - name: Generate security-patched dependency lock proposal
-        run: |
-          bun audit fix || test "$?" -eq 1
-          # Report the remaining unpatched advisory; strict CI still enforces it.
-          bun audit --audit-level high || true
-          echo ARIA_AUDIT_PATCH_BEGIN
-          git diff --no-ext-diff -- bun.lock package.json
-          echo ARIA_AUDIT_PATCH_END
-      - name: Archive audited package and lockfile proposal
-        uses: actions/upload-artifact@v4
-        with:
-          name: audited-dependencies-${{ github.sha }}
-          path: |
-            bun.lock
-            package.json
-          if-no-files-found: error
-          retention-days: 2
       - name: Validate Prisma and generate
         run: |
           bunx prisma validate
@@ -85,6 +66,8 @@ jobs:
         run: |
           bun --conditions=react-server test tests/applicant-cv-security-sync-journey.test.ts
           bun --conditions=react-server test tests/applicant-cv-cloud-http.test.ts
+      - name: Isolated push and WhatsApp consent + mocked provider tests
+        run: bun --conditions=react-server test tests/applicant-channels-m6.test.ts
       - name: Install isolated CV OCR corpus dependencies
         run: |
           sudo apt-get update -qq
@@ -107,3 +90,25 @@ jobs:
         run: |
           export ADMIN_SESSION_SECRET="$(openssl rand -hex 32)"
           bun run build
+      - name: Chromium mobile viewport and EN/FA/PS RTL acceptance (loopback only)
+        timeout-minutes: 12
+        run: |
+          bunx playwright-core install --with-deps chromium
+          export ADMIN_SESSION_SECRET="$(openssl rand -hex 32)"
+          PORT=3104 HOSTNAME=127.0.0.1 APPLICANT_AUTH_ENABLED=true APPLICANT_MATCHER_V3_ENABLED=true APPLICANT_NOTIFICATIONS_ENABLED=true bun .next/standalone/server.js >/tmp/aria-browser-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 50); do
+            if curl -fsS -o /dev/null http://127.0.0.1:3104/en/get-started; then break; fi
+            sleep 2
+          done
+          curl -fsS -o /dev/null http://127.0.0.1:3104/en/get-started
+          bun --conditions=react-server scripts/tests/applicant-browser-acceptance.ts
+      - name: Upload anonymized browser acceptance screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aria-candidate-rtl-browser-${{ github.sha }}
+          path: /tmp/aria-browser-snapshots/*.png
+          if-no-files-found: ignore
+          retention-days: 3

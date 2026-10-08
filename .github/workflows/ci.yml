@@ -37,9 +37,6 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Dependency security audit
-        run: bun audit --audit-level high
-
       - name: Prisma schema validation + client generation
         run: |
           bunx prisma validate
@@ -67,3 +64,9 @@ jobs:
         run: |
           export ADMIN_SESSION_SECRET="$(openssl rand -hex 32)"
           bun run build
+
+      # Keep the strict unpatched advisory gate red until an upstream fix is
+      # published. Other tests must run first so their failures are visible.
+      - name: Dependency security audit
+        run: bun audit --audit-level high
+
