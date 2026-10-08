@@ -68,7 +68,7 @@ set -e
 PREV=$(readlink -f /opt/aria-hub/current 2>/dev/null || true)
 echo "previous release: ${PREV:-none}"
 sudo -u ariahub ln -sfn "$REL" /opt/aria-hub/current.new
-mv -Tf /opt/aria-hub/current.new /opt/aria-hub/current
+sudo -u ariahub mv -Tf /opt/aria-hub/current.new /opt/aria-hub/current
 sudo systemctl restart aria-hub-web
 sleep 8
 if curl -sf --max-time 10 http://127.0.0.1:3000/api/health | grep -q '"ok":true'; then
@@ -77,7 +77,7 @@ else
   echo "HEALTH CHECK FAILED — rolling back"
   if [ -n "$PREV" ] && [ -d "$PREV" ]; then
     sudo -u ariahub ln -sfn "$PREV" /opt/aria-hub/current.new
-mv -Tf /opt/aria-hub/current.new /opt/aria-hub/current
+    sudo -u ariahub mv -Tf /opt/aria-hub/current.new /opt/aria-hub/current
     sudo systemctl restart aria-hub-web
     sleep 8
     curl -sf --max-time 10 http://127.0.0.1:3000/api/health && echo "ROLLBACK_OK" || echo "ROLLBACK ALSO UNHEALTHY — INVESTIGATE"
