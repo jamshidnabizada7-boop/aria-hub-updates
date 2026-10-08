@@ -19,6 +19,7 @@ CREATE TABLE "ApplicantWhatsAppContact" (
  "id" TEXT NOT NULL PRIMARY KEY, "applicantProfileId" TEXT NOT NULL,
  "phoneHash" TEXT NOT NULL, "encryptedNumber" TEXT NOT NULL,
  "verifyHash" TEXT, "verifyExpiresAt" TIMESTAMP(3),
+ "verifyAttempts" INTEGER NOT NULL DEFAULT 0,
  "verifiedAt" TIMESTAMP(3), "consentedAt" TIMESTAMP(3),
  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
  "updatedAt" TIMESTAMP(3) NOT NULL,

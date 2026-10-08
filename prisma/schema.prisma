@@ -2008,6 +2008,7 @@ model ApplicantWhatsAppContact {
   encryptedNumber    String @db.Text
   verifyHash         String?
   verifyExpiresAt    DateTime?
+  verifyAttempts     Int @default(0)
   verifiedAt         DateTime?
   consentedAt        DateTime?
   createdAt          DateTime @default(now())

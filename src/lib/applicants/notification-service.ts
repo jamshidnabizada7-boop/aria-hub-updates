@@ -6,11 +6,13 @@ import { applicantEnabled, applicantFromRequest } from '@/lib/applicant-auth';
 export const NotificationPrefsSchema=z.object({
   inAppEnabled:z.boolean(),
   emailEnabled:z.boolean(),
+  pushEnabled:z.boolean().optional().default(false),
+  whatsappEnabled:z.boolean().optional().default(false),
   emailFrequency:z.enum(['daily','weekly']),
 }).strict();
 export type NotificationPrefs=z.infer<typeof NotificationPrefsSchema>;
 export const defaultNotificationPrefs:NotificationPrefs={
-  inAppEnabled:false,emailEnabled:false,emailFrequency:'daily'
+  inAppEnabled:false,emailEnabled:false,pushEnabled:false,whatsappEnabled:false,emailFrequency:'daily'
 };
 export function notificationsEnabled():boolean {
   return applicantEnabled() && process.env.APPLICANT_MATCHER_V3_ENABLED==='true' && process.env.APPLICANT_NOTIFICATIONS_ENABLED==='true';
