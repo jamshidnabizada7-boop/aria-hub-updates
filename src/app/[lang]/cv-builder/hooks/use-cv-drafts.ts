@@ -133,5 +133,13 @@ export function useCVDrafts(initial: InitialContext) {
     });
   }, [activeDraftId, initial.outputLang, initial.paperSize, initial.purpose, initial.source, initial.template]);
 
-  return { drafts, activeDraft, activeDraftId, status, updateActive, createNewDraft, duplicateActive, switchDraft, removeDraft };
+  // Only invoked by an explicit user click to import a private cloud version.
+  // Guest/local draft persistence remains the default.
+  const importCloudDraft=useCallback((raw:CVDraft)=>{
+    const draft=normalizeDraft(raw);if(!draft)return false;
+    setDrafts(current=>[draft,...current.filter(x=>x.id!==draft.id)]);
+    setActiveDraftId(draft.id);writeActiveDraftId(draft.id);
+    return true;
+  },[]);
+  return { drafts, activeDraft, activeDraftId, status, updateActive, createNewDraft, duplicateActive, switchDraft, removeDraft, importCloudDraft };
 }

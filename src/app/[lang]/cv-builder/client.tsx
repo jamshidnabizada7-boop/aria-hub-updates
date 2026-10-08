@@ -10,6 +10,7 @@ import { CVPreview } from './components/CVPreview';
 import { ExportModal } from './components/ExportModal';
 import { TemplateGallery } from './components/TemplateGallery';
 import { useCVDrafts } from './hooks/use-cv-drafts';
+import { CloudCVSync } from './components/CloudCVSync';
 import { displayDraftName } from './lib/cv-utils';
 import { validateDraft } from './lib/cv-validation';
 import { CV_TEMPLATE_BY_ID } from './lib/cv-templates';
@@ -38,7 +39,7 @@ function cleanFilename(value:string){
 
 export function CVBuilderClient({ initialLang, initialPurpose='professional', initialTemplatesOpen=false, config, source }:Props){
   const initialTemplate=config.defaultTemplates[initialPurpose];
-  const {drafts,activeDraft,status,updateActive,createNewDraft,duplicateActive,switchDraft,removeDraft}=useCVDrafts({
+  const {drafts,activeDraft,status,updateActive,createNewDraft,duplicateActive,switchDraft,removeDraft,importCloudDraft}=useCVDrafts({
     purpose:initialPurpose,outputLang:initialLang,source,template:initialTemplate,paperSize:config.defaultPaperSize,
   });
   const { toast }=useToast();
@@ -236,9 +237,11 @@ export function CVBuilderClient({ initialLang, initialPurpose='professional', in
       </div>
 
       <div className="mt-5 flex flex-wrap justify-between gap-3 rounded-2xl border bg-card p-4">
-        <div className="text-sm text-muted-foreground">{config.features.pdfDownload ? cvText(initialLang,'Drafts are saved locally in your browser. PDF generation sends the validated draft only to the ARIA HUB renderer and does not store it.') : cvText(initialLang,'Draft data is stored locally in your browser. Cloud sync is not enabled until ARIA HUB has end-user authentication wired to these drafts.')}</div>
+        <div className="text-sm text-muted-foreground">{config.features.pdfDownload ? cvText(initialLang,'Drafts save locally. Account cloud synchronization is optional and must be enabled explicitly. PDF rendering does not store your CV.') : cvText(initialLang,'CV drafts save locally. Cloud sync requires applicant authentication, encryption setup and your opt-in.')}</div>
         <Button type="button" variant="destructive" onClick={()=>removeDraft(activeDraft.id)} disabled={drafts.length===1&&!activeDraft.data.personal.fullName}><Trash2 className="size-4" />{cvText(initialLang,'Delete this CV')}</Button>
       </div>
+
+      <CloudCVSync lang={initialLang} activeDraft={activeDraft} onImport={importCloudDraft} />
 
       <TemplateGallery
         open={templatesOpen}
