@@ -79,7 +79,7 @@ export function ApplicantChannels({lang,pushConsent,onChange}:{lang:Lang;pushCon
      {!pending?<><label className="block text-sm">{t.phone}
       <input type="tel" autoComplete="tel" dir="ltr" className="mt-1 w-full rounded-lg border bg-background p-2" placeholder="+93700123456"
        value={phone} onChange={e=>setPhone(e.target.value)} maxLength={16}/></label>
-      <label className="flex gap-2 text-xs"><input type="checkbox" checked={false} readOnly className="hidden" aria-hidden="true"/>By requesting a code, I consent to receiving a single verification template on this number.</label>
+      <p className="text-xs text-muted-foreground">By requesting a code, I consent to receiving a verification message on this number.</p>
       <button type="button" className="rounded-lg border px-3 py-2" disabled={busy||!/^\+[1-9]\d{7,14}$/.test(phone)} onClick={()=>void whatsApp('request')}>{t.request}</button></>:
      <><label className="block text-sm">{t.code}<input dir="ltr" inputMode="numeric" autoComplete="one-time-code" value={code} maxLength={6} onChange={e=>setCode(e.target.value)} className="mt-1 w-full rounded-lg border bg-background p-2"/></label>
       <button type="button" className="rounded-lg border px-3 py-2" disabled={busy||!/^\d{6}$/.test(code)} onClick={()=>void whatsApp('confirm')}>{t.confirm}</button></>}

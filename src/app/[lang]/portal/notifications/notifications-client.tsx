@@ -1,8 +1,9 @@
 'use client';
 import {useCallback,useEffect,useState} from 'react';
 import Link from 'next/link';
+import {ApplicantChannels} from './applicant-channels';
 type Lang='en'|'fa'|'ps';
-type Preference={inAppEnabled:boolean,emailEnabled:boolean,emailFrequency:'daily'|'weekly'};
+type Preference={inAppEnabled:boolean,emailEnabled:boolean,pushEnabled:boolean,whatsappEnabled:boolean,emailFrequency:'daily'|'weekly'};
 type Notification={id:string;createdAt:string;readAt:string|null;searchName:string;slug:string;title:string;titleI18n:Record<string,string>|null;organization:string|null;available:boolean};
 const strings={
  en:{title:'My notifications',intro:'Control when ARIA HUB tells you about strong matches from your saved searches. Alerts are not eligibility guarantees.',inApp:'Notify me in my portal',email:'Send matching opportunities to my verified email',freq:'Email frequency',daily:'Daily digest',weekly:'Weekly digest',save:'Save my choices',enable:'You must choose which alerts you want. Nothing is enabled automatically.',inbox:'Recent matches',unread:'unread',markAll:'Mark all read',open:'View opportunity',unavailable:'This opportunity is no longer open',empty:'No matches yet. Set up an Advanced Matcher search, then enable notifications here.',saved:'Preferences saved',error:'Unable to load or save notifications',load:'Load more',delete:'Clear unread',search:'Saved search',back:'Advanced Matcher',later:'Mobile push and WhatsApp are not enabled. They require a separate opt-in and provider setup.'},
@@ -11,7 +12,7 @@ const strings={
 } as const;
 export function ApplicantNotifications({lang}:{lang:Lang}){
  const t=strings[lang];
- const [prefs,setPrefs]=useState<Preference>({inAppEnabled:false,emailEnabled:false,emailFrequency:'daily'});
+ const [prefs,setPrefs]=useState<Preference>({inAppEnabled:false,emailEnabled:false,pushEnabled:false,whatsappEnabled:false,emailFrequency:'daily'});
  const [emailVerified,setEmailVerified]=useState(false);
  const [items,setItems]=useState<Notification[]>([]),[unread,setUnread]=useState(0),[next,setNext]=useState<string|null>(null),[busy,setBusy]=useState(false),[status,setStatus]=useState(''),[loading,setLoading]=useState(true);
  const refresh=useCallback(async()=>{
@@ -30,9 +31,12 @@ export function ApplicantNotifications({lang}:{lang:Lang}){
   <section className="my-8 rounded-xl border bg-card p-5"><h2 className="text-xl font-semibold">{t.enable}</h2>
    <label className="mt-5 flex items-center gap-3"><input type="checkbox" checked={prefs.inAppEnabled} onChange={e=>setPrefs(p=>({...p,inAppEnabled:e.target.checked}))} />{t.inApp}</label>
    <label className="mt-4 flex items-center gap-3"><input type="checkbox" checked={prefs.emailEnabled} disabled={!emailVerified} onChange={e=>setPrefs(p=>({...p,emailEnabled:e.target.checked}))} />{t.email}</label>
+   <label className="mt-4 flex items-center gap-3"><input type="checkbox" checked={prefs.pushEnabled} onChange={e=>setPrefs(p=>({...p,pushEnabled:e.target.checked}))}/>
+    {lang==='en'?'Allow device push alerts for strong matches':lang==='fa'?'اجازه اعلان در دستگاه برای فرصت‌های مناسب':'په وسیله کې د مناسب فرصت خبرتیا اجازه'}</label>
    <label className="mt-4 block text-sm font-semibold">{t.freq}<select className={'mt-2 ms-2 '+input} value={prefs.emailFrequency} disabled={!prefs.emailEnabled} onChange={e=>setPrefs(p=>({...p,emailFrequency:e.target.value as Preference['emailFrequency']}))}><option value="daily">{t.daily}</option><option value="weekly">{t.weekly}</option></select></label>
    <button className="mt-5 rounded-lg bg-primary px-5 py-3 text-primary-foreground disabled:opacity-50" disabled={busy||loading} onClick={()=>void save()}>{t.save}</button><p className="mt-4 text-xs text-muted-foreground">{t.later}</p>
   </section>
+  <ApplicantChannels lang={lang} pushConsent={prefs.pushEnabled} onChange={()=>void refresh()} />
   <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-xl font-semibold">{t.inbox} ({unread} {t.unread})</h2><div className="flex gap-2"><Link className="rounded-lg border px-3 py-2 text-sm" href={'/'+lang+'/portal/matcher'}>{t.back}</Link><button className="rounded-lg border px-3 py-2 text-sm" onClick={()=>void read()} disabled={!unread}>{t.markAll}</button></div></div>
   {status&&<p role="status" className="my-3 rounded-lg border p-3 text-sm">{status}</p>}
   {!loading&&!items.length&&<p className="my-5 rounded-xl border p-5">{t.empty}</p>}

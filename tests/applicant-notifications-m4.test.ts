@@ -11,10 +11,10 @@ afterAll(async()=>{
 });
 describe('M4 notification consent validation',()=>{
  test('all notification channels are opt-in by default',()=>{
-  expect(defaultNotificationPrefs).toEqual({inAppEnabled:false,emailEnabled:false,emailFrequency:'daily'});
+  expect(defaultNotificationPrefs).toEqual({inAppEnabled:false,emailEnabled:false,pushEnabled:false,whatsappEnabled:false,emailFrequency:'daily'});
   expect(NotificationPrefsSchema.safeParse({inAppEnabled:false,emailEnabled:false,emailFrequency:'daily'}).success).toBe(true);
-  expect(NotificationPrefsSchema.safeParse({inAppEnabled:true,emailEnabled:true,emailFrequency:'hourly'}).success).toBe(false);
-  expect(NotificationPrefsSchema.safeParse({inAppEnabled:true,emailEnabled:true,emailFrequency:'daily',isAdmin:true}).success).toBe(false);
+  expect(NotificationPrefsSchema.safeParse({inAppEnabled:true,emailEnabled:true,pushEnabled:false,whatsappEnabled:false,emailFrequency:'hourly'}).success).toBe(false);
+  expect(NotificationPrefsSchema.safeParse({inAppEnabled:true,emailEnabled:true,pushEnabled:false,whatsappEnabled:false,emailFrequency:'daily',isAdmin:true}).success).toBe(false);
  });
  test('daily/weekly cooldown is grounded in real time',()=>{
   const now=new Date('2026-10-08T10:00:00Z');

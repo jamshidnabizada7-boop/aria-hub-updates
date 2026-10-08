@@ -31,6 +31,11 @@ jobs:
       CV_OCR_ENABLED: 'false'
       APPLICANT_MATCHER_V3_ENABLED: 'false'
       APPLICANT_NOTIFICATIONS_ENABLED: 'false'
+      APPLICANT_PUSH_SUBSCRIPTIONS_ENABLED: 'false'
+      APPLICANT_PUSH_DELIVERY_ENABLED: 'false'
+      APPLICANT_WHATSAPP_VERIFICATION_ENABLED: 'false'
+      APPLICANT_WHATSAPP_DELIVERY_ENABLED: 'false'
+      APPLICANT_CHANNEL_WORKER_ENABLED: 'false'
       APPLICANT_MATCH_ALERT_WORKER_ENABLED: 'false'
       APPLICANT_MATCH_ALERT_EMAIL_ENABLED: 'false'
       APPLICANT_CAREER_V5_ENABLED: 'false'
@@ -97,6 +102,7 @@ jobs:
         run: |
           bun --conditions=react-server scripts/applicant-match-alert-worker.ts
           bun --conditions=react-server scripts/applicant-email-alert-worker.ts
+          bun --conditions=react-server scripts/applicant-channel-alert-worker.ts
       - name: Compile standalone website without applicant external services
         run: |
           export ADMIN_SESSION_SECRET="$(openssl rand -hex 32)"
