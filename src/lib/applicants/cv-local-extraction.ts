@@ -8,6 +8,7 @@ import sharp from 'sharp';
 import { validateCVUpload } from './cv-upload-validation';
 import { fetchPrivateCV } from './cv-private-storage';
 import { proposeCVFields, type ExtractedCV } from './cv-extraction-proposals';
+import { wordDocumentXmlToText } from './cv-docx-text';
 
 /** A separate worker only: NO OCR in a Next.js request handler. */
 const MAX_OUTPUT=250_000, MAX_PAGES=12;
@@ -50,23 +51,10 @@ async function languages():Promise<string>{
   throw new ExtractFailure('missing_ocr_languages');
  return 'eng+fas+pus';
 }
-function unescapeXml(s:string):string{
- return s.replace(/&(#x[0-9a-fA-F]+|#[0-9]+|amp|lt|gt|quot|apos);/g,(_m,entity:string)=>{
-  if(entity==='amp')return '&';if(entity==='lt')return '<';if(entity==='gt')return '>';
-  if(entity==='quot')return '"';if(entity==='apos')return "'";
-  const hex=entity.toLowerCase().startsWith('#x');
-  const n=Number.parseInt(entity.slice(hex?2:1),hex?16:10);
-  return Number.isInteger(n)&&n>0&&n<=0x10ffff&&! (n>=0xd800&&n<=0xdfff)?String.fromCodePoint(n):'';
- });
-}
 async function docxText(file:string):Promise<string>{
- // Validator already checked central directory and uncompressed size. The
- // XML stream itself is still capped below 250 KiB by run().
+ // Validator already checked archive bounds; run() caps extracted XML bytes.
  const xml=await run('unzip',['-p',file,'word/document.xml'],undefined,12000);
- if(/<!DOCTYPE|<!ENTITY/i.test(xml))throw new ExtractFailure('unsafe_docx_xml');
- return unescapeXml(xml.replace(/<w:tab\b[^>]*\/>/g,'\t').replace(/<w:br\b[^>]*\/>/g,'\n')
-  .replace(/<\/w:p>/g,'\n').replace(/<\/w:tr>/g,'\n')
-  .replace(/<[^>]*>/g,' ')).replace(/[ \t]+/g,' ').slice(0,MAX_OUTPUT);
+ return wordDocumentXmlToText(xml).slice(0,MAX_OUTPUT);
 }
 async function ocrImage(bytes:Uint8Array,langs:string):Promise<string>{
  // Decode / rotate / bound megapixels BEFORE invoking OCR; do not forward

@@ -36,7 +36,6 @@ export function proposeCVFields(text:string,method:ExtractedCV['method']):Extrac
  const original=text.normalize('NFKC').replace(/[\u0000-\u001f\u007f]/g,' ').replace(/\s+/g,' ').trim();
  const lines=text.normalize('NFKC').split(/\r?\n/).map(x=>x.replace(/[\u0000-\u001f\u007f]/g,' ').trim()).filter(Boolean).slice(0,450);
  const short=(value:string,max=220)=>value.replace(/\s+/g,' ').trim().slice(0,max);
- const lower=original.toLocaleLowerCase('en');
  const fa=/[\u0600-\u06ff]/.test(original);
  const ps=/[ټځڅډړږڼښګۍ]/.test(original);
  const language:ExtractedCV['language']=ps?'ps':fa?'fa':/[a-z]/i.test(original)?'en':'unknown';
@@ -71,13 +70,14 @@ export function proposeCVFields(text:string,method:ExtractedCV['method']):Extrac
  ] as const;
  const found=catalog.filter(([,pattern])=>pattern.test(original)).slice(0,25).map(([name])=>name);
  if(found.length){const snippet=lines.find(l=>catalog.some(([,p])=>p.test(l)))||'';set('skills',[...found],snippet,0.63);}
- const languageSection=/^(languages?|زبان[‌\s]*ها|زبان‌ها|ژبې|ژبه)\s*[:：]?$/i;
+ const languageSection=/^(?:languages?|زبان(?:[‌\s]*ها)?|ژبې|ژبه)\s*[:：]?\s*(.*)$/i;
  const languageIndex=lines.findIndex(x=>languageSection.test(x));
  if(languageIndex>=0){
   const entries: string[]=[];
-  const span=lines.slice(languageIndex+1,Math.min(languageIndex+5,lines.length));
+  const inline=languageSection.exec(lines[languageIndex])?.[1]?.trim();
+  const span=[...(inline?[inline]:[]),...lines.slice(languageIndex+1,Math.min(languageIndex+5,lines.length))];
   for(const line of span) {
-   if(/^(work|experience|education|skills|تحصیلات|تجربه|مهارت|زده کړې)/i.test(line))break;
+   if(/^(?:work|experience|education|skills|certifications?|تحصیلات|تجربه|مهارت|زده کړې|کاري تجربه|سندونه)(?:\s|[:：]|$)/iu.test(line))break;
    for(const [label,pattern] of [['English',/english|انگلیسی|انګلیسي/i],['Persian',/persian|فارسی|دری|فارسي/i],['Pashto',/pashto|پښتو/i],['Arabic',/arabic|عربی|عربي/i]] as const)
     if(pattern.test(line)&&!entries.includes(label))entries.push(label);
   }
@@ -97,7 +97,10 @@ export function proposeCVFields(text:string,method:ExtractedCV['method']):Extrac
  const startWork=/^(work experience|employment history|professional experience|experience|تجربه کاری|تجارب کاری|کاري تجربه|کاري تجربې)\s*[:：]?$/i;
  const startEducation=/^(education|academic background|qualifications|تحصیلات|سوابق تحصیلی|زده کړې|تحصیلي سوابق)\s*[:：]?$/i;
  const startCert=/^(certifications?|certificates?|licenses?|گواهینامه|تصدیق‌نامه|سندونه|سندونه او تصدیقونه)\s*[:：]?$/i;
- const stop=/^(work experience|education|skills|certifications?|languages?|references|contact|profile|projects|تجربه|تحصیلات|مهارت|زبان|مراجع|زده کړې|کاري تجربه|ژبې)\b/i;
+ // Unicode headings cannot use JS \\b: Arabic-script letters do not count as ASCII word characters.
+ // Stop only at an actual heading, so content from the next section is never
+ // falsely attributed to education, employment or a certificate.
+ const stop=/^(?:work experience|employment history|professional experience|experience|education|academic background|qualifications|skills|certifications?|certificates?|licenses?|languages?|references|contact|profile|projects|تجربه(?: کاری)?|تجارب کاری|تحصیلات|سوابق تحصیلی|مهارت(?:[‌\s]*ها)?|زبان(?:[‌\s]*ها)?|مراجع|زده کړې|تحصیلي سوابق|کاري تجربې?|ژبې|ژبه|تصدیق[‌-]?نامه|گواهینامه|سندونه(?: او تصدیقونه)?)(?:\s*[:：].*|\s*)$/iu;
  const history=section(startWork,stop,10);
  const school=section(startEducation,stop,8);
  const certs=section(startCert,stop,8);
