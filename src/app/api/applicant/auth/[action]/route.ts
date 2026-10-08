@@ -14,7 +14,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ action: string
   if (action !== 'me') return json({ error: 'not_found' }, 404);
   if (!process.env.APPLICANT_AUTH_ENABLED || process.env.APPLICANT_AUTH_ENABLED !== 'true') return json({ user: null });
   const user = await currentApplicant();
-  return json({ user: user ? { id: user.id, name: user.name, email: user.email } : null });
+  return json({ user: user ? { id: user.id, name: user.name, email: user.email } : null, notificationsAvailable: process.env.APPLICANT_NOTIFICATIONS_ENABLED === 'true' });
 }
 export async function POST(req: Request, ctx: { params: Promise<{ action: string }> }) {
   const { action } = await ctx.params;
