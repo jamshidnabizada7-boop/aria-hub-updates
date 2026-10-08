@@ -59,7 +59,7 @@ jobs:
       - name: Install isolated CV OCR corpus dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends tesseract-ocr-eng tesseract-ocr-fas tesseract-ocr-pus poppler-utils unzip fonts-noto-core fonts-dejavu-core
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-eng tesseract-ocr-fas tesseract-ocr-pus poppler-utils unzip fonts-noto-core fonts-dejavu-core
           python3 -m venv /tmp/aria-cv-corpus-venv
           /tmp/aria-cv-corpus-venv/bin/pip install --quiet --disable-pip-version-check Pillow==11.3.0 python-docx==1.2.0 reportlab==4.4.4
       - name: Validate real-format PDF DOCX and multilingual OCR offline
