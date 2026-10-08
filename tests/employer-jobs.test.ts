@@ -167,6 +167,6 @@ describeIf(dbUp)('employer job operations (db)', () => {
     expect(String(err)).toMatch(/80/);
     err = null;
     try { await createJob(db, ownerA, orgA, { ...jobInput, applyEmail: null, applyUrl: null }); } catch (e) { err = e; }
-    expect(String(err)).toMatch(/application URL or email/);
+    expect(String(err)).toMatch(/application URL, email, or phone number/);
   });
 });
