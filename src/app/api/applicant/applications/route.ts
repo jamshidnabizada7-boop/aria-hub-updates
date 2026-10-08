@@ -3,7 +3,7 @@ import { applicantSameOrigin } from '@/lib/applicant-origin';
 import { checkDurableRateLimit } from '@/lib/security/durable-rate-limit';
 import { careerAccount, careerEnabled, careerReply, TrackerCreate } from '@/lib/applicants/career-service';
 export const runtime='nodejs'; export const dynamic='force-dynamic';
-const fields={id:true,status:true,notes:true,appliedAt:true,nextActionAt:true,createdAt:true,updatedAt:true,
+const fields={opportunitySlug:true,opportunityTitle:true,opportunityOrganization:true,id:true,status:true,notes:true,appliedAt:true,nextActionAt:true,createdAt:true,updatedAt:true,
  opportunity:{select:{id:true,slug:true,title:true,titleI18n:true,organization:true,deadline:true,status:true,category:{select:{slug:true}}}}} as const;
 
 export async function GET(req:Request){
@@ -13,7 +13,10 @@ export async function GET(req:Request){
   const items=await db.applicantApplication.findMany({
    where:{applicantProfileId:account.profile.id},orderBy:{updatedAt:'desc'},take:100,select:fields
   });
-  return careerReply({items,autoApplications:false});
+  return careerReply({items:items.map(row=>({...row,opportunity:row.opportunity??{
+   id:null,slug:row.opportunitySlug,title:row.opportunityTitle,titleI18n:null,
+   organization:row.opportunityOrganization,deadline:null,status:'archived',category:null
+  }})),autoApplications:false});
  }catch{return careerReply({error:'request_failed'},500);}
 }
 export async function POST(req:Request){
@@ -32,7 +35,7 @@ export async function POST(req:Request){
   const now=new Date();
   const opportunity=await db.opportunity.findFirst({
    where:{slug:parsed.data.opportunitySlug,status:'published',OR:[{deadline:null},{deadline:{gte:now}}]},
-   select:{id:true}
+   select:{id:true,slug:true,title:true,organization:true}
   });
   if(!opportunity)return careerReply({error:'opportunity_not_open'},404);
   try{
@@ -42,7 +45,9 @@ export async function POST(req:Request){
     const n=await tx.applicantApplication.count({where:{applicantProfileId:account.profile.id}});
     if(n>=100)return null;
     return tx.applicantApplication.create({
-     data:{applicantProfileId:account.profile.id,opportunityId:opportunity.id,status:'saved'},
+     data:{applicantProfileId:account.profile.id,opportunityId:opportunity.id,
+      opportunitySlug:opportunity.slug,opportunityTitle:opportunity.title,
+      opportunityOrganization:opportunity.organization,status:'saved'},
      select:fields
     });
    });
