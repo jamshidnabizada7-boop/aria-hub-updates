@@ -7,7 +7,7 @@ CREATE TABLE "ApplicantCVDraft" (
  "encryptedContent" TEXT NOT NULL,
  "revision" INTEGER NOT NULL DEFAULT 1,
  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
- "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ "updatedAt" TIMESTAMP(3) NOT NULL,
  CONSTRAINT "ApplicantCVDraft_pkey" PRIMARY KEY ("id")
 );
 CREATE UNIQUE INDEX "ApplicantCVDraft_applicantProfileId_draftId_key" ON "ApplicantCVDraft"("applicantProfileId","draftId");
