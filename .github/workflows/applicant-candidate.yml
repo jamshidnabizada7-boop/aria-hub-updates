@@ -56,6 +56,17 @@ jobs:
       - name: Applicant and employer regression tests
         run: |
           bun test tests/applicant-milestone-1.test.ts tests/applicant-cv-m2.test.ts tests/applicant-cv-extraction-review.test.ts tests/applicant-matcher-m3.test.ts tests/applicant-saved-search-m3.test.ts tests/applicant-notifications-m4.test.ts tests/applicant-career-m5.test.ts tests/opportunity-matcher.test.ts tests/employer-jobs.test.ts tests/employer-auth.test.ts tests/employer-auth-completion.test.ts tests/apply-resolver.test.ts
+      - name: Install isolated CV OCR corpus dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr-eng tesseract-ocr-fas tesseract-ocr-pus poppler-utils unzip fonts-noto-core fonts-dejavu-core
+          python3 -m venv /tmp/aria-cv-corpus-venv
+          /tmp/aria-cv-corpus-venv/bin/pip install --quiet --disable-pip-version-check Pillow==11.3.0 python-docx==1.2.0 reportlab==4.4.4
+      - name: Validate real-format PDF DOCX and multilingual OCR offline
+        timeout-minutes: 9
+        run: |
+          /tmp/aria-cv-corpus-venv/bin/python scripts/tests/generate-cv-validation-corpus.py --out /tmp/aria-cv-corpus
+          bun --conditions=react-server test tests/applicant-cv-real-fixtures.test.ts
       - name: Verify CV processing worker remains safely disabled
         run: bun --conditions=react-server scripts/applicant-cv-extraction-worker.ts
       - name: Smoke-test notification worker dry-run CLI (zero deliveries)
