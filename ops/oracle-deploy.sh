@@ -23,11 +23,13 @@ REL="/opt/aria-hub/releases/$RELEASE_ID"
 STAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 OVR="/opt/aria-hub/deploy/oracle-overrides"
 
+mkdir -p /d/tmp
+LOCAL_TAR="/d/tmp/aria-$SHA.tar.gz"
 echo "==> exporting $SHA"
-git archive "$SHA" -- . ':!videos' ':!.github' ':!release-backups' | gzip -1 > "/tmp/aria-$SHA.tar.gz"
+git archive "$SHA" -- . ':!videos' ':!.github' ':!release-backups' | gzip -1 > "$LOCAL_TAR"
 
 echo "==> uploading to $HOST"
-scp -o ServerAliveInterval=30 "/tmp/aria-$SHA.tar.gz" "$HOST:/tmp/aria-$SHA.tar.gz"
+scp -o ServerAliveInterval=30 "$LOCAL_TAR" "$HOST:/tmp/aria-$SHA.tar.gz"
 
 echo "==> building release $RELEASE_ID on Oracle"
 ssh "$HOST" RELEASE="$REL" SHA="$SHA" STAMP="$STAMP" OVR="$OVR" 'bash -s' <<'REMOTE'
@@ -88,5 +90,5 @@ SWITCH
 
 echo "==> pruning old releases (keeping 3 newest)"
 ssh "$HOST" 'cd /opt/aria-hub/releases && ls -1dt */ 2>/dev/null | tail -n +4 | while read -r d; do echo "removing $d"; sudo rm -rf "/opt/aria-hub/releases/$d"; done'
-rm -f "/tmp/aria-$SHA.tar.gz"
+rm -f "$LOCAL_TAR"
 echo "==> done: $RELEASE_ID deployed"
