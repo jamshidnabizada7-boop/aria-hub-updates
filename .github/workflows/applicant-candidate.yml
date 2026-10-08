@@ -91,7 +91,8 @@ jobs:
       - name: Compile standalone website without applicant external services
         run: |
           export ADMIN_SESSION_SECRET="$(openssl rand -hex 32)"
-          bun run build
+          STANDALONE=1 bun run build
+          test -s .next/standalone/server.js
       - name: Chromium mobile viewport and EN/FA/PS RTL acceptance (loopback only)
         timeout-minutes: 12
         run: |
