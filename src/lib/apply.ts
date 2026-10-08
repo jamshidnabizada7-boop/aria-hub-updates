@@ -63,7 +63,7 @@ export function classifyApplyUrl(
 ): ApplyUrlType {
   const url = normalizeApplyUrl(applyUrl);
   if (!url) return 'unknown';
-  if (/^tel:\\+[1-9][0-9]{6,14}$/.test(url)) return 'application_phone';
+  if (/^tel:\+[1-9][0-9]{6,14}$/.test(url)) return 'application_phone';
   if (/^mailto:/i.test(url)) {
     const recipients = url.slice(7).split('?')[0].split(',').map((email) => email.trim()).filter(Boolean);
     return recipients.length > 0 && recipients.every((email) => BARE_EMAIL_RE.test(email))
