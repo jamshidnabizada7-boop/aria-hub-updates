@@ -17,7 +17,7 @@ export const ExtractedCVSchema=z.object({
   workHistory:z.array(z.string().min(3).max(240)).max(10).optional(),
   certifications:z.array(z.string().min(3).max(200)).max(8).optional()
  }).strict(),
- evidence:z.record(CVFieldSchema,z.object({snippet:z.string().max(240),confidence:z.number().min(0).max(1)})).partial(),
+ evidence:z.record(z.string().max(40),z.object({snippet:z.string().max(240),confidence:z.number().min(0).max(1)})),
  extractedAt:z.string().datetime(),
  textCharacters:z.number().int().nonnegative(),
  requiresUserReview:z.literal(true)
