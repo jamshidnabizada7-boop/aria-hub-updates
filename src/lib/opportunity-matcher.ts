@@ -52,10 +52,10 @@ export const MatcherProfileSchema = z.object({
   destinations: z.array(z.string().trim().min(2).max(80)).min(1).max(8),
   fieldArea: z.enum(FIELD_AREAS).default('any'),
   experienceYears: z.number().int().min(0).max(50).optional(),
-  preferredRoles: z.array(z.enum(JOB_ROLE_IDS as [JobRole, ...JobRole[]])).max(12).default([]),
-  skills: z.array(z.string().trim().min(2).max(60)).max(25).default([]),
-  desiredWorkMode: z.enum(['any', 'on_site', 'remote', 'hybrid']).default('any'),
-  explainWithAi: z.boolean().default(true),
+  preferredRoles: z.array(z.enum(JOB_ROLE_IDS as [JobRole, ...JobRole[]])).max(12).optional(),
+  skills: z.array(z.string().trim().min(2).max(60)).max(25).optional(),
+  desiredWorkMode: z.enum(['any', 'on_site', 'remote', 'hybrid']).optional(),
+  explainWithAi: z.boolean().optional(),
   lang: z.enum(['fa', 'ps', 'en']).default('en'),
 });
 
