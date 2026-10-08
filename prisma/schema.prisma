@@ -392,6 +392,7 @@ model Opportunity {
   category        OpportunityCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   matchProfile    OpportunityMatchProfile?
   matcherFeedback MatcherFeedback[]
+  applicantNotifications ApplicantNotification[]
   monetizationOrders MonetizationOrder[]
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
@@ -1193,6 +1194,8 @@ model ApplicantProfile {
   preferredLocale  String   @default("fa")
   documents        ApplicantDocument[]
   savedSearches     ApplicantSavedSearch[]
+  notificationPreference ApplicantNotificationPreference?
+  notifications ApplicantNotification[]
   verifiedCareerFacts Json?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -1230,8 +1233,59 @@ model ApplicantSavedSearch {
   active Boolean @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  notifications ApplicantNotification[]
 
   @@index([applicantProfileId, updatedAt])
+}
+
+// Explicit per-account consent. No notifications or email enabled by default.
+model ApplicantNotificationPreference {
+  id                 String   @id @default(cuid())
+  applicantProfileId String   @unique
+  applicantProfile   ApplicantProfile @relation(fields: [applicantProfileId], references: [id], onDelete: Cascade)
+  inAppEnabled       Boolean  @default(false)
+  emailEnabled       Boolean  @default(false)
+  emailFrequency     String   @default("daily") // daily | weekly
+  lastEmailAt        DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+// A unique saved-search + opportunity pairing cannot notify twice, even if
+// two scanners overlap. Updated opportunities can be revisited without spam.
+model ApplicantNotification {
+  id                 String @id @default(cuid())
+  applicantProfileId String
+  applicantProfile   ApplicantProfile @relation(fields: [applicantProfileId], references: [id], onDelete: Cascade)
+  savedSearchId      String
+  savedSearch        ApplicantSavedSearch @relation(fields: [savedSearchId], references: [id], onDelete: Cascade)
+  opportunityId      String
+  opportunity        Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  evidence           Json?
+  readAt             DateTime?
+  createdAt          DateTime @default(now())
+  emailDelivery      ApplicantEmailDelivery?
+
+  @@unique([applicantProfileId, savedSearchId, opportunityId])
+  @@index([applicantProfileId, readAt, createdAt])
+  @@index([createdAt])
+}
+
+// Server-only email outbox; never a browser-accessible queue.
+model ApplicantEmailDelivery {
+  id               String @id @default(cuid())
+  notificationId   String @unique
+  notification     ApplicantNotification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  status           String @default("pending") // pending | processing | sent | suppressed
+  attempts         Int    @default(0)
+  nextAttemptAt    DateTime @default(now())
+  claimedAt        DateTime?
+  sentAt           DateTime?
+  errorCode        String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([status, nextAttemptAt])
 }
 
 model OrganizationMember {
