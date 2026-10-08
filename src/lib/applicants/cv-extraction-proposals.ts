@@ -33,8 +33,10 @@ export const CVReviewSchema=z.object({
 
 /** Read-only, evidence-backed suggestions. NEVER write proposed CV values to profile here. */
 export function proposeCVFields(text:string,method:ExtractedCV['method']):ExtractedCV{
- const original=text.normalize('NFKC').replace(/[\u0000-\u001f\u007f]/g,' ').replace(/\s+/g,' ').trim();
- const lines=text.normalize('NFKC').split(/\r?\n/).map(x=>x.replace(/[\u0000-\u001f\u007f]/g,' ').trim()).filter(Boolean).slice(0,450);
+ // OCR may emit Arabic kaf and directional markers even for FA/PS CVs.
+ const normalized=text.normalize('NFKC').replace(/[\u200e\u200f\u061c\u2066-\u2069]/g,'').replace(/\u0643/g,'ک');
+ const original=normalized.replace(/[\u0000-\u001f\u007f]/g,' ').replace(/\s+/g,' ').trim();
+ const lines=normalized.split(/\r?\n/).map(x=>x.replace(/[\u0000-\u001f\u007f]/g,' ').trim()).filter(Boolean).slice(0,450);
  const short=(value:string,max=220)=>value.replace(/\s+/g,' ').trim().slice(0,max);
  const fa=/[\u0600-\u06ff]/.test(original);
  const ps=/[ټځڅډړږڼښګۍ]/.test(original);
