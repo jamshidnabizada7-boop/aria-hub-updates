@@ -108,10 +108,11 @@ export async function POST(req: NextRequest) {
         html: confirmationHtml(lang, confirmUrl),
       });
       if (!mail.sent) {
-        console.log(`[matcher-alerts] SMTP not configured — confirm URL for ${email}: ${confirmUrl}`);
+        return NextResponse.json({ error: 'email_delivery_unavailable' }, { status: 503 });
       }
     } catch (error) {
-      console.error('[matcher-alerts] confirmation email failed:', error);
+      console.error('[matcher-alerts] confirmation email failed:', error instanceof Error ? error.name : 'unknown');
+      return NextResponse.json({ error: 'email_delivery_unavailable' }, { status: 503 });
     }
 
     return NextResponse.json({ success: true, confirmRequired: true });
