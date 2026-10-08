@@ -1217,6 +1217,10 @@ model ApplicantDocument {
   status              String   @default("uploaded") // uploaded | processing | review | failed
   extraction          Json?
   processingError     String?
+  processingAttempts  Int      @default(0)
+  processingClaimedAt DateTime?
+  nextProcessingAt    DateTime @default(now())
+  reviewedAt          DateTime?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
