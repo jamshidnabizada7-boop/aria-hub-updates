@@ -393,6 +393,7 @@ model Opportunity {
   matchProfile    OpportunityMatchProfile?
   matcherFeedback MatcherFeedback[]
   applicantNotifications ApplicantNotification[]
+  trackedApplicantApplications ApplicantApplication[]
   monetizationOrders MonetizationOrder[]
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
@@ -1196,6 +1197,7 @@ model ApplicantProfile {
   savedSearches     ApplicantSavedSearch[]
   notificationPreference ApplicantNotificationPreference?
   notifications ApplicantNotification[]
+  trackedApplications ApplicantApplication[]
   verifiedCareerFacts Json?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -1286,6 +1288,25 @@ model ApplicantEmailDelivery {
   updatedAt        DateTime @updatedAt
 
   @@index([status, nextAttemptAt])
+}
+
+// Applicant-only tracking. We NEVER transmit an application to an employer.
+model ApplicantApplication {
+  id                 String @id @default(cuid())
+  applicantProfileId String
+  applicantProfile   ApplicantProfile @relation(fields: [applicantProfileId], references: [id], onDelete: Cascade)
+  opportunityId      String
+  opportunity        Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Restrict)
+  status             String @default("saved")
+  notes              String? @db.VarChar(2000)
+  nextActionAt       DateTime?
+  appliedAt          DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([applicantProfileId, opportunityId])
+  @@index([applicantProfileId, updatedAt])
+  @@index([status, nextActionAt])
 }
 
 model OrganizationMember {
