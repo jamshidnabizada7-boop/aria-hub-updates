@@ -1226,6 +1226,7 @@ model ApplicantDocument {
 
   @@index([applicantProfileId, createdAt])
   @@index([status, createdAt])
+  @@index([status, nextProcessingAt])
 }
 
 // Applicant-owned Matcher preferences. Saving is NOT a notification subscription;
