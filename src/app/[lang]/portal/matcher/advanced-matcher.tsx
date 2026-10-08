@@ -22,7 +22,16 @@ ps:{
 }
 } as const;
 const educationLabels:Record<EducationLevel,string>={high_school:'High School / مکتب',bachelors:'Bachelor / لیسانس',masters:'Master / ماستری',phd:'PhD / دوکتورا',other:'Other / سایر'};
-const fieldLabels:Record<FieldArea,string>={any:'Any field',technology:'Technology',engineering:'Engineering',business:'Business & Finance',health:'Health',education:'Education',social_sciences:'Social sciences',law_policy:'Law & Policy',natural_sciences:'Natural sciences',environment_agriculture:'Agriculture & Environment',arts_humanities:'Arts & Humanities'};
+const intentNames:Record<Lang,Record<MatcherIntent,string>>={
+ en:{scholarship:'Scholarship',fellowship:'Fellowship',internship:'Internship',job:'Job',training:'Training',conference:'Conference',competition:'Competition',exchange_program:'Exchange program',volunteer:'Volunteering'},
+ fa:{scholarship:'بورسیه تحصیلی',fellowship:'فیلوشیپ',internship:'کارآموزی',job:'وظیفه',training:'آموزش',conference:'کنفرانس',competition:'رقابت',exchange_program:'برنامه تبادله',volunteer:'داوطلبی'},
+ ps:{scholarship:'بورس',fellowship:'فیلوشیپ',internship:'کار زده کړه',job:'دنده',training:'روزنه',conference:'کنفرانس',competition:'سیالي',exchange_program:'تبادلې پروګرام',volunteer:'رضاکاري'}
+};
+const fieldNames:Record<Lang,Record<FieldArea,string>>={
+ en:{any:'Any field',technology:'Technology',engineering:'Engineering',business:'Business & Finance',health:'Health',education:'Education',social_sciences:'Social sciences',law_policy:'Law & Policy',natural_sciences:'Natural sciences',environment_agriculture:'Agriculture & Environment',arts_humanities:'Arts & Humanities'},
+ fa:{any:'هر رشته',technology:'تکنالوژی',engineering:'انجنیری',business:'تجارت و مالی',health:'صحت',education:'معارف',social_sciences:'علوم اجتماعی',law_policy:'حقوق و پالیسی',natural_sciences:'علوم طبیعی',environment_agriculture:'زراعت و محیط زیست',arts_humanities:'هنر و علوم بشری'},
+ ps:{any:'هره څانګه',technology:'ټکنالوژي',engineering:'انجنیري',business:'سوداګري او مالي',health:'روغتیا',education:'ښوونه',social_sciences:'ټولنیز علوم',law_policy:'حقوق او پالیسي',natural_sciences:'طبیعي علوم',environment_agriculture:'کرنه او چاپېریال',arts_humanities:'هنر او بشري علوم'}
+};
 const defaultProfile=(lang:Lang):MatcherProfile=>({intents:['job'],education:'bachelors',nationality:'',residence:'',destinations:['anywhere'],fieldArea:'any',preferredRoles:[],preferredProvinces:[],skills:[],desiredWorkMode:'any',lang,explainWithAi:false});
 const checklist=(selected:string[],id:string,max:number)=>selected.includes(id)?selected.filter(x=>x!==id):selected.length<max?[...selected,id]:selected;
 const evidenceName=(key:string,lang:Lang)=>{
@@ -65,7 +74,7 @@ export function AdvancedMatcher({lang}:{lang:Lang}){
   <section className="rounded-xl border bg-card p-5 md:p-7 space-y-5">
    <h2 className="text-xl font-bold">{t.section[step]}</h2>
    {step===0&&<>
-    <fieldset><legend className="mb-3 font-semibold">{t.goal}</legend><div className="flex flex-wrap gap-2">{MATCHER_INTENTS.map(intent=><button type="button" key={intent} aria-pressed={profile.intents.includes(intent)} className={choiceClass(profile.intents.includes(intent))} onClick={()=>set('intents',checklist(profile.intents,intent,3) as MatcherIntent[])}>{intent.replace(/_/g,' ')}</button>)}</div></fieldset>
+    <fieldset><legend className="mb-3 font-semibold">{t.goal}</legend><div className="flex flex-wrap gap-2">{MATCHER_INTENTS.map(intent=><button type="button" key={intent} aria-pressed={profile.intents.includes(intent)} className={choiceClass(profile.intents.includes(intent))} onClick={()=>set('intents',checklist(profile.intents,intent,3) as MatcherIntent[])}>{intentNames[lang][intent]}</button>)}</div></fieldset>
     <fieldset><legend className="mb-2 font-semibold">{t.roles}</legend><p className="mb-3 text-sm text-muted-foreground">{t.roleHint}</p>
      <input value={roleQuery} onChange={e=>setRoleQuery(e.target.value)} placeholder={t.findRole} className="w-full rounded-lg border bg-background p-3"/>
      <div className="mt-3 flex max-h-64 flex-wrap gap-2 overflow-auto">{JOB_ROLE_IDS.filter(id=>id!=='other'&&(!roleQuery||roleName(id,lang).toLowerCase().includes(roleQuery.toLowerCase())||id.includes(roleQuery.toLowerCase()))).map(role=><button type="button" key={role} aria-pressed={(profile.preferredRoles||[]).includes(role)} className={choiceClass((profile.preferredRoles||[]).includes(role))} onClick={()=>set('preferredRoles',checklist(profile.preferredRoles||[],role,12) as JobRole[])}>{roleName(role,lang)}</button>)}</div>
@@ -75,7 +84,7 @@ export function AdvancedMatcher({lang}:{lang:Lang}){
    {step===1&&<>
     <label className="block font-semibold">{t.education}<select className="mt-2 w-full rounded-lg border bg-background p-3" value={profile.education} onChange={e=>set('education',e.target.value as EducationLevel)}>{EDUCATION_LEVELS.map(x=><option key={x} value={x}>{educationLabels[x]}</option>)}</select></label>
     <label className="block font-semibold">{t.target}<select className="mt-2 w-full rounded-lg border bg-background p-3" value={profile.targetEducation||''} onChange={e=>set('targetEducation',e.target.value?e.target.value as EducationLevel:undefined)}><option value="">{t.any}</option>{EDUCATION_LEVELS.map(x=><option key={x} value={x}>{educationLabels[x]}</option>)}</select></label>
-    <label className="block font-semibold">{t.field}<select className="mt-2 w-full rounded-lg border bg-background p-3" value={profile.fieldArea} onChange={e=>set('fieldArea',e.target.value as FieldArea)}>{FIELD_AREAS.map(x=><option key={x} value={x}>{fieldLabels[x]}</option>)}</select></label>
+    <label className="block font-semibold">{t.field}<select className="mt-2 w-full rounded-lg border bg-background p-3" value={profile.fieldArea} onChange={e=>set('fieldArea',e.target.value as FieldArea)}>{FIELD_AREAS.map(x=><option key={x} value={x}>{fieldNames[lang][x]}</option>)}</select></label>
    </>}
    {step===2&&<>
     <label className="block font-semibold">{t.experience}<input type="number" min={0} max={50} value={profile.experienceYears??''} onChange={e=>set('experienceYears',e.target.value===''?undefined:Number(e.target.value))} className="mt-2 w-full rounded-lg border bg-background p-3"/></label>
