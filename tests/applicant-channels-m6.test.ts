@@ -3,6 +3,7 @@ import {PrismaClient} from '@prisma/client';
 import {createHash} from 'node:crypto';
 import {newApplicantSession,APPLICANT_COOKIE} from '../src/lib/applicant-auth';
 import {sealChannel,openChannel,otpHash,matchOtpHash,safePushSubscription} from '../src/lib/applicants/channel-security';
+import {deliverPushToGateway} from '../src/lib/applicants/channel-providers';
 import {GET as whatsappGet,POST as whatsappPost,DELETE as whatsappDelete} from '../src/app/api/applicant/whatsapp-contact/route';
 import {GET as pushGet,POST as pushPost,DELETE as pushDelete} from '../src/app/api/applicant/push-subscriptions/route';
 const db=new PrismaClient(),owners:string[]=[];
@@ -56,6 +57,40 @@ describe('candidate notification channels',()=>{
   expect(safePushSubscription(subscription).endpoint).toContain('fcm.googleapis.com');
   expect(()=>safePushSubscription({...subscription,endpoint:'https://127.0.0.1/private'})).toThrow('untrusted_push_endpoint');
   expect(()=>safePushSubscription({...subscription,endpoint:'https://evil.example.com/endpoint'})).toThrow('untrusted_push_endpoint');
+ });
+ test('push gateway uses authenticated contract, stable idempotency and rejects provider outages',async()=>{
+  const saved={flag:process.env.APPLICANT_PUSH_DELIVERY_ENABLED,url:process.env.APPLICANT_PUSH_GATEWAY_URL,token:process.env.APPLICANT_PUSH_GATEWAY_TOKEN};
+  const beforeFetch=globalThis.fetch;
+  process.env.APPLICANT_PUSH_DELIVERY_ENABLED='true';
+  process.env.APPLICANT_PUSH_GATEWAY_URL='https://candidate-gateway.example.test/webpush';
+  process.env.APPLICANT_PUSH_GATEWAY_TOKEN='fake-candidate-only';
+  const subscription={endpoint:'https://fcm.googleapis.com/fcm/send/fixture',
+   keys:{p256dh:'a'.repeat(87),auth:'b'.repeat(22)}};
+  const payload={title:'ARIA HUB',body:'Test role',url:'https://www.myariahub.com/en/opportunities/test-role'};
+  try{
+   const sent: Array<{url:string;auth:string|null;key:string|null;body:unknown}>=[];
+   globalThis.fetch=(async (input:unknown,init?:RequestInit)=>{
+    sent.push({url:String(input),auth:new Headers(init?.headers).get('Authorization'),
+     key:new Headers(init?.headers).get('Idempotency-Key'),body:JSON.parse(String(init?.body))});
+    return new Response('{}',{status:200});
+   }) as typeof fetch;
+   expect(await deliverPushToGateway(subscription,payload,'notification-123')).toBe(true);
+   expect(sent).toHaveLength(1);
+   expect(sent[0]).toMatchObject({url:'https://candidate-gateway.example.test/webpush',
+    auth:'Bearer fake-candidate-only',key:'notification-123',
+    body:{subscription,payload}});
+   process.env.APPLICANT_PUSH_GATEWAY_URL='http://127.0.0.1:3000/evil';
+   await expect(deliverPushToGateway(subscription,payload,'notification-123')).rejects.toThrow('push_provider_disabled');
+   process.env.APPLICANT_PUSH_GATEWAY_URL='https://candidate-gateway.example.test/webpush';
+   globalThis.fetch=(async()=>new Response('{}',{status:503})) as typeof fetch;
+   await expect(deliverPushToGateway(subscription,payload,'notification-123')).rejects.toThrow('push_provider_rejected');
+  }finally{
+   globalThis.fetch=beforeFetch;
+   for(const [name,value] of [['APPLICANT_PUSH_DELIVERY_ENABLED',saved.flag],
+    ['APPLICANT_PUSH_GATEWAY_URL',saved.url],['APPLICANT_PUSH_GATEWAY_TOKEN',saved.token]] as const){
+    if(value===undefined)delete process.env[name];else process.env[name]=value;
+   }
+  }
  });
  test('WhatsApp sends only a requested template; verification, opt-out and tenant isolation',async()=>{
   const a=await account(),b=await account();
