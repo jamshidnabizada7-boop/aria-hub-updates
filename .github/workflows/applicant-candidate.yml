@@ -58,7 +58,9 @@ jobs:
         run: |
           bun test tests/applicant-milestone-1.test.ts tests/applicant-cv-m2.test.ts tests/applicant-cv-extraction-review.test.ts tests/applicant-matcher-m3.test.ts tests/applicant-saved-search-m3.test.ts tests/applicant-notifications-m4.test.ts tests/applicant-career-m5.test.ts tests/opportunity-matcher.test.ts tests/employer-jobs.test.ts tests/employer-auth.test.ts tests/employer-auth-completion.test.ts tests/apply-resolver.test.ts
       - name: CV isolation, concurrent lifecycle, encrypted sync, and Matcher journey
-        run: bun --conditions=react-server test tests/applicant-cv-security-sync-journey.test.ts
+        run: |
+          bun --conditions=react-server test tests/applicant-cv-security-sync-journey.test.ts
+          bun --conditions=react-server test tests/applicant-cv-cloud-http.test.ts
       - name: Install isolated CV OCR corpus dependencies
         run: |
           sudo apt-get update -qq
