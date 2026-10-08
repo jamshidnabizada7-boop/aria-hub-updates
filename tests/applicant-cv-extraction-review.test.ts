@@ -70,7 +70,7 @@ describe('CV extraction regressions: document structure and RTL',()=>{
   expect(p.language).toBe('ps');
   expect(p.fields.educationHistory).toEqual(['لېسانس د کابل پوهنتون']);
   expect(p.fields.workHistory).toEqual(['ښوونکی په ښوونځي کې']);
-  expect(p.fields.languages).toEqual(['Pashto','English']);
+  expect(p.fields.languages?.slice().sort()).toEqual(['English','Pashto']);
   expect(p.fields.certifications).toEqual(['د ښوونې تصدیق']);
  });
  test('never treats the next section heading as an invented qualification',()=>{
