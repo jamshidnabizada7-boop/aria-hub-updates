@@ -195,6 +195,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [applicantSignedIn, setApplicantSignedIn] = useState(false);
+  const [notificationsAvailable,setNotificationsAvailable] = useState(false);
   const { setTheme, resolvedTheme } = useTheme();
   const { setLang } = useLangStore();
   const storeCode = useLangStore((s) => s.code);
@@ -258,7 +259,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
     const controller = new AbortController();
     fetch('/api/applicant/auth/me', { cache: 'no-store', credentials: 'same-origin', signal: controller.signal })
       .then(r => r.ok ? r.json() : { user: null })
-      .then(body => { if (!controller.signal.aborted) setApplicantSignedIn(Boolean(body.user)); })
+      .then(body => { if (!controller.signal.aborted) {setApplicantSignedIn(Boolean(body.user));setNotificationsAvailable(Boolean(body.notificationsAvailable));} })
       .catch(() => {});
     return () => controller.abort();
   }, [pathname]);
@@ -370,7 +371,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
                 <Moon className="block h-4 w-4 dark:hidden" />
               </Button>
 
-              {applicantSignedIn && <a href={hrefFn('/portal/notifications')} aria-label={code==='fa'?'اطلاع‌رسانی‌ها':code==='ps'?'خبرتیاوې':'Notifications'} className="hidden items-center rounded-xl border border-border px-3 py-2 text-sm font-semibold md:inline-flex"><Bell className="h-4 w-4" /></a>}
+              {applicantSignedIn && notificationsAvailable && <a href={hrefFn('/portal/notifications')} aria-label={code==='fa'?'اطلاع‌رسانی‌ها':code==='ps'?'خبرتیاوې':'Notifications'} className="hidden items-center rounded-xl border border-border px-3 py-2 text-sm font-semibold md:inline-flex"><Bell className="h-4 w-4" /></a>}
               <a href={hrefFn(applicantSignedIn ? '/portal' : '/login')} className="hidden rounded-xl border border-border px-3 py-2 text-sm font-semibold md:inline-flex">
                 {applicantSignedIn ? (code==='fa'?'داشبورد من':code==='ps'?'زما ډشبورډ':'My Dashboard') : (code==='fa'?'ورود':code==='ps'?'ننوتل':'Log In')}
               </a>
@@ -403,7 +404,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
                     ))}
                   </nav>
                   <div className="p-4 space-y-3">
-                    {applicantSignedIn && <a href={hrefFn('/portal/notifications')} onClick={() => setMobileOpen(false)} className="flex items-center justify-center gap-2 rounded-xl border p-3 text-center text-sm font-semibold"><Bell className="h-4 w-4"/>{code==='fa'?'اطلاع‌رسانی‌های من':code==='ps'?'زما خبرتیاوې':'My Notifications'}</a>}
+                    {applicantSignedIn && notificationsAvailable && <a href={hrefFn('/portal/notifications')} onClick={() => setMobileOpen(false)} className="flex items-center justify-center gap-2 rounded-xl border p-3 text-center text-sm font-semibold"><Bell className="h-4 w-4"/>{code==='fa'?'اطلاع‌رسانی‌های من':code==='ps'?'زما خبرتیاوې':'My Notifications'}</a>}
                     <a href={hrefFn(applicantSignedIn ? '/portal' : '/login')} onClick={() => setMobileOpen(false)} className="block rounded-xl border p-3 text-center text-sm font-semibold">{applicantSignedIn ? (code==='fa'?'داشبورد من':code==='ps'?'زما ډشبورډ':'My Dashboard') : (code==='fa'?'ورود':code==='ps'?'ننوتل':'Log In')}</a>
                     <Button asChild className="min-h-[44px] w-full rounded-xl bg-gradient-to-r from-primary to-chart-2">
                       <a href={hrefFn('/get-started')} onClick={() => setMobileOpen(false)}>{t('nav.getStarted')}</a>
