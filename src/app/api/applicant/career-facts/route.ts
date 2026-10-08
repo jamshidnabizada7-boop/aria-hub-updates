@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import {Prisma} from '@prisma/client';
 import { db } from '@/lib/db';
 import { applicantEnabled, applicantFromRequest } from '@/lib/applicant-auth';
 import { applicantSameOrigin } from '@/lib/applicant-origin';
@@ -38,7 +39,15 @@ export async function PUT(req:Request){
   if(Number(req.headers.get('content-length')||0)>6000)return send({error:'payload_too_large'},413);
   const parsed=CareerFacts.safeParse(await req.json().catch(()=>null));
   if(!parsed.success)return send({error:'invalid_facts'},400);
-  await db.applicantProfile.update({where:{id:p.id},data:{verifiedCareerFacts:parsed.data}});
+  await db.$transaction(async tx=>{
+    await tx.$queryRaw`SELECT "id" FROM "ApplicantProfile" WHERE "id"=${p.id} FOR UPDATE`;
+    const previous=await tx.applicantProfile.findUnique({where:{id:p.id},select:{verifiedCareerFacts:true}});
+    const existing=previous?.verifiedCareerFacts&&typeof previous.verifiedCareerFacts==='object'&&!Array.isArray(previous.verifiedCareerFacts)
+      ? previous.verifiedCareerFacts as Record<string,unknown> : {};
+    // A Matcher edit must not erase CV-reviewed languages/work history/etc.
+    const merged={...existing,...parsed.data};
+    await tx.applicantProfile.update({where:{id:p.id},data:{verifiedCareerFacts:merged as unknown as Prisma.InputJsonObject}});
+  });
   return send({success:true,source:'user_reviewed'});
  }catch{return send({error:'server_error'},500);}
 }
