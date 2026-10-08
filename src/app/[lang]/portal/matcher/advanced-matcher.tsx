@@ -43,7 +43,7 @@ export function AdvancedMatcher({lang}:{lang:Lang}){
  const t=WORDS[lang],rtl=lang!=='en';
  const [step,setStep]=useState(0),[profile,setProfile]=useState<MatcherProfile>(defaultProfile(lang)),[name,setName]=useState('My career matches'),[roleQuery,setRoleQuery]=useState(''),[saved,setSaved]=useState<Saved[]>([]),[results,setResults]=useState<Match[]>([]),[status,setStatus]=useState(''),[busy,setBusy]=useState(false);
  const [skillsText,setSkillsText]=useState(''),[destText,setDestText]=useState('Anywhere');
- const set=<K extends keyof MatcherProfile>(field:K,value:MatcherProfile[K])=>setProfile(p=>({...p,[field]:value}));
+ const set=<K extends keyof MatcherProfile,>(field:K,value:MatcherProfile[K])=>setProfile(p=>({...p,[field]:value}));
  const refresh=async()=>{const r=await fetch('/api/applicant/saved-searches',{cache:'no-store'});if(r.ok){const d=await r.json();setSaved(d.items||[]);}};
  useEffect(()=>{void refresh().catch(()=>{});},[]);
  const payload=():MatcherProfile=>({...profile,lang,explainWithAi:false,skills:skillsText.split(/[,،\n]/).map(x=>x.trim()).filter(Boolean).slice(0,25),destinations:destText.split(/[,،\n]/).map(x=>x.trim()).filter(Boolean).slice(0,8).map(x=>x.toLowerCase()==='anywhere'?'anywhere':x)});
