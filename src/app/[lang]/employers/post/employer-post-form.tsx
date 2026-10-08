@@ -77,6 +77,7 @@ export function EmployerPostForm({ lang }: { lang: Lang }) {
           deadline: fd.get('deadline'),
           applyUrl: fd.get('applyUrl'),
           applyEmail: fd.get('applyEmail'),
+          applyPhone: fd.get('applyPhone'),
           description: fd.get('description'),
           contactName: fd.get('contactName'),
           contactEmail: fd.get('contactEmail'),
@@ -370,6 +371,9 @@ export function EmployerPostForm({ lang }: { lang: Lang }) {
           <div className="relative">
             <Mail className="pointer-events-none absolute inset-y-0 start-3.5 my-auto h-4 w-4 text-muted-foreground" aria-hidden="true" />
             <input id="ep-applyemail" name="applyEmail" type="email" dir="ltr" placeholder="jobs@example.org" className={`${inputClasses} ps-10`} />
+          <label htmlFor="ep-applyph" className={labelClasses}>{lang === 'fa' ? 'شماره تماس برای درخواست (اختیاری)' : lang === 'ps' ? 'د غوښتنلیک لپاره د ټیلیفون شمېره (اختیاري)' : 'Phone applications (optional)'}</label>
+          <input id="ep-applyph" name="applyPhone" type="tel" dir="ltr" inputMode="tel" maxLength={32} placeholder="+93700123456" className={inputClasses} />
+          <p className="text-xs text-muted-foreground">{lang==='fa' ? 'یکی از روش‌های درخواست کافی است: لینک، ایمیل یا شماره تماس. شماره بعد از تأیید وظیفه عمومی می‌شود.' : lang==='ps' ? 'د غوښتنلیک لپاره لینک، برېښنالیک یا د ټیلیفون شمېره بس ده. شمېره له تایید وروسته عامه کېږي.' : 'Provide a link, email, or phone. The phone number will become public if approved.'}</p>
           </div>
         </div>
       </div>
