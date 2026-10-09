@@ -34,7 +34,7 @@ try{
   const page=await context.newPage();
   const errors:string[]=[];
   page.on('pageerror',error=>errors.push(error.message.slice(0,180)));
-  const pages=['get-started','login','register','forgot-password','portal','portal/profile','portal/settings','portal/cvs','portal/career','portal/notifications','portal/matcher'];
+  const pages=['get-started','employers/post','login','register','forgot-password','portal','portal/profile','portal/settings','portal/cvs','portal/career','portal/notifications','portal/matcher'];
   for(const segment of pages){
    const response=await page.goto(root+'/'+lang+'/'+segment,{waitUntil:'domcontentloaded',timeout:30000});
    await page.waitForTimeout(300);
@@ -50,6 +50,41 @@ try{
    if(await page.locator('body').count()){
     const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);
     if(overflow>8)issues.push(lang+' '+segment+' '+(mobile?'mobile':'desktop')+' horizontal overflow='+overflow);
+   }
+   if(segment==='employers/post') {
+    const form=page.locator('main form');
+    const next=form.locator('button[type=submit]');
+    // Empty input must stay on step one and must never hit the submission API.
+    let submissions=0;
+    let payload:Record<string,unknown>={};
+    await page.route('**/api/opportunities/submit',async route=>{
+     submissions++; payload=route.request().postDataJSON();
+     await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({success:true,referenceCode:'UI-TEST-123'})});
+    });
+    await next.click();
+    if(!(await form.locator('fieldset[data-step="0"]').isVisible())||submissions)issues.push(lang+' invalid form advanced');
+    await form.locator('[name=organization]').fill('Interface Test Organization');
+    await form.locator('[name=title]').fill('Community Programme Coordinator');
+    await form.locator('[name=categorySlug]').selectOption('jobs');
+    await form.locator('[name=description]').fill('Coordinate community programmes, support project reporting, and work with a local team to deliver training and services.');
+    await next.click();
+    await form.locator('[name=contactEmail]').fill('review@test.invalid');
+    await next.click();
+    if(!(await form.locator('[role=alert]').isVisible())||submissions)issues.push(lang+' application method validation missing');
+    await form.locator('[name=applyPhone]').fill('+93700123456');
+    await next.click();
+    if(!(await form.getByRole('heading',{name:'Community Programme Coordinator'}).isVisible())||submissions)issues.push(lang+' review missing or premature submit');
+    await form.getByRole('button',{name:lang==='en'?'Back':lang==='fa'?'بازگشت':'شاته',exact:true}).click();
+    if(await form.locator('[name=applyPhone]').inputValue()!=='+93700123456')issues.push(lang+' data lost on back');
+    await next.click();
+    await next.click();
+    await page.getByText('UI-TEST-123',{exact:true}).waitFor();
+    if(submissions!==1||payload.applyPhone!=='+93700123456'||payload.organization!=='Interface Test Organization')issues.push(lang+' submission payload invalid');
+    await page.unroute('**/api/opportunities/submit');
+    // A real home link must navigate out of the posting route.
+    await page.locator('header a').first().click();
+    await page.waitForURL(root+'/'+lang);
+    if(new URL(page.url()).pathname!=='/'+lang)issues.push(lang+' logo failed to navigate home');
    }
    if(segment==='portal/notifications'){
     const heading=page.getByRole('heading',{level:1});

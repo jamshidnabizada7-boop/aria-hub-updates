@@ -51,7 +51,7 @@ export default async function EmployerPostPage({
   const data = await getSiteData();
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="posting-workspace flex min-h-screen flex-col">
       <Navbar
         menu={data.menu}
         languages={data.languages}
@@ -60,7 +60,7 @@ export default async function EmployerPostPage({
       />
 
       <main id="main-content" className="flex-1">
-        <section className="relative overflow-hidden py-14 sm:py-20">
+        <section className="relative overflow-hidden pb-16 pt-28 sm:pb-24 sm:pt-36">
           {/* soft background accents */}
           <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
             <div className="absolute -left-40 top-0 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
@@ -71,22 +71,22 @@ export default async function EmployerPostPage({
             className="pointer-events-none absolute -end-8 -top-8 h-48 w-48 text-primary/[0.05]"
           />
 
-          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-            <div className="grid gap-10 lg:grid-cols-5 lg:gap-12">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="grid items-start gap-8 lg:grid-cols-5 lg:gap-16">
               {/* Introduction column */}
-              <div className="lg:col-span-2">
+              <div className="lg:sticky lg:top-28 lg:col-span-2">
                 <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-semibold text-primary">
                   <Building2 className="h-3.5 w-3.5" aria-hidden="true" />
                   {t('employers.post.eyebrow')}
                 </div>
-                <h1 dir="auto" className="mt-5 text-balance text-3xl font-black leading-tight tracking-tight sm:text-4xl">
+                <h1 dir="auto" className="mt-5 text-balance text-4xl font-bold leading-[1.12] tracking-tight sm:text-5xl">
                   {t('employers.post.title')}
                 </h1>
                 <p dir="auto" className="mt-4 text-pretty leading-relaxed text-muted-foreground">
                   {t('employers.post.subtitle')}
                 </p>
 
-                <ul className="mt-8 space-y-4">
+                <ul className="mt-8 hidden space-y-5 lg:block">
                   {[PenLine, FileText, Send].map((Icon, idx) => {
                     const n = idx + 1;
                     return (
@@ -105,7 +105,7 @@ export default async function EmployerPostPage({
                   })}
                 </ul>
 
-                <p dir="auto" className="mt-8 rounded-xl border border-border/60 bg-card/50 p-4 text-xs leading-relaxed text-muted-foreground">
+                <p dir="auto" className="mt-8 hidden rounded-xl lg:block border border-border/60 bg-card/50 p-4 text-xs leading-relaxed text-muted-foreground">
                   {t('submit.privacy')}
                 </p>
               </div>
