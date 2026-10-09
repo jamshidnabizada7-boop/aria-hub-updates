@@ -387,7 +387,7 @@ export function EmployerPostForm({ lang }: { lang: Lang }) {
             placeholder={t('submit.form.descriptionHint')}
             className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm leading-relaxed text-foreground shadow-sm outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
           />
-          <div className="mt-1.5 flex items-center justify-between text-xs">
+          <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 text-xs">
             <span id="ep-description-hint" className="text-muted-foreground">{ui.min}</span>
             <span
               aria-live="polite"

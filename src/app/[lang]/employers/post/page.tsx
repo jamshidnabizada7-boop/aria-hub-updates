@@ -59,7 +59,7 @@ export default async function EmployerPostPage({
         logoUrl={data.settings?.logoUrl ?? null}
       />
 
-      <main id="main-content" className="flex-1">
+      <main id="main-content" dir={lang==='en'?'ltr':'rtl'} className="flex-1">
         <section className="relative overflow-hidden pb-16 pt-28 sm:pb-24 sm:pt-36">
           {/* soft background accents */}
           <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">

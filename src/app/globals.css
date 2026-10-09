@@ -619,6 +619,7 @@
 .journey .account-panel input:not([type=checkbox]) { min-height: 48px; margin-top: .5rem; border-radius: .75rem; }
 .journey .account-panel label { font-weight: 550; }
 .posting-workspace input, .posting-workspace select, .posting-workspace textarea { font-size: 16px; }
+.posting-workspace :is(input,select,textarea) { scroll-margin-top: 8rem; }
 .posting-workspace textarea { min-height: 120px; height: auto; padding-top: .75rem; padding-bottom: .75rem; }
 .posting-workspace fieldset { min-width: 0; }
 .posting-workspace fieldset[hidden] { display: none; }
