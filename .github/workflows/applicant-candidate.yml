@@ -73,7 +73,7 @@ jobs:
       - name: Exercise authenticated email transport through isolated loopback SMTP
         run: |
           bun test tests/applicant-smtp-loopback.test.ts
-          bun test tests/applicant-production-auth.test.ts
+          bun --conditions=react-server test tests/applicant-production-auth.test.ts
       - name: Isolated push and WhatsApp consent + mocked provider tests
         run: bun --conditions=react-server test tests/applicant-channels-m6.test.ts
       - name: Install isolated CV OCR corpus dependencies
@@ -137,3 +137,4 @@ jobs:
           path: /tmp/aria-account-snapshots/*.png
           if-no-files-found: ignore
           retention-days: 3
+
