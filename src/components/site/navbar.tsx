@@ -276,7 +276,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
           scrolled ? 'py-2' : 'py-4'
         )}
       >
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8">
           <div
             className={cn(
               'flex items-center justify-between rounded-2xl px-4 transition-all duration-500 sm:px-5',
@@ -295,7 +295,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
             </a>
 
             {/* Desktop nav */}
-            <nav className="hidden items-center xl:flex">
+            <nav className="hidden items-center 2xl:flex">
               {menu.map((item) => (
                 <DesktopMenuItem key={item.id} item={item} />
               ))}
@@ -355,7 +355,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
               </Button>
 
               {applicantSignedIn && notificationsAvailable && <a href={hrefFn('/portal/notifications')} aria-label={code==='fa'?'اطلاع‌رسانی‌ها':code==='ps'?'خبرتیاوې':'Notifications'} className="hidden items-center rounded-xl border border-border px-3 py-2 text-sm font-semibold md:inline-flex"><Bell className="h-4 w-4" /></a>}
-              {applicantAvailable&&<a href={hrefFn(applicantSignedIn ? '/portal' : '/login')} className="hidden rounded-xl border border-border px-3 py-2 text-sm font-semibold md:inline-flex">
+              {applicantAvailable&&<a href={hrefFn(applicantSignedIn ? '/portal' : '/login')} className="hidden min-h-11 items-center whitespace-nowrap rounded-xl border border-border px-3 py-2 text-sm font-semibold md:inline-flex">
                 {applicantSignedIn ? (code==='fa'?'داشبورد من':code==='ps'?'زما ډشبورډ':'My Dashboard') : (code==='fa'?'ورود':code==='ps'?'ننوتل':'Log In')}
               </a>}
               <Button
@@ -369,7 +369,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
               {/* Mobile menu */}
               <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl xl:hidden" aria-label={t('nav.menu')}>
+                  <Button variant="ghost" size="icon" className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl 2xl:hidden" aria-label={t('nav.menu')}>
                     <Menu className="h-5 w-5" />
                   </Button>
                 </SheetTrigger>
