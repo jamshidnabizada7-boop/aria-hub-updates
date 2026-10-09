@@ -306,7 +306,7 @@ function createTranslationServer(authClient?: { clientId: string; scopes: string
       inputSchema: {
         claimId: z.string().describe('The claimId to release'),
         errors: z
-          .record(z.string(), z.unknown())
+          .union([z.array(z.any()), z.record(z.string(), z.unknown()), z.string()])
           .optional()
           .describe('Optional error details or diagnostic reason for releasing the claim'),
       },

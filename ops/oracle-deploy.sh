@@ -23,11 +23,13 @@ REL="/opt/aria-hub/releases/$RELEASE_ID"
 STAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 OVR="/opt/aria-hub/deploy/oracle-overrides"
 
+mkdir -p /d/tmp
+LOCAL_TAR="/d/tmp/aria-$SHA.tar.gz"
 echo "==> exporting $SHA"
-git archive "$SHA" -- . ':!videos' ':!.github' ':!release-backups' | gzip -1 > "/tmp/aria-$SHA.tar.gz"
+git archive "$SHA" -- . ':!videos' ':!.github' ':!release-backups' | gzip -1 > "$LOCAL_TAR"
 
 echo "==> uploading to $HOST"
-scp -o ServerAliveInterval=30 "/tmp/aria-$SHA.tar.gz" "$HOST:/tmp/aria-$SHA.tar.gz"
+scp -o ServerAliveInterval=30 "$LOCAL_TAR" "$HOST:/tmp/aria-$SHA.tar.gz"
 
 echo "==> building release $RELEASE_ID on Oracle"
 ssh "$HOST" RELEASE="$REL" SHA="$SHA" STAMP="$STAMP" OVR="$OVR" 'bash -s' <<'REMOTE'
@@ -68,7 +70,7 @@ set -e
 PREV=$(readlink -f /opt/aria-hub/current 2>/dev/null || true)
 echo "previous release: ${PREV:-none}"
 sudo -u ariahub ln -sfn "$REL" /opt/aria-hub/current.new
-mv -Tf /opt/aria-hub/current.new /opt/aria-hub/current
+sudo -u ariahub mv -Tf /opt/aria-hub/current.new /opt/aria-hub/current
 sudo systemctl restart aria-hub-web
 sleep 8
 if curl -sf --max-time 10 http://127.0.0.1:3000/api/health | grep -q '"ok":true'; then
@@ -77,7 +79,7 @@ else
   echo "HEALTH CHECK FAILED — rolling back"
   if [ -n "$PREV" ] && [ -d "$PREV" ]; then
     sudo -u ariahub ln -sfn "$PREV" /opt/aria-hub/current.new
-mv -Tf /opt/aria-hub/current.new /opt/aria-hub/current
+    sudo -u ariahub mv -Tf /opt/aria-hub/current.new /opt/aria-hub/current
     sudo systemctl restart aria-hub-web
     sleep 8
     curl -sf --max-time 10 http://127.0.0.1:3000/api/health && echo "ROLLBACK_OK" || echo "ROLLBACK ALSO UNHEALTHY — INVESTIGATE"
@@ -87,6 +89,6 @@ fi
 SWITCH
 
 echo "==> pruning old releases (keeping 3 newest)"
-ssh "$HOST" 'cd /opt/aria-hub/releases && ls -1dt */ 2>/dev/null | tail -n +4 | while read -r d; do echo "removing $d"; rm -rf "/opt/aria-hub/releases/$d"; done'
-rm -f "/tmp/aria-$SHA.tar.gz"
+ssh "$HOST" 'cd /opt/aria-hub/releases && ls -1dt */ 2>/dev/null | tail -n +4 | while read -r d; do echo "removing $d"; sudo rm -rf "/opt/aria-hub/releases/$d"; done'
+rm -f "$LOCAL_TAR"
 echo "==> done: $RELEASE_ID deployed"

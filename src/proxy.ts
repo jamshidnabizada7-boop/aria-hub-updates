@@ -52,6 +52,11 @@ function headersWithLangCookie(req: NextRequest, value: string): Headers {
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Skip MCP, OAuth, API, and static files from language redirects
+  if (pathname.startsWith('/mcp') || pathname.startsWith('/oauth') || pathname.startsWith('/api')) {
+    return NextResponse.next();
+  }
+
   // Skip anything that looks like a static file (last path segment has an extension).
   const lastSegment = pathname.split('/').pop() || '';
   if (lastSegment.includes('.')) {
@@ -121,6 +126,6 @@ export const config = {
   // Exclude APIs, Next internals, admin, and all static file paths. A file
   // request never needs language routing, so it should not invoke the proxy.
   matcher: [
-    '/((?!api|_next|admin|robots\\.txt|sitemap\\.xml|ads\\.txt|llms\\.txt|llms-full\\.txt|images|uploads|favicon\\.ico|_rsc|__nextjs|.*\\..*).*)',
+    '/((?!api|_next|admin|mcp|oauth|robots\\.txt|sitemap\\.xml|ads\\.txt|llms\\.txt|llms-full\\.txt|images|uploads|favicon\\.ico|_rsc|__nextjs|.*\\..*).*)',
   ],
 };
