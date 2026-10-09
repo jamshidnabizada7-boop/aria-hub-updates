@@ -147,9 +147,12 @@ export async function createCampaignForQueueRow(
   });
 
   for (const match of matches) {
-    await db.facebookGroupDistributionJob.upsert({
-      where: { sourceQueueId_groupId: { sourceQueueId: row.id, groupId: match.groupId } },
-      create: {
+    // ON CONFLICT DO NOTHING covers both unique indexes. Concurrent native
+    // upserts targeting only sourceQueueId/groupId can still conflict on
+    // campaignId/groupId before PostgreSQL resolves their chosen arbiter.
+    await db.facebookGroupDistributionJob.createMany({
+      skipDuplicates: true,
+      data: {
         campaignId: campaign.id,
         groupId: match.groupId,
         sourceQueueId: row.id,
@@ -160,7 +163,10 @@ export async function createCampaignForQueueRow(
         retryable: false,
         suggestedAction: 'Open the Facebook Group and publish manually. Mark completed after verifying the post.',
       },
-      update: {
+    });
+    await db.facebookGroupDistributionJob.updateMany({
+      where: { sourceQueueId: row.id, groupId: match.groupId },
+      data: {
         campaignId: campaign.id,
         matchReasons: match.reasons,
         scheduledFor: row.scheduledFor,

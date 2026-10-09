@@ -94,6 +94,7 @@ async function fetchCandidates(profile: MatcherProfile) {
     select: {
       id: true,
       slug: true,
+      locations: { select: { country: true, province: true, city: true } },
       title: true,
       titleI18n: true,
       organization: true,
@@ -281,7 +282,7 @@ export async function POST(req: NextRequest) {
     }
 
     const baseResults = ranked.map((item) => publicResult(item, profile.lang));
-    const withAi = await addGroundedAiExplanations(baseResults, ranked, profile);
+    const withAi = profile.explainWithAi === false ? { results: baseResults, ai: false } : await addGroundedAiExplanations(baseResults, ranked, profile);
 
     return NextResponse.json({
       status: 'ok',

@@ -27,6 +27,7 @@ jobs:
       ARIA_DISABLE_SCHEDULER: '1'
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5433/ariahub_test?sslmode=disable
       DIRECT_URL: postgresql://postgres:postgres@127.0.0.1:5433/ariahub_test?sslmode=disable
+      ARIA_TRANSLATION_WORKER_URL: postgresql://aria_translation_worker:tgw-test-pw-1234567890@127.0.0.1:5433/ariahub_test?sslmode=disable
     steps:
       - uses: actions/checkout@v5
 
@@ -36,9 +37,6 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
-
-      - name: Dependency security audit
-        run: bun audit --audit-level high
 
       - name: Prisma schema validation + client generation
         run: |
@@ -53,8 +51,22 @@ jobs:
       - name: Type check
         run: bunx tsc --noEmit
 
+      - name: Prepare real-format fixture corpus for full repository test suite
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-eng tesseract-ocr-fas tesseract-ocr-pus poppler-utils unzip fonts-noto-core fonts-dejavu-core
+          python3 -m venv /tmp/aria-cv-corpus-venv
+          /tmp/aria-cv-corpus-venv/bin/pip install --quiet --disable-pip-version-check Pillow==11.3.0 python-docx==1.2.0 reportlab==4.4.4
+          /tmp/aria-cv-corpus-venv/bin/python scripts/tests/generate-cv-validation-corpus.py --out /tmp/aria-cv-corpus
+
       - name: Tests (unit, scraper fixtures, publish safety, security guards*)
-        run: bun test tests/
+        run: |
+          # Bun can cache an incompatible module namespace when the AI provider
+          # failover suite shares a process with global provider mocks.
+          # Preserve every test; run that suite in an independent process.
+          mapfile -t test_files < <(find tests -maxdepth 1 -name '*.test.ts' ! -name 'ai-failover.test.ts' -print | sort)
+          bun --conditions=react-server test "${test_files[@]}"
+          bun --conditions=react-server test tests/ai-failover.test.ts
         # * The api-guards tests skip automatically: no running server in CI.
         #   Database/publisher tests are required and fail if setup is missing.
 
@@ -67,3 +79,9 @@ jobs:
         run: |
           export ADMIN_SESSION_SECRET="$(openssl rand -hex 32)"
           bun run build
+
+      # Keep the strict unpatched advisory gate red until an upstream fix is
+      # published. Other tests must run first so their failures are visible.
+      - name: Dependency security audit
+        run: bun audit --audit-level high
+

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Copy, Download, FilePlus2, FileText, LayoutTemplate, Save, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,7 +10,9 @@ import { CVPreview } from './components/CVPreview';
 import { ExportModal } from './components/ExportModal';
 import { TemplateGallery } from './components/TemplateGallery';
 import { useCVDrafts } from './hooks/use-cv-drafts';
+import { CloudCVSync } from './components/CloudCVSync';
 import { displayDraftName } from './lib/cv-utils';
+import { applyVerifiedCareerFacts } from './lib/cv-profile-import';
 import { validateDraft } from './lib/cv-validation';
 import { CV_TEMPLATE_BY_ID } from './lib/cv-templates';
 import { cvText } from './lib/cv-copy';
@@ -38,7 +40,7 @@ function cleanFilename(value:string){
 
 export function CVBuilderClient({ initialLang, initialPurpose='professional', initialTemplatesOpen=false, config, source }:Props){
   const initialTemplate=config.defaultTemplates[initialPurpose];
-  const {drafts,activeDraft,status,updateActive,createNewDraft,duplicateActive,switchDraft,removeDraft}=useCVDrafts({
+  const {drafts,activeDraft,status,updateActive,createNewDraft,duplicateActive,switchDraft,removeDraft,importCloudDraft}=useCVDrafts({
     purpose:initialPurpose,outputLang:initialLang,source,template:initialTemplate,paperSize:config.defaultPaperSize,
   });
   const { toast }=useToast();
@@ -46,6 +48,22 @@ export function CVBuilderClient({ initialLang, initialPurpose='professional', in
   const [templatesOpen,setTemplatesOpen]=useState(initialTemplatesOpen);
   const [mobileTab,setMobileTab]=useState('edit');
   const [generating,setGenerating]=useState(false);
+  const [approvedFacts,setApprovedFacts]=useState<Record<string,unknown>|null>(null);
+  useEffect(()=>{
+    const ac=new AbortController();
+    fetch('/api/applicant/career-facts',{cache:'no-store',signal:ac.signal})
+      .then(r=>r.ok?r.json():null)
+      .then(d=>{if(!ac.signal.aborted&&d?.facts&&typeof d.facts==='object')setApprovedFacts(d.facts);})
+      .catch(()=>{});
+    return ()=>ac.abort();
+  },[]);
+  function importReviewedProfile(){
+    if(!approvedFacts)return;
+    updateActive(draft=>applyVerifiedCareerFacts(draft,approvedFacts));
+    toast({title:initialLang==='fa'?'معلومات تأییدشده وارد شد':initialLang==='ps'?'تایید شوي معلومات ورزیات شول':'Reviewed facts imported',
+      description:initialLang==='fa'?'سطح مهارت‌ها و زبان‌ها را خودتان دقیق کنید.':initialLang==='ps'?'د مهارتونو او ژبو کچې پخپله سمې کړئ.':'Complete missing institutions, job titles, dates and proficiency levels before exporting.'});
+  }
+
   const readiness=useMemo(()=>activeDraft?validateDraft(activeDraft,config):null,[activeDraft,config]);
   const enabledPurposes=getEnabledPurposeIds(config);
   const enabledTemplateIds=getEnabledTemplateIds(config);
@@ -128,6 +146,10 @@ export function CVBuilderClient({ initialLang, initialPurpose='professional', in
               const purpose=config.purposes[activeDraft.purpose].enabled?activeDraft.purpose:config.defaultPurpose;
               createNewDraft(purpose,activeDraft.outputLang,undefined,{template:config.defaultTemplates[purpose],paperSize:config.defaultPaperSize});
             }}><FilePlus2 className="size-4" />{cvText(initialLang,'New CV')}</Button>
+            {approvedFacts&&<Button type="button" variant="outline" onClick={importReviewedProfile}>
+              {initialLang==='fa'?'وارد کردن معلومات تأییدشده':initialLang==='ps'?'تایید شوي معلومات واردول':'Import reviewed profile'}
+            </Button>}
+
             <Button type="button" variant="outline" onClick={()=>duplicateActive()}><Copy className="size-4" />{cvText(initialLang,'Duplicate')}</Button>
             {config.features.pdfDownload ? <Button type="button" onClick={()=>setExportOpen(true)}><Download className="size-4" />{cvText(initialLang,'Review & download')}</Button> : null}
           </div>
@@ -199,9 +221,11 @@ export function CVBuilderClient({ initialLang, initialPurpose='professional', in
       </div>
 
       <div className="mt-5 flex flex-wrap justify-between gap-3 rounded-2xl border bg-card p-4">
-        <div className="text-sm text-muted-foreground">{config.features.pdfDownload ? cvText(initialLang,'Drafts are saved locally in your browser. PDF generation sends the validated draft only to the ARIA HUB renderer and does not store it.') : cvText(initialLang,'Draft data is stored locally in your browser. Cloud sync is not enabled until ARIA HUB has end-user authentication wired to these drafts.')}</div>
+        <div className="text-sm text-muted-foreground">{config.features.pdfDownload ? cvText(initialLang,'Drafts save locally. Account cloud synchronization is optional and must be enabled explicitly. PDF rendering does not store your CV.') : cvText(initialLang,'CV drafts save locally. Cloud sync requires applicant authentication, encryption setup and your opt-in.')}</div>
         <Button type="button" variant="destructive" onClick={()=>removeDraft(activeDraft.id)} disabled={drafts.length===1&&!activeDraft.data.personal.fullName}><Trash2 className="size-4" />{cvText(initialLang,'Delete this CV')}</Button>
       </div>
+
+      <CloudCVSync lang={initialLang} activeDraft={activeDraft} onImport={importCloudDraft} />
 
       <TemplateGallery
         open={templatesOpen}

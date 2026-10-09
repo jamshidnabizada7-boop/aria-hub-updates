@@ -1,3 +1,6 @@
+import { AF_PROVINCES, normalizeProvince, type AfghanProvince } from '@/lib/geo/provinces';
+import { JOB_ROLE_IDS, roleMatchesPreference } from '@/lib/job-role-taxonomy';
+import type { JobRole } from '@/lib/job-role-taxonomy';
 import { z } from 'zod';
 
 export const MATCHER_INTENTS = [
@@ -50,6 +53,11 @@ export const MatcherProfileSchema = z.object({
   destinations: z.array(z.string().trim().min(2).max(80)).min(1).max(8),
   fieldArea: z.enum(FIELD_AREAS).default('any'),
   experienceYears: z.number().int().min(0).max(50).optional(),
+  preferredRoles: z.array(z.enum(JOB_ROLE_IDS as [JobRole, ...JobRole[]])).max(12).optional(),
+  preferredProvinces: z.array(z.enum(AF_PROVINCES)).max(34).optional(),
+  skills: z.array(z.string().trim().min(2).max(60)).max(25).optional(),
+  desiredWorkMode: z.enum(['any', 'on_site', 'remote', 'hybrid']).optional(),
+  explainWithAi: z.boolean().optional(),
   lang: z.enum(['fa', 'ps', 'en']).default('en'),
 });
 
@@ -82,6 +90,7 @@ export interface MatcherOpportunity {
   categorySlug: string | null;
   categoryName: string | null;
   jobType: string | null;
+  locations?: { country?: string | null; province?: string | null; city?: string | null }[];
   educationReq: string | null;
   experience: string | null;
   eligibility: string | null;
@@ -324,6 +333,23 @@ export function rankOpportunity(profile: MatcherProfile, opportunity: MatcherOpp
   if (!categoryMatches(profile, opportunity)) return null;
   score += 50;
   reasons.push('opportunity_type');
+  // Selected occupations must match the advertised title or job position;
+  // this relevance filter is not evidence of eligibility.
+  // Some published employer vacancies have no category relation but DO have
+  // jobType="job". Enforce occupation/province filters for both representations.
+  const jobTypes=['jobs','job','internships','internship'];
+  const listedCategory=normalize(opportunity.categorySlug);
+  // An explicit scholarship/fellowship category outranks stale jobType data.
+  // A category-less employer vacancy can still be classified by jobType.
+  const jobRoleRelevant=profile.intents.some(i=>i==='job'||i==='internship')
+    && (jobTypes.includes(listedCategory)||(!listedCategory&&jobTypes.includes(normalize(opportunity.jobType))));
+  if (jobRoleRelevant && profile.preferredRoles?.length && !profile.preferredRoles.includes('other')) {
+    const roles = roleMatchesPreference(profile.preferredRoles, opportunity.title, opportunity.jobType);
+    if (!roles.matched.length) return null;
+    score += 26;
+    reasons.push('preferred_role');
+  }
+
 
   const anywhere = profile.destinations.some((d) => normalize(d) === 'anywhere');
   const destinationMatch = countryMatches(profile, opportunity);
@@ -335,6 +361,14 @@ export function rankOpportunity(profile: MatcherProfile, opportunity: MatcherOpp
     reasons.push('destination');
   } else if (!anywhere && !destinationMatch) {
     unknowns.push('destination');
+  }
+
+  if (profile.preferredProvinces?.length && jobRoleRelevant) {
+    const explicitProvinces = (opportunity.locations||[]).map(row => normalizeProvince(row.province)).filter((v):v is AfghanProvince=>v!==null);
+    if (explicitProvinces.length > 0) {
+      if (!explicitProvinces.some(p=>profile.preferredProvinces!.includes(p))) return null;
+      score += 10; reasons.push('province');
+    } else unknowns.push('province');
   }
 
   const eligibilityText = normalize(
@@ -380,6 +414,30 @@ export function rankOpportunity(profile: MatcherProfile, opportunity: MatcherOpp
     }
   }
 
+
+  if (profile.skills?.length) {
+    const skillsText = normalize(
+      [opportunity.title,opportunity.requirements,opportunity.jobType,flattenJson(opportunity.tags)].filter(Boolean).join(' ')
+    );
+    const present = profile.skills.filter(skill => {
+      const words = normalize(skill);
+      if (words.length < 2) return false;
+      const padded = ' ' + skillsText.replace(/[^\p{L}\p{N}]+/gu, ' ') + ' ';
+      return padded.includes(' ' + words + ' ');
+    });
+    if (present.length) {
+      score += Math.min(12, present.length * 4);
+      reasons.push('skills');
+    } else unknowns.push('skills');
+  }
+  // Work-mode data in imported listings is often incomplete: never invent.
+  if (profile.desiredWorkMode && profile.desiredWorkMode !== 'any') {
+    const advertised = normalize(opportunity.structuredFacts?.locationType).replace(/\s/g,'');
+    const desired = normalize(profile.desiredWorkMode).replace(/\s/g,'');
+    if (advertised && ['remote','onsite','hybrid'].includes(advertised) && advertised === desired) {
+      score += 5; reasons.push('work_mode');
+    } else unknowns.push('work_mode');
+  }
   const structuredNationalities = normalizedStringArray(opportunity.structuredFacts?.eligibleNationalities);
   const nationalityRestriction = extractNationalityRestriction(
     opportunity.extractedData,

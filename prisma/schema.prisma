@@ -312,7 +312,7 @@ model Organization {
 // first hit of a fresh window opportunistically deletes expired buckets.
 model RateLimitBucket {
   key         String
-  windowStart DateTime
+  windowStart DateTime @default(now())
   count       Int      @default(0)
   updatedAt   DateTime @updatedAt
 
@@ -385,6 +385,7 @@ model Opportunity {
   attachments     String? // JSON
   featured        Boolean              @default(false)
   status          OpportunityStatus    @default(published)
+  publicationRevision Int @default(0)
   sort            Int                  @default(0)
   seoTitle        String?
   seoDescription  String?
@@ -392,6 +393,8 @@ model Opportunity {
   category        OpportunityCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   matchProfile    OpportunityMatchProfile?
   matcherFeedback MatcherFeedback[]
+  applicantNotifications ApplicantNotification[]
+  trackedApplicantApplications ApplicantApplication[]
   monetizationOrders MonetizationOrder[]
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
@@ -1125,9 +1128,9 @@ model ComparisonRow {
   id              String   @id @default(cuid())
   feature         String
   featureI18n     Json?
-  ariaValue       String   @default("â")
+  ariaValue       String   @default("✓")
   ariaValueI18n   Json?
-  othersValue     String   @default("â")
+  othersValue     String   @default("—")
   othersValueI18n Json?
   order           Int      @default(0)
   status          String   @default("published")
@@ -1167,6 +1170,7 @@ model User {
   disabled      Boolean @default(false) // account disable (PHASE 7: blocks login + invalidates sessions)
   passwordResetToken   String?
   passwordResetExpires DateTime?
+  applicantProfile ApplicantProfile?
   members       OrganizationMember[]
   accounts      Account[]
   sessions      Session[]
@@ -1183,6 +1187,178 @@ model User {
 // Claiming = a `pending` row awaiting admin approval. NEVER auto-approved
 // from the organization name alone â an admin (or later, official-domain
 // email verification) must confirm. Roles: owner > recruiter > viewer.
+model ApplicantProfile {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  headline         String?
+  residence        String?
+  preferredLocale  String   @default("fa")
+  documents        ApplicantDocument[]
+  cvDrafts         ApplicantCVDraft[]
+  savedSearches     ApplicantSavedSearch[]
+  notificationPreference ApplicantNotificationPreference?
+  notifications ApplicantNotification[]
+  pushSubscriptions ApplicantPushSubscription[]
+  whatsappContact ApplicantWhatsAppContact?
+  trackedApplications ApplicantApplication[]
+  verifiedCareerFacts Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+// Private CV library: metadata only; raw bytes live in a strictly private bucket.
+// Import proposals and confidence remain opt-in and are never automatically applied.
+model ApplicantDocument {
+  id                  String   @id @default(cuid())
+  applicantProfileId  String
+  applicantProfile    ApplicantProfile @relation(fields: [applicantProfileId], references: [id], onDelete: Cascade)
+  originalName        String
+  mimeType            String
+  byteSize            Int
+  sha256              String
+  storageKey          String   @unique
+  status              String   @default("uploaded") // uploaded | processing | review | failed
+  extraction          Json?
+  processingError     String?
+  processingAttempts  Int      @default(0)
+  processingClaimedAt DateTime?
+  nextProcessingAt    DateTime @default(now())
+  reviewedAt          DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([applicantProfileId, createdAt])
+  @@index([status, createdAt])
+  @@index([status, nextProcessingAt])
+}
+
+// Applicant-owned Matcher preferences. Saving is NOT a notification subscription;
+// notification delivery requires a later consented notification worker.
+/** Encrypted, opt-in account CVs. No public object links or cross-user grants. */
+model ApplicantCVDraft {
+  id                 String @id @default(cuid())
+  applicantProfileId String
+  applicantProfile   ApplicantProfile @relation(fields:[applicantProfileId],references:[id],onDelete:Cascade)
+  draftId            String
+  encryptedContent   String @db.Text
+  revision           Int @default(1)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  @@unique([applicantProfileId,draftId])
+  @@index([applicantProfileId,updatedAt])
+}
+
+model ApplicantSavedSearch {
+  id String @id @default(cuid())
+  applicantProfileId String
+  applicantProfile ApplicantProfile @relation(fields: [applicantProfileId], references: [id], onDelete: Cascade)
+  name String
+  profile Json
+  active Boolean @default(true)
+  lastScannedAt DateTime?
+  scanCursorUpdatedAt DateTime?
+  scanCursorId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  notifications ApplicantNotification[]
+
+  @@index([applicantProfileId, updatedAt])
+}
+
+// Explicit per-account consent. No notifications or email enabled by default.
+model ApplicantNotificationPreference {
+  id                 String   @id @default(cuid())
+  applicantProfileId String   @unique
+  applicantProfile   ApplicantProfile @relation(fields: [applicantProfileId], references: [id], onDelete: Cascade)
+  inAppEnabled       Boolean  @default(false)
+  emailEnabled       Boolean  @default(false)
+  pushEnabled        Boolean  @default(false)
+  whatsappEnabled    Boolean  @default(false)
+  emailFrequency     String   @default("daily") // daily | weekly
+  lastEmailAt        DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+// A unique saved-search + opportunity pairing cannot notify twice, even if
+// two scanners overlap. Updated opportunities can be revisited without spam.
+model ApplicantNotification {
+  id                 String @id @default(cuid())
+  applicantProfileId String
+  applicantProfile   ApplicantProfile @relation(fields: [applicantProfileId], references: [id], onDelete: Cascade)
+  savedSearchId      String
+  savedSearch        ApplicantSavedSearch @relation(fields: [savedSearchId], references: [id], onDelete: Cascade)
+  opportunityId      String
+  opportunity        Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  evidence           Json?
+  materialVersion    String @default("legacy")
+  archivedAt         DateTime?
+  readAt             DateTime?
+  createdAt          DateTime @default(now())
+  emailDelivery      ApplicantEmailDelivery?
+  channelDeliveries  ApplicantChannelDelivery[]
+
+  @@unique([applicantProfileId, savedSearchId, opportunityId, materialVersion], map: "ApplicantNotification_match_version_key")
+  @@index([applicantProfileId, readAt, createdAt])
+  @@index([createdAt])
+}
+
+// Durable account deletion: retained until every private object is removed.
+// No foreign key allows a completed minimal receipt to survive user deletion.
+model ApplicantDeletionJob {
+  id String @id @default(cuid())
+  userId String @unique
+  status String @default("pending")
+  attempts Int @default(0)
+  nextAttemptAt DateTime @default(now())
+  claimedAt DateTime?
+  errorCode String?
+  completedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([status, nextAttemptAt])
+}
+
+// Server-only email outbox; never a browser-accessible queue.
+model ApplicantEmailDelivery {
+  id               String @id @default(cuid())
+  notificationId   String @unique
+  notification     ApplicantNotification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  status           String @default("pending") // pending | processing | sent | suppressed
+  attempts         Int    @default(0)
+  nextAttemptAt    DateTime @default(now())
+  claimedAt        DateTime?
+  sentAt           DateTime?
+  errorCode        String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([status, nextAttemptAt])
+}
+
+// Applicant-only tracking. We NEVER transmit an application to an employer.
+model ApplicantApplication {
+  id                 String @id @default(cuid())
+  applicantProfileId String
+  applicantProfile   ApplicantProfile @relation(fields: [applicantProfileId], references: [id], onDelete: Cascade)
+  opportunityId      String?
+  opportunity        Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+  opportunitySlug    String
+  opportunityTitle   String
+  opportunityOrganization String?
+  status             String @default("saved")
+  notes              String? @db.VarChar(2000)
+  nextActionAt       DateTime?
+  appliedAt          DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([applicantProfileId, opportunitySlug])
+  @@index([applicantProfileId, updatedAt])
+  @@index([status, nextActionAt])
+}
+
 model OrganizationMember {
   id             String       @id @default(cuid())
   organizationId String
@@ -1831,4 +2007,50 @@ model StudioVisual {
   enabled   Boolean  @default(true)
   order     Int      @default(0)
   createdAt DateTime @default(now())
+}
+
+model ApplicantPushSubscription {
+  id                    String @id @default(cuid())
+  applicantProfileId    String
+  applicantProfile      ApplicantProfile @relation(fields: [applicantProfileId], references: [id], onDelete: Cascade)
+  endpointHash          String @unique
+  encryptedSubscription String @db.Text
+  consentedAt           DateTime @default(now())
+  disabledAt            DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  @@index([applicantProfileId,disabledAt])
+}
+
+model ApplicantWhatsAppContact {
+  id                 String @id @default(cuid())
+  applicantProfileId String @unique
+  applicantProfile   ApplicantProfile @relation(fields: [applicantProfileId], references: [id], onDelete: Cascade)
+  phoneHash          String
+  encryptedNumber    String @db.Text
+  verifyHash         String?
+  verifyExpiresAt    DateTime?
+  verifyAttempts     Int @default(0)
+  verifiedAt         DateTime?
+  consentedAt        DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model ApplicantChannelDelivery {
+  id             String @id @default(cuid())
+  notificationId String
+  notification   ApplicantNotification @relation(fields: [notificationId],references:[id],onDelete:Cascade)
+  channel        String // push | whatsapp
+  targetId       String // subscription id or whatsapp contact id
+  status         String @default("pending")
+  attempts       Int @default(0)
+  nextAttemptAt  DateTime @default(now())
+  claimedAt      DateTime?
+  sentAt         DateTime?
+  errorCode      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  @@unique([notificationId,channel,targetId])
+  @@index([status,nextAttemptAt])
 }

@@ -17,6 +17,7 @@ export const FORM_URL_RE =
 
 export type ApplyUrlType =
   | 'application_email'
+  | 'application_phone'
   | 'application_form'
   | 'direct_application'
   | 'source_article_fallback'
@@ -44,6 +45,7 @@ function hostOf(url: string): string {
 export function isRealApplyLink(applyUrlType: string | null | undefined): boolean {
   return (
     applyUrlType === 'application_email' ||
+    applyUrlType === 'application_phone' ||
     applyUrlType === 'application_form' ||
     applyUrlType === 'direct_application'
   );
@@ -61,6 +63,7 @@ export function classifyApplyUrl(
 ): ApplyUrlType {
   const url = normalizeApplyUrl(applyUrl);
   if (!url) return 'unknown';
+  if (/^tel:\+[1-9][0-9]{6,14}$/.test(url)) return 'application_phone';
   if (/^mailto:/i.test(url)) {
     const recipients = url.slice(7).split('?')[0].split(',').map((email) => email.trim()).filter(Boolean);
     return recipients.length > 0 && recipients.every((email) => BARE_EMAIL_RE.test(email))

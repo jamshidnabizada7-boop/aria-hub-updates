@@ -10,6 +10,7 @@
     "worker:social": "bun --conditions=react-server scripts/social-publish-worker.ts",
     "worker:opportunities": "bun --conditions=react-server scripts/opportunity-schedule-worker.ts",
     "worker:imports": "bun --conditions=react-server scripts/opportunity-import-worker.ts",
+    "worker:applicant-privacy": "bun --conditions=react-server scripts/applicant-privacy-worker.ts",
     "release:check-functions": "bun scripts/release/measure-function-sizes.ts --check",
     "lint": "eslint .",
     "test": "bun test ./tests/",
@@ -107,6 +108,7 @@
     "zustand": "^5.0.6"
   },
   "devDependencies": {
+    "fast-glob": "file:tools/fast-glob-compat",
     "@embedded-postgres/linux-x64": "^18.4.0-beta.17",
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^3.0.0",
@@ -127,6 +129,7 @@
     "@embedded-postgres/linux-x64"
   ],
   "overrides": {
+    "fast-glob": "file:tools/fast-glob-compat",
     "deepmerge-ts": "8.0.0",
     "js-yaml": "4.3.2",
     "prismjs": "1.30.0"

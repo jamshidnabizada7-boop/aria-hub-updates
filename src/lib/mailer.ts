@@ -14,10 +14,17 @@ export async function sendHtmlEmail(opts: {
 }): Promise<{ sent: boolean; skipped?: 'smtp_not_configured' }> {
   if (!smtpConfigured()) return { sent: false, skipped: 'smtp_not_configured' };
   const nodemailer = await import('nodemailer');
+  const host=process.env.SMTP_HOST!;
+  const port=Number(process.env.SMTP_PORT||587);
+  if(!Number.isInteger(port)||port<1||port>65535)throw new Error('invalid_smtp_port');
+  const loopback=['localhost','127.0.0.1','::1','[::1]'].includes(host.toLowerCase());
+  // Never send SMTP credentials over an unencrypted remote connection.
+  // A disposable loopback SMTP test relay does not need STARTTLS.
   const transport = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT || 587),
-    secure: Number(process.env.SMTP_PORT || 587) === 465,
+    host,port,
+    secure:port===465,
+    requireTLS:port!==465&&!loopback,
+    tls:{rejectUnauthorized:true},
     auth: { user: process.env.SMTP_USER!, pass: process.env.SMTP_PASS! },
   });
   await transport.sendMail({

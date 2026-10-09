@@ -1,0 +1,2 @@
+import { applicantEnabled } from '@/lib/applicant-auth';
+import { Suspense } from 'react'; import { AccountClient } from '../account/account-client'; export const dynamic='force-dynamic'; export default async function Page({params}:{params:Promise<{lang:string}>}){const {lang}=await params; return <Suspense fallback={null}><AccountClient lang={lang==='en'||lang==='ps'?lang:'fa'} mode="reset-password" enabled={applicantEnabled()}/></Suspense>;}

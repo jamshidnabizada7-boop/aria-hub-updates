@@ -29,7 +29,7 @@ function ipOf(request: Request): string {
   return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'local';
 }
 
-function sessionCookie(payload: { userId: string; email: string }) {
+function sessionCookie(payload: { userId: string; email: string; credentialTag?:string }) {
   return {
     name: EMPLOYER_SESSION_COOKIE,
     value: encodeEmployerSession({ ...payload, t: Date.now() }),
@@ -78,13 +78,13 @@ export async function POST(request: Request, ctx: { params: Promise<{ action: st
     if (action === 'register') {
       const user = await registerEmployer(email, password, typeof body.name === 'string' ? body.name : undefined);
       const res = NextResponse.json({ success: true, user });
-      res.cookies.set(sessionCookie({ userId: user.id, email: user.email }));
+      res.cookies.set(sessionCookie({ userId: user.id, email: user.email,credentialTag:user.credentialTag }));
       return res;
     }
     if (action === 'login') {
       const user = await loginEmployer(email, password);
       const res = NextResponse.json({ success: true, user });
-      res.cookies.set(sessionCookie({ userId: user.id, email: user.email }));
+      res.cookies.set(sessionCookie({ userId: user.id, email: user.email,credentialTag:user.credentialTag }));
       return res;
     }
     if (action === 'forgot-password') {
@@ -112,13 +112,14 @@ export async function POST(request: Request, ctx: { params: Promise<{ action: st
       if (body.confirmPassword !== undefined && body.confirmPassword !== newPassword) {
         return NextResponse.json({ error: 'Passwords do not match.' }, { status: 400 });
       }
+      let credentialTag:string;
       try {
-        await changeEmployerPasswordSession(employer.id, currentPassword, newPassword);
+        credentialTag=await changeEmployerPasswordSession(employer.id, currentPassword, newPassword);
       } catch (e) {
         return NextResponse.json({ error: e instanceof Error ? e.message : 'Password change failed.' }, { status: 400 });
       }
       const res = NextResponse.json({ success: true });
-      res.cookies.set(sessionCookie({ userId: employer.id, email: employer.email }));
+      res.cookies.set(sessionCookie({ userId: employer.id, email: employer.email,credentialTag }));
       return res;
     }
     if (action === 'reset-password') {

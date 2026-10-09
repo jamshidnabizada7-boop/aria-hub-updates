@@ -1,3 +1,4 @@
+import { applicationPhoneUrl } from '@/lib/employers/application-phone';
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { rateLimit, getClientIp } from '@/lib/admin-auth';
@@ -82,6 +83,8 @@ export async function POST(req: NextRequest) {
     const country = clean(body.country, 80) || null;
     const applyUrlRaw = clean(body.applyUrl, 500);
     const applyEmail = clean(body.applyEmail, 200).toLowerCase();
+    const applyPhoneRaw = submitterType === 'employer' ? clean(body.applyPhone, 40) : '';
+    const applyPhone = applicationPhoneUrl(applyPhoneRaw);
     const description = clean(body.description, 8000);
     const contactName = clean(body.contactName, 120) || null;
     const contactEmail = clean(body.contactEmail, 200).toLowerCase();
@@ -136,8 +139,9 @@ export async function POST(req: NextRequest) {
       }
       companyWebsite = companyWebsiteRaw;
     }
-    if (!applyUrl && !applyEmail) {
-      return NextResponse.json({ error: 'An application link or email is required.' }, { status: 400 });
+    if (applyPhoneRaw && !applyPhone) return NextResponse.json({ error: 'Use an international phone number, e.g. +93700123456.' }, { status: 400 });
+    if (!applyUrl && !applyEmail && !applyPhone) {
+      return NextResponse.json({ error: 'Provide an application link, email, or phone number.' }, { status: 400 });
     }
     let deadline: Date | null = null;
     if (deadlineRaw) {
@@ -163,7 +167,7 @@ export async function POST(req: NextRequest) {
         categorySlug,
         country,
         deadline,
-        applyUrl,
+        applyUrl: applyUrl || (!applyEmail ? applyPhone : null),
         applyEmail: applyEmail || null,
         description,
         contactName,

@@ -32,6 +32,7 @@ import { AutoImportPanel } from '@/components/admin/auto-import-panel';
 import { TemplatesPanel } from '@/components/admin/templates-panel';
 import { SubmissionsPanel } from '@/components/admin/submissions-panel';
 import { ContentHealthPanel } from '@/components/admin/content-health-panel';
+import { ApplicantOperationsPanel } from '@/components/admin/applicant-operations-panel';
 import { DiscoveryInboxPanel } from '@/components/admin/discovery-inbox-panel';
 import { OrganizationsPanel } from '@/components/admin/organizations-panel';
 import { OrdersPanel } from '@/components/admin/orders-panel';
@@ -53,6 +54,7 @@ const NAV: NavItem[] = [
   { key: 'brandStudio', labelKey: 'admin.nav.brandStudio', icon: Wand2 },
   { key: 'automation', labelKey: 'admin.nav.automation', icon: Zap },
   { key: 'contentHealth', labelKey: 'admin.nav.contentHealth', icon: Activity },
+  { key: 'applicantOps', labelKey: 'admin.nav.contentHealth', icon: BellRing },
   { key: 'submissions', labelKey: 'admin.nav.submissions', icon: Inbox },
   { key: 'discovery', labelKey: 'admin.nav.discovery', icon: SearchCheck },
   { key: 'organizations', labelKey: 'admin.nav.organizations', icon: Building2 },
@@ -162,7 +164,7 @@ export function AdminApp({ admin }: { admin: AdminUser }) {
                 )}
               >
                 <item.icon className="h-4 w-4 shrink-0" />
-                <span className="truncate">{t(item.labelKey)}</span>
+                <span className="truncate">{item.key==='applicantOps'?'Applicant operations':t(item.labelKey)}</span>
               </button>
             )
           )}
@@ -208,7 +210,7 @@ export function AdminApp({ admin }: { admin: AdminUser }) {
           </div>
         </header>
         <main id="main-content" className="flex-1 overflow-x-hidden p-4 lg:p-6">
-          {active === 'dashboard' ? <Dashboard onNavigate={setActive} /> : active === 'settings' ? <SettingsPanel /> : active === 'autoImport' ? <AutoImportPanel /> : active === 'documentTemplate' ? <TemplatesPanel /> : active === 'submissions' ? <SubmissionsPanel /> : active === 'discovery' ? <DiscoveryInboxPanel onEditOpportunity={(id) => { setRepairOpportunity({ id, issue: 'core' }); setActive('opportunity'); }} /> : active === 'contentHealth' ? <ContentHealthPanel onEditOpportunity={(id, issue) => { setRepairOpportunity({ id, issue }); setActive('opportunity'); }} /> : active === 'orders' ? <OrdersPanel /> : active === 'brandStudio' ? <BrandStudioPanel /> : active === 'automation' ? <AutomationPanel /> : active === 'opportunity' ? <OpportunityFormPanel focus={repairOpportunity} onFocusHandled={() => setRepairOpportunity(null)} /> : active === 'cvBuilder' ? <CVBuilderAdminPanel /> : <CrudTable model={active} />}
+          {active === 'applicantOps' ? <ApplicantOperationsPanel /> : active === 'dashboard' ? <Dashboard onNavigate={setActive} /> : active === 'settings' ? <SettingsPanel /> : active === 'autoImport' ? <AutoImportPanel /> : active === 'documentTemplate' ? <TemplatesPanel /> : active === 'submissions' ? <SubmissionsPanel /> : active === 'discovery' ? <DiscoveryInboxPanel onEditOpportunity={(id) => { setRepairOpportunity({ id, issue: 'core' }); setActive('opportunity'); }} /> : active === 'contentHealth' ? <ContentHealthPanel onEditOpportunity={(id, issue) => { setRepairOpportunity({ id, issue }); setActive('opportunity'); }} /> : active === 'orders' ? <OrdersPanel /> : active === 'brandStudio' ? <BrandStudioPanel /> : active === 'automation' ? <AutomationPanel /> : active === 'opportunity' ? <OpportunityFormPanel focus={repairOpportunity} onFocusHandled={() => setRepairOpportunity(null)} /> : active === 'cvBuilder' ? <CVBuilderAdminPanel /> : <CrudTable model={active} />}
         </main>
       </div>
     </div>

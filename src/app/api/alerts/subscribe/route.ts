@@ -145,11 +145,12 @@ export async function POST(req: NextRequest) {
       const { sendHtmlEmail } = await import('@/lib/mailer');
       const result = await sendHtmlEmail({ to: email, subject: confirmSubject(lang), html: confirmEmailHtml(lang, confirmUrl) });
       if (!result.sent) {
-        console.log(`[alert-subscribe] SMTP not configured — confirm URL for ${email}: ${confirmUrl}`);
+        return NextResponse.json({ error: 'email_delivery_unavailable' }, { status: 503 });
       }
     } catch (mailErr) {
       // Delivery failure must never fail the signup — admin can re-trigger.
-      console.error('[alert-subscribe] confirm email failed:', mailErr);
+      console.error('[alert-subscribe] confirm email failed:', mailErr instanceof Error ? mailErr.name : 'unknown');
+      return NextResponse.json({ error: 'email_delivery_unavailable' }, { status: 503 });
     }
 
     return NextResponse.json({ success: true, confirmRequired: true });

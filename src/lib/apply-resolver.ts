@@ -110,6 +110,7 @@ export interface ApplyResolverInput {
 
 const DOMAINS_DEFAULT_RANK: Record<ApplyUrlType, number> = {
   application_email: 75,
+  application_phone: 0, // Employer-provided phone is actionable but not independently verified
   application_form: 88,
   direct_application: 65,
   source_article_fallback: 20,

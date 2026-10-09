@@ -297,7 +297,7 @@ describeIf(dbUp)('phase 25 — end-to-end local workflow', () => {
     const created = await createJob(db, ownerA, orgA, {
       title: `Dashboard Edit Job ${runId}`,
       description: 'A dashboard-created vacancy that the ownership wall will protect from organization B.',
-      applyEmail: `jobs@orga-e2e25-${runId}@example.org`,
+      applyEmail: `jobs+${runId}@orga-e2e25.example.org`,
     });
 
     // organization B's owner CANNOT touch organization A's vacancy
