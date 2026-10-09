@@ -385,6 +385,7 @@ model Opportunity {
   attachments     String? // JSON
   featured        Boolean              @default(false)
   status          OpportunityStatus    @default(published)
+  publicationRevision Int @default(0)
   sort            Int                  @default(0)
   seoTitle        String?
   seoDescription  String?

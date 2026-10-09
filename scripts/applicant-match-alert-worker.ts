@@ -47,7 +47,7 @@ async function scan(){
     OR:[{deadline:null},{deadline:{gte:today}}]},
   orderBy:[{updatedAt:'asc'},{id:'asc'}],take:MAX_CANDIDATES,
   select:{
-   id:true,slug:true,title:true,organization:true,country:true,deadline:true,
+   id:true,slug:true,title:true,organization:true,country:true,deadline:true,publicationRevision:true,
    locations:{select:{country:true,province:true,city:true}},
    category:{select:{slug:true,name:true}},jobType:true,educationReq:true,
    experience:true,eligibility:true,requirements:true,benefits:true,tags:true,

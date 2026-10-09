@@ -8,6 +8,19 @@ test('material version ignores bookkeeping and changes with eligibility/deadline
  const row={title:'Driver',deadline:new Date('2027-01-01'),requirements:'License',locations:[{province:'Kabul'}]};
  expect(matchMaterialVersion(row)).toBe(matchMaterialVersion({...row}));
  expect(matchMaterialVersion(row)).not.toBe(matchMaterialVersion({...row,requirements:'Two years experience'}));
+ expect(matchMaterialVersion(row)).not.toBe(matchMaterialVersion({...row,publicationRevision:1}));
+ expect(matchMaterialVersion({...row,locations:[{province:'Kabul'},{province:'Herat'}]})).toBe(matchMaterialVersion({...row,locations:[{province:'Herat'},{province:'Kabul'}]}));
+});
+test('reopening increments publication revision; translation bookkeeping does not',async()=>{
+ const id='reopen-'+randomBytes(10).toString('hex');
+ try{
+  const row=await db.opportunity.create({data:{id,slug:id,title:'Driver',description:'Synthetic reopening test',status:'published'}});
+  await db.opportunity.update({where:{id},data:{titleI18n:{fa:'راننده'}}});
+  expect((await db.opportunity.findUniqueOrThrow({where:{id}})).publicationRevision).toBe(0);
+  await db.opportunity.update({where:{id},data:{status:'expired'}});
+  await db.opportunity.update({where:{id},data:{status:'published'}});
+  expect((await db.opportunity.findUniqueOrThrow({where:{id}})).publicationRevision).toBe(1);
+ }finally{await db.opportunity.deleteMany({where:{id}});}
 });
 test('scanner rotates past 100 saved searches and resumes beyond a 500-row page',async()=>{
  const url=new URL(process.env.DATABASE_URL||'postgresql://localhost/no_db');

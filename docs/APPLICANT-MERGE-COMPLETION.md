@@ -31,7 +31,8 @@ It does not activate production databases, providers or Oracle services.
 - Matching scans rotate least-recently-scanned searches, persist ordered page
   boundaries, and use a dedicated PostgreSQL advisory lock across workers.
   Meaningful content hashes permit changed-listing alerts while ignoring
-  translation/import bookkeeping. Archived notification records preserve
+  translation/import bookkeeping. A database publication revision identifies
+  reopened vacancies even when their text is unchanged. Archived records preserve
   deduplication history.
 - Dashboard uses real completion/CV/search/application/unread counts. Profile,
   settings, export, logout-all and archive actions are localized. Public
