@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Search, ChevronDown, Sun, Moon, Globe, ChevronRight, Bell } from 'lucide-react';
+import { Menu, Search, ChevronDown, Sun, Moon, Globe, ChevronRight, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import {
@@ -47,6 +47,7 @@ function DesktopMenuItem({ item }: { item: MenuItem }) {
   const storeCode = useLangStore((s) => s.code);
   const code = useLangContext() ?? storeCode;
   const hrefFn = useLangHref();
+  const [expanded, setExpanded] = useState(false);
   const hasChildren = item.children && item.children.length > 0;
   
   // Get localized label - correct parameter order: (baseValue, i18nValue, lang)
@@ -75,13 +76,13 @@ function DesktopMenuItem({ item }: { item: MenuItem }) {
   }
 
   return (
-    <div className="group relative">
-      <button className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-foreground/75 transition-colors hover:text-foreground">
+    <div className="group relative" onMouseEnter={() => setExpanded(true)} onMouseLeave={() => setExpanded(false)} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) setExpanded(false); }} onKeyDown={e => { if (e.key === 'Escape') { setExpanded(false); e.currentTarget.querySelector('button')?.focus(); } }}>
+      <button type="button" aria-expanded={expanded} onClick={() => setExpanded(!expanded)} className="flex min-h-11 items-center gap-1 px-3 py-2 text-sm font-medium text-foreground/75 transition-colors hover:text-foreground">
         {label}
         <ChevronDown className="h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-180" />
         <span className="absolute inset-x-3 -bottom-0.5 h-px origin-left scale-x-0 bg-gradient-to-r from-primary to-chart-2 transition-transform duration-300 group-hover:scale-x-100" />
       </button>
-      <div className="invisible absolute left-0 top-full z-50 pt-2 opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100">
+      <div hidden={!expanded} className="absolute start-0 top-full z-50 pt-2">
         <div className="min-w-56 overflow-hidden rounded-2xl border border-border/60 bg-card/95 p-2 shadow-premium backdrop-blur-xl">
           {item.children.map((child) => (
             <NestedMenuItem key={child.id} item={child} />
@@ -96,6 +97,7 @@ function NestedMenuItem({ item }: { item: MenuItem }) {
   const storeCode = useLangStore((s) => s.code);
   const code = useLangContext() ?? storeCode;
   const hrefFn = useLangHref();
+  const [expanded, setExpanded] = useState(false);
   const hasChildren = item.children && item.children.length > 0;
   const label = getLocalizedContent(item.label, item.labelI18n, code);
 
@@ -117,12 +119,12 @@ function NestedMenuItem({ item }: { item: MenuItem }) {
     );
   }
   return (
-    <div className="group/nested relative">
-      <button className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm text-foreground/70 transition-colors hover:bg-accent hover:text-foreground">
+    <div className="group/nested relative" onMouseEnter={() => setExpanded(true)} onMouseLeave={() => setExpanded(false)} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) setExpanded(false); }}>
+      <button type="button" aria-expanded={expanded} onClick={() => setExpanded(!expanded)} className="flex min-h-11 w-full items-center justify-between rounded-xl px-3 py-2 text-sm text-foreground/70 transition-colors hover:bg-accent hover:text-foreground">
         {label}
         <ChevronRight className="h-3.5 w-3.5 rtl-flip" />
       </button>
-      <div className="invisible absolute left-full top-0 z-50 ml-1 opacity-0 transition-all duration-200 group-hover/nested:visible group-hover/nested:opacity-100 rtl:left-auto rtl:right-full rtl:ml-0 rtl:mr-1">
+      <div hidden={!expanded} className="absolute left-full top-0 z-50 pl-1 rtl:left-auto rtl:right-full rtl:pl-0 rtl:pr-1">
         <div className="min-w-56 overflow-hidden rounded-2xl border border-border/60 bg-card/95 p-2 shadow-premium backdrop-blur-xl">
           {item.children.map((child) => (
             <NestedMenuItem key={child.id} item={child} />
@@ -164,6 +166,7 @@ function MobileMenuItem({ item, depth = 0, onNavigate }: { item: MenuItem; depth
   return (
     <div>
       <button
+        aria-expanded={open}
         onClick={() => setOpen(!open)}
         className="flex min-h-[44px] w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-foreground/80 transition-colors hover:bg-accent"
         style={{ paddingInlineStart: `${depth * 12 + 12}px` }}
@@ -207,11 +210,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
   // (kept in sync by LangSync with a static fallback).
   const allLanguages = languages.length > 0 ? languages : storeLanguages;
   const t = useT();
-  const router = useRouter();
   const pathname = usePathname();
-  const clickCount = useRef(0);
-  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   // Switch language: navigate to the same page under the new /{lang} prefix.
   // HARD navigation (window.location.assign), NOT router.push: mixing a zustand
   // store update and router.push in one handler raced the Next 16 concurrent
@@ -230,23 +229,6 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
       return;
     }
     window.location.assign(target);
-  };
-
-  // Secret admin access: click the logo 5 times within 2 seconds to open /admin
-  // (not visible to regular visitors — no UI hint)
-  const handleLogoClick = (e: React.MouseEvent) => {
-    clickCount.current += 1;
-    if (clickTimer.current) clearTimeout(clickTimer.current);
-    clickTimer.current = setTimeout(() => { clickCount.current = 0; }, 2000);
-    if (clickCount.current >= 5) {
-      clickCount.current = 0;
-      if (clickTimer.current) clearTimeout(clickTimer.current);
-      router.push('/admin');
-      return;
-    }
-    // First 4 clicks: normal navigation to #home
-    e.preventDefault();
-    window.location.hash = 'home';
   };
 
   useEffect(() => {
@@ -300,20 +282,20 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
               'flex items-center justify-between rounded-2xl px-4 transition-all duration-500 sm:px-5',
               scrolled
                 ? 'glass border border-border/60 shadow-premium h-14'
-                : 'border border-transparent h-16'
+                : 'border border-border/60 bg-background/95 shadow-sm backdrop-blur-xl h-16'
             )}
           >
-            {/* Logo — click 5× quickly (within 2s) to open admin */}
-            <button onClick={handleLogoClick} className="flex items-center gap-2.5" aria-label={siteName}>
+            {/* A predictable home link on every page. */}
+            <a href={`/${code}`} className="flex min-h-11 shrink-0 items-center gap-2.5 rounded-lg focus-visible:outline-2 focus-visible:outline-primary" aria-label={`${siteName} — ${code==='en'?'Home':code==='fa'?'خانه':'کور'}`}>
               <LogoMark src={logoUrl} />
               <span className="text-lg font-bold tracking-tight">
                 {siteName.split(' ')[0]}
                 <span className="text-gradient-static"> {siteName.split(' ')[1]}</span>
               </span>
-            </button>
+            </a>
 
             {/* Desktop nav */}
-            <nav className="hidden items-center lg:flex">
+            <nav className="hidden items-center xl:flex">
               {menu.map((item) => (
                 <DesktopMenuItem key={item.id} item={item} />
               ))}
@@ -378,7 +360,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
               </a>}
               <Button
                 size="sm"
-                className="hidden h-9 rounded-xl bg-gradient-to-r from-primary to-chart-2 px-4 text-sm font-semibold shadow-float hover:opacity-90 md:inline-flex"
+                className="hidden min-h-11 rounded-xl bg-primary px-4 text-sm font-semibold shadow-float hover:opacity-90 md:inline-flex"
                 asChild
               >
                 <a href={hrefFn('/get-started')}>{t('nav.getStarted')}</a>
@@ -387,17 +369,15 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
               {/* Mobile menu */}
               <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl lg:hidden" aria-label={t('nav.menu')}>
+                  <Button variant="ghost" size="icon" className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl xl:hidden" aria-label={t('nav.menu')}>
                     <Menu className="h-5 w-5" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-[320px] overflow-y-auto p-0">
+                <SheetContent side={code === 'en' ? 'right' : 'left'} className="w-[min(360px,90vw)] overflow-y-auto p-0 [&>button]:min-h-11 [&>button]:min-w-11 [&>button]:top-2">
                   <SheetTitle className="sr-only">{t('nav.menu')}</SheetTitle>
                   <div className="flex items-center justify-between border-b border-border/60 px-5 py-4">
                     <span className="text-lg font-bold">{siteName}</span>
-                    <Button variant="ghost" size="icon" className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl" onClick={() => setMobileOpen(false)} aria-label={t('common.close') || 'Close'}>
-                      <X className="h-4 w-4" />
-                    </Button>
+
                   </div>
                   <nav className="space-y-1 p-3">
                     {menu.map((item) => (

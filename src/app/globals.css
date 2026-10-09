@@ -154,6 +154,7 @@
     font-feature-settings: "ss01", "cv01", "cv03";
   }
   html {
+    scroll-padding-top: 6rem;
     scroll-behavior: smooth;
   }
 
@@ -601,3 +602,27 @@
 .cv-field-flash { animation: cv-field-flash 1.4s ease-out; }
 .cv-print-sheet, .cv-print-sheet * { min-width: 0; }
 .cv-print-sheet .cv-rich { overflow-wrap: anywhere; word-break: break-word; }
+
+/* Applicant and employer journeys: touch targets, clear focus, quiet surfaces. */
+.journey-primary, .journey-secondary {
+  display: inline-flex; min-height: 48px; align-items: center; justify-content: center;
+  gap: .625rem; padding: .75rem 1.25rem; border-radius: .75rem;
+  font-size: .875rem; font-weight: 650; text-align: center; transition: background .15s, box-shadow .15s;
+}
+.journey-primary { background: var(--primary); color: var(--primary-foreground); }
+.journey-primary:hover { filter: brightness(1.08); }
+.journey-secondary { border: 1px solid var(--border); background: var(--card); color: var(--foreground); }
+.journey-secondary:hover { background: var(--accent); }
+.journey :is(button,a,input,select,textarea):focus-visible,
+.posting-workspace :is(button,a,input,select,textarea):focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+.journey button:disabled, .posting-workspace button:disabled { cursor: wait; opacity: .6; }
+.journey .account-panel { width: calc(100% - 2.5rem); max-width: 32rem; margin: 2rem auto 5rem; padding: 2rem; border: 1px solid var(--border); border-radius: 1.5rem; background: var(--card); box-shadow: 0 12px 45px -24px #102c4633; }
+.journey .account-panel input:not([type=checkbox]) { min-height: 48px; margin-top: .5rem; border-radius: .75rem; }
+.journey .account-panel label { font-weight: 550; }
+.posting-workspace input, .posting-workspace select, .posting-workspace textarea { font-size: 16px; }
+.posting-workspace :is(input,select,textarea) { scroll-margin-top: 8rem; }
+.posting-workspace textarea { min-height: 120px; height: auto; padding-top: .75rem; padding-bottom: .75rem; }
+.posting-workspace fieldset { min-width: 0; }
+.posting-workspace fieldset[hidden] { display: none; }
+@media (max-width: 420px) { .journey .account-panel { padding: 1.25rem; } }
+@media (prefers-reduced-motion: reduce) { .journey *, .posting-workspace * { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }
