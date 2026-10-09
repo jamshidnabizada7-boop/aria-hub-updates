@@ -4,9 +4,11 @@
  */
 import { createHash, randomBytes } from 'node:crypto';
 import bcrypt from 'bcryptjs';
+import { Prisma } from '@prisma/client';
 import { cookies } from 'next/headers';
 import { db } from '@/lib/db';
 import { sendHtmlEmail, smtpConfigured } from '@/lib/mailer';
+import { accountEmail } from '@/lib/applicants/account-email';
 
 export const APPLICANT_COOKIE = 'aria-applicant-session';
 const SESSION_DAYS = 14;
@@ -37,13 +39,17 @@ export function applicantCookie(raw: string) {
 export function expiredApplicantCookie() {
   return { ...applicantCookie(''), maxAge: 0 };
 }
-export async function newApplicantSession(userId: string, expectedPasswordHash?: string): Promise<string> {
+export async function newApplicantSession(userId: string, expectedPasswordHash?: string, profileLocale?: string): Promise<string> {
   const raw = randomBytes(32).toString('base64url');
   await db.$transaction(async tx => {
     await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${userId} FOR UPDATE`;
     const user = await tx.user.findUnique({ where: { id: userId } });
     if (!user || user.disabled || (expectedPasswordHash && user.passwordHash !== expectedPasswordHash))
       throw new ApplicantError('invalid_credentials', 401);
+    if (profileLocale !== undefined) {
+      if (!user.emailVerified) throw new ApplicantError('email_not_verified', 403);
+      await tx.applicantProfile.upsert({where:{userId},create:{userId,preferredLocale:['en','fa','ps'].includes(profileLocale)?profileLocale:'fa'},update:{}});
+    }
     await tx.session.create({ data: { userId, sessionToken: tokenHash(raw), expires: new Date(Date.now() + SESSION_DAYS * 86400000) } });
   });
   return raw;
@@ -74,12 +80,22 @@ export async function revokeAllApplicantSessions(userId: string): Promise<void> 
   await db.session.deleteMany({ where: { userId } });
 }
 
+async function deliverAccountEmail(message: Parameters<typeof sendHtmlEmail>[0]) {
+  try {
+    const result=await sendHtmlEmail(message);
+    if(!result.sent) throw new ApplicantError('email_delivery_unavailable',503);
+  } catch {
+    // Never expose provider errors or verification URLs to the client/logs.
+    throw new ApplicantError('email_delivery_unavailable',503);
+  }
+}
+
 export async function sendVerification(emailRaw: string, lang: string): Promise<void> {
   requireDelivery();
   const email = cleanEmail(emailRaw);
   if (!validEmail(email)) return;
   const user = await db.user.findUnique({ where: { email }, select: { id: true, disabled: true, emailVerified: true, applicantProfile: { select: { id: true } } } });
-  if (!user || user.disabled || user.emailVerified || !user.applicantProfile) return;
+  if (!user || user.disabled || user.emailVerified) return;
   const raw = randomBytes(32).toString('hex');
   await db.verificationToken.deleteMany({ where: { identifier: verifyPrefix + email } });
   await db.verificationToken.create({
@@ -90,11 +106,7 @@ export async function sendVerification(emailRaw: string, lang: string): Promise<
   verify.searchParams.set('email', email);
   verify.searchParams.set('token', raw);
   verify.searchParams.set('lang', ['en', 'fa', 'ps'].includes(lang) ? lang : 'fa');
-  const result = await sendHtmlEmail({
-    to: email, subject: 'Verify your ARIA HUB account',
-    html: '<p>Confirm your ARIA HUB account by opening this secure link (valid 30 minutes):</p><p><a href="' + verify.toString().replace(/&/g, '&amp;') + '">Verify email</a></p>',
-  });
-  if (!result.sent) throw new ApplicantError('email_delivery_unavailable', 503);
+  await deliverAccountEmail({to:email,...accountEmail(lang,'verify',verify)});
 }
 export async function registerApplicant(emailRaw: string, password: string, name: string, lang: string) {
   requireApplicantEnabled();
@@ -102,9 +114,21 @@ export async function registerApplicant(emailRaw: string, password: string, name
   const email = cleanEmail(emailRaw);
   if (!validEmail(email) || !passwordOk(password) || !name?.trim() || name.length > 120)
     throw new ApplicantError('invalid_registration');
-  const existing = await db.user.findUnique({ where: { email }, select: { id: true } });
-  if (existing) return; // non-enumerating; verified users are not silently modified
-  await db.user.create({ data: { email, name: name.trim(), passwordHash: await bcrypt.hash(password, 12), applicantProfile: { create: {} } } });
+  // Retry a pending registration only with password proof. This also recovers
+  // an account created just before its email provider became unavailable.
+  async function resendPending() {
+    const user = await db.user.findUnique({where:{email},select:{disabled:true,emailVerified:true,passwordHash:true,applicantProfile:{select:{id:true}}}});
+    if(user && !user.disabled && !user.emailVerified && user.passwordHash && await bcrypt.compare(password,user.passwordHash))
+      await sendVerification(email,lang);
+  }
+  const existing = await db.user.findUnique({where:{email},select:{id:true}});
+  if(existing) { await resendPending(); return; }
+  try {
+    await db.user.create({data:{email,name:name.trim(),passwordHash:await bcrypt.hash(password,12),applicantProfile:{create:{preferredLocale:lang}}}});
+  } catch(error) {
+    if(error instanceof Prisma.PrismaClientKnownRequestError && error.code==='P2002') {await resendPending();return;}
+    throw error;
+  }
   await sendVerification(email, lang);
 }
 export async function verifyApplicantEmail(emailRaw: string, raw: string): Promise<boolean> {
@@ -119,7 +143,7 @@ export async function verifyApplicantEmail(emailRaw: string, raw: string): Promi
     return true;
   });
 }
-export async function loginApplicant(emailRaw: string, password: string): Promise<string> {
+export async function loginApplicant(emailRaw: string, password: string, lang = 'fa'): Promise<string> {
   requireApplicantEnabled();
   const email = cleanEmail(emailRaw);
   const user = validEmail(email) ? await db.user.findUnique({ where: { email } }) : null;
@@ -127,10 +151,8 @@ export async function loginApplicant(emailRaw: string, password: string): Promis
   const dummy = '$2b$12$C6UzMDM.H6dfI/f/IKcEeOOoN8AwcEJZaU5fg3UJmKcF6bLPydTeS';
   const valid = await bcrypt.compare(password, user?.passwordHash || dummy).catch(() => false);
   if (!user || !valid || user.disabled) throw new ApplicantError('invalid_credentials', 401);
-  const applicant = await db.applicantProfile.findUnique({ where: { userId: user.id }, select: { id: true } });
-  if (!applicant) throw new ApplicantError('invalid_credentials', 401);
   if (!user.emailVerified) throw new ApplicantError('email_not_verified', 403);
-  return newApplicantSession(user.id, user.passwordHash!);
+  return newApplicantSession(user.id, user.passwordHash!, lang);
 }
 export async function forgotApplicantPassword(emailRaw: string, lang: string): Promise<void> {
   requireApplicantEnabled();
@@ -139,14 +161,12 @@ export async function forgotApplicantPassword(emailRaw: string, lang: string): P
   if (!validEmail(email)) return;
   const user = await db.user.findUnique({ where: { email } });
   if (!user?.passwordHash || user.disabled || !user.emailVerified) return;
-  if (!(await db.applicantProfile.findUnique({ where: { userId: user.id }, select: { id: true } }))) return;
   const raw = randomBytes(32).toString('base64url');
   await db.user.update({ where: { id: user.id }, data: { passwordResetToken: tokenHash(raw), passwordResetExpires: new Date(Date.now() + 30 * 60000) } });
   const base = process.env.PUBLIC_SITE_URL || 'https://www.myariahub.com';
   const url = new URL('/' + (['en', 'fa', 'ps'].includes(lang) ? lang : 'fa') + '/reset-password', base);
   url.searchParams.set('token', raw);
-  const delivery = await sendHtmlEmail({ to: email, subject: 'ARIA HUB password reset', html: '<p>Reset your password (valid 30 minutes):</p><p><a href="' + url.toString().replace(/&/g, '&amp;') + '">Reset password</a></p>' });
-  if (!delivery.sent) throw new ApplicantError('email_delivery_unavailable', 503);
+  await deliverAccountEmail({to:email,...accountEmail(lang,'reset',url)});
 }
 export async function resetApplicantPassword(raw: string, password: string): Promise<void> {
   if (!passwordOk(password) || !/^[A-Za-z0-9_-]{40,64}$/.test(raw)) throw new ApplicantError('invalid_reset', 400);

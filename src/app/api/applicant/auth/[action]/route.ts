@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { allowDurable } from '@/lib/security/durable-rate-limit';
 import { checkDurableRateLimit } from '@/lib/security/durable-rate-limit';
 import { createHash } from 'node:crypto';
+import { isIP } from 'node:net';
 import { applicantCookie, applicantFromRequest, APPLICANT_COOKIE, ApplicantError, changeApplicantPassword, currentApplicant, expiredApplicantCookie, forgotApplicantPassword, loginApplicant, registerApplicant, requireApplicantEnabled, resetApplicantPassword, revokeApplicantSession, sendVerification } from '@/lib/applicant-auth';
 import { cookies } from 'next/headers';
 import { enrollApplicant, revokeAllApplicantSessions } from '@/lib/applicant-auth';
@@ -12,8 +13,11 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 // Only trust an ingress header when the deployment explicitly guarantees
 // direct origin traffic is blocked and Cloudflare overwrites that header.
-const rawIp = (req: Request) => process.env.APPLICANT_TRUST_CLOUDFLARE_HEADERS==='true'
-  ? (req.headers.get('cf-connecting-ip') || 'unknown').slice(0,64) : 'unknown';
+const rawIp = (req: Request) => {
+  if(process.env.APPLICANT_TRUST_CLOUDFLARE_HEADERS!=='true') return 'unknown';
+  const value=(req.headers.get('cf-connecting-ip')||'').trim();
+  return isIP(value)?value:'unknown';
+};
 const json = (data: object, status = 200) => NextResponse.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 export async function GET(_req: Request, ctx: { params: Promise<{ action: string }> }) {
   const { action } = await ctx.params;
@@ -54,7 +58,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ action: string
     }
     if (action === 'verify') return json({ error: 'use_verification_link' }, 405);
     if (action === 'login') {
-      const session = await loginApplicant(email, password);
+      const session = await loginApplicant(email, password, lang);
       const res = json({ success: true });
       res.cookies.set(applicantCookie(session));
       return res;
