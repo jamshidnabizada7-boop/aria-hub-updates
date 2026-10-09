@@ -154,6 +154,7 @@
     font-feature-settings: "ss01", "cv01", "cv03";
   }
   html {
+    scroll-padding-top: 6rem;
     scroll-behavior: smooth;
   }
 
