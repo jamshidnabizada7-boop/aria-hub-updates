@@ -32,6 +32,7 @@ export interface EmployerSessionPayload {
   userId: string;
   email: string;
   t: number; // issued at
+  credentialTag?: string;
 }
 
 function sign(payload: string): string {
@@ -66,6 +67,7 @@ export interface EmployerUser {
   id: string;
   email: string;
   name: string | null;
+  credentialTag?: string;
 }
 
 /** Register: creates the User with a bcrypt hash. Fails on duplicate email. */
@@ -82,7 +84,7 @@ export async function registerEmployer(email: string, password: string, name?: s
       passwordHash: await bcrypt.hash(password, 12),
     },
   });
-  return { id: user.id, email: user.email!, name: user.name };
+  return { id: user.id, email: user.email!, name: user.name, credentialTag: sign('credentials:' + user.passwordHash) };
 }
 
 /** Login: constant-shape failure (no user-enumeration detail). */
@@ -107,7 +109,7 @@ export async function loginEmployer(email: string, password: string): Promise<Em
     `.catch(() => null);
     throw new Error('Invalid email or password.');
   }
-  return { id: user.id, email: user.email!, name: user.name };
+  return { id: user.id, email: user.email!, name: user.name, credentialTag: sign('credentials:' + user.passwordHash) };
 }
 
 /** Resolve the signed cookie to the current employer (or null). */
@@ -117,6 +119,7 @@ export async function getCurrentEmployer(cookieValue: string | undefined | null)
   const user = await db.user.findUnique({ where: { id: payload.userId } });
   // PHASE 7: sessions fail closed for disabled accounts.
   if (!user?.email || user.disabled || user.updatedAt.getTime() > payload.t) return null;
+  if(payload.credentialTag && payload.credentialTag!==sign('credentials:'+user.passwordHash))return null;
   return { id: user.id, email: user.email, name: user.name };
 }
 
@@ -137,16 +140,19 @@ export async function changeEmployerPassword(
   userId: string,
   currentPassword: string,
   newPassword: string,
-): Promise<void> {
+): Promise<string> {
   const user = await db.user.findUnique({ where: { id: userId } });
   if (!user?.passwordHash) throw new Error('Account has no password set.');
   const ok = await bcrypt.compare(currentPassword, user.passwordHash);
   if (!ok) throw new Error('Current password is incorrect.');
   if (typeof newPassword !== 'string' || newPassword.length < 8) throw new Error('Password must be at least 8 characters.');
-  await db.user.update({
-    where: { id: userId },
-    data: { passwordHash: await bcrypt.hash(newPassword, 12) },
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  await db.$transaction(async tx => {
+    const changed = await tx.user.updateMany({ where: { id: userId, passwordHash: user.passwordHash, disabled: false }, data: { passwordHash, passwordResetToken: null, passwordResetExpires: null } });
+    if (!changed.count) throw new Error('Current password is incorrect.');
+    await tx.session.deleteMany({ where: { userId } });
   });
+  return sign('credentials:'+passwordHash);
 }
 
 /**
@@ -157,7 +163,7 @@ export async function changeEmployerPassword(
 export async function createPasswordResetToken(email: string): Promise<{ sent: boolean; token?: string }> {
   const normalized = String(email ?? '').trim().toLowerCase();
   const user = await db.user.findUnique({ where: { email: normalized } });
-  if (!user?.passwordHash) return { sent: false };
+  if (!user?.passwordHash || user.disabled) return { sent: false };
   const token = randomBytes(32).toString('base64url');
   await db.user.update({
     where: { id: user.id },
@@ -176,20 +182,21 @@ export async function resetEmployerPassword(token: string, newPassword: string):
   const user = await db.user.findFirst({
     where: { passwordResetToken: hashed, passwordResetExpires: { gt: new Date() } },
   });
-  if (!user) throw new Error('Reset link is invalid or has expired.');
-  await db.user.update({
-    where: { id: user.id },
-    data: {
-      passwordHash: await bcrypt.hash(newPassword, 12),
-      passwordResetToken: null,
-      passwordResetExpires: null,
-    },
+  if (!user || user.disabled) throw new Error('Reset link is invalid or has expired.');
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  await db.$transaction(async tx => {
+    const changed = await tx.user.updateMany({ where: { id: user.id, disabled: false, passwordResetToken: hashed, passwordResetExpires: { gt: new Date() } }, data: { passwordHash, passwordResetToken: null, passwordResetExpires: null } });
+    if (!changed.count) throw new Error('Reset link is invalid or has expired.');
+    await tx.session.deleteMany({ where: { userId: user.id } });
   });
 }
 
 /** Admin/operations: disable an account (blocks login, sessions fail closed). */
 export async function disableEmployerAccount(userId: string): Promise<void> {
-  await db.user.update({ where: { id: userId }, data: { disabled: true } });
+  await db.$transaction([
+    db.user.update({ where: { id: userId }, data: { disabled: true, passwordResetToken: null, passwordResetExpires: null } }),
+    db.session.deleteMany({ where: { userId } }),
+  ]);
 }
 
 /** PHASE 7: change password by session (verifies current). */
@@ -197,8 +204,8 @@ export async function changeEmployerPasswordSession(
   userId: string,
   currentPassword: string,
   newPassword: string,
-): Promise<void> {
-  await changeEmployerPassword(userId, currentPassword, newPassword);
+): Promise<string> {
+  return changeEmployerPassword(userId, currentPassword, newPassword);
 }
 
 /** PHASE 7: expire all reset tokens for a user (used after a reset). */

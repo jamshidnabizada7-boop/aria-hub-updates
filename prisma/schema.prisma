@@ -1255,6 +1255,9 @@ model ApplicantSavedSearch {
   name String
   profile Json
   active Boolean @default(true)
+  lastScannedAt DateTime?
+  scanCursorUpdatedAt DateTime?
+  scanCursorId String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   notifications ApplicantNotification[]
@@ -1288,14 +1291,32 @@ model ApplicantNotification {
   opportunityId      String
   opportunity        Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
   evidence           Json?
+  materialVersion    String @default("legacy")
+  archivedAt         DateTime?
   readAt             DateTime?
   createdAt          DateTime @default(now())
   emailDelivery      ApplicantEmailDelivery?
   channelDeliveries  ApplicantChannelDelivery[]
 
-  @@unique([applicantProfileId, savedSearchId, opportunityId])
+  @@unique([applicantProfileId, savedSearchId, opportunityId, materialVersion], map: "ApplicantNotification_match_version_key")
   @@index([applicantProfileId, readAt, createdAt])
   @@index([createdAt])
+}
+
+// Durable account deletion: retained until every private object is removed.
+// No foreign key allows a completed minimal receipt to survive user deletion.
+model ApplicantDeletionJob {
+  id String @id @default(cuid())
+  userId String @unique
+  status String @default("pending")
+  attempts Int @default(0)
+  nextAttemptAt DateTime @default(now())
+  claimedAt DateTime?
+  errorCode String?
+  completedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([status, nextAttemptAt])
 }
 
 // Server-only email outbox; never a browser-accessible queue.

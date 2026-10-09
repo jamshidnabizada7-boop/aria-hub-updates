@@ -10,6 +10,7 @@ export default function manifest():MetadataRoute.Manifest {
   display:'standalone',
   background_color:'#ffffff',
   theme_color:'#163a68',
-  icons:[{src:'/favicon.ico',sizes:'any',type:'image/x-icon',purpose:'any'}]
+  icons:[{src:'/applicant-icon-192.png',sizes:'192x192',type:'image/png',purpose:'any'},
+    {src:'/applicant-icon-512.png',sizes:'512x512',type:'image/png',purpose:'any'}]
  };
 }

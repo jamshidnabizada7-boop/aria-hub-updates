@@ -24,6 +24,7 @@ export function ApplicantNotifications({lang}:{lang:Lang}){
  useEffect(()=>{void refresh().catch(()=>setStatus(t.error)).finally(()=>setLoading(false));},[refresh,t.error]);
  async function save(){setBusy(true);setStatus('');try{const r=await fetch('/api/applicant/notification-preferences',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(prefs)});if(!r.ok)throw Error('bad');setStatus(t.saved);}catch{setStatus(t.error);}finally{setBusy(false);}}
  async function read(id?:string){try{const r=await fetch('/api/applicant/notifications',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(id?{id}:{all:true})});if(!r.ok)throw Error('bad');await refresh();}catch{setStatus(t.error);}}
+ async function archive(id:string){try{const r=await fetch('/api/applicant/notifications',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,archive:true})});if(!r.ok)throw Error();await refresh();}catch{setStatus(t.error);}}
  async function more(){if(!next)return;try{const r=await fetch('/api/applicant/notifications?cursor='+encodeURIComponent(next),{cache:'no-store'});if(!r.ok)throw Error('bad');const d=await r.json();setItems(old=>[...old,...(d.items||[])]);setNext(d.nextCursor||null);}catch{setStatus(t.error);}}
  const input='rounded-md border bg-background p-2';
  return <main className="mx-auto max-w-4xl px-5 py-12" dir={lang==='en'?'ltr':'rtl'}>
@@ -45,6 +46,7 @@ export function ApplicantNotifications({lang}:{lang:Lang}){
    return <li key={item.id} className={'rounded-xl border p-4 '+(!item.readAt?'border-primary':'')}>
     <div className="flex flex-wrap items-center justify-between gap-2"><p className="font-semibold">{title}</p>{!item.readAt&&<button type="button" className="text-xs underline" onClick={()=>void read(item.id)}>{t.markAll}</button>}</div>
     <p className="mt-2 text-sm text-muted-foreground">{t.search}: {item.searchName} · {item.organization||''} · {new Date(item.createdAt).toLocaleDateString(lang==='fa'?'fa-AF':lang==='ps'?'ps-AF':'en-GB')}</p>
+    <button className="mt-3 rounded-lg border px-3 py-2 text-sm" onClick={()=>void archive(item.id)}>{lang==='en'?'Archive':lang==='fa'?'بایگانی':'زېرمه'}</button>
     {item.available?<Link className="mt-3 inline-block rounded-lg border px-3 py-2 text-sm" href={'/'+lang+'/opportunities/'+encodeURIComponent(item.slug)} onClick={()=>void read(item.id)}>{t.open}</Link>:<p className="mt-3 text-sm text-muted-foreground">{t.unavailable}</p>}
    </li>;
   })}</ul>

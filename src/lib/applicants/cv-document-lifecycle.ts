@@ -11,6 +11,8 @@ export async function reserveCVUpload(db:PrismaClient,profileId:string,data:{
   const owners=await tx.$queryRawUnsafe<Array<{id:string}>>(
    'SELECT "id" FROM "ApplicantProfile" WHERE "id"=$1 FOR UPDATE',profileId);
   if(!owners.length)throw new Error('profile_not_found');
+  const owner=await tx.applicantProfile.findUnique({where:{id:profileId},select:{user:{select:{disabled:true}}}});
+  if(!owner||owner.user.disabled)throw new Error('profile_unavailable');
   const duplicate=await tx.applicantDocument.findFirst({where:{applicantProfileId:profileId,sha256:data.sha256},select:{id:true}});
   if(duplicate)throw new CVLifecycleError('already_uploaded',duplicate.id);
   if(await tx.applicantDocument.count({where:{applicantProfileId:profileId}})>=10)

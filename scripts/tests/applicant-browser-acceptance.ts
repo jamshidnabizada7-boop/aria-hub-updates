@@ -24,16 +24,17 @@ const issues:string[]=[];
 let completed=0;
 await mkdir('/tmp/aria-browser-snapshots',{recursive:true});
 try{
- for(const lang of ['en','fa','ps'] as const)for(const mobile of [false,true]){
+ for(const lang of ['en','fa','ps'] as const)for(const width of [375,390,768,1440]){
+  const mobile=width<768;
   const context=await browser.newContext({
-   viewport:mobile?{width:390,height:844}:{width:1280,height:900},
+   viewport:{width,height:mobile?844:900},
    deviceScaleFactor:mobile?2:1,isMobile:mobile,hasTouch:mobile
   });
   await context.addCookies([{name:'aria-applicant-session',value:token,url:root,httpOnly:true,sameSite:'Lax'}]);
   const page=await context.newPage();
   const errors:string[]=[];
   page.on('pageerror',error=>errors.push(error.message.slice(0,180)));
-  const pages=['get-started','portal','portal/notifications','portal/matcher'];
+  const pages=['get-started','login','register','forgot-password','portal','portal/profile','portal/settings','portal/cvs','portal/career','portal/notifications','portal/matcher'];
   for(const segment of pages){
    const response=await page.goto(root+'/'+lang+'/'+segment,{waitUntil:'domcontentloaded',timeout:30000});
    await page.waitForTimeout(300);
@@ -56,7 +57,7 @@ try{
     if(await page.getByRole('checkbox').count()<2)issues.push(lang+' consent controls missing');
    }
    if(segment==='portal'){
-    await page.screenshot({path:'/tmp/aria-browser-snapshots/'+lang+'-'+(mobile?'mobile':'desktop')+'-portal.png'});
+    await page.screenshot({path:'/tmp/aria-browser-snapshots/'+lang+'-'+width+'-portal.png'});
    }
   }
   if(errors.length)issues.push(lang+' '+(mobile?'mobile':'desktop')+' hydration='+errors.join('|'));
@@ -68,5 +69,5 @@ try{
  await db.user.delete({where:{id:user.id}});
  await db.$disconnect();
 }
-console.log(JSON.stringify({mode:'isolated_browser',locales:['en','fa','ps'],viewports:2,cases:completed,screenshots:6,issues}));
+console.log(JSON.stringify({mode:'isolated_browser',locales:['en','fa','ps'],viewports:4,cases:completed,screenshots:12,issues}));
 if(issues.length)process.exitCode=1;

@@ -62,6 +62,8 @@ jobs:
       - name: Applicant and employer regression tests
         run: |
           bun test tests/applicant-milestone-1.test.ts tests/applicant-cv-m2.test.ts tests/applicant-cv-extraction-review.test.ts tests/applicant-matcher-m3.test.ts tests/applicant-saved-search-m3.test.ts tests/applicant-notifications-m4.test.ts tests/applicant-career-m5.test.ts tests/opportunity-matcher.test.ts tests/employer-jobs.test.ts tests/employer-auth.test.ts tests/employer-auth-completion.test.ts tests/apply-resolver.test.ts
+      - name: Completion security privacy alert fairness and lint compatibility
+        run: bun --conditions=react-server test tests/applicant-completion-security.test.ts tests/applicant-alert-pagination.test.ts tests/lint-glob-security.test.ts
       - name: CV isolation, concurrent lifecycle, encrypted sync, and Matcher journey
         run: |
           bun --conditions=react-server test tests/applicant-cv-security-sync-journey.test.ts
@@ -90,6 +92,7 @@ jobs:
           bun --conditions=react-server scripts/applicant-match-alert-worker.ts
           bun --conditions=react-server scripts/applicant-email-alert-worker.ts
           bun --conditions=react-server scripts/applicant-channel-alert-worker.ts
+          bun --conditions=react-server scripts/applicant-privacy-worker.ts
       - name: Compile standalone website without applicant external services
         run: |
           export ADMIN_SESSION_SECRET="$(openssl rand -hex 32)"
@@ -100,7 +103,7 @@ jobs:
         run: |
           bunx playwright-core install --with-deps chromium
           export ADMIN_SESSION_SECRET="$(openssl rand -hex 32)"
-          PORT=3104 HOSTNAME=127.0.0.1 NODE_ENV=production APPLICANT_AUTH_ENABLED=true APPLICANT_MATCHER_V3_ENABLED=true APPLICANT_NOTIFICATIONS_ENABLED=true node .next/standalone/server.js >/tmp/aria-browser-server.log 2>&1 &
+          PORT=3104 HOSTNAME=127.0.0.1 NODE_ENV=production APPLICANT_AUTH_ENABLED=true APPLICANT_MATCHER_V3_ENABLED=true APPLICANT_NOTIFICATIONS_ENABLED=true APPLICANT_CAREER_V5_ENABLED=true CLOUD_CV_STORAGE_ENABLED=true node .next/standalone/server.js >/tmp/aria-browser-server.log 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid" 2>/dev/null || true' EXIT
           for i in $(seq 1 50); do

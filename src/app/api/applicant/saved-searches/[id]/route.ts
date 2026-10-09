@@ -15,7 +15,8 @@ export async function PATCH(req:Request,{params}:Ctx){
   if(Number(req.headers.get('content-length')||0)>10000)return send({error:'payload_too_large'},413);
   const parsed=Update.safeParse(await req.json().catch(()=>null));if(!parsed.success)return send({error:'invalid_saved_search'},400);
   const changed=await db.applicantSavedSearch.updateMany({where:{id,applicantProfileId:profile.id},data:{
-    name:parsed.data.name,profile:parsed.data.profile,active:parsed.data.active??true
+    name:parsed.data.name,profile:parsed.data.profile,active:parsed.data.active??true,
+    lastScannedAt:null,scanCursorUpdatedAt:null,scanCursorId:null
   }});
   if(!changed.count)return send({error:'not_found'},404);
   return send({success:true,notificationsEnabled:false});
