@@ -39,6 +39,10 @@ It does not activate production databases, providers or Oracle services.
 - PWA manifest includes actual 192px and 512px ARIA HUB icons.
 - CI adds real database regressions and checks 11 routes in EN/FA/PS at
   375, 390, 768 and 1440 pixels. These tests use synthetic private data.
+- Full-suite verification exposed a concurrent Facebook Group job insertion
+  conflict across its two unique indexes. Atomic duplicate suppression followed
+  by a scoped metadata update preserves existing status and manual publishing.
+  The existing parallel-creation regression passes with this repair.
 
 ## Configuration and operations
 
