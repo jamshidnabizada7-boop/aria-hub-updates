@@ -286,7 +286,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
             )}
           >
             {/* A predictable home link on every page. */}
-            <a href={`/${code}`} className="flex min-h-11 shrink-0 items-center gap-2.5 rounded-lg focus-visible:outline-2 focus-visible:outline-primary" aria-label={`${siteName} — ${t('nav.home')}`}>
+            <a href={`/${code}`} className="flex min-h-11 shrink-0 items-center gap-2.5 rounded-lg focus-visible:outline-2 focus-visible:outline-primary" aria-label={`${siteName} — ${code==='en'?'Home':code==='fa'?'خانه':'کور'}`}>
               <LogoMark src={logoUrl} />
               <span className="text-lg font-bold tracking-tight">
                 {siteName.split(' ')[0]}

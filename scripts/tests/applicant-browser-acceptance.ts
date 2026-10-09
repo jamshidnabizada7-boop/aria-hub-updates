@@ -68,6 +68,8 @@ try{
     await form.locator('[name=categorySlug]').selectOption('jobs');
     await form.locator('[name=description]').fill('Coordinate community programmes, support project reporting, and work with a local team to deliver training and services.');
     await next.click();
+    const stepHeading=await form.locator('h2').boundingBox();
+    if(!stepHeading||stepHeading.y<80||stepHeading.y>300)issues.push(lang+' next step heading outside useful viewport');
     await form.locator('[name=contactEmail]').fill('review@test.invalid');
     await next.click();
     if(!(await form.locator('[role=alert]').isVisible())||submissions)issues.push(lang+' application method validation missing');

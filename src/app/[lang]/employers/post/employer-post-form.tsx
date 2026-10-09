@@ -63,7 +63,12 @@ export function EmployerPostForm({ lang }: { lang: Lang }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const hasNavigated = useRef(false);
   const sending = useRef(false);
-  useEffect(() => { if (hasNavigated.current) headingRef.current?.focus(); }, [step]);
+  useEffect(() => {
+    if (hasNavigated.current) {
+      headingRef.current?.focus({preventScroll:true});
+      headingRef.current?.scrollIntoView({block:'start',behavior:'instant'});
+    }
+  }, [step]);
   function changeStep(value:number) { hasNavigated.current=true; setStep(value); setError(''); }
   function validateStep(form:HTMLFormElement, value:number) {
     const fields = form.querySelectorAll<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>(`fieldset[data-step="${value}"] input, fieldset[data-step="${value}"] select, fieldset[data-step="${value}"] textarea`);

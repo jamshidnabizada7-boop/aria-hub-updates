@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -30,29 +29,10 @@ export function Footer({
   const lang = useLangStore((s) => s.code);
   const hrefFn = useLangHref();
   const { toast } = useToast();
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
-  const clickCount = useRef(0);
-  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Secret admin access: click footer logo 5× within 2s
-  const handleLogoClick = (e: React.MouseEvent) => {
-    clickCount.current += 1;
-    if (clickTimer.current) clearTimeout(clickTimer.current);
-    clickTimer.current = setTimeout(() => { clickCount.current = 0; }, 2000);
-    if (clickCount.current >= 5) {
-      clickCount.current = 0;
-      if (clickTimer.current) clearTimeout(clickTimer.current);
-      router.push('/admin');
-      return;
-    }
-    e.preventDefault();
-    window.location.hash = 'home';
-  };
-
   async function subscribe(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -161,7 +141,7 @@ export function Footer({
         <div className="grid grid-cols-2 gap-8 md:grid-cols-4 lg:grid-cols-6">
           {/* Brand */}
           <div className="col-span-2 lg:col-span-2">
-            <button onClick={handleLogoClick} className="flex items-center gap-2.5" aria-label={settings?.siteName || 'ARIA HUB'}>
+            <Link href={hrefFn('/')} className="flex min-h-11 items-center gap-2.5" aria-label={settings?.siteName || 'ARIA HUB'}>
               {settings?.logoUrl ? (
                 <Image src={settings.logoUrl} alt={settings.siteName} width={36} height={36} className="h-9 w-9 rounded-xl object-cover" unoptimized={settings.logoUrl.startsWith('http') && !settings.logoUrl.startsWith('https://www.myariahub.com')} />
               ) : (
@@ -171,7 +151,7 @@ export function Footer({
                 {settings?.siteName?.split(' ')[0] || 'ARIA'}
                 <span className="text-gradient-static"> {(settings?.siteName?.split(' ')[1]) || 'HUB'}</span>
               </span>
-            </button>
+            </Link>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
               {getLocalizedContent(settings?.description, settings?.descriptionI18n, lang) || t('footer.aboutDesc')}
             </p>
