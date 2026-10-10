@@ -60,6 +60,7 @@ import {
 } from '@/lib/opportunity-queries';
 import { cn } from '@/lib/utils';
 import { buildOpportunityFacts } from '@/lib/opportunity-facts';
+import { buildDetailSummary } from '@/lib/opportunity-summary';
 import { ensureSeoDescription } from '@/lib/seo-metadata';
 import { parseDate } from '@/lib/import/utils';
 import { classifyApplyUrl, isRealApplyLink, normalizeApplyUrl } from '@/lib/apply';
@@ -263,10 +264,11 @@ export default async function OpportunityDetailPage({
   const eligibility = localize(opp.eligibility, opp.eligibilityI18n as I18nJson, lang);
   const benefits = localize(opp.benefits, opp.benefitsI18n as I18nJson, lang);
   const guidelines = localize(opp.guidelines, opp.guidelinesI18n as I18nJson, lang);
-  const summary = cleanSummary(
-    localize(opp.aiSummary, opp.aiSummaryI18n as I18nJson, lang),
-    800
-  );
+  const summaryBlocks = buildDetailSummary({
+    summary: localize(opp.aiSummary, opp.aiSummaryI18n as I18nJson, lang),
+    description: rawDescription,
+    requirements, eligibility, benefits, responsibilities, guidelines,
+  });
 
   const expired = isOpportunityExpired(opp.status, opp.deadline);
   const daysLeft = opp.deadline ? daysUntilDeadline(opp.deadline) : null;
@@ -311,7 +313,7 @@ export default async function OpportunityDetailPage({
 
   // ---- JSON-LD (JobPosting + BreadcrumbList) --------------------------------
   const jsonLdDescription =
-    summary ||
+    summaryBlocks.map(block => block.text).join('\n\n') ||
     renderListingContent(rawDescription).replace(/<[^>]+>/g, ' ').slice(0, 300).trim() ||
     title ||
     'Opportunity details on ARIA HUB';
@@ -561,16 +563,21 @@ export default async function OpportunityDetailPage({
                 </div>
               )}
 
-              {/* AI summary */}
-              {summary && (
+              {/* Complete listing overview, independent of card/SEO excerpts. */}
+              {summaryBlocks.length > 0 && (
                 <div className="mt-5 rounded-xl border border-primary/20 bg-primary/5 p-5">
                   <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-primary">
                     <Sparkles className="h-4 w-4" aria-hidden="true" />
                     {t('detail.aiSummary')}
                   </h2>
-                  <p dir="auto" className="mt-2 text-sm leading-relaxed text-foreground/90">
-                    {summary}
-                  </p>
+                  <div className="mt-3 space-y-3 text-sm leading-7 text-foreground/90">
+                    {summaryBlocks.map((block, index) => (
+                      <p key={index} dir="auto" className="whitespace-pre-line break-words">
+                        {block.labelKey && <strong className="font-semibold">{t(block.labelKey)}: </strong>}
+                        {block.text}
+                      </p>
+                    ))}
+                  </div>
                   <p className="mt-3 flex items-start gap-1.5 text-xs leading-relaxed text-muted-foreground">
                     <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                     {t('detail.aiSummaryNote')}

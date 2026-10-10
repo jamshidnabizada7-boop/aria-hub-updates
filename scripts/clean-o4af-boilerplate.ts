@@ -1,3 +1,4 @@
+import { buildSourceSummary } from '../src/lib/opportunity-summary';
 /**
  * Clean o4af.com / scholarships.af theme boilerplate from EXISTING records.
  *
@@ -62,13 +63,9 @@ const JUNK_RE = /Follow Us|Share with Your Friends|Sponsored links|Making Educat
 const SUMMARY_PREFIX_RE =
   /^\s*(about the (company|organization( and job)?|volunteerism|opportunity|program|job)|introduction|job description|opportunity description|description)\s*[:\-–—]?\s*/i;
 
-/** Plain-text summary rebuilt from the cleaned description (≤200 chars). */
+/** Rebuild a source overview at complete sentence boundaries. */
 function rebuildSummary(description: string): string {
-  let s = stripHtml(description);
-  s = s.replace(SUMMARY_PREFIX_RE, '');
-  s = s.replace(/\s+/g, ' ').trim();
-  if (s.length > 200) s = s.slice(0, 199).trimEnd() + '…';
-  return s;
+  return buildSourceSummary({ description: stripHtml(description).replace(SUMMARY_PREFIX_RE, '') });
 }
 
 async function main() {

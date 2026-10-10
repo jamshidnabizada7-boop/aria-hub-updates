@@ -1,3 +1,4 @@
+import { buildSourceSummary } from '../src/lib/opportunity-summary';
 /**
  * Backfill #2 — full trilingual content for EXISTING Opportunity rows.
  *
@@ -296,8 +297,8 @@ async function passTranslate(zai: Awaited<ReturnType<typeof ZAI.create>>): Promi
 
       // If summaries were never translated, derive from the (now available) sections
       const summaryI18n = { ...((row.aiSummaryI18n || {}) as Record<string, string>) };
-      if (!summaryI18n.fa && t.description_fa) summaryI18n.fa = stripHtml(t.description_fa).slice(0, 220);
-      if (!summaryI18n.ps && t.description_ps) summaryI18n.ps = stripHtml(t.description_ps).slice(0, 220);
+      if (!summaryI18n.fa && t.description_fa) summaryI18n.fa = buildSourceSummary({ description: t.description_fa, requirements: t.requirements_fa, eligibility: t.eligibility_fa, benefits: t.benefits_fa, guidelines: t.guidelines_fa });
+      if (!summaryI18n.ps && t.description_ps) summaryI18n.ps = buildSourceSummary({ description: t.description_ps, requirements: t.requirements_ps, eligibility: t.eligibility_ps, benefits: t.benefits_ps, guidelines: t.guidelines_ps });
       data.aiSummaryI18n = summaryI18n;
       data.seoDescriptionI18n = Object.fromEntries(
         Object.entries(summaryI18n).map(([k, v]) => [k, stripHtml(v).slice(0, 155)]),

@@ -20,6 +20,7 @@ import { prettifySlug } from '../import/scrapers/scholarships-af';
 import { extractApplyLink } from '../apply-extract';
 import type { RawListing } from '../import/types';
 import { getAIProvider } from './provider';
+import { buildSourceSummary } from '../opportunity-summary';
 
 /**
  * Last-resort title sanitation: a URL-looking title (sitemap seed that
@@ -152,7 +153,11 @@ export async function runAIPipeline(
     seoDescription: shortDesc,
     ogTitle: listing.title,
     ogDescription: shortDesc,
-    aiSummary: shortDesc,
+    aiSummary: buildSourceSummary({
+      description: cleanedDescription, requirements: listing.requirements || listing.requiredDocuments,
+      eligibility: listing.eligibility, benefits: listing.benefits,
+      responsibilities: listing.responsibilities, guidelines: listing.guidelines,
+    }) || plainDescription,
   };
 
   if (listing.eligibility) data.eligibility = listing.eligibility;
@@ -166,7 +171,7 @@ export async function runAIPipeline(
   // i18n containers start with the original language
   const titleI18n: Record<string, string> = { [originalLang]: listing.title };
   const descriptionI18n: Record<string, string> = { [originalLang]: data.description as string };
-  const summaryI18n: Record<string, string> = { [originalLang]: shortDesc };
+  const summaryI18n: Record<string, string> = { [originalLang]: data.aiSummary as string };
 
   // ── AI enrichment (single call) ─────────────────────────────────────────
   let translationStatus: PipelineOutput['translationStatus'] = 'pending';
