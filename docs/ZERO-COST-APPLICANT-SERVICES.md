@@ -29,6 +29,26 @@ Back up the encrypted objects, database and encryption keys. Restore all three
 together. The deployment operator must verify actual storage, antivirus,
 extraction, ownership isolation and deletion before enabling live upload.
 
+The existing host is configured with a 256 MiB aggregate live CV allowance
+to leave room for two encrypted recovery snapshots and the disk reserve.
+This is a bounded service on the existing VM, not unlimited free storage.
+The isolated Oracle acceptance script is
+`scripts/tests/oracle-private-services.ts`; it uses genuine fictional documents
+and refuses any database not named with the `_test` suffix. It verifies the
+real ClamAV scanner, encrypted storage, extraction, owner isolation, explicit
+review, replay rejection and file deletion without sending external messages.
+
+## Database
+
+The Supabase free egress allowance was exceeded. The deployment moves the
+application's public schema to PostgreSQL 17 on the existing Oracle VM,
+bound only to loopback. The cutover requires pausing application writers,
+dumping and restoring the final public schema, and comparing all table counts
+and content digests before activation. Existing limited worker roles and
+translation function grants are preserved. The source database remains intact.
+Once the destination accepts writes, rolling back to the source requires
+copying those new writes back first.
+
 ## Push
 
 Use `APPLICANT_PUSH_TRANSPORT=direct`, `APPLICANT_PUSH_DELIVERY_ENABLED=true`,

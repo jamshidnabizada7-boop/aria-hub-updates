@@ -10,7 +10,8 @@ export async function reserveCVUpload(db:PrismaClient,profileId:string,data:{
  return db.$transaction(async tx=>{
   if(process.env.CV_PRIVATE_STORAGE_PROVIDER==='oracle'){
    // Serialize the global quota across owners before taking the profile lock.
-   await tx.$queryRaw`SELECT pg_advisory_xact_lock(63871944)`;
+   // PostgreSQL's lock function returns void, which Prisma cannot deserialize.
+   await tx.$executeRaw`SELECT pg_advisory_xact_lock(63871944)`;
    const used=await tx.applicantDocument.aggregate({_sum:{byteSize:true}});
    const quota=Number(process.env.CV_PRIVATE_STORAGE_MAX_BYTES||1073741824);
    if(!Number.isSafeInteger(quota)||quota<8*1024*1024||(used._sum.byteSize||0)+data.byteSize>quota)throw Error('cv_storage_capacity_unavailable');
