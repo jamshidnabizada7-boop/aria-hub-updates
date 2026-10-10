@@ -1,3 +1,4 @@
+import { AriPageTip } from '@/components/site/ari/ari-tip';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { PenLine, ShieldCheck, Clock3, Globe2, Briefcase } from 'lucide-react';
@@ -152,6 +153,7 @@ export default async function SubmitOpportunityPage({
             </div>
           </div>
         </section>
+        <AriPageTip lang={lang} />
       </main>
 
       <Footer

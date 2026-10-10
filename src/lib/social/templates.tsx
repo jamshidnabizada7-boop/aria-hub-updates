@@ -1,4 +1,6 @@
 'use client';
+import { AriPosterFrame } from '@/lib/social/ari-poster-frame';
+import type { AriPosterConfig } from '@/lib/social/ari-poster';
 
 /**
  * ARIA HUB — Brand Studio template library (100% code-driven).
@@ -42,6 +44,7 @@ const H: Record<PosterSize, number> = {
 };
 
 export interface SocialCanvasProps {
+  ari?: AriPosterConfig;
   template: PostTemplate;
   lang: Lang;
   size: PosterSize;
@@ -1037,7 +1040,7 @@ function NoteLine({ text, theme, clamp }: { text: string; theme: StudioTheme; cl
 
 // ─── main dispatcher ─────────────────────────────────────────────────────────
 
-export function SocialCanvas(props: SocialCanvasProps) {
+function BaseSocialCanvas(props: SocialCanvasProps) {
   const { template, lang, size, title, note, seriesNo, qrDataUrl } = props;
   const t = (key: string, params?: Record<string, string | number>) => translate(lang, key, params);
   const portrait = size === 'portrait';
@@ -1719,4 +1722,8 @@ export function SocialCanvas(props: SocialCanvasProps) {
       </ContentFrame>
     </BrandShell>
   );
+}
+
+export function SocialCanvas(props: SocialCanvasProps) {
+  return <AriPosterFrame ari={props.ari} height={H[props.size]} themeId={props.themeId} rtl={props.lang !== 'en'}><BaseSocialCanvas {...props} /></AriPosterFrame>;
 }

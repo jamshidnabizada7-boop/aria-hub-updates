@@ -1,3 +1,4 @@
+import { AriTip } from '@/components/site/ari/ari-tip';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -562,6 +563,8 @@ export default async function OpportunityDetailPage({
                   </div>
                 </div>
               )}
+
+              <AriTip lang={lang} context="detail" deadline={opp.deadline ? new Date(opp.deadline).toISOString() : null} cvHref={cvBuilderHref} />
 
               {/* Complete listing overview, independent of card/SEO excerpts. */}
               {summaryBlocks.length > 0 && (

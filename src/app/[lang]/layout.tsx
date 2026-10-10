@@ -4,6 +4,8 @@ import { unstable_cache } from 'next/cache';
 import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
 import { getLocalizedContent } from '@/lib/i18n-content';
+import { ARI_ENABLED } from '@/lib/ari';
+import { AriCompanion } from '@/components/site/ari/ari-companion';
 import { LangSync } from '@/components/site/lang-sync';
 import { LangProvider } from '@/components/site/lang-context';
 import type { Language, SiteSettings } from '@/lib/types';
@@ -142,6 +144,8 @@ export default async function LangLayout({
   if (!LANGS.includes(lang)) notFound();
 
   const languages = await getLanguages();
+  const ariSettings = ARI_ENABLED ? await getSettings() : null;
+  const ariSocials = ARI_ENABLED ? await db.socialLink.findMany({ where: { enabled: true }, orderBy: { order: 'asc' } }).catch(() => []) : [];
 
   return (
     <LangProvider lang={lang}>
@@ -169,6 +173,7 @@ export default async function LangLayout({
         }}
       />
       {children}
+      {ARI_ENABLED ? <AriCompanion lang={lang as 'en' | 'fa' | 'ps'} socials={ariSocials} position={ariSettings?.socialPosition || (lang === 'en' ? 'right' : 'left')} hideOnScroll={ariSettings?.socialHideOnScroll ?? false} /> : null}
     </LangProvider>
   );
 }

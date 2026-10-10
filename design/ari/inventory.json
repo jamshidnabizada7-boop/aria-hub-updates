@@ -1,0 +1,89 @@
+{
+  "method": "Reference-derived imagegen edits; happy and waving use Classic master. Not original artist source.",
+  "assets": [
+    {
+      "name": "classic",
+      "width": 1386,
+      "height": 1135,
+      "alpha": true,
+      "master": "design/ari/masters/classic.png"
+    },
+    {
+      "name": "minimal",
+      "width": 1270,
+      "height": 1239,
+      "alpha": true,
+      "master": "design/ari/masters/minimal.png"
+    },
+    {
+      "name": "scholar",
+      "width": 1333,
+      "height": 1180,
+      "alpha": true,
+      "master": "design/ari/masters/scholar.png"
+    },
+    {
+      "name": "global",
+      "width": 1312,
+      "height": 1199,
+      "alpha": true,
+      "master": "design/ari/masters/global.png"
+    },
+    {
+      "name": "happy",
+      "width": 1386,
+      "height": 1135,
+      "alpha": true,
+      "master": "design/ari/masters/happy.png"
+    },
+    {
+      "name": "thinking",
+      "width": 1278,
+      "height": 1230,
+      "alpha": true,
+      "master": "design/ari/masters/thinking.png"
+    },
+    {
+      "name": "celebrating",
+      "width": 1380,
+      "height": 1140,
+      "alpha": true,
+      "master": "design/ari/masters/celebrating.png"
+    },
+    {
+      "name": "reading",
+      "width": 1299,
+      "height": 1211,
+      "alpha": true,
+      "master": "design/ari/masters/reading.png"
+    },
+    {
+      "name": "stellar",
+      "width": 1312,
+      "height": 1199,
+      "alpha": true,
+      "master": "design/ari/masters/stellar.png"
+    },
+    {
+      "name": "nature",
+      "width": 1268,
+      "height": 1241,
+      "alpha": true,
+      "master": "design/ari/masters/nature.png"
+    },
+    {
+      "name": "blink",
+      "width": 1386,
+      "height": 1135,
+      "alpha": true,
+      "master": "design/ari/masters/blink.png"
+    },
+    {
+      "name": "waving",
+      "width": 1386,
+      "height": 1135,
+      "alpha": true,
+      "master": "design/ari/masters/waving.png"
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import { AriTip } from '@/components/site/ari/ari-tip';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getToolPageData } from '@/lib/get-site';
@@ -89,6 +90,7 @@ export default async function CVBuilderPage({
           <div className="absolute bottom-[-10%] right-[-10%] h-[40%] w-[40%] rounded-full bg-indigo-500/15 blur-[100px]" />
         </div>
 
+        <div className="mx-auto max-w-5xl px-4"><AriTip lang={lang} context="cv" /></div>
         <div data-clarity-mask="true">
           <CVBuilderClient
             initialLang={outputLang}

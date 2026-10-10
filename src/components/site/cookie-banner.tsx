@@ -34,6 +34,7 @@ export function CookieBanner() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 60 }}
           transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          data-ari-obstruction="cookie"
           className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-2xl print:hidden"
         >
           <div className="glass-card flex flex-col items-start gap-4 rounded-2xl border border-border/60 p-5 shadow-premium sm:flex-row sm:items-center">

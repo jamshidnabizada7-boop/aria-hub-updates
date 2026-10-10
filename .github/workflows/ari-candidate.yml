@@ -1,0 +1,64 @@
+name: ARI candidate review
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'public/images/ari/**'
+      - 'design/ari/**'
+      - 'scripts/tests/*ari*'
+      - '.github/workflows/ari-candidate.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  visual-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ariahub_test
+        ports: ['5433:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5433/ariahub_test?sslmode=disable
+      DIRECT_URL: postgresql://postgres:postgres@127.0.0.1:5433/ariahub_test?sslmode=disable
+      REQUIRE_TEST_DATABASE: '1'
+      ARIA_DISABLE_SCHEDULER: '1'
+      NEXT_PUBLIC_ARI_ENABLED: 'true'
+      ADMIN_SESSION_SECRET: ari-candidate-local-only-secret-please-never-use-live
+      SOCIAL_RENDER_TOKEN: ari-candidate-local-only-render-token
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run db:deploy
+      - run: bun scripts/tests/seed-ari-candidate.ts
+      - run: bun --conditions=react-server test tests/ari.test.ts
+      - run: bunx tsc --noEmit
+      - run: STANDALONE=1 bun run build
+      - run: bunx playwright-core install --with-deps chromium
+      - name: Isolated website, localized UI, saved design and real PNG export
+        run: |
+          PORT=3106 HOSTNAME=127.0.0.1 NODE_ENV=production node .next/standalone/server.js >/tmp/ari-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 50); do
+            if curl -fsS -o /dev/null http://127.0.0.1:3106/en; then break; fi
+            sleep 2
+          done
+          bun --conditions=react-server scripts/tests/ari-browser-acceptance.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ari-review-${{ github.sha }}
+          path: |
+            /tmp/ari-review/
+            /tmp/ari-server.log
+          retention-days: 7

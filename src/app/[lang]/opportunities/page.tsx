@@ -1,3 +1,6 @@
+import { AriAvatar } from '@/components/site/ari/ari-avatar';
+import { ARI_ENABLED } from '@/lib/ari';
+import { AriTip } from '@/components/site/ari/ari-tip';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Bookmark, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, Plus, Rss, Search, X } from 'lucide-react';
@@ -384,6 +387,8 @@ export default async function OpportunitiesPage({
             </div>
           </div>
 
+          <AriTip lang={lang} context="listing" />
+
           {/* Filter form — plain GET, works without JS.
               Row 1: prominent search. Row 2: refinement selects with counts. */}
           <form
@@ -513,7 +518,7 @@ export default async function OpportunitiesPage({
                 aria-hidden="true"
                 className="grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary"
               >
-                <Search className="h-7 w-7" />
+                <>{ARI_ENABLED ? <AriAvatar variant="thinking" size={64} /> : <Search className="h-7 w-7" />}</>
               </span>
               <p dir="auto" className="mt-4 text-base font-semibold">
                 {t('opportunities.noResults')}

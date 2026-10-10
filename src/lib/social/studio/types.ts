@@ -1,3 +1,4 @@
+import type { AriPosterConfig } from '@/lib/social/ari-poster';
 import type { Lang } from '@/lib/lang-route';
 import type { PostTemplate } from '@/lib/social/brand';
 import type { PosterSize } from '@/lib/social/templates';
@@ -74,6 +75,7 @@ export interface DesignFamilyDefinition {
 }
 
 export interface PremiumCanvasProps {
+  ari?: AriPosterConfig;
   template: PostTemplate;
   designFamily: DesignFamilyId;
   lang: Lang;

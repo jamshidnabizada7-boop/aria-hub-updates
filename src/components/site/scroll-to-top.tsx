@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowUp } from 'lucide-react';
+import { ARI_ENABLED } from '@/lib/ari';
 import { useT } from '@/hooks/use-t';
 
 export function ScrollToTop() {
@@ -21,7 +22,7 @@ export function ScrollToTop() {
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.5 }}
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="fixed bottom-24 right-5 z-40 grid h-11 w-11 place-items-center rounded-full border border-border bg-card shadow-float backdrop-blur-sm transition-colors hover:bg-accent"
+          className={`fixed ${ARI_ENABLED ? 'bottom-44' : 'bottom-24'} right-5 z-40 grid h-11 w-11 place-items-center rounded-full border border-border bg-card shadow-float backdrop-blur-sm transition-colors hover:bg-accent`}
           aria-label={t('scroll.top')}
         >
           <ArrowUp className="h-5 w-5" />

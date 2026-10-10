@@ -1,4 +1,6 @@
 'use client';
+import { AriRestore } from './ari/ari-companion';
+import { ARI_ENABLED } from '@/lib/ari';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -271,6 +273,7 @@ export function Footer({
           </div>
         </div>
       </div>
+      {ARI_ENABLED ? <div className="site-container"><AriRestore lang={lang === 'ps' ? 'ps' : lang === 'fa' ? 'fa' : 'en'} /></div> : null}
     </footer>
   );
 }

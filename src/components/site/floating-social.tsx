@@ -5,12 +5,23 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X, MessageCircle, Phone, Mail, Facebook, Instagram, Send, Linkedin, Youtube } from 'lucide-react';
 import type { SocialLink, SiteSettings } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { ARI_ENABLED, ARI_COPY } from '@/lib/ari';
+import { useEffectiveLang } from './lang-context';
+import { isLang } from '@/lib/lang-route';
 
-export function FloatingSocial({ socials, settings }: { socials: SocialLink[]; settings: SiteSettings | null }) {
+export function FloatingSocial({ socials, settings, embedded = false, forceClosed = false, onExpand }: { socials: SocialLink[]; settings: SiteSettings | null; embedded?: boolean; forceClosed?: boolean; onExpand?: () => void }) {
+  const language = useEffectiveLang();
+  const lang = isLang(language) ? language : 'en';
   const [open, setOpen] = useState(false);
   const [hidden, setHidden] = useState(false);
   const position = settings?.socialPosition === 'left' ? 'left' : 'right';
   const hideOnScroll = settings?.socialHideOnScroll ?? false;
+
+  useEffect(() => {
+    if (!forceClosed) return;
+    const frame = requestAnimationFrame(() => setOpen(false));
+    return () => cancelAnimationFrame(frame);
+  }, [forceClosed]);
 
   useEffect(() => {
     if (!hideOnScroll) return;
@@ -19,7 +30,7 @@ export function FloatingSocial({ socials, settings }: { socials: SocialLink[]; s
     return () => window.removeEventListener('scroll', onScroll);
   }, [hideOnScroll]);
 
-  if (!socials.length) return null;
+  if (!socials.length || (ARI_ENABLED && !embedded)) return null;
   const [primary, ...rest] = socials;
 
   return (
@@ -30,12 +41,12 @@ export function FloatingSocial({ socials, settings }: { socials: SocialLink[]; s
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.5 }}
           className={cn(
-            'fixed bottom-5 z-50 flex flex-col items-center gap-3 print:hidden',
-            position === 'left' ? 'left-5' : 'right-5'
+            embedded ? 'relative flex flex-col items-center gap-3 print:hidden' : 'fixed bottom-5 z-50 flex flex-col items-center gap-3 print:hidden',
+            !embedded && (position === 'left' ? 'left-5' : 'right-5')
           )}
         >
           <AnimatePresence>
-            {open && (
+            {open && !forceClosed && (
               <>
                 {rest.map((s, i) => (
                   <motion.a
@@ -47,6 +58,7 @@ export function FloatingSocial({ socials, settings }: { socials: SocialLink[]; s
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0, y: 10 }}
                     transition={{ delay: i * 0.05 }}
+                    aria-label={s.label || s.platform}
                     className="group relative grid h-12 w-12 place-items-center rounded-full text-white shadow-float transition-transform hover:scale-110"
                     style={{ backgroundColor: s.color || 'var(--primary)' }}
                   >
@@ -60,6 +72,7 @@ export function FloatingSocial({ socials, settings }: { socials: SocialLink[]; s
 
           {/* Primary (WhatsApp) - always visible */}
           <motion.a
+            aria-label={primary.label || primary.platform}
             href={primary.url}
             target="_blank"
             rel="noopener noreferrer"
@@ -76,13 +89,13 @@ export function FloatingSocial({ socials, settings }: { socials: SocialLink[]; s
           {/* Toggle button */}
           {rest.length > 0 && (
             <motion.button
-              onClick={() => setOpen(!open)}
+              onClick={() => { if (!open || forceClosed) onExpand?.(); setOpen(!open || forceClosed); }}
               whileHover={{ scale: 1.08 }}
               whileTap={{ scale: 0.95 }}
-              className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card text-foreground shadow-float backdrop-blur-sm"
-              aria-label="Toggle social links"
+              className="grid h-11 w-11 place-items-center rounded-full border border-border bg-card text-foreground shadow-float backdrop-blur-sm"
+              aria-label={lang === 'fa' ? 'نمایش پیوندهای اجتماعی' : lang === 'ps' ? 'ټولنیزې اړیکې ښکاره کړئ' : 'Toggle social links'} aria-expanded={open}
             >
-              {open ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+              {open && !forceClosed ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
             </motion.button>
           )}
         </motion.div>
@@ -124,4 +137,3 @@ function SocialIcon({ platform, className = 'h-5 w-5' }: { platform: string; cla
     default: return <Send className={className} />;
   }
 }
-

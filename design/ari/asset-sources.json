@@ -1,0 +1,18 @@
+{
+  "method": "Built-in imagegen, background-extraction edit of user-approved ARI board; reference-derived raster artwork, not original isolated artist masters.",
+  "reference": "ARI_Approved_Mascot_Reference.png",
+  "sources": {
+    "classic": "design/ari/masters/classic.png",
+    "minimal": "design/ari/masters/minimal.png",
+    "scholar": "design/ari/masters/scholar.png",
+    "global": "design/ari/masters/global.png",
+    "happy": "design/ari/masters/happy.png",
+    "thinking": "design/ari/masters/thinking.png",
+    "celebrating": "design/ari/masters/celebrating.png",
+    "reading": "design/ari/masters/reading.png",
+    "stellar": "design/ari/masters/stellar.png",
+    "nature": "design/ari/masters/nature.png",
+    "blink": "design/ari/masters/blink.png",
+    "waving": "design/ari/masters/waving.png"
+  }
+}

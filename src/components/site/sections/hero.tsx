@@ -1,3 +1,4 @@
+import { AriTip } from '@/components/site/ari/ari-tip';
 import Link from 'next/link';
 import {
   Sparkles,
@@ -155,6 +156,8 @@ export function Hero({ lang, stats }: { lang: Lang; stats: HeroStats }) {
             {t('common.search')}
           </button>
         </form>
+
+        <div className="mx-auto max-w-2xl"><AriTip lang={lang} context="home" /></div>
 
         {/* Quick category chips */}
         <div className="mt-5 flex flex-wrap items-center justify-center gap-2">

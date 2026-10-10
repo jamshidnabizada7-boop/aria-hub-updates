@@ -28,6 +28,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { SaveButton } from '@/components/site/save-button';
+import { ARI_MATCHER_STEPS } from '@/lib/ari';
+import { AriTip } from '@/components/site/ari/ari-tip';
+import { AriAvatar } from '@/components/site/ari/ari-avatar';
 import { useLangHref } from '@/hooks/use-lang-href';
 import { useLangStore } from '@/lib/lang-store';
 import type { EducationLevel, FieldArea, MatcherIntent } from '@/lib/opportunity-matcher';
@@ -357,6 +360,7 @@ export function OpportunityMatcherClient() {
     return (
       <div className="mx-auto w-full max-w-3xl px-4" aria-live="polite">
         <GlassCard className="flex flex-col items-center justify-center py-16 text-center">
+          <AriAvatar variant="thinking" size={80} />
           <div className="relative mb-7 h-20 w-20" role="status" aria-label={c.loadingTitle}>
             <div className="absolute inset-0 rounded-full border-4 border-amber-500/20 border-t-amber-500 motion-reduce:animate-none animate-spin" />
             <Search className="absolute inset-0 m-auto h-7 w-7 text-amber-600" aria-hidden="true" />
@@ -373,6 +377,7 @@ export function OpportunityMatcherClient() {
       <div className="mx-auto w-full max-w-4xl px-4" dir={rtl ? 'rtl' : 'ltr'} aria-live="polite">
         <div className="mb-7 text-center">
           <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-emerald-600" aria-hidden="true" />
+          <div className="flex justify-center"><AriAvatar variant="celebrating" size={72} /></div>
           <h2 className="text-3xl font-bold">{c.resultsTitle}</h2>
           <p className="mt-2 text-muted-foreground">{c.resultsSub}</p>
         </div>
@@ -471,6 +476,7 @@ export function OpportunityMatcherClient() {
         <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">{c.intro}</p>
       </div>
 
+      <AriTip key={step} lang={lang} context="matcher" tip={ARI_MATCHER_STEPS[lang][step - 1]} />
       <AnimatePresence mode="wait">
         <motion.div key={step} {...motionProps}>
           <GlassCard>

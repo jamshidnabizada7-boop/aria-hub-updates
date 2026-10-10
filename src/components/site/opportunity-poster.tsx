@@ -1,3 +1,5 @@
+import { AriPosterFrame } from '@/lib/social/ari-poster-frame';
+import type { AriPosterConfig } from '@/lib/social/ari-poster';
 import { Banknote, Building2, CalendarDays, MapPin, Sparkles } from 'lucide-react';
 import { translate } from '@/lib/i18n';
 import { formatDateLong, toEasternDigits } from '@/lib/date-format';
@@ -81,7 +83,7 @@ function titleSize(title: string): number {
   return 92;
 }
 
-export function OpportunityPoster({
+function BaseOpportunityPoster({
   data,
   lang,
   size = 'square',
@@ -93,6 +95,7 @@ export function OpportunityPoster({
   size?: PosterSize;
   qrDataUrl?: string | null;
   themeId?: string;
+  ari?: AriPosterConfig;
 }) {
   const t = (key: string, params?: Record<string, string | number>) => translate(lang, key, params);
   const rtl = lang !== 'en';
@@ -511,4 +514,8 @@ export function buildPosterData(
       : '',
     featured: opp.featured,
   };
+}
+
+export function OpportunityPoster(props: Parameters<typeof BaseOpportunityPoster>[0]) {
+  return <AriPosterFrame ari={props.ari} height={H[props.size || 'square']} themeId={props.themeId} rtl={props.lang !== 'en'}><BaseOpportunityPoster {...props} /></AriPosterFrame>;
 }
