@@ -77,10 +77,10 @@ function DesktopMenuItem({ item }: { item: MenuItem }) {
   }
 
   return (
-    <div className="group relative" onMouseEnter={() => setExpanded(true)} onMouseLeave={() => setExpanded(false)} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) setExpanded(false); }} onKeyDown={e => { if (e.key === 'Escape') { setExpanded(false); e.currentTarget.querySelector('button')?.focus(); } }}>
+    <div className="group relative" onMouseLeave={() => setExpanded(false)} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) setExpanded(false); }} onKeyDown={e => { if (e.key === 'Escape') { setExpanded(false); e.currentTarget.querySelector('button')?.focus(); } }}>
       <button type="button" aria-expanded={expanded} onClick={() => setExpanded(!expanded)} className="flex min-h-11 items-center gap-1 px-2 xl:px-3 py-2 text-sm font-medium text-foreground/75 transition-colors hover:text-foreground">
         {label}
-        <ChevronDown className="h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-180" />
+        <ChevronDown className={cn('h-3.5 w-3.5 transition-transform duration-300',expanded&&'rotate-180')} />
         <span className="absolute inset-x-3 -bottom-0.5 h-px origin-left scale-x-0 bg-gradient-to-r from-primary to-chart-2 transition-transform duration-300 group-hover:scale-x-100" />
       </button>
       <div hidden={!expanded} className="absolute start-0 top-full z-50 pt-2">
@@ -120,7 +120,7 @@ function NestedMenuItem({ item }: { item: MenuItem }) {
     );
   }
   return (
-    <div className="group/nested relative" onMouseEnter={() => setExpanded(true)} onMouseLeave={() => setExpanded(false)} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) setExpanded(false); }}>
+    <div className="group/nested relative" onMouseLeave={() => setExpanded(false)} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) setExpanded(false); }}>
       <button type="button" aria-expanded={expanded} onClick={() => setExpanded(!expanded)} className="flex min-h-11 w-full items-center justify-between rounded-xl px-3 py-2 text-sm text-foreground/70 transition-colors hover:bg-accent hover:text-foreground">
         {label}
         <ChevronRight className="h-3.5 w-3.5 rtl-flip" />
