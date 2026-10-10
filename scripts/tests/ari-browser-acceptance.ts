@@ -20,7 +20,10 @@ const issues: string[] = [];
 const check = (condition: unknown, message: string) => { checks++; if (!condition) issues.push(message); };
 const readyImages = async (page: any) => page.evaluate(async () => {
   await document.fonts.ready;
-  await Promise.all(Array.from(document.images, async img => { if (img.complete) { try { await img.decode(); } catch {} } }));
+  await Promise.all(Array.from(document.images, async img => {
+    const rect = img.getBoundingClientRect();
+    if (img.loading !== 'lazy' || (rect.top < innerHeight && rect.bottom > 0)) { try { await img.decode(); } catch {} }
+  }));
 });
 try {
   for (const lang of ['en', 'fa', 'ps'] as const) for (const width of [320, 390, 1440]) for (const theme of ['light', 'dark']) {
@@ -75,7 +78,10 @@ try {
   const page = await context.newPage();
   for (const lang of ['en', 'fa', 'ps'] as const) {
     for (const path of ['opportunities', 'opportunity-matcher', 'cv-builder', 'letters', 'services', 'contact', 'employers/post', 'submit-opportunity', 'track', `opportunities/${snapshot.samples[0].slug}`]) {
-      const response = await page.goto(`${base}/${lang}/${path}`, { waitUntil: 'networkidle' });
+      // Editors keep background sync active; readiness is the rendered UI, not network silence.
+      const response = await page.goto(`${base}/${lang}/${path}`, { waitUntil: 'domcontentloaded' });
+      await page.waitForLoadState('load');
+      await page.locator('[data-ari-tip]').waitFor({ state: 'visible' });
       check(response?.ok(), `${lang}/${path} HTTP success`);
       check(await page.locator('[data-ari-tip]').count() === 1, `${lang}/${path} one contextual tip`);
       if (['cv-builder', 'letters', 'opportunity-matcher', 'contact', 'employers/post', 'track', 'submit-opportunity'].includes(path)) check(await page.locator('[data-ari-dock]').count() === 0, 'No floating overlay on forms/tools');
