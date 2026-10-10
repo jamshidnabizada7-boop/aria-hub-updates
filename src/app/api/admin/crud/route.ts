@@ -613,7 +613,14 @@ export async function PUT(req: NextRequest) {
   }
 
   try {
-    const item = await delegate.update({ where: { id }, data: clean });
+    const item = model === 'opportunity' && clean.status === 'draft'
+      ? await db.$transaction(async tx => {
+        const saved = await tx.opportunity.update({ where: { id }, data: clean });
+        await tx.auditLog.create({ data: { userId: admin.id, entity: 'opportunity', entityId: id,
+          action: 'opportunity.manual-draft', details: JSON.stringify({ reason: 'admin_saved_as_draft' }) } });
+        return saved;
+      })
+      : await delegate.update({ where: { id }, data: clean });
     await logAction({ userId: admin.id, action: 'update', entity: model, entityId: id, req });
     try {
       if (model === 'opportunity') {

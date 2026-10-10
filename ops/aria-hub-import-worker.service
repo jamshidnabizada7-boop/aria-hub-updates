@@ -7,7 +7,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=ariahub
-WorkingDirectory=/opt/aria-hub
+WorkingDirectory=/opt/aria-hub/current
 Environment=NODE_ENV=production
 Environment=WORKER_ALLOW_REMOTE=1
 EnvironmentFile=-/etc/aria-hub/import-worker.env
