@@ -58,6 +58,16 @@ try{
     if(width>=1024){
      const bounds=await page.locator('header').boundingBox();
      if(!bounds||bounds.width>width)issues.push(lang+' navigation exceeds laptop width '+width);
+     // Real pointer events must open on the first click, not be cancelled by hover.
+     const toggle=desktopNav.locator('button[aria-expanded]').first();
+     await toggle.click();
+     if(await toggle.getAttribute('aria-expanded')!=='true')issues.push(lang+' desktop first click failed '+width);
+     await toggle.click();
+     if(await toggle.getAttribute('aria-expanded')!=='false')issues.push(lang+' desktop second click failed '+width);
+     await toggle.press('Enter');
+     if(await toggle.getAttribute('aria-expanded')!=='true')issues.push(lang+' desktop keyboard open failed '+width);
+     await toggle.press('Escape');
+     if(await toggle.getAttribute('aria-expanded')!=='false')issues.push(lang+' desktop Escape failed '+width);
     }
     const form=page.locator('main form');
     const next=form.locator('button[type=submit]');
