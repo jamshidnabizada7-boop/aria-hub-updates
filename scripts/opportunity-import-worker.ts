@@ -15,8 +15,8 @@
  *      (5/15/30/60/120min, degraded at 5, blocked at 8); "pending" (e.g.
  *      ReliefWeb awaiting appname approval) retries at the normal cadence
  *
- * It NEVER touches the social publishing worker and NEVER publishes —
- * publication stays governed by each source's autoPublish flag.
+ * Opportunity publication follows each source's autoPublish flag and the
+ * per-record quality gate. The social publishing worker is separate.
  *
  * Usage:
  *   bun --conditions=react-server scripts/opportunity-import-worker.ts           # persistent loop
@@ -31,6 +31,7 @@
  */
 import { db } from '../src/lib/db';
 import { runImport } from '../src/lib/import/orchestrator';
+import { reconcileImportedDrafts } from '../src/lib/import/automatic-publication';
 import { pickNextSource, dueSummary } from '../src/lib/import/worker-scheduler';
 import {
   computeNextRunAt, nextFailureState, nextSuccessState, isDue,
@@ -74,6 +75,7 @@ process.on('SIGINT', stop);
 process.on('SIGTERM', stop);
 
 const ts = () => new Date().toISOString().slice(11, 19);
+let publicationCursor: string | undefined;
 
 async function loadDueCandidates(now: Date): Promise<WorkerCandidate[]> {
   const rows = await db.importSource.findMany({
@@ -141,6 +143,13 @@ async function applyHealth(sourceId: string, status: string): Promise<void> {
 }
 
 async function tick(): Promise<void> {
+  // Run even when no source is due or its content is unchanged. Previously,
+  // those fast paths left imported drafts stuck after enabling autoPublish.
+  if (!dryRun) {
+    const result = await reconcileImportedDrafts(db, { limit: 500, cursor: publicationCursor });
+    publicationCursor = result.nextCursor;
+    console.log(`${ts()} [import-worker] publication: checked=${result.checked}, published=${result.published}, expired=${result.expired}, held=${result.held}, changedElsewhere=${result.changedElsewhere}`);
+  }
   const now = new Date();
   const candidates = await loadDueCandidates(now);
   const summary = dueSummary(candidates, now);

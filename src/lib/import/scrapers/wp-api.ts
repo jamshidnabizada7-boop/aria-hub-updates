@@ -48,7 +48,7 @@ export function extractWpFacts(description: string): Pick<RawListing, 'eligibili
   const sections: Record<string, string[]> = {};
   let active: string | null = null;
   for (const line of lines) {
-    const heading = line.match(/^(eligibility|who can apply\??|who is eligible\??|requirements?|qualifications?|benefits?|what (?:are|will) the benefits\??|how to apply\??|application (?:process|procedure)|where (?:will|is).*?(?:taken|held)\??|location|host country|country)\s*[:?]?\s*(.*)$/i);
+    const heading = line.match(/^(eligibility|who can apply\??|who is eligible\??|requirements?|qualifications?|benefits?|what (?:are|will) the benefits\??|how to apply\??|application (?:process|procedure)|application(?=\s*[:?]?\s*$)|where (?:will|is).*?(?:taken|held)\??|location|host country|country)\s*[:?]?\s*(.*)$/i);
     if (heading && heading[0].length < 140) {
       const key = /where|location|host country|^country$/i.test(heading[1]) ? 'location'
         : /eligib|who can apply/i.test(heading[1]) ? 'eligibility'

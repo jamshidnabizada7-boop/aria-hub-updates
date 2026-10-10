@@ -29,6 +29,7 @@ import { buildLocationRows, resolveCountry } from '@/lib/geo/location-rows';
 import { classifyApplyUrl, isRealApplyLink, shouldHealApplyLink } from '@/lib/apply';
 import type { RawListing, SourceHandle } from './types';
 import { resolveImportedOpportunityStatus } from './publication-policy';
+import { reconcileImportedDrafts } from './automatic-publication';
 import { preserveAdminFields } from './preserve-admin-fields';
 import { PRIMARY_OPPORTUNITY_KEYS } from '@/lib/automation/import-selection';
 import { resolveCrossSource, mergeIntoCanonical, extractVacancyNumber } from './canonical-resolver';
@@ -801,7 +802,9 @@ async function processListing(
         ...pipeline.data,
         ...importFields,
         status: resolveImportedOpportunityStatus({
-          autoPublish: source.autoPublish,
+          // Start behind the same quality gate used to clear the backlog.
+          // The reconciliation below publishes immediately once checks pass.
+          autoPublish: false,
           deadline: importFields.deadline,
         }),
         slug,
@@ -870,6 +873,11 @@ async function processListing(
       } catch { // suggestions must never break an import
       }
     }
+  }
+
+  if (targetId && source.autoPublish) {
+    try { await reconcileImportedDrafts(db, { ids: [targetId] }); }
+    catch (e) { console.warn('[import] automatic publication failed:', sanitizeError(e)); }
   }
 
   // Translation-on-import is OPT-IN (release policy: MANUAL-ONLY translation).

@@ -58,7 +58,7 @@ export interface OfficialSourceSeed {
   config: Record<string, unknown>;
 }
 
-/** Hard rule of Phase 9: nothing from official sources auto-publishes. */
+/** New sources start in review; reseeding preserves an operator's choice. */
 export const OFFICIAL_SOURCES_AUTOPUBLISH = false;
 
 export const OFFICIAL_SOURCE_SEEDS: OfficialSourceSeed[] = [
@@ -129,12 +129,12 @@ if (!['127.0.0.1', 'localhost', '::1'].includes(host) && process.env.BACKFILL_AL
   process.exit(1);
 }
 
-console.log(`Official-source seed — ${apply ? 'APPLY' : 'DRY-RUN'} on ${host} (autoPublish=${OFFICIAL_SOURCES_AUTOPUBLISH} for ALL rows)\n`);
+console.log(`Official-source seed — ${apply ? 'APPLY' : 'DRY-RUN'} on ${host} (preserves existing autoPublish; new sources start in review)\n`);
 
 for (const seed of OFFICIAL_SOURCE_SEEDS) {
   const existing = await db.importSource.findUnique({ where: { name: seed.name } });
   if (!apply) {
-    console.log(`${existing ? 'exists' : 'would create'}: ${seed.name} (${seed.scraperKey}, role=${seed.sourceRole}, priority=${seed.priority}, schedule=${seed.scheduleMinutes}m, autoPublish=false)`);
+    console.log(`${existing ? 'exists' : 'would create'}: ${seed.name} (${seed.scraperKey}, role=${seed.sourceRole}, priority=${seed.priority}, schedule=${seed.scheduleMinutes}m, autoPublish=${existing?.autoPublish ?? false})`);
     continue;
   }
 
@@ -159,7 +159,6 @@ for (const seed of OFFICIAL_SOURCE_SEEDS) {
     scraperKey: seed.scraperKey,
     baseUrl: seed.baseUrl,
     enabled: true,
-    autoPublish: OFFICIAL_SOURCES_AUTOPUBLISH,
     scheduleMinutes: seed.scheduleMinutes,
     defaultCategory: seed.defaultCategory,
     config: JSON.stringify(seed.config),
@@ -173,12 +172,12 @@ for (const seed of OFFICIAL_SOURCE_SEEDS) {
     await db.importSource.update({ where: { name: seed.name }, data });
     console.log(`updated: ${seed.name}`);
   } else {
-    await db.importSource.create({ data: { name: seed.name, ...data } });
+    await db.importSource.create({ data: { name: seed.name, ...data, autoPublish: OFFICIAL_SOURCES_AUTOPUBLISH } });
     console.log(`created: ${seed.name}`);
   }
 }
 
-console.log(`\n${apply ? 'Seeded' : 'Dry-run complete'} — re-run with --apply to write. Sources must still be validated (autoPublish=false keeps everything in review).`);
+console.log(`\n${apply ? 'Seeded' : 'Dry-run complete'} — re-run with --apply to write. New sources must be reviewed; existing publication choices are preserved.`);
 process.exit(0);
 }
 

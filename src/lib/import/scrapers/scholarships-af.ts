@@ -346,7 +346,7 @@ export class ScholarshipsAfScraper extends BaseScraper {
   }
 
   /**
-   * Parse the .jobsearch-description into h2-delimited sections.
+   * Parse the .jobsearch-description into heading-delimited sections.
    * Maps each section (Benefits, Eligibility, Required Documents, How to Apply, etc.)
    * to the correct RawListing field. Non-matched sections become the main description.
    */
@@ -358,11 +358,11 @@ export class ScholarshipsAfScraper extends BaseScraper {
     const descHtml = descEl.html() || '';
     if (!descHtml.trim()) return;
 
-    // Split the description by <h2> headings into named sections
+    // Split the description by h2/h3/h4 headings into named sections
     const sections: Array<{ heading: string; body: string }> = [];
-    // Regex to split by h2 tags, capturing the heading text
-    const h2Pattern = /<h2[^>]*>([\s\S]*?)<\/h2>/gi;
-    const parts = descHtml.split(h2Pattern);
+    // Regex to split by section heading tags, capturing the heading text
+    const headingPattern = /<h[234][^>]*>([\s\S]*?)<\/h[234]>/gi;
+    const parts = descHtml.split(headingPattern);
 
     // parts[0] = content before the first h2 (the main description)
     // parts[1] = first h2 heading text, parts[2] = content after first h2
