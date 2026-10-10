@@ -143,9 +143,9 @@ export function Footer({
           <div className="col-span-2 lg:col-span-2">
             <Link href={hrefFn('/')} className="flex min-h-11 items-center gap-2.5" aria-label={settings?.siteName || 'ARIA HUB'}>
               {settings?.logoUrl ? (
-                <Image src={settings.logoUrl} alt={settings.siteName} width={36} height={36} className="h-9 w-9 rounded-xl object-cover" unoptimized={settings.logoUrl.startsWith('http') && !settings.logoUrl.startsWith('https://www.myariahub.com')} />
+                <Image src={settings.logoUrl} alt={settings.siteName} width={36} height={36} className="h-9 w-9 shrink-0 rounded-[6px] object-contain" unoptimized={settings.logoUrl.startsWith('http') && !settings.logoUrl.startsWith('https://www.myariahub.com')} />
               ) : (
-                <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-chart-2 text-sm font-black text-primary-foreground">A</div>
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-[6px] bg-gradient-to-br from-primary to-chart-2 text-sm font-black text-primary-foreground">A</div>
               )}
               <span className="text-lg font-bold">
                 {settings?.siteName?.split(' ')[0] || 'ARIA'}
