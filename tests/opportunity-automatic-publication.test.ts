@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, test } from 'bun:test';
 import { PrismaClient } from '@prisma/client';
 import { extractWpFacts } from '../src/lib/import/scrapers/wp-api';
+import { ScholarshipsAfScraper } from '../src/lib/import/scrapers/scholarships-af';
 import { evaluateImportedDraftPublication, reconcileImportedDrafts, type PublicationCandidate, type PublicationSource } from '../src/lib/import/automatic-publication';
 
 const now = new Date('2026-10-10T12:00:00Z');
@@ -10,6 +11,14 @@ const candidate: PublicationCandidate = { status: 'draft', title: 'Finance Offic
   applyUrl: 'mailto:jobs@example.org', applyUrlType: 'application_email', verificationStatus: 'single_source' };
 
 describe('automatic import publication quality', () => {
+  test('scholarship h3 application section is extracted from the full detail page', async () => {
+    const scraper = new ScholarshipsAfScraper({ id: 'fixture', name: 'Scholarships.af', type: 'scholarship', scraperKey: 'scholarshipsAf', baseUrl: 'https://scholarships.af', defaultCategory: null, config: {} });
+    const instructions = 'Contact the international office at your chosen university. The university must nominate eligible students through the official scholarship system.';
+    scraper.fetchText = async () => '<div class="jobsearch-description"><p>A scholarship with a full description for international students seeking graduate studies.</p><h3>How to apply for the scholarship?</h3><p>' + instructions + '</p><h4>Related opportunities</h4><p>Unrelated article links.</p></div>';
+    const parsed = await scraper.parseDetail({ title: 'Scholarship', sourceUrl: 'https://scholarships.af/opportunity/fixture', description: '', applyUrl: null });
+    expect(parsed.guidelines).toBe(instructions);
+    expect(parsed.guidelines).not.toContain('Unrelated');
+  });
   test('standalone Application heading preserves instructions without treating narrative as a heading', () => {
     const instructions = 'Submit a research proposal and CV through the official application portal. Two referees must submit references.';
     expect(extractWpFacts('Application\n' + instructions).guidelines).toBe(instructions);
