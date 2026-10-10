@@ -33,8 +33,10 @@ export function AriCompanion({ lang, socials, position = 'right', hideOnScroll =
   useEffect(() => {
     let frame = 0;
     const check = () => {
-      cancelAnimationFrame(frame);
+      // Coalesce mutations without postponing the check when other page animations keep running.
+      if (frame) return;
       frame = requestAnimationFrame(() => {
+        frame = 0;
         const overlays = document.querySelectorAll<HTMLElement>('[aria-modal="true"], [role="dialog"][data-state="open"], [data-ari-obstruction]');
         const covered = Array.from(overlays).some(el => el.id !== 'ari-guide-panel' && el.getClientRects().length > 0);
         const keyboard = window.visualViewport ? window.innerHeight - window.visualViewport.height > 150 : false;

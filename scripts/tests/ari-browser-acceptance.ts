@@ -60,7 +60,7 @@ try {
     await page.reload({ waitUntil: 'networkidle' }); check(await launcher.count() === 0, 'Hidden preference survives reload');
     await page.getByRole('button', { name: ARI_COPY[lang].restore, exact: true }).click(); await launcher.waitFor({ state: 'visible' });
     await page.evaluate(() => { const dialog = document.createElement('div'); dialog.id = 'qa-obstruction'; dialog.setAttribute('aria-modal', 'true'); dialog.textContent = 'QA dialog'; document.body.appendChild(dialog); });
-    await page.waitForTimeout(100); check(await page.locator('[data-ari-dock]').isHidden(), 'Steps aside for modal');
+    await page.locator('[data-ari-dock]').waitFor({ state: 'hidden', timeout: 3000 }); check(await page.locator('[data-ari-dock]').isHidden(), 'Steps aside for modal');
     await page.evaluate(() => document.getElementById('qa-obstruction')?.remove());
     await launcher.waitFor({ state: 'visible' });
     await page.emulateMedia({ media: 'print' }); check(await launcher.isHidden() && await page.locator('[data-ari-tip="home"]').isHidden(), 'Omitted in print');
