@@ -59,6 +59,7 @@ import {
   type OpportunityDetail,
 } from '@/lib/opportunity-queries';
 import { cn } from '@/lib/utils';
+import { buildOpportunityFacts } from '@/lib/opportunity-facts';
 import { ensureSeoDescription } from '@/lib/seo-metadata';
 import { parseDate } from '@/lib/import/utils';
 import { classifyApplyUrl, isRealApplyLink, normalizeApplyUrl } from '@/lib/apply';
@@ -373,86 +374,19 @@ export default async function OpportunityDetailPage({
       : daysLeft <= 7
         ? 'text-amber-600 dark:text-amber-400'
         : 'text-primary';
-  const keyFacts: { icon: LucideIcon; label: string; value: string; emphasis?: boolean; href?: string }[] = [
-    { icon: Building2, label: t('opportunities.organization'), value: organization || '' },
-    { icon: MapPin, label: t('opportunities.location'), value: locationValue },
-    { icon: Briefcase, label: t('detail.jobType'), value: jobType || '' },
-    { icon: Banknote, label: t('opportunities.salary'), value: salary || '' },
-    { icon: GraduationCap, label: t('opportunities.education'), value: educationReq || '' },
-    { icon: Clock, label: t('opportunities.experience'), value: experience || '' },
-    {
-      icon: CalendarDays,
-      label: t('opportunities.deadline'),
-      value: opp.deadline ? formatDateLong(opp.deadline, lang) : '',
-      emphasis: true,
-    },
-    { icon: CalendarDays, label: t('opportunities.posted'), value: postedDate || '' },
-  ].filter((f) => f.value && f.value.trim());
-
-  // ---- extra scraped fact sheet (extractedData) ------------------------------
-  // Every fact the import pipeline captured that isn't already shown in the
-  // key-facts strip above gets a compact two-column table here (vacancy
-  // number, gender, nationality, contract duration, opportunity ID, …).
-  const shownFactKeys = new Set([
-    'location', 'city', 'category', 'employment type', 'type', 'salary',
-    'education', 'experience', 'closing date', 'deadline', 'published',
-    'organization', 'company', 'job type', 'slug', 'url', 'link',
-    'source', 'sourceurl', 'source name',
-  ]);
-  // Raw scraper keys (workType, functionalAreas, …) → human labels.
-  const FACT_LABELS: Record<string, string> = {
-    worktype: 'Work type',
-    functionalareas: 'Functional areas',
-    'functional area': 'Functional areas',
-    probationperiod: 'Probation period',
-    contracttype: 'Contract type',
-    contractduration: 'Contract duration',
-    contractextension: 'Contract extension',
-    referencenumber: 'Reference number',
-    reference: 'Reference number',
-    numberofvacancies: 'Vacancies',
-    vacancies: 'Vacancies',
-    announcementtype: 'Announcement type',
-    salaryrange: 'Salary range',
-    experiencerequired: 'Experience required',
-    'yearsofexperience': 'Years of experience',
-    languages: 'Languages',
-    nationality: 'Nationality',
-    travelrequired: 'Travel required',
-    gender: 'Gender',
-    'education level': 'Education level',
-    submission: 'Submission',
-    submissionemail: 'Submission email',
-    opportunityid: 'Opportunity ID',
-    degree: 'Degree',
-    'no. of opportunity': 'No. of opportunities',
-    'no. of jobs': 'No. of vacancies',
-    'number of fellowships': 'Number of fellowships',
-    duration: 'Duration',
-    languageofinstruction: 'Language of instruction',
-    'application fee required': 'Application fee',
-    fundingtype: 'Funding type',
-    studylevel: 'Study level',
-    hostcountry: 'Host country',
-    hostinstitution: 'Host institution',
+  const keyFacts = buildOpportunityFacts(opp, lang, {
+    location: locationValue,
+    deadline: opp.deadline ? formatDateLong(opp.deadline, lang) : '',
+    posted: postedDate || '',
+  });
+  const primaryKeys = new Set(['organization', 'location', 'jobType', 'salary', 'educationReq', 'experience', 'deadline', 'posted']);
+  const primaryFacts = keyFacts.filter(f => primaryKeys.has(f.key));
+  const additionalFacts = keyFacts.filter(f => !primaryKeys.has(f.key));
+  const factIcons: Record<string, LucideIcon> = {
+    organization: Building2, location: MapPin, jobType: Briefcase, salary: Banknote,
+    educationReq: GraduationCap, experience: Clock, deadline: CalendarDays, posted: CalendarDays,
   };
-  const keyFactValues = new Set(
-    keyFacts.map((f) => f.value.trim().toLowerCase()).filter(Boolean),
-  );
-  const extraFacts: { label: string; value: string }[] = [];
-  const rawFacts = (opp.extractedData ?? {}) as Record<string, unknown>;
-  for (const [label, value] of Object.entries(rawFacts)) {
-    const v = Array.isArray(value)
-      ? value.filter((x) => typeof x === 'string' || typeof x === 'number').join(', ')
-      : typeof value === 'string' || typeof value === 'number'
-        ? String(value).trim()
-        : '';
-    if (!v || v.length > 300) continue;
-    const key = label.trim().toLowerCase();
-    if (shownFactKeys.has(key)) continue;
-    if (keyFactValues.has(v.toLowerCase())) continue;
-    extraFacts.push({ label: FACT_LABELS[key] ?? label.trim(), value: v });
-  }
+  const originalFactLabel = lang === 'fa' ? 'به زبان اصلی' : lang === 'ps' ? 'په اصلي ژبه' : 'Original language';
 
   const catLabel = categoryLabel(
     lang,
@@ -557,80 +491,45 @@ export default async function OpportunityDetailPage({
                 )}
               </header>
 
-              {/* ── KEY FACTS — the scannable summary strip, always at the top ── */}
+              {/* One applicant-facing fact sheet, with semantic deduplication. */}
               {keyFacts.length > 0 && (
-                <Card className="mt-5 overflow-hidden border-border/70 p-0">
-                  <div className="flex items-center gap-2 border-b border-border/70 bg-muted/40 px-4 py-2.5">
-                    <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-                    <h2 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                      {t('detail.keyFacts')}
-                    </h2>
+                <Card className="mt-5 gap-0 overflow-hidden border-border/70 p-0">
+                  <div className="flex items-center gap-2 border-b border-border/70 bg-muted/40 px-4 py-3">
+                    <Sparkles className="h-4 w-4 text-primary" aria-hidden="true" />
+                    <h2 className="text-sm font-bold text-foreground">{t('detail.keyFacts')}</h2>
                   </div>
-                  {/* Column count adapts to the number of facts so rows look
-                      intentional (static classes for Tailwind JIT). */}
-                  <dl
-                    className={
-                      keyFacts.length <= 1
-                        ? 'grid grid-cols-1 gap-3'
-                        : keyFacts.length === 2
-                          ? 'grid grid-cols-2 gap-3'
-                          : keyFacts.length === 3
-                            ? 'grid grid-cols-2 gap-3 sm:grid-cols-3'
-                            : 'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4'
-                    }
-                  >
-                    {keyFacts.map((fact) => (
-                      <div
-                        key={fact.label}
-                        className="rounded-lg border border-border/60 bg-card px-3.5 py-3 transition-colors hover:border-primary/30"
-                      >
-                        <dt className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-wide text-muted-foreground">
-                          <fact.icon className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
-                          {fact.label}
-                        </dt>
-                        <dd
-                          dir="auto"
-                          className={cn(
-                            'mt-1 break-words text-[13px] font-semibold leading-snug',
-                            fact.emphasis ? factTone : 'text-foreground'
-                          )}
-                        >
-                          {fact.value}
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
-                </Card>
-              )}
-
-              {/* Scraped fact sheet — remaining import-captured fields, merged
-                  into the top Key Information area per the redesigned layout */}
-              {extraFacts.length > 0 && (
-                <Card className="mt-5 overflow-hidden border-border/70 p-0">
-                  <div className="flex items-center gap-2 border-b border-border/70 bg-muted/40 px-4 py-2.5">
-                    <ListChecks className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-                    <h2 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                      {t('opportunities.keyDetails')}
-                    </h2>
-                  </div>
-                  <dl className="grid grid-cols-1 gap-x-8 px-4 py-2 sm:grid-cols-2">
-                    {extraFacts.map((fact) => (
-                      <div
-                        key={fact.label}
-                        className="flex gap-3 border-b border-border/40 py-2 text-sm last:border-b-0"
-                      >
-                        <dt
-                          dir="auto"
-                          className="w-2/5 shrink-0 font-medium text-foreground/55"
-                        >
-                          {fact.label}
-                        </dt>
-                        <dd dir="auto" className="flex-1 break-words text-foreground/85">
-                          {fact.value}
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
+                  {primaryFacts.length > 0 && (
+                    <dl className={cn("grid grid-cols-1 gap-3 p-4 min-[420px]:grid-cols-2", primaryFacts.length <= 3 ? "lg:grid-cols-3" : "lg:grid-cols-4")}>
+                      {primaryFacts.map(fact => {
+                        const Icon = factIcons[fact.key];
+                        return (
+                          <div key={fact.key} className="min-w-0 rounded-xl border border-border/60 bg-card px-4 py-3.5">
+                            <dt className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                              <Icon className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                              {fact.label}
+                            </dt>
+                            <dd dir="auto" className={cn('mt-2 break-words text-sm font-semibold leading-relaxed', fact.key === 'deadline' ? factTone : 'text-foreground')}>
+                              {fact.value}
+                            </dd>
+                            {fact.original && <p className="mt-1 text-[11px] text-muted-foreground">{originalFactLabel}</p>}
+                          </div>
+                        );
+                      })}
+                    </dl>
+                  )}
+                  {additionalFacts.length > 0 && (
+                    <dl className={cn('grid grid-cols-1 gap-x-8 px-4 py-2 sm:grid-cols-2', primaryFacts.length > 0 && 'border-t border-border/60')}>
+                      {additionalFacts.map(fact => (
+                        <div key={fact.key} className={cn('flex min-w-0 gap-3 border-b border-border/40 py-3 text-sm', fact.value.length > 180 && 'sm:col-span-2')}>
+                          <dt className="w-2/5 shrink-0 font-medium leading-relaxed text-muted-foreground">{fact.label}</dt>
+                          <dd dir="auto" className="min-w-0 flex-1 break-words leading-relaxed text-foreground">
+                            {fact.value}
+                            {fact.original && <span className="mt-1 block text-[11px] text-muted-foreground">{originalFactLabel}</span>}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  )}
                 </Card>
               )}
 

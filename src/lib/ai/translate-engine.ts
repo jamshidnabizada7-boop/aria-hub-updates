@@ -723,7 +723,11 @@ export async function processBatch(
     // psTurn override for callers that drive one unit per tick (the worker);
     // internal default: every 4th unit in multi-unit batches.
     const psTurn = opts?.psTurn !== undefined ? opts.psTurn : i > 0 && i % 4 === 3;
-    const r = await processNextUnit(deadlineAt, { ...opts, psTurn });
+    let r = await processNextUnit(deadlineAt, { ...opts, psTurn });
+    if (r.skipped && !r.processed && !r.committed && !r.rateLimited) {
+      const { processOpportunityFactsUnit } = await import('./translate-opportunity-facts');
+      r = await processOpportunityFactsUnit(deadlineAt, opts);
+    }
     if (r.rateLimited) { rateLimited = true; break; }
     if (r.skipped && !r.processed && !r.committed && i === 0) {
       return { processed, committed, rateLimited, exhausted: true };

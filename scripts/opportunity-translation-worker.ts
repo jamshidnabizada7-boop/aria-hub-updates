@@ -24,6 +24,7 @@
  */
 import { db } from '../src/lib/db';
 import { processBatch } from '../src/lib/ai/translate-engine';
+import { processOpportunityFactsUnit } from '../src/lib/ai/translate-opportunity-facts';
 import { acquireTickLock, releaseTickLock } from '../src/lib/automation/tick';
 import { getState, patchState } from '../src/lib/social/publisher';
 
@@ -36,8 +37,8 @@ const DRY_RUN = process.env.TRANSLATION_WORKER_DRY_RUN === '1';
 const MAX_UNITS_TOTAL = Number(process.env.TRANSLATION_WORKER_MAX_UNITS || 0) || Infinity;
 // §27 controlled write tests are driven one-off via processOpportunityNow on
 // an explicit id list (driver script), not through this continuous worker.
-/** Supabase Free turns read-only at 500 MB — same guard the old cron used. */
-const MAX_DATABASE_BYTES = 250 * 1024 * 1024;
+/** Storage guard; override for the actual database capacity when hosted on Oracle. */
+const MAX_DATABASE_BYTES = Number(process.env.TRANSLATION_MAX_DATABASE_BYTES || 250 * 1024 * 1024);
 const RATE_LIMIT_BACKOFF_MS = 2 * 60 * 1000;
 /** One unit = one chunk translation. */
 const UNITS_PER_TICK = CONCURRENCY;
@@ -116,7 +117,14 @@ async function tick(): Promise<void> {
     // fa-complete rows are not starved by the Persian backlog.
     tickCount += 1;
     const psTurn = tickCount % 4 === 0;
-    const r = await processBatch(UNITS_PER_TICK, undefined, { dryRun: DRY_RUN, psTurn });
+    // Reserve every fifth tick for supporting facts; a large body-translation
+    // backlog must not starve key information indefinitely. Same unit budget.
+    const fact = tickCount % 5 === 0
+      ? await processOpportunityFactsUnit(undefined, { dryRun: DRY_RUN })
+      : null;
+    const r = fact && (!fact.skipped || fact.rateLimited)
+      ? { processed: Number(fact.processed), committed: Number(fact.committed), rateLimited: fact.rateLimited, exhausted: false }
+      : await processBatch(UNITS_PER_TICK, undefined, { dryRun: DRY_RUN, psTurn });
     processedTotal += r.processed;
     await recordUnits(r.processed, r.rateLimited);
     console.log(
