@@ -273,7 +273,7 @@ export function Footer({
           </div>
         </div>
       </div>
-      {ARI_ENABLED ? <div className="site-container"><AriRestore lang={lang === 'ps' ? 'ps' : lang === 'fa' ? 'fa' : 'en'} /></div> : null}
+      {ARI_ENABLED ? <div className="site-container pb-40"><AriRestore lang={lang === 'ps' ? 'ps' : lang === 'fa' ? 'fa' : 'en'} /></div> : null}
     </footer>
   );
 }
@@ -299,4 +299,3 @@ function SocialIcon({ platform }: { platform: string }) {
     default: return <Send className={cls} />;
   }
 }
-

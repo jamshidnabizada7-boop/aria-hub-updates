@@ -68,7 +68,7 @@ export function AriCompanion({ lang, socials, position = 'right', hideOnScroll =
     setSessionHidden(true);
     setOpen(false);
   }
-  return <div data-ari-dock dir={lang === 'en' ? 'ltr' : 'rtl'} hidden={obstructed} className="ari-dock fixed z-40 flex items-end gap-3 print:hidden" style={{ [position === 'left' ? 'left' : 'right']: 'max(1rem, env(safe-area-inset-left))', bottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+  return <div data-ari-dock dir={lang === 'en' ? 'ltr' : 'rtl'} hidden={obstructed} className="ari-dock fixed z-40 flex items-end gap-3 print:hidden" style={{ [position === 'left' ? 'left' : 'right']: position === 'left' ? 'max(1rem, env(safe-area-inset-left))' : 'max(1rem, env(safe-area-inset-right))', bottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
     {!hidden && !sessionHidden ? <Popover open={open && !obstructed} onOpenChange={value => { setOpen(value); if (value) setGreeting(true); }}>
       <PopoverTrigger asChild><button ref={launcher} type="button" aria-label={c.open} className="ari-launcher grid h-16 w-16 shrink-0 place-items-center rounded-2xl border border-primary/20 bg-card/95 shadow-float transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring" data-greeting={greeting}>
         <AriAvatar variant="classic" size={60} animated={!open} />
