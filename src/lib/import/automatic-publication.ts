@@ -49,7 +49,9 @@ export function evaluateImportedDraftPublication(
   if (reasons.length) return { action: 'hold', reasons };
   const facts = row.extractedData && typeof row.extractedData === 'object' && !Array.isArray(row.extractedData)
     ? row.extractedData as Record<string, unknown> : {};
-  if ((row.deadline && row.deadline.getTime() <= now.getTime()) || EXPLICIT_CLOSED_STATUSES.has(String(facts.listingStatus || '').toLowerCase())) {
+  // Public listings treat a date-only deadline as open through that UTC day.
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  if ((row.deadline && row.deadline.getTime() < today) || EXPLICIT_CLOSED_STATUSES.has(String(facts.listingStatus || '').toLowerCase())) {
     return { action: 'expire', reasons: ['expired_or_closed'] };
   }
   if (source!.healthStatus !== 'healthy') reasons.push('source_unhealthy');

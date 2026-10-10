@@ -33,6 +33,7 @@ describe('automatic import publication quality', () => {
     expect(evaluateImportedDraftPublication({ ...candidate, sourceName: null, importStatus: null }, source, false, now).action).toBe('hold');
   });
   test('expired/explicitly closed imports are retired, archived content is never revived', () => {
+    expect(evaluateImportedDraftPublication({ ...candidate, deadline: new Date('2026-10-10') }, source, false, now).action).toBe('publish');
     expect(evaluateImportedDraftPublication({ ...candidate, deadline: new Date('2026-10-09') }, source, false, now).action).toBe('expire');
     expect(evaluateImportedDraftPublication({ ...candidate, extractedData: { listingStatus: 'closed' } }, source, false, now).action).toBe('expire');
     expect(evaluateImportedDraftPublication({ ...candidate, status: 'archived' }, source, false, now).action).toBe('hold');
