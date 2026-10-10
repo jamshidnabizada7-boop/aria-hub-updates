@@ -1,17 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Plus, X, MessageCircle, Phone, Mail, Facebook, Instagram, Send, Linkedin, Youtube } from 'lucide-react';
 import type { SocialLink, SiteSettings } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { ARI_ENABLED, ARI_COPY } from '@/lib/ari';
+import { ARI_ENABLED } from '@/lib/ari';
 import { useEffectiveLang } from './lang-context';
 import { isLang } from '@/lib/lang-route';
 
 export function FloatingSocial({ socials, settings, embedded = false, forceClosed = false, onExpand }: { socials: SocialLink[]; settings: SiteSettings | null; embedded?: boolean; forceClosed?: boolean; onExpand?: () => void }) {
   const language = useEffectiveLang();
   const lang = isLang(language) ? language : 'en';
+  const reducedMotion = useReducedMotion();
   const [open, setOpen] = useState(false);
   const [hidden, setHidden] = useState(false);
   const position = settings?.socialPosition === 'left' ? 'left' : 'right';
@@ -37,7 +38,7 @@ export function FloatingSocial({ socials, settings, embedded = false, forceClose
     <AnimatePresence>
       {!hidden && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.5 }}
+          initial={reducedMotion ? false : { opacity: 0, scale: 0.5 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.5 }}
           className={cn(
@@ -54,10 +55,10 @@ export function FloatingSocial({ socials, settings, embedded = false, forceClose
                     href={s.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    initial={{ opacity: 0, scale: 0, y: 10 }}
+                    initial={reducedMotion ? false : { opacity: 0, scale: 0, y: 10 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0, y: 10 }}
-                    transition={{ delay: i * 0.05 }}
+                    transition={{ delay: reducedMotion ? 0 : i * 0.05, duration: reducedMotion ? 0 : .2 }}
                     aria-label={s.label || s.platform}
                     className="group relative grid h-12 w-12 place-items-center rounded-full text-white shadow-float transition-transform hover:scale-110"
                     style={{ backgroundColor: s.color || 'var(--primary)' }}
@@ -81,7 +82,7 @@ export function FloatingSocial({ socials, settings, embedded = false, forceClose
             className="group relative grid h-14 w-14 place-items-center rounded-full text-white shadow-float"
             style={{ backgroundColor: primary.color || 'var(--primary)' }}
           >
-            <span className="absolute inset-0 rounded-full" style={{ backgroundColor: primary.color || 'var(--primary)', animation: 'pulse-ring 2s ease-out infinite' }} />
+            <span className="absolute inset-0 rounded-full" style={{ backgroundColor: primary.color || 'var(--primary)', animation: reducedMotion ? 'none' : 'pulse-ring 2s ease-out infinite' }} />
             <SocialIcon platform={primary.platform} className="relative h-6 w-6" />
             <Tooltip label={primary.label || ''} position={position} />
           </motion.a>
@@ -93,7 +94,7 @@ export function FloatingSocial({ socials, settings, embedded = false, forceClose
               whileHover={{ scale: 1.08 }}
               whileTap={{ scale: 0.95 }}
               className="grid h-11 w-11 place-items-center rounded-full border border-border bg-card text-foreground shadow-float backdrop-blur-sm"
-              aria-label={lang === 'fa' ? 'نمایش پیوندهای اجتماعی' : lang === 'ps' ? 'ټولنیزې اړیکې ښکاره کړئ' : 'Toggle social links'} aria-expanded={open}
+              aria-label={lang === 'fa' ? 'نمایش پیوندهای اجتماعی' : lang === 'ps' ? 'ټولنیزې اړیکې ښکاره کړئ' : 'Toggle social links'} aria-expanded={open && !forceClosed}
             >
               {open && !forceClosed ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
             </motion.button>

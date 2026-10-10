@@ -54,6 +54,11 @@ export default async function PressPage({
   return (
     <PageShell lang={safeLang}>
       <StaticDocView doc={PRESS_DOC} lang={safeLang} title={title} dbHtml={dbHtml} />
+      <div className="site-container mt-6 print:hidden">
+        <a href="/images/ari/ARI-asset-pack.zip" download className="inline-flex min-h-11 items-center rounded-xl border border-primary/20 px-4 text-sm font-semibold text-primary hover:bg-primary/5">
+          {safeLang === 'fa' ? 'دانلود مجموعهٔ تصاویر آری (فایل فشرده)' : safeLang === 'ps' ? 'د آري د انځورونو ټولګه ښکته کړئ (فشرده فایل)' : 'Download ARI artwork pack (ZIP)'}
+        </a>
+      </div>
     </PageShell>
   );
 }

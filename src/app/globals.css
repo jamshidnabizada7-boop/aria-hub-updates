@@ -642,6 +642,6 @@
 @keyframes ari-open-eyes { 0%, 96%, 100% { opacity: 1; } 97% { opacity: 0; } }
 @keyframes ari-blink { 0%, 96%, 100% { opacity: 0; } 97% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
- .ari-float, .ari-launcher[data-greeting="true"] > span, .ari-open-eyes, .ari-blink { animation: none; }
+ .ari-panel, .ari-float, .ari-launcher[data-greeting="true"] > span, .ari-open-eyes, .ari-blink { animation: none; }
  .ari-blink { opacity: 0; }
 }

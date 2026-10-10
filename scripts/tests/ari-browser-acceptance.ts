@@ -49,9 +49,11 @@ try {
     await readyImages(page);
     await page.screenshot({ path: `${output}/${lang}-${width}-${theme}-guide.png` });
     await page.keyboard.press('Escape');
+    await panel.waitFor({ state: 'detached' });
     check(await panel.count() === 0, 'Escape closes guide');
     check(await launcher.evaluate(el => el === document.activeElement), 'Focus returned');
     await launcher.click(); await page.getByRole('button', { name: ARI_COPY[lang].hide, exact: true }).click();
+    await launcher.waitFor({ state: 'detached' });
     check(await launcher.count() === 0, 'Hide removes launcher');
     await page.reload({ waitUntil: 'networkidle' }); check(await launcher.count() === 0, 'Hidden preference survives reload');
     await page.getByRole('button', { name: ARI_COPY[lang].restore, exact: true }).click(); await launcher.waitFor({ state: 'visible' });

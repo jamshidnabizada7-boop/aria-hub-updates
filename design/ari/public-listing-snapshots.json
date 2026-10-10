@@ -1,29 +1,29 @@
 {
-  "capturedAt": "2026-10-10T20:03:19.406Z",
+  "capturedAt": "2026-10-10T20:20:54.988Z",
   "note": "Public database-backed listing snapshot for non-published design review. Availability and untranslated source titles reflect the feed at capture time.",
   "samples": [
     {
-      "source": "https://www.myariahub.com/en/opportunities/monitoring-evaluation-officer-m-e-officer-2",
-      "slug": "monitoring-evaluation-officer-m-e-officer-2",
+      "source": "https://www.myariahub.com/en/opportunities/electrical-electronics-engineer-technical-team-supervisor",
+      "slug": "electrical-electronics-engineer-technical-team-supervisor",
       "category": "job",
-      "organization": "Youth's Assembly for Afghanistan Rehabilitation-YAAR",
+      "organization": "Sehat Andishan CO LTD",
       "country": "Afghanistan",
-      "deadline": "2026-10-10T00:00:00.000Z",
-      "applyUrl": "mailto:recruitment@yaar.af",
+      "deadline": "2026-11-09T00:00:00.000Z",
+      "applyUrl": "mailto:info@sehatandishan.com",
       "localized": {
         "en": {
-          "title": "Monitoring & Evaluation Officer (M&E) Officer",
-          "summary": "Youth's Assembly for Afghanistan Rehabilitation (YAAR) is a national, non governmental and non profit organization established in 1994. ...",
+          "title": "Electrical & Electronics Engineer / Technical Team Supervisor",
+          "summary": "Sehat Andishan Ltd. is seeking a highly motivated, technically skilled, and well-organized Electrical & Electronics Engineer / Technical Team Supervisor to...",
           "category": "Job"
         },
         "fa": {
-          "title": "Monitoring & Evaluation Officer (M&E) Officer",
-          "summary": "Youth's Assembly for Afghanistan Rehabilitation (YAAR) is a national, non governmental and non profit organization established in 1994. ...",
+          "title": "Electrical & Electronics Engineer / Technical Team Supervisor",
+          "summary": "Sehat Andishan Ltd. is seeking a highly motivated, technically skilled, and well-organized Electrical & Electronics Engineer / Technical Team Supervisor to...",
           "category": "شغل"
         },
         "ps": {
-          "title": "Monitoring & Evaluation Officer (M&E) Officer",
-          "summary": "Youth's Assembly for Afghanistan Rehabilitation (YAAR) is a national, non governmental and non profit organization established in 1994. ...",
+          "title": "Electrical & Electronics Engineer / Technical Team Supervisor",
+          "summary": "Sehat Andishan Ltd. is seeking a highly motivated, technically skilled, and well-organized Electrical & Electronics Engineer / Technical Team Supervisor to...",
           "category": "دنده"
         }
       }

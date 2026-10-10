@@ -5,7 +5,8 @@ const samples = [];
 for (const category of ['job', 'scholarship']) {
   const response = await fetch(`${base}/api/opportunities/list?lang=en&category=${category}`);
   if (!response.ok) throw Error(`Public feed ${response.status}`);
-  const first = (await response.json()).items?.[0];
+  const items = (await response.json()).items || [];
+  const first = items.find((row: any) => (!row.deadline || new Date(row.deadline).getTime() > Date.now() + 86400000) && /^[A-Za-z]/.test(row.title)) || items.find((row: any) => !row.deadline || new Date(row.deadline).getTime() > Date.now() + 86400000);
   if (!first || first.status !== 'published') throw Error('A published real listing is required');
   const localized: Record<string, { title: string; summary: string; category: string }> = {};
   for (const lang of ['en', 'fa', 'ps']) {
