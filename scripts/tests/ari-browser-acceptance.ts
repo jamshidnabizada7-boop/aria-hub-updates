@@ -16,7 +16,8 @@ const db = new PrismaClient();
 const beforeQueue = await db.socialPostQueue.count();
 const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
 let checks = 0;
-const check = (condition: unknown, message: string) => { checks++; if (!condition) throw Error(message); };
+const issues: string[] = [];
+const check = (condition: unknown, message: string) => { checks++; if (!condition) issues.push(message); };
 const readyImages = async (page: any) => page.evaluate(async () => {
   await document.fonts.ready;
   await Promise.all(Array.from(document.images, async img => { if (img.complete) { try { await img.decode(); } catch {} } }));
@@ -51,7 +52,7 @@ try {
     await page.keyboard.press('Escape');
     await panel.waitFor({ state: 'detached' });
     check(await panel.count() === 0, 'Escape closes guide');
-    await page.waitForFunction(label => document.activeElement?.getAttribute('aria-label') === label, ARI_COPY[lang].open, { timeout: 3000 });
+    await page.waitForFunction(label => document.activeElement?.getAttribute('aria-label') === label, ARI_COPY[lang].open, { timeout: 3000 }).catch(() => {});
     check(await launcher.evaluate(el => el === document.activeElement), 'Focus returned');
     await launcher.click(); await page.getByRole('button', { name: ARI_COPY[lang].hide, exact: true }).click();
     await launcher.waitFor({ state: 'detached' });
@@ -123,6 +124,7 @@ try {
   const exported = await sharp(output + '/studio-actual-download.png').metadata(); check(exported.width === 1080 && exported.format === 'png', 'Real existing Studio PNG export');
   check(await db.socialPostQueue.count() === beforeQueue, 'Zero posts queued or delivered');
   await context.close();
-  await writeFile(output + '/verification.json', JSON.stringify({ checks, status: 'passed', locales: ['en', 'fa', 'ps'], viewports: [320, 390, 1440], themes: ['light', 'dark'], deliveryCalls: 0, screenshots: true }, null, 2));
+  await writeFile(output + '/verification.json', JSON.stringify({ checks, status: issues.length ? 'failed' : 'passed', issues, locales: ['en', 'fa', 'ps'], viewports: [320, 390, 1440], themes: ['light', 'dark'], deliveryCalls: 0, screenshots: true }, null, 2));
+  if (issues.length) throw Error(issues.join('\n'));
   console.log(`PASS ${checks} ARI candidate checks; screenshots and unpublished PNG exports in ${output}`);
 } finally { await browser.close(); await db.$disconnect(); }

@@ -14,6 +14,7 @@ for (const row of snapshot.samples) {
   } });
 }
 await db.section.upsert({ where: { key: 'hero' }, update: { enabled: true }, create: { key: 'hero', title: 'Hero', enabled: true } });
-await db.socialLink.createMany({ data: [{ platform: 'whatsapp', label: 'WhatsApp', url: 'https://wa.me/93728915695', order: 0, color: '#16a34a' }, { platform: 'facebook', label: 'Facebook', url: 'https://www.facebook.com/', order: 1 }], skipDuplicates: true });
+await db.siteSetting.upsert({ where: { id: 'ari-candidate-settings' }, update: {}, create: { id: 'ari-candidate-settings', siteName: 'ARIA HUB', logoUrl: '/images/logo-mark.png', socialPosition: 'right' } });
+await db.socialLink.createMany({ data: [{ platform: 'whatsapp', label: 'WhatsApp', url: 'https://wa.me/93700876806', order: 0, color: '#16a34a' }, { platform: 'facebook', label: 'Facebook', url: 'https://www.facebook.com/profile.php?id=61573687093269', order: 1 }], skipDuplicates: true });
 await db.$disconnect();
 console.log('Seeded public listing copies into isolated QA database; no publishing queues.');
