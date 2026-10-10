@@ -15,7 +15,7 @@ describe('automatic import publication quality', () => {
     const scraper = new ScholarshipsAfScraper({ id: 'fixture', name: 'Scholarships.af', type: 'scholarship', scraperKey: 'scholarshipsAf', baseUrl: 'https://scholarships.af', defaultCategory: null, config: {} });
     const instructions = 'Contact the international office at your chosen university. The university must nominate eligible students through the official scholarship system.';
     scraper.fetchText = async () => '<div class="jobsearch-description"><p>A scholarship with a full description for international students seeking graduate studies.</p><h3>How to apply for the scholarship?</h3><p>' + instructions + '</p><h4>Related opportunities</h4><p>Unrelated article links.</p></div>';
-    const parsed = await scraper.parseDetail({ title: 'Scholarship', sourceUrl: 'https://scholarships.af/opportunity/fixture', description: '', applyUrl: null });
+    const parsed = await scraper.parseDetail({ title: 'Scholarship', sourceName: 'Scholarships.af', sourceUrl: 'https://scholarships.af/opportunity/fixture', description: '', applyUrl: null });
     expect(parsed.guidelines).toBe(instructions);
     expect(parsed.guidelines).not.toContain('Unrelated');
   });
