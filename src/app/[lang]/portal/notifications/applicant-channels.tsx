@@ -1,5 +1,5 @@
 'use client';
-import {useEffect,useState} from 'react';
+import {useEffect,useState,useRef} from 'react';
 type Lang='en'|'fa'|'ps';
 const text={
  en:{push:'Browser and mobile web push',enroll:'Enable notifications on this device',unenroll:'Remove this device',unavailable:'Push subscriptions are not yet enabled by ARIA HUB.',saved:'This device is registered. Manage your notification consent above.',wa:'WhatsApp alerts',phone:'WhatsApp number in international format',request:'Request verification code',confirm:'Confirm code and opt in',code:'Six-digit verification code',cancel:'Remove WhatsApp consent',verified:'Number verified; WhatsApp messages only after provider activation.',waiting:'Check your WhatsApp for the verification code.',disabled:'WhatsApp verification is not yet enabled by ARIA HUB.',error:'Request could not be completed. Check consent, account verification, and provider status.'},
@@ -13,6 +13,11 @@ function publicKeyBytes(key:string){
 }
 export function ApplicantChannels({lang,pushConsent,onChange}:{lang:Lang;pushConsent:boolean;onChange:()=>void}){
  const t=text[lang];
+ const help={en:{permission:'Your device controls notification permission. You can revoke it at any time.',consent:'Select push alerts and save your choices above, then register this device.',unsupported:'This browser does not support push. On iPhone or iPad, add ARIA HUB to your Home Screen first.',denied:'Notifications are blocked. Allow them in your browser settings, then try again.',test:'Send a test notification',accepted:'Test accepted. Check your device notifications.',waConsent:'Requesting a code permits one verification message. Confirming the code opts you in to matching-opportunity alerts.'},
+  fa:{permission:'اجازه اعلان در تنظیمات دستگاه است و هر زمان می‌توانید آن را لغو کنید.',consent:'گزینه اعلان دستگاه را انتخاب و انتخاب‌ها را در بالا ذخیره کنید؛ سپس دستگاه را ثبت کنید.',unsupported:'این مرورگر اعلان را پشتیبانی نمی‌کند. در آیفون یا آیپد، نخست آریا هاب را به صفحه اصلی اضافه کنید.',denied:'اعلان مسدود است. اجازه آن را در تنظیمات مرورگر فعال کنید و دوباره تلاش کنید.',test:'ارسال اعلان آزمایشی',accepted:'اعلان آزمایشی پذیرفته شد. اعلان‌های دستگاه را بررسی کنید.',waConsent:'درخواست کود، اجازه یک پیام تأیید است. تأیید کود، دریافت اعلان فرصت‌های مناسب را فعال می‌کند.'},
+  ps:{permission:'د خبرتیا اجازه د وسیلې په تنظیماتو کې ده او هر وخت یې لغوه کولای شئ.',consent:'پورته د پش اجازه وټاکئ او خوندي یې کړئ، بیا دا وسیله ثبت کړئ.',unsupported:'دا براوزر پش نه مني. په آیفون یا آیپډ کې لومړی آریا هاب اصلي پردې ته ورزیات کړئ.',denied:'خبرتیاوې بندې دي. د براوزر په تنظیماتو کې اجازه ورکړئ او بیا هڅه وکړئ.',test:'ازمایښتي خبرتیا ولېږئ',accepted:'ازمایښتي خبرتیا ومنل شوه. د وسیلې خبرتیاوې وګورئ.',waConsent:'د کوډ غوښتنه د یوه تایید پیغام اجازه ده. د کوډ تایید د مناسب فرصت خبرتیاوې فعالوي.'}}[lang];
+ const sending=useRef(false);
+ const [thisDevice,setThisDevice]=useState(false);
  const [availablePush,setAvailablePush]=useState(false),[pushKey,setPushKey]=useState(''),[pushCount,setPushCount]=useState(0);
  const [waAvailable,setWaAvailable]=useState(false),[waVerified,setWaVerified]=useState(false);
  const [phone,setPhone]=useState(''),[code,setCode]=useState(''),[pending,setPending]=useState(false);
@@ -22,23 +27,35 @@ export function ApplicantChannels({lang,pushConsent,onChange}:{lang:Lang;pushCon
    fetch('/api/applicant/whatsapp-contact',{cache:'no-store'})]);
   if(p.ok){const d=await p.json();setAvailablePush(Boolean(d.available));setPushKey(d.publicKey||'');setPushCount(Number(d.activeSubscriptions)||0);}
   if(w.ok){const d=await w.json();setWaAvailable(Boolean(d.available));setWaVerified(Boolean(d.verified));}
+  if('serviceWorker' in navigator){const reg=await navigator.serviceWorker.getRegistration('/');setThisDevice(Boolean(await reg?.pushManager?.getSubscription()));}
  }
  useEffect(()=>{void refresh().catch(()=>{});},[]);
  async function enroll(){
+  if(sending.current)return;sending.current=true;
   setBusy(true);setStatus('');
   try{
-   if(!pushConsent)throw Error('Save push consent above before registering this device.');
-   if(!('serviceWorker' in navigator)||!('PushManager' in window))throw Error('Web push is not supported on this device.');
+   if(!pushConsent)throw Error(help.consent);
+   if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window))throw Error(help.unsupported);
    const permission=await Notification.requestPermission();
-   if(permission!=='granted')throw Error('Notification permission was not granted.');
-   const worker=await navigator.serviceWorker.register('/applicant-push-sw.js',{scope:'/'});
+   if(permission!=='granted')throw Error(help.denied);
+   await navigator.serviceWorker.register('/applicant-push-sw.js',{scope:'/'});
+   const worker=await navigator.serviceWorker.ready;
    const existing=await worker.pushManager.getSubscription();
    const sub=existing||await worker.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:publicKeyBytes(pushKey)});
    const result=await fetch('/api/applicant/push-subscriptions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(sub.toJSON())});
    if(!result.ok)throw Error(t.error);
    await refresh();setStatus(t.saved);
   }catch(e){setStatus(e instanceof Error?e.message:t.error);}
-  finally{setBusy(false);}
+  finally{sending.current=false;setBusy(false);}
+ }
+ async function testDevice(){
+  if(sending.current)return;sending.current=true;setBusy(true);setStatus('');
+  try{
+   const reg=await navigator.serviceWorker.getRegistration('/'),sub=await reg?.pushManager.getSubscription();
+   if(!sub)throw Error(t.error);
+   const r=await fetch('/api/applicant/push-test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:sub.endpoint})});
+   if(!r.ok)throw Error(t.error);setStatus(help.accepted);
+  }catch{setStatus(t.error);}finally{sending.current=false;setBusy(false);}
  }
  async function unenroll(){
   setBusy(true);setStatus('');
@@ -66,10 +83,11 @@ export function ApplicantChannels({lang,pushConsent,onChange}:{lang:Lang;pushCon
  }
  return <div className="space-y-4">
   <section className="rounded-xl border bg-card p-4"><h3 className="font-semibold">{t.push}</h3>
-   <p className="mt-1 text-sm text-muted-foreground">{availablePush?'Permission is controlled by your device and can be revoked.':t.unavailable}</p>
+   <p className="mt-1 text-sm text-muted-foreground">{availablePush?help.permission:t.unavailable}</p>
+   {availablePush&&!pushConsent&&<p className="mt-2 text-sm text-muted-foreground">{help.consent}</p>}
    {availablePush&&<div className="mt-3 flex flex-wrap gap-2">
     <button type="button" className="rounded-lg border px-3 py-2" disabled={busy||!pushConsent} onClick={()=>void enroll()}>{t.enroll}</button>
-    {pushCount>0&&<button type="button" className="rounded-lg border px-3 py-2" disabled={busy} onClick={()=>void unenroll()}>{t.unenroll}</button>}
+    {thisDevice&&pushCount>0&&<><button type="button" className="rounded-lg border px-3 py-2" disabled={busy||!pushConsent} onClick={()=>void testDevice()}>{help.test}</button><button type="button" className="rounded-lg border px-3 py-2" disabled={busy} onClick={()=>void unenroll()}>{t.unenroll}</button></>}
    </div>}
   </section>
   <section className="rounded-xl border bg-card p-4"><h3 className="font-semibold">{t.wa}</h3>
@@ -79,7 +97,7 @@ export function ApplicantChannels({lang,pushConsent,onChange}:{lang:Lang;pushCon
      {!pending?<><label className="block text-sm">{t.phone}
       <input type="tel" autoComplete="tel" dir="ltr" className="mt-1 w-full rounded-lg border bg-background p-2" placeholder="+93700123456"
        value={phone} onChange={e=>setPhone(e.target.value)} maxLength={16}/></label>
-      <p className="text-xs text-muted-foreground">By requesting a code, I consent to receiving a verification message on this number.</p>
+      <p className="text-xs text-muted-foreground">{help.waConsent}</p>
       <button type="button" className="rounded-lg border px-3 py-2" disabled={busy||!/^\+[1-9]\d{7,14}$/.test(phone)} onClick={()=>void whatsApp('request')}>{t.request}</button></>:
      <><label className="block text-sm">{t.code}<input dir="ltr" inputMode="numeric" autoComplete="one-time-code" value={code} maxLength={6} onChange={e=>setCode(e.target.value)} className="mt-1 w-full rounded-lg border bg-background p-2"/></label>
       <button type="button" className="rounded-lg border px-3 py-2" disabled={busy||!/^\d{6}$/.test(code)} onClick={()=>void whatsApp('confirm')}>{t.confirm}</button></>}

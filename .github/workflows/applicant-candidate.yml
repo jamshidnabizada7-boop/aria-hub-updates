@@ -75,7 +75,9 @@ jobs:
           bun test tests/applicant-smtp-loopback.test.ts
           bun --conditions=react-server test tests/applicant-production-auth.test.ts
       - name: Isolated push and WhatsApp consent + mocked provider tests
-        run: bun --conditions=react-server test tests/applicant-channels-m6.test.ts
+        run: |
+          bun --conditions=react-server test tests/applicant-channels-m6.test.ts
+          bun --conditions=react-server test tests/applicant-services-production.test.ts tests/site-navigation.test.ts
       - name: Install isolated CV OCR corpus dependencies
         run: |
           sudo apt-get update -qq

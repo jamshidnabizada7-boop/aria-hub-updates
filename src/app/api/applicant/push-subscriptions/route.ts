@@ -3,12 +3,13 @@ import {applicantSameOrigin} from '@/lib/applicant-origin';
 import {notificationAccount,applicantResponse} from '@/lib/applicants/notification-service';
 import {safePushSubscription,sealChannel,endpointHash,enabledChannelCrypto} from '@/lib/applicants/channel-security';
 import {allowDurable} from '@/lib/security/durable-rate-limit';
+import {pushConfigured} from '@/lib/applicants/channel-providers';
 export const runtime='nodejs';export const dynamic='force-dynamic';
 const enabled=()=>process.env.APPLICANT_PUSH_SUBSCRIPTIONS_ENABLED==='true'&&enabledChannelCrypto();
 export async function GET(req:Request){
  const a=await notificationAccount(req);if(!a)return applicantResponse({error:'unauthorized'},401);
  const count=await db.applicantPushSubscription.count({where:{applicantProfileId:a.profile.id,disabledAt:null}});
- return applicantResponse({available:enabled()&&/^[A-Za-z0-9_-]{80,128}$/.test(process.env.APPLICANT_VAPID_PUBLIC_KEY||''),
+ return applicantResponse({available:enabled()&&pushConfigured()&&/^[A-Za-z0-9_-]{80,128}$/.test(process.env.APPLICANT_VAPID_PUBLIC_KEY||''),
   publicKey:enabled()?process.env.APPLICANT_VAPID_PUBLIC_KEY||null:null,
   activeSubscriptions:count});
 }

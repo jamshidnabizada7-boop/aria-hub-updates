@@ -24,7 +24,7 @@ const issues:string[]=[];
 let completed=0;
 await mkdir('/tmp/aria-browser-snapshots',{recursive:true});
 try{
- for(const lang of ['en','fa','ps'] as const)for(const width of [375,390,768,1440]){
+ for(const lang of ['en','fa','ps'] as const)for(const width of [375,390,768,1024,1280,1440]){
   const mobile=width<768;
   const context=await browser.newContext({
    viewport:{width,height:mobile?844:900},
@@ -52,6 +52,13 @@ try{
     if(overflow>8)issues.push(lang+' '+segment+' '+(mobile?'mobile':'desktop')+' horizontal overflow='+overflow);
    }
    if(segment==='employers/post') {
+    const desktopNav=page.locator('header nav');
+    const desktopVisible=await desktopNav.isVisible();
+    if(desktopVisible!==(width>=1024))issues.push(lang+' navigation wrong breakpoint '+width);
+    if(width>=1024){
+     const bounds=await page.locator('header').boundingBox();
+     if(!bounds||bounds.width>width)issues.push(lang+' navigation exceeds laptop width '+width);
+    }
     const form=page.locator('main form');
     const next=form.locator('button[type=submit]');
     // Empty input must stay on step one and must never hit the submission API.
