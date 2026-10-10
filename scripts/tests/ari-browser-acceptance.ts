@@ -86,7 +86,8 @@ try {
       check(await page.locator('[data-ari-tip]').count() === 1, `${lang}/${path} one contextual tip`);
       if (['cv-builder', 'letters', 'opportunity-matcher', 'contact', 'employers/post', 'track', 'submit-opportunity'].includes(path)) check(await page.locator('[data-ari-dock]').count() === 0, 'No floating overlay on forms/tools');
       await readyImages(page);
-      await page.screenshot({ path: `${output}/${lang}-${path.split('/')[0]}-desktop.png` });
+      const screenName = path.startsWith('opportunities/') ? 'opportunity-detail' : path.replaceAll('/', '-');
+      await page.screenshot({ path: `${output}/${lang}-${screenName}-desktop.png` });
     }
     for (const row of snapshot.samples) for (const size of ['square', 'portrait', 'story']) {
       await page.goto(`${base}/${lang}/social-poster?slug=${row.slug}&size=${size}&ari=${row.category === 'job' ? 'classic' : 'scholar'}`, { waitUntil: 'networkidle' });
@@ -119,7 +120,9 @@ try {
   check(saved.ok(), 'Authenticated existing Studio save');
   const loaded = await context.request.get(base + '/api/admin/studio/design?date=2099-01-01');
   const savedJson = await loaded.json(); check(savedJson.designs.some((d: any) => d.contentRef === 'ari-review-only' && d.overrides.ari.preset === 'global'), 'Saved ARI override reload');
-  await page.goto(base + '/admin', { waitUntil: 'networkidle' });
+  // The multilingual public sweep ends in Pashto; sync the existing language store before English admin labels.
+  await page.goto(base + '/en', { waitUntil: 'networkidle' });
+  await page.goto(base + '/admin', { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: /Brand Studio/i }).click();
   const preset = page.locator('select').filter({ has: page.locator('option[value="scholar"]') });
   await preset.first().waitFor({ state: 'visible' }); await preset.first().selectOption('scholar');
