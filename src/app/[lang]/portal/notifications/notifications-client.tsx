@@ -14,15 +14,16 @@ export function ApplicantNotifications({lang}:{lang:Lang}){
  const t=strings[lang];
  const [prefs,setPrefs]=useState<Preference>({inAppEnabled:false,emailEnabled:false,pushEnabled:false,whatsappEnabled:false,emailFrequency:'daily'});
  const [emailVerified,setEmailVerified]=useState(false);
+ const [savedPushConsent,setSavedPushConsent]=useState(false);
  const [items,setItems]=useState<Notification[]>([]),[unread,setUnread]=useState(0),[next,setNext]=useState<string|null>(null),[busy,setBusy]=useState(false),[status,setStatus]=useState(''),[loading,setLoading]=useState(true);
  const refresh=useCallback(async()=>{
   const [p,n]=await Promise.all([fetch('/api/applicant/notification-preferences',{cache:'no-store'}),fetch('/api/applicant/notifications',{cache:'no-store'})]);
   if(!p.ok||!n.ok)throw Error('unavailable');
   const pd=await p.json(),nd=await n.json();
-  setPrefs(pd.preferences);setEmailVerified(Boolean(pd.emailVerified));setItems(nd.items||[]);setUnread(nd.unread||0);setNext(nd.nextCursor||null);
+  setPrefs(pd.preferences);setSavedPushConsent(Boolean(pd.preferences.pushEnabled));setEmailVerified(Boolean(pd.emailVerified));setItems(nd.items||[]);setUnread(nd.unread||0);setNext(nd.nextCursor||null);
  },[]);
  useEffect(()=>{void refresh().catch(()=>setStatus(t.error)).finally(()=>setLoading(false));},[refresh,t.error]);
- async function save(){setBusy(true);setStatus('');try{const r=await fetch('/api/applicant/notification-preferences',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(prefs)});if(!r.ok)throw Error('bad');setStatus(t.saved);}catch{setStatus(t.error);}finally{setBusy(false);}}
+ async function save(){setBusy(true);setStatus('');try{const r=await fetch('/api/applicant/notification-preferences',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(prefs)});if(!r.ok)throw Error('bad');setSavedPushConsent(prefs.pushEnabled);setStatus(t.saved);}catch{setStatus(t.error);}finally{setBusy(false);}}
  async function read(id?:string){try{const r=await fetch('/api/applicant/notifications',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(id?{id}:{all:true})});if(!r.ok)throw Error('bad');await refresh();}catch{setStatus(t.error);}}
  async function archive(id:string){try{const r=await fetch('/api/applicant/notifications',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,archive:true})});if(!r.ok)throw Error();await refresh();}catch{setStatus(t.error);}}
  async function more(){if(!next)return;try{const r=await fetch('/api/applicant/notifications?cursor='+encodeURIComponent(next),{cache:'no-store'});if(!r.ok)throw Error('bad');const d=await r.json();setItems(old=>[...old,...(d.items||[])]);setNext(d.nextCursor||null);}catch{setStatus(t.error);}}
@@ -35,9 +36,9 @@ export function ApplicantNotifications({lang}:{lang:Lang}){
    <label className="mt-4 flex items-center gap-3"><input type="checkbox" checked={prefs.pushEnabled} onChange={e=>setPrefs(p=>({...p,pushEnabled:e.target.checked}))}/>
     {lang==='en'?'Allow device push alerts for strong matches':lang==='fa'?'اجازه اعلان در دستگاه برای فرصت‌های مناسب':'په وسیله کې د مناسب فرصت خبرتیا اجازه'}</label>
    <label className="mt-4 block text-sm font-semibold">{t.freq}<select className={'mt-2 ms-2 '+input} value={prefs.emailFrequency} disabled={!prefs.emailEnabled} onChange={e=>setPrefs(p=>({...p,emailFrequency:e.target.value as Preference['emailFrequency']}))}><option value="daily">{t.daily}</option><option value="weekly">{t.weekly}</option></select></label>
-   <button className="mt-5 rounded-lg bg-primary px-5 py-3 text-primary-foreground disabled:opacity-50" disabled={busy||loading} onClick={()=>void save()}>{t.save}</button><p className="mt-4 text-xs text-muted-foreground">{t.later}</p>
+   <button className="mt-5 rounded-lg bg-primary px-5 py-3 text-primary-foreground disabled:opacity-50" disabled={busy||loading} onClick={()=>void save()}>{t.save}</button>
   </section>
-  <ApplicantChannels lang={lang} pushConsent={prefs.pushEnabled} onChange={()=>void refresh()} />
+  <ApplicantChannels lang={lang} pushConsent={savedPushConsent&&prefs.pushEnabled} onChange={()=>void refresh()} />
   <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-xl font-semibold">{t.inbox} ({unread} {t.unread})</h2><div className="flex gap-2"><Link className="rounded-lg border px-3 py-2 text-sm" href={'/'+lang+'/portal/matcher'}>{t.back}</Link><button className="rounded-lg border px-3 py-2 text-sm" onClick={()=>void read()} disabled={!unread}>{t.markAll}</button></div></div>
   {status&&<p role="status" className="my-3 rounded-lg border p-3 text-sm">{status}</p>}
   {!loading&&!items.length&&<p className="my-5 rounded-xl border p-5">{t.empty}</p>}

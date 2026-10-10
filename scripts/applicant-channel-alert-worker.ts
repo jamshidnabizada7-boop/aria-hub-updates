@@ -1,7 +1,7 @@
 /**
  * Dedicated applicant channel outbox. NO --send means read-only dry run.
  * No scheduling, provider calls or production activation in candidate CI.
- * Push requires a separate authenticated gateway that signs RFC8291/VAPID;
+ * Push uses direct RFC8291/VAPID delivery or an authenticated gateway;
  * WhatsApp requires an approved Meta template and verified recipient consent.
  */
 import {PrismaClient} from '@prisma/client';
@@ -66,7 +66,9 @@ async function main(){
    sent++;
   }catch(e){
    const code=e instanceof Error?e.message:'delivery_failure';
-   const permanentlyUnsafe=/consent|revoked|not_permitted|invalid_channel|unapproved|unsafe_link/.test(code);
+   if(code==='push_subscription_expired')await db.applicantPushSubscription.updateMany({
+    where:{id:row.targetId,applicantProfileId:note.applicantProfileId},data:{disabledAt:new Date()}});
+   const permanentlyUnsafe=/consent|revoked|not_permitted|invalid_channel|unapproved|unsafe_link|subscription_expired/.test(code);
    const attempts=row.attempts+1;
    await db.applicantChannelDelivery.updateMany({where:{id:row.id,status:'processing'},
     data:{status:permanentlyUnsafe||attempts>=5?'suppressed':'pending',

@@ -8,7 +8,8 @@ export async function scanCV(bytes: Uint8Array): Promise<boolean> {
     let settled=false;
     const finish=(clean:boolean)=>{if(!settled){settled=true;clearTimeout(timeout);resolve(clean);}};
     // Never interpolate user input or invoke a shell.
-    const child=spawn('clamscan',['--no-summary','-'],{stdio:['pipe','ignore','ignore']});
+    const daemon=process.env.CV_CLAMAV_MODE==='daemon';
+    const child=spawn(daemon?'clamdscan':'clamscan',daemon?['--stream','--no-summary','-']:['--no-summary','-'],{stdio:['pipe','ignore','ignore']});
     const timeout=setTimeout(()=>{child.kill('SIGKILL');finish(false);},30000);
     child.on('error',()=>finish(false));
     child.on('close',code=>finish(code===0)); // 1 = infected; 2 = scanner error

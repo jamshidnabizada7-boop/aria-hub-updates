@@ -1,6 +1,7 @@
 import 'server-only';
-import {z} from 'zod';
-import {openChannel,safePushSubscription} from './channel-security';
+import webpush from 'web-push';
+import {createHash} from 'node:crypto';
+import {safePushSubscription} from './channel-security';
 /** Network calls happen ONLY from the dedicated opt-in channel worker (or
  * a user-requested verification). Never invoke from import/translation/social.
  */
@@ -10,8 +11,21 @@ export const whatsappConfigured=()=>process.env.APPLICANT_WHATSAPP_DELIVERY_ENAB
  && /^[a-z0-9_]{3,80}$/i.test(process.env.WHATSAPP_MATCH_TEMPLATE||'')
  && /^[a-z0-9_]{3,80}$/i.test(process.env.WHATSAPP_VERIFY_TEMPLATE||'');
 export const pushConfigured=()=>process.env.APPLICANT_PUSH_DELIVERY_ENABLED==='true'
- && /^https:\/\//.test(process.env.APPLICANT_PUSH_GATEWAY_URL||'')
- && !!process.env.APPLICANT_PUSH_GATEWAY_TOKEN;
+ && (process.env.APPLICANT_PUSH_TRANSPORT==='direct'
+  ? /^[A-Za-z0-9_-]{87}$/.test(process.env.APPLICANT_VAPID_PUBLIC_KEY||'')
+    && /^[A-Za-z0-9_-]{43}$/.test(process.env.APPLICANT_VAPID_PRIVATE_KEY||'')
+  : /^https:\/\//.test(process.env.APPLICANT_PUSH_GATEWAY_URL||'')
+    && !!process.env.APPLICANT_PUSH_GATEWAY_TOKEN);
+
+export class PushDeliveryError extends Error{
+ constructor(public code:'push_subscription_expired'|'push_provider_rejected'){super(code);}
+}
+export function directPushOptions(idempotencyKey:string):webpush.RequestOptions{
+ return {vapidDetails:{subject:'mailto:info@myariahub.com',
+  publicKey:process.env.APPLICANT_VAPID_PUBLIC_KEY!,privateKey:process.env.APPLICANT_VAPID_PRIVATE_KEY!},
+  TTL:3600,urgency:'normal',timeout:12000,
+  topic:createHash('sha256').update(idempotencyKey).digest('base64url').slice(0,32)};
+}
 
 export async function sendWhatsAppTemplate(phone:string,template:string,locale:'en'|'fa'|'ps',variables:string[]){
  if(!whatsappConfigured())throw Error('whatsapp_provider_disabled');
@@ -38,6 +52,15 @@ export async function sendWhatsAppTemplate(phone:string,template:string,locale:'
 export async function deliverPushToGateway(subscription:unknown,payload:{title:string;body:string;url:string},idempotencyKey:string){
  if(!pushConfigured())throw Error('push_provider_disabled');
  const safe=safePushSubscription(subscription);
+ if(process.env.APPLICANT_PUSH_TRANSPORT==='direct'){
+  try{
+   await webpush.sendNotification(safe,JSON.stringify(payload),directPushOptions(idempotencyKey));
+   return true;
+  }catch(error){
+   const status=(error as {statusCode?:number}).statusCode;
+   throw new PushDeliveryError(status===404||status===410?'push_subscription_expired':'push_provider_rejected');
+  }
+ }
  const url=new URL(process.env.APPLICANT_PUSH_GATEWAY_URL!);
  if(url.protocol!=='https:'||url.username||url.password||!url.hostname||url.hostname==='localhost')
    throw Error('push_gateway_invalid');

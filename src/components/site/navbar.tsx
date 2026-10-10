@@ -15,6 +15,7 @@ import { useLangContext } from '@/components/site/lang-context';
 import { useT } from '@/hooks/use-t';
 import { useLangHref } from '@/hooks/use-lang-href';
 import { resolveAnchorUrl } from '@/lib/anchor-routes';
+import { cleanSiteNavigation } from '@/lib/site-navigation';
 import { LANGS, sanitizeLangPath, withLangPrefix } from '@/lib/lang-route';
 import type { MenuItem, Language } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -67,7 +68,7 @@ function DesktopMenuItem({ item }: { item: MenuItem }) {
       <a
         href={href}
         target={item.openInNewTab ? '_blank' : undefined}
-        className="group relative flex items-center gap-1 px-3 py-2 text-sm font-medium text-foreground/75 transition-colors hover:text-foreground"
+        className="group relative flex items-center gap-1 px-2 xl:px-3 py-2 text-sm font-medium text-foreground/75 transition-colors hover:text-foreground"
       >
         {label}
         <span className="absolute inset-x-3 -bottom-0.5 h-px origin-left scale-x-0 bg-gradient-to-r from-primary to-chart-2 transition-transform duration-300 group-hover:scale-x-100" />
@@ -77,7 +78,7 @@ function DesktopMenuItem({ item }: { item: MenuItem }) {
 
   return (
     <div className="group relative" onMouseEnter={() => setExpanded(true)} onMouseLeave={() => setExpanded(false)} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) setExpanded(false); }} onKeyDown={e => { if (e.key === 'Escape') { setExpanded(false); e.currentTarget.querySelector('button')?.focus(); } }}>
-      <button type="button" aria-expanded={expanded} onClick={() => setExpanded(!expanded)} className="flex min-h-11 items-center gap-1 px-3 py-2 text-sm font-medium text-foreground/75 transition-colors hover:text-foreground">
+      <button type="button" aria-expanded={expanded} onClick={() => setExpanded(!expanded)} className="flex min-h-11 items-center gap-1 px-2 xl:px-3 py-2 text-sm font-medium text-foreground/75 transition-colors hover:text-foreground">
         {label}
         <ChevronDown className="h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-180" />
         <span className="absolute inset-x-3 -bottom-0.5 h-px origin-left scale-x-0 bg-gradient-to-r from-primary to-chart-2 transition-transform duration-300 group-hover:scale-x-100" />
@@ -259,6 +260,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  const navigation = cleanSiteNavigation(menu);
   const currentLang = allLanguages.find((l) => l.code === code) || allLanguages[0];
 
   return (
@@ -295,8 +297,8 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
             </a>
 
             {/* Desktop nav */}
-            <nav className="hidden items-center 2xl:flex">
-              {menu.map((item) => (
+            <nav aria-label={t('nav.menu')} className="hidden min-w-0 flex-1 items-center justify-center lg:flex">
+              {navigation.map((item) => (
                 <DesktopMenuItem key={item.id} item={item} />
               ))}
             </nav>
@@ -311,7 +313,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
                 aria-label="Search"
               >
                 <Search className="h-4 w-4" />
-                <kbd className="hidden ms-1 items-center gap-0.5 rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground sm:inline-flex">
+                <kbd className="hidden ms-1 items-center gap-0.5 rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground xl:inline-flex">
                   <span className="text-[9px]">⌘</span>K
                 </kbd>
               </Button>
@@ -354,13 +356,13 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
                 <Moon className="block h-4 w-4 dark:hidden" />
               </Button>
 
-              {applicantSignedIn && notificationsAvailable && <a href={hrefFn('/portal/notifications')} aria-label={code==='fa'?'اطلاع‌رسانی‌ها':code==='ps'?'خبرتیاوې':'Notifications'} className="hidden items-center rounded-xl border border-border px-3 py-2 text-sm font-semibold md:inline-flex"><Bell className="h-4 w-4" /></a>}
-              {applicantAvailable&&<a href={hrefFn(applicantSignedIn ? '/portal' : '/login')} className="hidden min-h-11 items-center whitespace-nowrap rounded-xl border border-border px-3 py-2 text-sm font-semibold md:inline-flex">
+              {applicantSignedIn && notificationsAvailable && <a href={hrefFn('/portal/notifications')} aria-label={code==='fa'?'اطلاع‌رسانی‌ها':code==='ps'?'خبرتیاوې':'Notifications'} className="hidden items-center rounded-xl border border-border px-3 py-2 text-sm font-semibold lg:inline-flex"><Bell className="h-4 w-4" /></a>}
+              {applicantAvailable&&<a href={hrefFn(applicantSignedIn ? '/portal' : '/login')} className="hidden min-h-11 items-center whitespace-nowrap rounded-xl border border-border px-3 py-2 text-sm font-semibold lg:inline-flex">
                 {applicantSignedIn ? (code==='fa'?'داشبورد من':code==='ps'?'زما ډشبورډ':'My Dashboard') : (code==='fa'?'ورود':code==='ps'?'ننوتل':'Log In')}
               </a>}
               <Button
                 size="sm"
-                className="hidden min-h-11 rounded-xl bg-primary px-4 text-sm font-semibold shadow-float hover:opacity-90 md:inline-flex"
+                className="hidden min-h-11 rounded-xl bg-primary px-4 text-sm font-semibold shadow-float hover:opacity-90 lg:inline-flex"
                 asChild
               >
                 <a href={hrefFn('/get-started')}>{t('nav.getStarted')}</a>
@@ -369,18 +371,18 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
               {/* Mobile menu */}
               <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl 2xl:hidden" aria-label={t('nav.menu')}>
+                  <Button variant="ghost" size="icon" className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl lg:hidden" aria-label={t('nav.menu')}>
                     <Menu className="h-5 w-5" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side={code === 'en' ? 'right' : 'left'} className="w-[min(360px,90vw)] overflow-y-auto p-0 [&>button]:min-h-11 [&>button]:min-w-11 [&>button]:top-2">
+                <SheetContent side={code === 'en' ? 'right' : 'left'} className="w-[min(360px,90vw)] overflow-y-auto p-0 [&>button]:min-h-11 [&>button]:min-w-11 [&>button]:top-2 [&>button]:right-auto [&>button]:end-3">
                   <SheetTitle className="sr-only">{t('nav.menu')}</SheetTitle>
-                  <div className="flex items-center justify-between border-b border-border/60 px-5 py-4">
+                  <div className="flex items-center justify-between border-b border-border/60 px-5 pe-16 py-4">
                     <span className="text-lg font-bold">{siteName}</span>
 
                   </div>
                   <nav className="space-y-1 p-3">
-                    {menu.map((item) => (
+                    {navigation.map((item) => (
                       <MobileMenuItem key={item.id} item={item} onNavigate={() => setMobileOpen(false)} />
                     ))}
                   </nav>
