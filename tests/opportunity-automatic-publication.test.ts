@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, test } from 'bun:test';
 import { PrismaClient } from '@prisma/client';
+import { extractWpFacts } from '../src/lib/import/scrapers/wp-api';
 import { evaluateImportedDraftPublication, reconcileImportedDrafts, type PublicationCandidate, type PublicationSource } from '../src/lib/import/automatic-publication';
 
 const now = new Date('2026-10-10T12:00:00Z');
@@ -9,6 +10,11 @@ const candidate: PublicationCandidate = { status: 'draft', title: 'Finance Offic
   applyUrl: 'mailto:jobs@example.org', applyUrlType: 'application_email', verificationStatus: 'single_source' };
 
 describe('automatic import publication quality', () => {
+  test('standalone Application heading preserves instructions without treating narrative as a heading', () => {
+    const instructions = 'Submit a research proposal and CV through the official application portal. Two referees must submit references.';
+    expect(extractWpFacts('Application\n' + instructions).guidelines).toBe(instructions);
+    expect(extractWpFacts('Application deadlines vary between institutions.\n' + instructions).guidelines).toBeNull();
+  });
   test('verified import can publish before translations finish', () => {
     expect(evaluateImportedDraftPublication(candidate, source, false, now)).toEqual({ action: 'publish', reasons: [] });
   });
