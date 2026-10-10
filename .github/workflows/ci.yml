@@ -64,9 +64,11 @@ jobs:
           # Bun can cache an incompatible module namespace when the AI provider
           # failover suite shares a process with global provider mocks.
           # Preserve every test; run that suite in an independent process.
-          mapfile -t test_files < <(find tests -maxdepth 1 -name '*.test.ts' ! -name 'ai-failover.test.ts' -print | sort)
+          mapfile -t test_files < <(find tests -maxdepth 1 -name '*.test.ts' ! -name 'ai-failover.test.ts' ! -name 'applicant-production-auth.test.ts' -print | sort)
           bun --conditions=react-server test "${test_files[@]}"
           bun --conditions=react-server test tests/ai-failover.test.ts
+          # Real account SMTP must not inherit transport mocks from other suites.
+          bun --conditions=react-server test tests/applicant-production-auth.test.ts
         # * The api-guards tests skip automatically: no running server in CI.
         #   Database/publisher tests are required and fail if setup is missing.
 

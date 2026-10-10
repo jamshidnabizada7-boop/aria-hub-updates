@@ -11,6 +11,7 @@ export async function sendHtmlEmail(opts: {
   to: string;
   subject: string;
   html: string;
+  text?: string;
 }): Promise<{ sent: boolean; skipped?: 'smtp_not_configured' }> {
   if (!smtpConfigured()) return { sent: false, skipped: 'smtp_not_configured' };
   const nodemailer = await import('nodemailer');
@@ -22,6 +23,7 @@ export async function sendHtmlEmail(opts: {
   // A disposable loopback SMTP test relay does not need STARTTLS.
   const transport = nodemailer.createTransport({
     host,port,
+    connectionTimeout:10000, greetingTimeout:10000, socketTimeout:20000,
     secure:port===465,
     requireTLS:port!==465&&!loopback,
     tls:{rejectUnauthorized:true},
@@ -32,6 +34,9 @@ export async function sendHtmlEmail(opts: {
     to: opts.to,
     subject: opts.subject,
     html: opts.html,
+    text: opts.text,
+    replyTo: process.env.SMTP_REPLY_TO || undefined,
+    headers: {'Auto-Submitted':'auto-generated','X-Auto-Response-Suppress':'All'},
   });
   return { sent: true };
 }

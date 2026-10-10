@@ -71,7 +71,9 @@ jobs:
       - name: Employer job application methods and unsafe URL regression
         run: bun test tests/employer-application-methods-m7.test.ts
       - name: Exercise authenticated email transport through isolated loopback SMTP
-        run: bun test tests/applicant-smtp-loopback.test.ts
+        run: |
+          bun test tests/applicant-smtp-loopback.test.ts
+          bun --conditions=react-server test tests/applicant-production-auth.test.ts
       - name: Isolated push and WhatsApp consent + mocked provider tests
         run: bun --conditions=react-server test tests/applicant-channels-m6.test.ts
       - name: Install isolated CV OCR corpus dependencies
@@ -116,6 +118,9 @@ jobs:
             exit 1
           fi
           bun --conditions=react-server scripts/tests/applicant-browser-acceptance.ts
+      - name: Complete new account verification login and recovery over isolated HTTPS
+        timeout-minutes: 5
+        run: bun --conditions=react-server scripts/tests/account-browser-journey.ts
       - name: Upload anonymized browser acceptance screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -124,3 +129,12 @@ jobs:
           path: /tmp/aria-browser-snapshots/*.png
           if-no-files-found: ignore
           retention-days: 3
+      - name: Upload synthetic account screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aria-account-browser-${{ github.sha }}
+          path: /tmp/aria-account-snapshots/*.png
+          if-no-files-found: ignore
+          retention-days: 3
+
