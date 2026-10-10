@@ -27,12 +27,12 @@ function LogoMark({ src }: { src: string | null | undefined }) {
   const [err, setErr] = useState(false);
   if (!src || err) {
     return (
-      <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-chart-2 text-sm font-black text-primary-foreground shadow-float">
+      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-[6px] bg-gradient-to-br from-primary to-chart-2 text-sm font-black text-primary-foreground shadow-float">
         A
       </div>
     );
   }
-  return <Image src={src} alt="Logo" width={72} height={72} onError={() => setErr(true)} className="h-9 w-9 rounded-xl object-cover" />;
+  return <Image src={src} alt="Logo" width={72} height={72} onError={() => setErr(true)} className="h-9 w-9 shrink-0 rounded-[6px] object-contain" />;
 }
 
 interface NavbarProps {
