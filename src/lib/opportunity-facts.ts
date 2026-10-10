@@ -228,7 +228,7 @@ export function materializeFactTranslations(raw: unknown, current: unknown): Rec
     for (const source of publicFactSources(raw)) {
       if (translatedFact(source, root, lang) !== source.value) continue;
       const value = source.code || preservedName(source) ? source.value : controlled(source, lang);
-      if (value === source.value && /[a-z]{3}/i.test(value) && !source.code && !preservedName(source)) continue;
+      if (value === source.value && /\p{L}/u.test(value) && !source.code && !preservedName(source)) continue;
       if (values[source.key] === value && sources[source.key] === source.value) continue;
       values[source.key] = value;
       sources[source.key] = source.value;

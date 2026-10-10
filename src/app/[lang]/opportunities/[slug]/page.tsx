@@ -493,13 +493,13 @@ export default async function OpportunityDetailPage({
 
               {/* One applicant-facing fact sheet, with semantic deduplication. */}
               {keyFacts.length > 0 && (
-                <Card className="mt-5 overflow-hidden border-border/70 p-0">
+                <Card className="mt-5 gap-0 overflow-hidden border-border/70 p-0">
                   <div className="flex items-center gap-2 border-b border-border/70 bg-muted/40 px-4 py-3">
                     <Sparkles className="h-4 w-4 text-primary" aria-hidden="true" />
                     <h2 className="text-sm font-bold text-foreground">{t('detail.keyFacts')}</h2>
                   </div>
                   {primaryFacts.length > 0 && (
-                    <dl className="grid grid-cols-1 gap-3 p-4 min-[420px]:grid-cols-2 lg:grid-cols-3">
+                    <dl className={cn("grid grid-cols-1 gap-3 p-4 min-[420px]:grid-cols-2", primaryFacts.length <= 3 ? "lg:grid-cols-3" : "lg:grid-cols-4")}>
                       {primaryFacts.map(fact => {
                         const Icon = factIcons[fact.key];
                         return (
