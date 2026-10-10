@@ -51,6 +51,7 @@ try {
     await page.keyboard.press('Escape');
     await panel.waitFor({ state: 'detached' });
     check(await panel.count() === 0, 'Escape closes guide');
+    await page.waitForFunction(label => document.activeElement?.getAttribute('aria-label') === label, ARI_COPY[lang].open, { timeout: 3000 });
     check(await launcher.evaluate(el => el === document.activeElement), 'Focus returned');
     await launcher.click(); await page.getByRole('button', { name: ARI_COPY[lang].hide, exact: true }).click();
     await launcher.waitFor({ state: 'detached' });

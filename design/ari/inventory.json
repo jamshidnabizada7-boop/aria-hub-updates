@@ -52,8 +52,8 @@
     },
     {
       "name": "reading",
-      "width": 1299,
-      "height": 1211,
+      "width": 1314,
+      "height": 1197,
       "alpha": true,
       "master": "design/ari/masters/reading.png"
     },
