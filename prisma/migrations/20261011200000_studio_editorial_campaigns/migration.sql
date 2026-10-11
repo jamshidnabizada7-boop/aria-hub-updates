@@ -9,6 +9,8 @@ CREATE TABLE "StudioCampaign" (
     "content" JSONB NOT NULL,
     "media" JSONB,
     "sourceUrl" TEXT,
+    "posterUrl" TEXT,
+    "queueId" TEXT,
     "consentConfirmed" BOOLEAN NOT NULL DEFAULT false,
     "status" TEXT NOT NULL DEFAULT 'draft',
     "approvedAt" TIMESTAMP(3),
@@ -16,6 +18,7 @@ CREATE TABLE "StudioCampaign" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "StudioCampaign_pkey" PRIMARY KEY ("id")
 );
+CREATE UNIQUE INDEX "StudioCampaign_queueId_key" ON "StudioCampaign"("queueId");
 CREATE INDEX "StudioCampaign_status_updatedAt_idx" ON "StudioCampaign"("status", "updatedAt");
 CREATE INDEX "StudioCampaign_pillar_createdAt_idx" ON "StudioCampaign"("pillar", "createdAt");
 
