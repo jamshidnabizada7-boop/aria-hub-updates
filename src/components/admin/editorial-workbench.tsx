@@ -32,6 +32,8 @@ export function EditorialWorkbench({ lang, size }: { lang: Lang; size: PosterSiz
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState('');
   const [campaignId, setCampaignId] = useState<string | null>(null);
+  const [posterUrl, setPosterUrl] = useState('');
+  const [queueId, setQueueId] = useState('');
   const [status, setStatus] = useState('unsaved');
   const [saved, setSaved] = useState<{id:string;title:string;status:string}[]>([]);
   const [visuals, setVisuals] = useState<{url:string;id:string;label:string;enabled:boolean}[]>([]);
@@ -79,6 +81,7 @@ export function EditorialWorkbench({ lang, size }: { lang: Lang; size: PosterSiz
       if(!res.ok)throw new Error(body.error??'Load failed');
       const c=body.campaign;
       setCampaignId(c.id);setStatus(c.status);setPillar(c.pillar);
+      setPosterUrl(c.posterUrl??'');setQueueId(c.queueId??'');
       setHeadline(c.content.headline);setDescription(c.content.note);setCaption(c.content.caption);
       setSourceUrl(c.sourceUrl??'');setConsent(Boolean(c.consentConfirmed));
       const found=recipesForPillar(c.pillar).findIndex((x:{id:string})=>x.id===c.recipeId);
@@ -98,7 +101,7 @@ export function EditorialWorkbench({ lang, size }: { lang: Lang; size: PosterSiz
       })});
       const body=await res.json();
       if(!res.ok)throw new Error(body.error??'Save failed');
-      setCampaignId(body.campaign.id);setStatus('draft');setNotice('Saved as draft. Nothing has been published.');
+      setCampaignId(body.campaign.id);setStatus('draft');setPosterUrl('');setQueueId('');setNotice('Saved as draft. Nothing has been published.');
       await refreshLibrary();
     }catch(e){setError(e instanceof Error?e.message:'Save failed');}
     finally{setBusy(false);}
@@ -112,6 +115,42 @@ export function EditorialWorkbench({ lang, size }: { lang: Lang; size: PosterSiz
       setStatus('approved');setNotice('Editorial review recorded. Publishing is still manual.');
       await refreshLibrary();
     }catch(e){setError(e instanceof Error?e.message:'Approval failed');}
+    finally{setBusy(false);}
+  };
+  const saveApprovedPoster=async()=>{
+    if(!campaignId||status!=='approved'||!renderRef.current)return;
+    setBusy(true);setError('');setNotice('');
+    try{
+      const png=await toPng(renderRef.current,{width:1080,height:size==='story'?1920:size==='portrait'?1350:1080,pixelRatio:1,cacheBust:true});
+      const res=await fetch('/api/admin/studio/poster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        campaignId,headline,recipeId:recipe.id,png,
+      })});
+      const body=await res.json();if(!res.ok)throw new Error(body.error||'Poster upload failed');
+      setPosterUrl(body.posterUrl);
+      setNotice('Approved PNG stored. No post has been queued or published.');
+    }catch(e){setError(e instanceof Error?e.message:'Poster upload failed');}
+    finally{setBusy(false);}
+  };
+  const queueReviewed=async()=>{
+    if(!campaignId||!posterUrl||status!=='approved')return;
+    if(!window.confirm('Create a MANUAL-ONLY social queue row? This does not publish yet.'))return;
+    setBusy(true);setError('');
+    try{
+      const res=await fetch('/api/admin/studio/queue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({campaignId,confirmManualQueue:true})});
+      const body=await res.json();if(!res.ok)throw new Error(body.error||'Queue failed');
+      setQueueId(body.queueId);setNotice('Manual-only queue row created. Automatic workers will not publish it.');
+    }catch(e){setError(e instanceof Error?e.message:'Queue failed');}
+    finally{setBusy(false);}
+  };
+  const publishReviewed=async()=>{
+    if(!queueId)return;
+    if(!window.confirm('Publish this reviewed campaign NOW to every enabled social channel? This is a real public action.'))return;
+    setBusy(true);setError('');
+    try{
+      const res=await fetch('/api/admin/automation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'publish-now',id:queueId})});
+      const body=await res.json();if(!res.ok||!body.ok)throw new Error(body.error||'Publishing unsuccessful');
+      setNotice('Publish request completed. Review the Automation delivery log for individual platform results.');
+    }catch(e){setError(e instanceof Error?e.message:'Publishing failed');}
     finally{setBusy(false);}
   };
   const brainstorm = async () => {
@@ -193,7 +232,7 @@ export function EditorialWorkbench({ lang, size }: { lang: Lang; size: PosterSiz
         <div className="rounded-xl border p-3 space-y-2">
           <p className="text-sm font-semibold">Saved campaigns · {status}</p>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" type="button" onClick={()=>{setCampaignId(null);setStatus('unsaved');setHeadline('');setDescription('');setCaption('');setSourceUrl('');setConsent(false);setHeroUrl('');setSnapshots([]);}}>New</Button>
+            <Button size="sm" variant="outline" type="button" onClick={()=>{setCampaignId(null);setStatus('unsaved');setPosterUrl('');setQueueId('');setHeadline('');setDescription('');setCaption('');setSourceUrl('');setConsent(false);setHeroUrl('');setSnapshots([]);}}>New</Button>
             <Button size="sm" variant="outline" type="button" onClick={()=>void refreshLibrary()}>Refresh</Button>
           </div>
           <select className="h-9 w-full rounded-lg border bg-background px-2 text-xs" value={campaignId??''} onChange={e=>e.target.value&&void loadSaved(e.target.value)}>
@@ -309,6 +348,21 @@ export function EditorialWorkbench({ lang, size }: { lang: Lang; size: PosterSiz
         <div className="grid grid-cols-2 gap-2">
           <Button type="button" variant="outline" disabled={busy} onClick={()=>void saveCampaign()}><Save className="mr-1 h-4 w-4"/>Save draft</Button>
           <Button type="button" disabled={busy||!campaignId||!review.publishReady||status!=='draft'} onClick={()=>void approve()}><CheckCircle2 className="mr-1 h-4 w-4"/>Approve</Button>
+        </div>
+        <div className="rounded-lg border p-3 space-y-2">
+          <p className="text-xs font-semibold">Reviewed poster → manual publishing</p>
+          <p className="text-[11px] text-muted-foreground">Save the final branded PNG in durable storage, queue only after owner confirmation, then explicitly publish through the existing approved channels. None of these actions run automatically.</p>
+          <Button size="sm" variant="outline" type="button" disabled={busy||!campaignId||status!=='approved'||Boolean(queueId)} onClick={()=>void saveApprovedPoster()}>
+            Save final PNG for publishing
+          </Button>
+          {posterUrl&&<p className="text-[11px] text-emerald-700">Durable poster stored</p>}
+          <Button size="sm" variant="outline" type="button" disabled={busy||!posterUrl||Boolean(queueId)||status!=='approved'} onClick={()=>void queueReviewed()}>
+            Add to manual-only queue
+          </Button>
+          {queueId&&<p className="break-all text-[11px]">Queue: {queueId}</p>}
+          <Button size="sm" type="button" disabled={busy||!queueId} onClick={()=>void publishReviewed()}>
+            Publish now (explicit confirmation)
+          </Button>
         </div>
         <Button type="button" className="w-full gap-2" onClick={exportPng} disabled={!review.publishReady || exporting}>
           <Download className="h-4 w-4"/>{exporting ? 'Exporting…' : 'Export approved PNG'}
