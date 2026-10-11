@@ -76,6 +76,7 @@ export async function POST(req: NextRequest) {
       if (d.action === 'update' && !d.id) return responseError('Campaign id required');
       const existing = d.id ? await db.studioCampaign.findUnique({ where: { id: d.id } }) : null;
       if (d.action === 'update' && !existing) return responseError('Not found', 404);
+      if (existing?.queueId) return responseError('Queued campaigns are locked. Create a new draft to revise the content.', 409);
       const content = d.content ?? (existing?.content as z.infer<typeof copy> | undefined);
       const pillar = d.pillar ?? existing?.pillar as EditorialPillarId | undefined;
       const recipeId = d.recipeId ?? existing?.recipeId;
@@ -95,6 +96,7 @@ export async function POST(req: NextRequest) {
         // Editing a reviewed campaign always puts it back into draft status.
         status: 'draft',
         approvedAt: null,
+        posterUrl: null,
       };
       const campaign = existing
         ? await db.studioCampaign.update({ where: { id: existing.id }, data })
