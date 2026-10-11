@@ -123,7 +123,7 @@ export function EditorialWorkbench({ lang, size }: { lang: Lang; size: PosterSiz
     try{
       const png=await toPng(renderRef.current,{width:1080,height:size==='story'?1920:size==='portrait'?1350:1080,pixelRatio:1,cacheBust:true});
       const res=await fetch('/api/admin/studio/poster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-        campaignId,headline,recipeId:recipe.id,png,
+        campaignId,headline,note:description,caption,language:lang,format:size,mediaUrl:heroUrl,recipeId:recipe.id,png,
       })});
       const body=await res.json();if(!res.ok)throw new Error(body.error||'Poster upload failed');
       setPosterUrl(body.posterUrl);
