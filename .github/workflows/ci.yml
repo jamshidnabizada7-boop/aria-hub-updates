@@ -89,13 +89,14 @@ jobs:
           ADMIN_SESSION_SECRET: studio-review-local-session-test-only-123456789
         run: |
           bunx playwright-core install --with-deps chromium
-          PORT=3000 HOSTNAME=127.0.0.1 node .next/standalone/server.js > /tmp/studio-review-server.log 2>&1 &
+          node node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port 3000 > /tmp/studio-review-server.log 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid" || true' EXIT
           for attempt in $(seq 1 60); do
             if curl --silent --fail http://127.0.0.1:3000/en > /dev/null; then break; fi
             sleep 2
           done
+          curl --silent --fail http://127.0.0.1:3000/en > /dev/null || { cat /tmp/studio-review-server.log; exit 1; }
           bun scripts/tests/studio-editorial-review.ts
 
       - uses: actions/upload-artifact@v4

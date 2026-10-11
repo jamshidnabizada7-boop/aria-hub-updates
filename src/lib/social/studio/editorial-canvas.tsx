@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type CSSProperties } from 'react';
 import { ArrowUpRight, BriefcaseBusiness, GraduationCap, Globe2, CalendarClock } from 'lucide-react';
-import { CANVAS_SIZES } from '../themes';
+import { CANVAS_SIZES, resolveTheme } from '../themes';
 import { formatDateLong } from '@/lib/date-format';
 import { deadlineSnapshot } from './rotation';
 import type { PremiumCanvasProps } from './types';
@@ -27,10 +27,11 @@ export function EditorialCanvas({ props: p }: { props: PremiumCanvasProps }) {
   const fellow = id === 'scholarship-fellow';
   const bulletin = id === 'deadline-bulletin';
   const calendar = id === 'deadline-calendar';
-  const ink = paper ? '#152744' : '#F5F7FC';
-  const accent = deadline ? (paper ? '#B63D28' : '#FFC19E') : career ? (paper ? '#0E6C67' : '#83E5CE') : (paper ? '#7A511B' : '#F5D58C');
-  const bg = paper ? '#F3F0E8' : career ? '#092F36' : '#11223E';
-  const rule = paper ? '#CBD0CB' : '#ffffff30';
+  const theme = p.themeId && p.themeId !== 'midnight' ? resolveTheme(p.themeId) : null;
+  const ink = theme?.text ?? (paper ? '#152744' : '#F5F7FC');
+  const accent = theme?.accent ?? (deadline ? (paper ? '#B63D28' : '#FFC19E') : career ? (paper ? '#0E6C67' : '#83E5CE') : (paper ? '#7A511B' : '#F5D58C'));
+  const bg = theme?.bgMid ?? (paper ? '#F3F0E8' : career ? '#092F36' : '#11223E');
+  const rule = theme?.surfaceBorder ?? (paper ? '#CBD0CB' : '#ffffff30');
   const h = CANVAS_SIZES[p.size].h;
   const snapshot = now === null ? null : deadlineSnapshot(p.deadlineDate, now);
   const validDate = p.deadlineDate && Number.isFinite(Date.parse(p.deadlineDate));
@@ -50,8 +51,8 @@ export function EditorialCanvas({ props: p }: { props: PremiumCanvasProps }) {
     <main style={{flex:1,minHeight:0,position:'relative',display:'flex',flexDirection:'column',justifyContent:ticket || fellow ? 'center' : 'space-evenly',gap:24,paddingBlock:30}}>
       <div style={{...small,color:accent,letterSpacing:p.lang === 'en' ? 3 : 0,fontWeight:800,display:'flex',alignItems:'center',gap:12}}><span style={{width:10,height:10,background:accent,borderRadius:'50%'}}/>{label}</div>
       {fellow && <GraduationCap aria-hidden size={p.size === 'square' ? 90 : 180} strokeWidth={1} color={accent} style={{alignSelf:'center'}}/>}
-      {deadline && <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:28,padding:calendar || bulletin ? 30 : 0,border:calendar ? `2px solid ${accent}` : undefined,borderRadius:calendar ? 20 : 0,background:bulletin ? accent : undefined,color:bulletin ? '#11223E' : ink}}>
-        <div style={{display:'flex',alignItems:'baseline',gap:20,flexWrap:'wrap'}}><strong style={{fontSize:p.size === 'square' ? 116 : 170,lineHeight:1,fontVariantNumeric:'tabular-nums',color:bulletin ? '#11223E' : accent}}>{snapshot ? new Intl.NumberFormat(p.lang === 'en' ? 'en' : 'fa').format(snapshot.value) : '—'}</strong><span style={{fontSize:27,fontWeight:750}}>{snapshot?.status === 'closed' ? c.closed : snapshot ? c[snapshot.unit] : c.unknown}</span></div>
+      {deadline && <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:28,padding:calendar || bulletin ? 30 : 0,border:calendar ? `2px solid ${accent}` : undefined,borderRadius:calendar ? 20 : 0,background:bulletin ? accent : undefined,color:bulletin ? (theme?.onAccent ?? '#11223E') : ink}}>
+        <div style={{display:'flex',alignItems:'baseline',gap:20,flexWrap:'wrap'}}><strong style={{fontSize:p.size === 'square' ? 116 : 170,lineHeight:1,fontVariantNumeric:'tabular-nums',color:bulletin ? (theme?.onAccent ?? '#11223E') : accent}}>{snapshot ? new Intl.NumberFormat(p.lang === 'en' ? 'en' : 'fa').format(snapshot.value) : '—'}</strong><span style={{fontSize:27,fontWeight:750}}>{snapshot?.status === 'closed' ? c.closed : snapshot ? c[snapshot.unit] : c.unknown}</span></div>
         {!calendar && <CalendarClock size={80} color={accent} strokeWidth={1}/>}
       </div>}
       <div style={{borderInlineStart:paper && !calendar ? `6px solid ${accent}` : undefined,paddingInlineStart:paper && !calendar ? 28 : 0,background:ticket ? '#F3F0E8' : undefined,color:ticket ? '#152744' : ink,padding:ticket ? 36 : undefined,borderRadius:ticket ? 24 : undefined}}>
