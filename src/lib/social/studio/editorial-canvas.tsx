@@ -48,7 +48,7 @@ export function EditorialCanvas({ props: p }: { props: PremiumCanvasProps }) {
       <div style={{display:'flex',alignItems:'center',gap:16,direction:'ltr'}}><img src="/images/logo-mark.png" alt="ARIA HUB" style={{width:60,height:60,objectFit:'contain'}}/><strong style={{fontSize:29,letterSpacing:1}}>ARIA HUB</strong></div>
       <Icon size={42} color={accent} strokeWidth={1.5}/>
     </header>
-    <main style={{flex:1,minHeight:0,position:'relative',display:'flex',flexDirection:'column',justifyContent:ticket || fellow ? 'center' : 'space-evenly',gap:24,paddingBlock:30}}>
+    <main style={{flex:1,minHeight:0,position:'relative',display:'flex',flexDirection:'column',justifyContent:ticket || fellow ? 'center' : 'space-evenly',gap:deadline && p.size === 'square' ? 16 : 24,paddingBlock:deadline && p.size === 'square' ? 20 : 30}}>
       <div style={{...small,color:accent,letterSpacing:p.lang === 'en' ? 3 : 0,fontWeight:800,display:'flex',alignItems:'center',gap:12}}><span style={{width:10,height:10,background:accent,borderRadius:'50%'}}/>{label}</div>
       {fellow && <GraduationCap aria-hidden size={p.size === 'square' ? 90 : 180} strokeWidth={1} color={accent} style={{alignSelf:'center'}}/>}
       {deadline && <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:28,padding:calendar || bulletin ? 30 : 0,border:calendar ? `2px solid ${accent}` : undefined,borderRadius:calendar ? 20 : 0,background:bulletin ? accent : undefined,color:bulletin ? (theme?.onAccent ?? '#11223E') : ink}}>
@@ -59,7 +59,7 @@ export function EditorialCanvas({ props: p }: { props: PremiumCanvasProps }) {
         <h1 style={{fontSize:deadline ? Math.min(titleSize,60) : titleSize,lineHeight:1.32,fontWeight:850,margin:0,overflowWrap:'anywhere',position:'relative',textAlign:fellow ? 'center' : undefined,fontFamily:id === 'scholarship-journal' && p.lang === 'en' ? 'Georgia,serif' : undefined}}>{p.title}</h1>
         {p.note && !deadline && p.title.length < 100 && <p style={{fontSize:24,lineHeight:1.65,margin:'20px 0 0',opacity:.82}}>{p.note.slice(0,180)}{p.note.length > 180 ? '…' : ''}</p>}
       </div>
-      <div style={{display:'grid',gridTemplateColumns:paper || ticket ? '1fr 1fr' : '1fr',gap:18,borderTop:`1px ${ticket ? 'dashed' : 'solid'} ${rule}`,paddingTop:24}}>{facts.map(([key,value]) => <div key={key} style={{minWidth:0}}><div style={{...small,color:accent,fontSize:17}}>{key}</div><div style={{fontSize:25,fontWeight:700,lineHeight:1.5,overflowWrap:'anywhere'}}>{value}</div></div>)}</div>
+      <div style={{display:'grid',gridTemplateColumns:paper || ticket || (deadline && p.size === 'square') ? '1fr 1fr' : '1fr',gap:18,borderTop:`1px ${ticket ? 'dashed' : 'solid'} ${rule}`,paddingTop:24}}>{facts.map(([key,value]) => <div key={key} style={{minWidth:0}}><div style={{...small,color:accent,fontSize:17}}>{key}</div><div style={{fontSize:25,fontWeight:700,lineHeight:1.5,overflowWrap:'anywhere'}}>{value}</div></div>)}</div>
       {validDate && <div style={{...small,display:'flex',justifyContent:'space-between',gap:20,borderTop:`1px solid ${rule}`,paddingTop:20}}><span>{c.date}</span><strong>{formatDateLong(new Date(p.deadlineDate!),p.lang)}</strong></div>}
       {deadline && now !== null && <div style={{fontSize:16,opacity:.75}}>{c.asof}: {new Intl.DateTimeFormat(p.lang === 'en' ? 'en-GB' : p.lang === 'fa' ? 'fa-AF' : 'ps-AF',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Kabul'}).format(now)} · UTC+04:30</div>}
     </main>
