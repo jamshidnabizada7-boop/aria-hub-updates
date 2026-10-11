@@ -41,6 +41,7 @@ export function EditorialWorkbench({ lang, size }: { lang: Lang; size: PosterSiz
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [snapshots, setSnapshots] = useState<{platform:string;views:number|null;reach:number|null;paid:boolean|null}[]>([]);
+  const [overview, setOverview] = useState<{totalPosts:number; organic:{label:string;posts:number;medianReach:number|null;medianViews:number|null}[];paid:{label:string;posts:number;medianReach:number|null}[];unclassified:{label:string;posts:number;medianReach:number|null}[]}|null>(null);
   const [viewsInput, setViewsInput] = useState('');
   const [reachInput, setReachInput] = useState('');
   const [metricPlatform, setMetricPlatform] = useState<'facebook'|'instagram'>('facebook');
@@ -55,10 +56,11 @@ export function EditorialWorkbench({ lang, size }: { lang: Lang; size: PosterSiz
   const media: StudioMediaConfig = heroUrl ? { hero: { url: heroUrl, visible:true, fit:'contain' } } : {};
   const refreshLibrary = async () => {
     try {
-      const [a,v]=await Promise.all([fetch('/api/admin/studio/campaigns',{cache:'no-store'}),fetch('/api/admin/studio/visuals',{cache:'no-store'})]);
+      const [a,v,ins]=await Promise.all([fetch('/api/admin/studio/campaigns',{cache:'no-store'}),fetch('/api/admin/studio/visuals',{cache:'no-store'}),fetch('/api/admin/studio/analytics',{cache:'no-store'})]);
       if (!a.ok) throw new Error('Campaign storage unavailable. Database migration may be pending.');
       const campaigns=await a.json();
       setSaved(campaigns.campaigns??[]);
+      if(ins.ok){const data=await ins.json();setOverview(data.summary??null);}
       if(v.ok){const assets=await v.json();setVisuals((assets.visuals??[]).filter((x:{enabled:boolean})=>x.enabled));}
     } catch(e) {setError(e instanceof Error?e.message:'Unable to load Studio data');}
   };
@@ -256,6 +258,14 @@ export function EditorialWorkbench({ lang, size }: { lang: Lang; size: PosterSiz
         </Button>
         {notice && <p role="status" className="text-xs text-emerald-700">{notice}</p>}
         {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
+        <div className="rounded-xl border p-3 space-y-2">
+          <p className="text-xs font-semibold">Campaign performance overview · manual measurements</p>
+          <p className="text-[11px] text-muted-foreground">Latest snapshot per campaign/platform, so repeated exports do not inflate counts. Reach and views remain different metrics.</p>
+          <p className="text-xs">{overview?.totalPosts??0} measured campaign-platform posts</p>
+          {overview?.organic.slice(0,5).map(row=><p key={row.label} className="text-xs">Organic · {row.label}: median reach {row.medianReach??'—'} / {row.posts} posts</p>)}
+          {overview?.paid.slice(0,2).map(row=><p key={row.label} className="text-xs">Paid · {row.label}: median reach {row.medianReach??'—'}</p>)}
+          {overview?.unclassified.slice(0,2).map(row=><p key={row.label} className="text-xs">Unclassified · {row.label}: median reach {row.medianReach??'—'}</p>)}
+        </div>
         <div className="border-t pt-3 space-y-2">
           <p className="flex items-center gap-2 text-xs font-semibold"><BarChart3 className="h-4 w-4"/>Real performance snapshots</p>
           <p className="text-[11px] text-muted-foreground">Enter values from Meta Business Suite. Follower/non-follower status does not establish paid reach.</p>
