@@ -36,6 +36,8 @@ export function EditorialWorkbench({ lang, size }: { lang: Lang; size: PosterSiz
   const [saved, setSaved] = useState<{id:string;title:string;status:string}[]>([]);
   const [visuals, setVisuals] = useState<{url:string;id:string;label:string;enabled:boolean}[]>([]);
   const [heroUrl, setHeroUrl] = useState('');
+  const [ideas, setIdeas] = useState<string[]>([]);
+  const [ideaBusy, setIdeaBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [snapshots, setSnapshots] = useState<{platform:string;views:number|null;reach:number|null;paid:boolean|null}[]>([]);
@@ -103,6 +105,17 @@ export function EditorialWorkbench({ lang, size }: { lang: Lang; size: PosterSiz
       await refreshLibrary();
     }catch(e){setError(e instanceof Error?e.message:'Approval failed');}
     finally{setBusy(false);}
+  };
+  const brainstorm = async () => {
+    const brief=[headline,description].filter(Boolean).join(' — ').trim();
+    if(brief.length<15){setError('Write at least 15 characters of your topic and known facts first.');return;}
+    setIdeaBusy(true);setError('');
+    try{
+      const res=await fetch('/api/admin/studio/ideas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang,pillar,brief})});
+      const data=await res.json();if(!res.ok)throw new Error(data.error||'Idea generation failed');
+      setIdeas(data.suggestions??[]);
+    }catch(e){setError(e instanceof Error?e.message:'Idea generation unavailable');}
+    finally{setIdeaBusy(false);}
   };
   const recordMetric=async()=>{
     if(!campaignId)return;
@@ -175,6 +188,14 @@ export function EditorialWorkbench({ lang, size }: { lang: Lang; size: PosterSiz
           <Label htmlFor="editorial-title">Original headline</Label>
           <Input id="editorial-title" dir={direction} maxLength={200} value={headline}
             onChange={e => setHeadline(e.target.value)} placeholder="Write a concise hook; do not paste an entire article."/>
+        </div>
+        <div className="rounded-xl border p-3 space-y-2">
+          <Button variant="outline" size="sm" type="button" disabled={ideaBusy} onClick={()=>void brainstorm()}>
+            <Sparkles className="mr-1 h-4 w-4"/>{ideaBusy?'Generating…':'Suggest 3 original hooks (AI)'}
+          </Button>
+          <p className="text-[11px] text-muted-foreground">On-demand only; uses the existing configured AI provider and may incur API usage. Verify all generated copy.</p>
+          {ideas.map((idea,i)=><button key={i} type="button" className="block w-full rounded-lg border p-2 text-start text-xs hover:bg-muted" dir="auto"
+            onClick={()=>setHeadline(idea)}>{idea}</button>)}
         </div>
         <div className="space-y-2">
           <Label htmlFor="editorial-note">Supporting line</Label>
