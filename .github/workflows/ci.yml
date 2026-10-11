@@ -98,6 +98,8 @@ jobs:
           done
           curl --silent --fail http://127.0.0.1:3000/en > /dev/null || { cat /tmp/studio-review-server.log; exit 1; }
           bun scripts/tests/studio-editorial-review.ts
+          # New 2.0 editorial recipes: actual live PremiumSocialCanvas screenshots.
+          bun scripts/tests/studio-brand2-new-preview.ts
 
       - uses: actions/upload-artifact@v4
         if: always()
