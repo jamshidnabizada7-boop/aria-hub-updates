@@ -38,6 +38,9 @@ export function EditorialWorkbench({ lang, size }: { lang: Lang; size: PosterSiz
   const [heroUrl, setHeroUrl] = useState('');
   const [ideas, setIdeas] = useState<string[]>([]);
   const [ideaBusy, setIdeaBusy] = useState(false);
+  const [artPrompt, setArtPrompt] = useState('');
+  const [artCostAcknowledged, setArtCostAcknowledged] = useState(false);
+  const [artBusy, setArtBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [snapshots, setSnapshots] = useState<{platform:string;views:number|null;reach:number|null;paid:boolean|null}[]>([]);
@@ -118,6 +121,18 @@ export function EditorialWorkbench({ lang, size }: { lang: Lang; size: PosterSiz
       setIdeas(data.suggestions??[]);
     }catch(e){setError(e instanceof Error?e.message:'Idea generation unavailable');}
     finally{setIdeaBusy(false);}
+  };
+  const requestArtwork=async()=>{
+    if(!artCostAcknowledged||artPrompt.trim().length<30)return;
+    setArtBusy(true);setError('');setNotice('');
+    try{
+      const res=await fetch('/api/admin/studio/generate-art',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({prompt:artPrompt,acknowledgeCost:true,acknowledgeArtworkReview:true})});
+      const body=await res.json();if(!res.ok)throw new Error(body.error||'Generation unavailable');
+      setNotice('Artwork created, but it is DISABLED until reviewed in Studio Visuals. Asset ID: '+body.asset.id);
+      await refreshLibrary();
+    }catch(e){setError(e instanceof Error?e.message:'Artwork generation failed');}
+    finally{setArtBusy(false);}
   };
   const recordMetric=async()=>{
     if(!campaignId)return;
@@ -242,6 +257,19 @@ export function EditorialWorkbench({ lang, size }: { lang: Lang; size: PosterSiz
             {visuals.map(v=><option key={v.id} value={v.url}>{v.label}</option>)}
           </select>
           <p className="text-[11px] text-muted-foreground">Use original or licensed assets from the existing Brand Studio library.</p>
+        </div>
+        <div className="rounded-xl border p-3 space-y-2">
+          <p className="text-xs font-semibold">Optional cinematic artwork generator</p>
+          <textarea className="min-h-20 w-full rounded-lg border bg-background p-2 text-xs" maxLength={900}
+            value={artPrompt} onChange={e=>setArtPrompt(e.target.value)}
+            placeholder="Describe original artwork, main object, lighting, mood and negative space. Generated images never contain the final poster text."/>
+          <label className="flex gap-2 text-[11px]">
+            <input type="checkbox" checked={artCostAcknowledged} onChange={e=>setArtCostAcknowledged(e.target.checked)}/>
+            I understand this is a paid request if an image provider is enabled, and artwork must be reviewed before use.
+          </label>
+          <Button type="button" variant="outline" size="sm" disabled={!artCostAcknowledged||artPrompt.trim().length<30||artBusy}
+            onClick={()=>void requestArtwork()}>{artBusy?'Generating…':'Generate artwork (opt-in)'}</Button>
+          <p className="text-[11px] text-muted-foreground">Requires server feature flag, provider key, Blob storage, and admin confirmation. New artwork remains disabled until reviewed.</p>
         </div>
         <div className="rounded-lg border p-3 text-xs" role="status">
           <div className="mb-1 flex items-center gap-2 font-semibold"><ShieldCheck className="h-4 w-4"/> Editorial review</div>
