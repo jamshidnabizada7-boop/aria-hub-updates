@@ -83,6 +83,9 @@ type AutomationStateShape = {
   opportunityBatchSize?: number;
   opportunityRepeatDays?: number;
   opportunityBatchTimes?: string[];
+  /** Opt-in, owner-controlled lower-volume opportunity publishing experiment. */
+  editorialPilotEnabled?: boolean;
+  editorialPilotDailyCap?: number;
 };
 
 export async function getState(): Promise<AutomationStateShape> {
@@ -211,8 +214,14 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
     if (state.lastQueueBuildDate === todayAft) return { created: 0 };
     const primary = state.captionLangs?.[0] ?? 'fa';
     const slots = state.opportunityBatchTimes?.length ? state.opportunityBatchTimes : DEFAULT_OPPORTUNITY_BATCH_TIMES_AFT;
-    const batchSize = Math.min(10, Math.max(1, state.opportunityBatchSize ?? DEFAULT_OPPORTUNITY_BATCH_SIZE));
-    const target = Math.min(state.opportunityDailyTarget ?? DEFAULT_OPPORTUNITY_DAILY_TARGET, opportunityDistributionCapacity(slots, batchSize));
+    // Only when explicitly enabled by the owner: preserve all website listings,
+    // but select fewer high-value announcements for social distribution.
+    const pilot = state.editorialPilotEnabled === true;
+    const batchSize = pilot ? 1 : Math.min(10, Math.max(1, state.opportunityBatchSize ?? DEFAULT_OPPORTUNITY_BATCH_SIZE));
+    const requestedTarget = state.opportunityDailyTarget ?? DEFAULT_OPPORTUNITY_DAILY_TARGET;
+    const pilotCap = Number.isFinite(state.editorialPilotDailyCap)
+      ? Math.max(1, Math.min(3, Math.floor(state.editorialPilotDailyCap!))) : 2;
+    const target = Math.min(pilot ? pilotCap : requestedTarget, opportunityDistributionCapacity(slots, batchSize));
     const posts = await buildOpportunityDistributionPlan(primary, { target, repeatDays: state.opportunityRepeatDays ?? DEFAULT_OPPORTUNITY_REPEAT_DAYS });
     // A morning import can populate an initially empty database later today.
     if (!posts.length) return { created: 0 };
