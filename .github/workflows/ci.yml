@@ -83,6 +83,28 @@ jobs:
           export ADMIN_SESSION_SECRET="$(openssl rand -hex 32)"
           bun run build
 
+      - name: Verify editorial poster exports (isolated, no publishing)
+        env:
+          SOCIAL_RENDER_TOKEN: studio-review-local-test-only
+          ADMIN_SESSION_SECRET: studio-review-local-session-test-only-123456789
+        run: |
+          bunx playwright-core install --with-deps chromium
+          PORT=3000 HOSTNAME=127.0.0.1 node .next/standalone/server.js > /tmp/studio-review-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" || true' EXIT
+          for attempt in $(seq 1 60); do
+            if curl --silent --fail http://127.0.0.1:3000/en > /dev/null; then break; fi
+            sleep 2
+          done
+          bun scripts/tests/studio-editorial-review.ts
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: studio-editorial-review
+          path: /tmp/studio-review
+          if-no-files-found: ignore
+
       # Keep the strict unpatched advisory gate red until an upstream fix is
       # published. Other tests must run first so their failures are visible.
       - name: Dependency security audit

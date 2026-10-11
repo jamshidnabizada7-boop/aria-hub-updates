@@ -1,3 +1,4 @@
+import { rotatedFamily, rotationCategory } from '@/lib/social/studio/rotation';
 import { getLocalizedContent } from '@/lib/i18n-content';
 /**
  * Social auto-publisher — turns the deterministic daily plan into a scheduled
@@ -224,6 +225,7 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
     });
     const refs = new Set(existing.map((row) => row.contentRef));
     const rows: { scheduledFor: Date; templateType: string; contentRef: string; contentJson: object; captionJson: object }[] = [];
+    const familyOrdinals = { career: 0, scholarship: 0, deadline: 0 };
     for (const [index, post] of posts.entries()) {
       const ref = post.opp?.slug;
       const schedule = opportunityScheduleForIndex(index, slots, batchSize);
@@ -242,11 +244,14 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
       if (props.posterData && overrides.title) {
         props.posterData = { ...(props.posterData as object), title: overrides.title, titleI18n: { [primary]: overrides.title } };
       }
+      const category = post.opp?.category?.name ?? '';
+      const group = rotationCategory(post.template, category);
+      const automaticFamily = rotatedFamily(post.template, category, todayAft, group ? familyOrdinals[group]++ : 0);
       rows.push({
         scheduledFor: new Date(aftSlotToUtc(schedule.slot).getTime() + schedule.offsetMinutes * 60000),
         templateType: post.template, contentRef: ref,
         contentJson: {
-          ...props, organization: post.opp?.organization, country: post.opp?.country,
+          ...props, ...(automaticFamily ? { designFamily: automaticFamily } : {}), category, salary: post.opp?.salary, organization: post.opp?.organization, country: post.opp?.country,
           deadlineDate: post.opp?.deadline, ...overrides, template: post.template, sourceSlug: ref,
         },
         captionJson: captions,

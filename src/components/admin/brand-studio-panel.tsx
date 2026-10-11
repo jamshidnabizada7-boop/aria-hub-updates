@@ -15,6 +15,7 @@
  * deterministic brand caption as guaranteed fallback.
  */
 
+import { rotatedFamily } from '@/lib/social/studio/rotation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlarmClock, BarChart3, CalendarDays, Check, Copy, Download, Eye, GraduationCap,
@@ -327,9 +328,10 @@ export function BrandStudioPanel() {
   }, [tab, labPost, plan, selectedKey]);
 
   // ── per-post content overrides (reset when switching posts) ───────────────
+  const todayIso = () => new Date(Date.now() + 270 * 60000).toISOString().slice(0, 10);
   const activeOverrides = (activePost && overrides[activePost.key]) || {};
   const activeFamily: DesignFamilyId = activePost
-    ? resolveDesignFamily(String(activeOverrides.designFamily ?? defaultDesignFamilyForTemplate(activePost.template)))
+    ? resolveDesignFamily(String(activeOverrides.designFamily ?? (rotatedFamily(activePost.template, activePost.opp?.category?.name ?? '', todayIso() + activePost.key) ?? defaultDesignFamilyForTemplate(activePost.template))))
     : 'legacy';
 
   useEffect(() => {
@@ -424,7 +426,6 @@ export function BrandStudioPanel() {
     }
   }, [activePost, aiBusyKey, lang, loc, tr, t, toast]);
 
-  const todayIso = () => new Date(Date.now() + 270 * 60000).toISOString().slice(0, 10);
 
   const designPayload = useCallback(() => {
     if (!activePost) return null;

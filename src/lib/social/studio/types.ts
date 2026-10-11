@@ -3,6 +3,15 @@ import type { PostTemplate } from '@/lib/social/brand';
 import type { PosterSize } from '@/lib/social/templates';
 
 export type DesignFamilyId =
+  | 'career-ledger'
+  | 'career-signal'
+  | 'career-ticket'
+  | 'scholarship-atlas'
+  | 'scholarship-journal'
+  | 'scholarship-fellow'
+  | 'deadline-clock'
+  | 'deadline-bulletin'
+  | 'deadline-calendar'
   | 'legacy'
   | 'global-portal'
   | 'document-desk'

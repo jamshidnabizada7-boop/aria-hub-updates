@@ -1,0 +1,58 @@
+{
+  "capturedAt": "2026-10-10T20:20:54.988Z",
+  "note": "Public database-backed listing snapshot for non-published design review. Availability and untranslated source titles reflect the feed at capture time.",
+  "samples": [
+    {
+      "source": "https://www.myariahub.com/en/opportunities/electrical-electronics-engineer-technical-team-supervisor",
+      "slug": "electrical-electronics-engineer-technical-team-supervisor",
+      "category": "job",
+      "organization": "Sehat Andishan CO LTD",
+      "country": "Afghanistan",
+      "deadline": "2026-11-09T00:00:00.000Z",
+      "applyUrl": "mailto:info@sehatandishan.com",
+      "localized": {
+        "en": {
+          "title": "Electrical & Electronics Engineer / Technical Team Supervisor",
+          "summary": "Sehat Andishan Ltd. is seeking a highly motivated, technically skilled, and well-organized Electrical & Electronics Engineer / Technical Team Supervisor to...",
+          "category": "Job"
+        },
+        "fa": {
+          "title": "Electrical & Electronics Engineer / Technical Team Supervisor",
+          "summary": "Sehat Andishan Ltd. is seeking a highly motivated, technically skilled, and well-organized Electrical & Electronics Engineer / Technical Team Supervisor to...",
+          "category": "شغل"
+        },
+        "ps": {
+          "title": "Electrical & Electronics Engineer / Technical Team Supervisor",
+          "summary": "Sehat Andishan Ltd. is seeking a highly motivated, technically skilled, and well-organized Electrical & Electronics Engineer / Technical Team Supervisor to...",
+          "category": "دنده"
+        }
+      }
+    },
+    {
+      "source": "https://www.myariahub.com/en/opportunities/erasmus-mundus-joint-masters-2027",
+      "slug": "erasmus-mundus-joint-masters-2027",
+      "category": "scholarship",
+      "organization": "European Commission",
+      "country": "Multiple (Europe)",
+      "deadline": null,
+      "applyUrl": "https://www.eacea.ec.europa.eu/scholarships/erasmus-mundus-catalogue_en",
+      "localized": {
+        "en": {
+          "title": "Erasmus+ Joint Master Degrees 2027 Intake",
+          "summary": "Study a master’s in at least two European countries with a full EU scholarship covering fees, travel and living costs.",
+          "category": "Scholarship"
+        },
+        "fa": {
+          "title": "دوره پذیرش 2027 ماستری مشترک Erasmus+",
+          "summary": "در دست‌کم دو کشور اروپایی ماستری بخوانید و بورسیه کامل اتحادیه اروپا شامل فیس، سفر و مصارف زندگی دریافت کنید.",
+          "category": "بورسیه"
+        },
+        "ps": {
+          "title": "د Erasmus+ ګډو ماسټرۍ د 2027 پروګرامونه",
+          "summary": "په لږ تر لږه دوو اروپايي هېوادونو کې د اروپايي ټولنې په بشپړ بورس ماسټري وکړئ؛ د زده‌کړې فیسونه، سفر او ژوند لګښتونه پکې شامل دي.",
+          "category": "بورسونه"
+        }
+      }
+    }
+  ]
+}

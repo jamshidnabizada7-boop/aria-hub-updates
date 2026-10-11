@@ -1,5 +1,6 @@
 'use client';
 
+import { EditorialCanvas } from './editorial-canvas';
 import type { CSSProperties, ReactNode } from 'react';
 import { BriefcaseBusiness, CalendarDays, FileText, MapPin } from 'lucide-react';
 import { formatDateLong } from '@/lib/date-format';
@@ -432,6 +433,7 @@ export function PremiumSocialCanvas(raw: PremiumCanvasProps) {
       overlay: { ...(defaults.overlay ?? {}), ...(raw.media?.overlay ?? {}) },
     },
   };
+  if (['career-ledger', 'career-signal', 'career-ticket', 'scholarship-atlas', 'scholarship-journal', 'scholarship-fellow', 'deadline-clock', 'deadline-bulletin', 'deadline-calendar'].includes(props.designFamily)) return <EditorialCanvas props={props}/>;
   switch(props.designFamily){
     case 'global-portal': return <SplitEditorial props={props}/>;
     case 'document-desk': return <DocumentAlert props={props}/>;

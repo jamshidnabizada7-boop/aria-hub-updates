@@ -7,9 +7,9 @@ import {
 } from '../src/lib/social/studio/registry';
 
 describe('Brand Studio premium design registry', () => {
-  test('contains twelve premium directions plus legacy compatibility', () => {
-    expect(DESIGN_FAMILIES.length).toBe(13);
-    expect(DESIGN_FAMILIES.filter((x) => x.id !== 'legacy').length).toBe(12);
+  test('preserves legacy and includes nine editorial directions', () => {
+    expect(DESIGN_FAMILIES.length).toBe(22);
+    expect(DESIGN_FAMILIES.filter((x) => x.id !== 'legacy').length).toBe(21);
   });
 
   test('recommends opportunity and career families deterministically', () => {

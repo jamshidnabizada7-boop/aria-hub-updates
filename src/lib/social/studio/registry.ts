@@ -43,6 +43,15 @@ const storyFields: StudioEditorField[] = [
 const allSizes = ['square', 'portrait', 'story'] as const;
 
 export const DESIGN_FAMILIES: DesignFamilyDefinition[] = [
+  { id: 'career-ledger', label: 'Career · Ledger', description: 'Ivory recruitment ledger with a structured facts grid.', category: 'career', supportedTemplates: ['spotlight','hiring','promo'], supportedSizes: [...allSizes], recommendedLayouts: ['classic'], visualSlots: [], editorFields: opportunityFields },
+  { id: 'career-signal', label: 'Career · Signal', description: 'Deep teal career signal with directional typography.', category: 'career', supportedTemplates: ['spotlight','hiring','promo'], supportedSizes: [...allSizes], recommendedLayouts: ['classic'], visualSlots: [], editorFields: opportunityFields },
+  { id: 'career-ticket', label: 'Career · Ticket', description: 'Recruitment invitation with a contrasting ticket panel.', category: 'career', supportedTemplates: ['spotlight','hiring','promo'], supportedSizes: [...allSizes], recommendedLayouts: ['classic'], visualSlots: [], editorFields: opportunityFields },
+  { id: 'scholarship-atlas', label: 'Scholarship · Atlas', description: 'Navy international education atlas with globe linework.', category: 'scholarship', supportedTemplates: ['spotlight','promo'], supportedSizes: [...allSizes], recommendedLayouts: ['classic'], visualSlots: [], editorFields: opportunityFields },
+  { id: 'scholarship-journal', label: 'Scholarship · Journal', description: 'Warm editorial journal with gold rules and a clear facts grid.', category: 'scholarship', supportedTemplates: ['spotlight','promo'], supportedSizes: [...allSizes], recommendedLayouts: ['classic'], visualSlots: [], editorFields: opportunityFields },
+  { id: 'scholarship-fellow', label: 'Scholarship · Fellow', description: 'Scholarship announcement with a gold vertical ribbon.', category: 'scholarship', supportedTemplates: ['spotlight','promo'], supportedSizes: [...allSizes], recommendedLayouts: ['classic'], visualSlots: [], editorFields: opportunityFields },
+  { id: 'deadline-clock', label: 'Deadline · Clock', description: 'Oversized live countdown with timestamp and official deadline.', category: 'editorial', supportedTemplates: ['deadline'], supportedSizes: [...allSizes], recommendedLayouts: ['classic'], visualSlots: [], editorFields: opportunityFields },
+  { id: 'deadline-bulletin', label: 'Deadline · Bulletin', description: 'Deadline bulletin with high contrast numeric hierarchy.', category: 'editorial', supportedTemplates: ['deadline'], supportedSizes: [...allSizes], recommendedLayouts: ['classic'], visualSlots: [], editorFields: opportunityFields },
+  { id: 'deadline-calendar', label: 'Deadline · Calendar', description: 'Paper calendar card with a framed countdown.', category: 'editorial', supportedTemplates: ['deadline'], supportedSizes: [...allSizes], recommendedLayouts: ['classic'], visualSlots: [], editorFields: opportunityFields },
   {
     id: 'legacy',
     label: 'Legacy / current',

@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { BUILTIN_PREMIUM_VISUALS, defaultMediaForDesignFamily, designFamiliesForTemplate, getDesignFamily } from '@/lib/social/studio/registry';
 import type { PostTemplate } from '@/lib/social/brand';
 import type { DesignFamilyId, StudioMediaConfig, StudioMediaLayer, StudioMediaRole } from '@/lib/social/studio/types';
+import { ROTATION_POOLS } from '@/lib/social/studio/rotation';
 
 type Visual = { id: string; label: string; category: string; url: string };
 
@@ -78,6 +79,16 @@ export function PremiumStudioControls({
             ))}
           </SelectContent>
         </Select>
+        <div className="mt-3 grid grid-cols-3 gap-2" aria-label="Editorial design collection">
+          {families.filter(item => Object.values(ROTATION_POOLS).flat().some(id => id === item.id)).map(item => {
+            const paper = /ledger|journal|calendar/.test(item.id);
+            const accent = item.id.startsWith('deadline') ? '#FFBC9A' : item.id.startsWith('career') ? '#83E5CE' : '#F5D58C';
+            return <button key={item.id} type="button" onClick={() => onFamily(item.id)} aria-pressed={family === item.id} className="min-h-24 rounded-lg border-2 p-2 text-start transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary" style={{borderColor:family === item.id ? 'var(--primary)' : 'transparent',background:paper ? '#F3F0E8' : '#11223E',color:paper ? '#152744' : '#fff'}}>
+              <span aria-hidden style={{display:'block',width:28,height:4,background:paper ? '#927040' : accent,marginBottom:12}}/>
+              <span className="block text-[10px] font-bold leading-relaxed">{item.label}</span>
+            </button>;
+          })}
+        </div>
       </div>
 
       {family !== 'legacy' && def.editorFields.length > 0 ? (
@@ -113,7 +124,7 @@ export function PremiumStudioControls({
         </div>
       ) : null}
 
-      {family !== 'legacy' ? (
+      {family !== 'legacy' && def.visualSlots.length > 0 ? (
         <div className="rounded-xl border bg-background/50 p-3">
           <div className="mb-3 flex items-center gap-2">
             <Layers3 className="h-4 w-4 text-primary" />
