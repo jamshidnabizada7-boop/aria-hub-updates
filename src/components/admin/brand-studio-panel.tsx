@@ -43,6 +43,7 @@ import { OpportunityPoster, buildPosterData } from '@/components/site/opportunit
 import { SocialCanvas, type PosterSize } from '@/lib/social/templates';
 import { PremiumSocialCanvas } from '@/lib/social/studio/premium-canvas';
 import { PremiumStudioControls } from '@/components/admin/premium-studio-controls';
+import { EditorialWorkbench } from '@/components/admin/editorial-workbench';
 import {
   defaultDesignFamilyForTemplate, resolveDesignFamily,
 } from '@/lib/social/studio/registry';
@@ -119,7 +120,7 @@ export function BrandStudioPanel() {
     [],
   );
 
-  const [tab, setTab] = useState<'plan' | 'lab'>('plan');
+  const [tab, setTab] = useState<'plan' | 'lab' | 'editorial'>('plan');
   const [lang, setLang] = useState<Lang>('fa');
   const [size, setSize] = useState<PosterSize>('square');
 
@@ -684,10 +685,11 @@ export function BrandStudioPanel() {
 
       {/* controls row */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Tabs value={tab} onValueChange={(v) => setTab(v as 'plan' | 'lab')}>
+        <Tabs value={tab} onValueChange={(v) => setTab(v as 'plan' | 'lab' | 'editorial')}>
           <TabsList>
             <TabsTrigger value="plan" className="gap-1.5"><CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />{t('admin.studio.tabPlan')}</TabsTrigger>
             <TabsTrigger value="lab" className="gap-1.5"><Palette className="h-3.5 w-3.5" aria-hidden="true" />{t('admin.studio.tabLab')}</TabsTrigger>
+            <TabsTrigger value="editorial" className="gap-1.5"><Sparkles className="h-3.5 w-3.5" aria-hidden="true" />Original content</TabsTrigger>
           </TabsList>
         </Tabs>
         <div className="flex items-center gap-2">
@@ -714,7 +716,8 @@ export function BrandStudioPanel() {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(320px,420px)_1fr]">
+      {tab === 'editorial' && <EditorialWorkbench lang={lang} size={size} />}
+      <div className={tab === 'editorial' ? 'hidden' : 'grid gap-4 lg:grid-cols-[minmax(320px,420px)_1fr]'}>
         {/* ── left column ── */}
         <div className="space-y-3">
           {loading ? (

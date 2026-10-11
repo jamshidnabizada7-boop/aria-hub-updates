@@ -1827,6 +1827,53 @@ model SocialDelivery {
   @@index([status, nextAttemptAt])
 }
 
+// Original Brand Studio campaigns are deliberately separate from automatic
+// opportunity scheduling. A campaign cannot publish without a human review.
+model StudioCampaign {
+  id             String   @id @default(cuid())
+  title          String
+  pillar         String
+  language       String   @default("fa")
+  format         String   @default("portrait")
+  recipeId       String
+  content        Json     // { headline, note, caption, eyebrow?, cta? }
+  media          Json?    // approved Studio media layers
+  sourceUrl      String?
+  posterUrl      String?  // approved durable PNG exported by an admin
+  queueId        String?  @unique // idempotent manual-publish queue link
+  consentConfirmed Boolean @default(false)
+  status         String   @default("draft") // draft | approved | archived
+  approvedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  metrics        StudioCampaignMetric[]
+
+  @@index([status, updatedAt])
+  @@index([pillar, createdAt])
+}
+
+model StudioCampaignMetric {
+  id             String   @id @default(cuid())
+  campaignId     String
+  platform       String
+  capturedAt     DateTime @default(now())
+  postId         String?
+  paid           Boolean? // null means unknown, never inferred from non-followers
+  views          Int?
+  reach          Int?
+  interactions   Int?
+  reactions      Int?
+  comments       Int?
+  shares         Int?
+  saves          Int?
+  linkClicks     Int?
+  watchSeconds   Int?
+  campaign       StudioCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId, capturedAt])
+  @@index([platform, capturedAt])
+}
+
 model StudioDesign {
   id            String   @id @default(cuid())
   contentRef    String // slug / id of the source content
