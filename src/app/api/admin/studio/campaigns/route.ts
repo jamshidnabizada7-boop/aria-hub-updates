@@ -5,7 +5,7 @@ import { db } from '@/lib/db';
 import { getCurrentAdmin } from '@/lib/admin-auth';
 import { canManageSocial } from '@/lib/social/permissions';
 import {
-  EDITORIAL_PILLARS, CREATIVE_RECIPES, reviewEditorialDraft, recipesForPillar,
+  EDITORIAL_PILLARS, CREATIVE_RECIPES, editorialSimilarity, reviewEditorialDraft, recipesForPillar,
   type EditorialPillarId,
 } from '@/lib/social/editorial/strategy';
 import { hasUnsafeStudioMedia } from '@/lib/social/studio/media-url';
@@ -119,6 +119,15 @@ export async function POST(req: NextRequest) {
         consentConfirmed: existing.consentConfirmed,
       });
       if (!review.publishReady) return responseError(review.warnings.join(' '));
+      // Duplicates are checked across campaign drafts, not just within a
+      // single browser session. Exact/near-duplicate headlines block approval.
+      const nearby = await db.studioCampaign.findMany({
+        where: { id: { not: existing.id }, status: 'approved', language: existing.language },
+        select: { title: true }, take: 100, orderBy: { updatedAt: 'desc' },
+      });
+      if (nearby.some(row => editorialSimilarity(c.headline, row.title) >= 0.85)) {
+        return responseError('An approved campaign already has a near-identical headline');
+      }
       if (!isValidMedia(existing.media)) return responseError('Unsafe Studio media URL');
       const updated = await db.studioCampaign.updateMany({ where: { id: existing.id, status: 'draft' }, data: { status: 'approved', approvedAt: new Date() } });
       if (!updated.count) return responseError('Only drafts can be approved', 409);
