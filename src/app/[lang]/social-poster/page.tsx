@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import QRCode from 'qrcode';
+import { resolveAriPoster, type AriPosterPreset } from '@/lib/social/ari-poster';
 import { db } from '@/lib/db';
 import { isLang, type Lang } from '@/lib/lang-route';
 import { OpportunityPoster, buildPosterData, type PosterSize } from '@/components/site/opportunity-poster';
@@ -24,12 +25,12 @@ export default async function SocialPosterPage({
   searchParams,
 }: {
   params: Promise<{ lang: string }>;
-  searchParams: Promise<{ slug?: string; size?: string }>;
+  searchParams: Promise<{ slug?: string; size?: string; ari?: string }>;
 }) {
   const { lang: rawLang } = await params;
   const lang: Lang = isLang(rawLang) ? rawLang : 'en';
-  const { slug = '', size: rawSize } = await searchParams;
-  const size: PosterSize = rawSize === 'portrait' ? 'portrait' : 'square';
+  const { slug = '', size: rawSize, ari } = await searchParams;
+  const size: PosterSize = rawSize === 'story' ? 'story' : rawSize === 'portrait' ? 'portrait' : 'square';
 
   let posterData: ReturnType<typeof buildPosterData> | null = null;
   let qrDataUrl: string | null = null;
@@ -71,7 +72,7 @@ export default async function SocialPosterPage({
       {posterData ? (
         <>
           <div className="origin-center overflow-hidden rounded-sm shadow-2xl" style={{ maxWidth: '100%' }}>
-            <OpportunityPoster data={posterData} lang={lang} size={size} qrDataUrl={qrDataUrl} />
+            <OpportunityPoster data={posterData} lang={lang} size={size} ari={resolveAriPoster({ preset: ari as AriPosterPreset })} qrDataUrl={qrDataUrl} />
           </div>
           <Link
             href={`/${lang}/opportunities/${posterData.slug}`}

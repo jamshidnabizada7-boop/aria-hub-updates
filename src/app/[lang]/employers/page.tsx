@@ -1,3 +1,4 @@
+import { AriPageTip } from '@/components/site/ari/ari-tip';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
@@ -274,6 +275,7 @@ export default async function EmployersPage({
             </p>
           </div>
         </section>
+        <AriPageTip lang={lang} />
       </main>
 
       <Footer

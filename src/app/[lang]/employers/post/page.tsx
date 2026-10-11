@@ -1,3 +1,4 @@
+import { AriPageTip } from '@/components/site/ari/ari-tip';
 import type { Metadata } from 'next';
 import { Building2, FileText, PenLine, Send } from 'lucide-react';
 import { getSiteData } from '@/lib/get-site';
@@ -117,6 +118,7 @@ export default async function EmployerPostPage({
             </div>
           </div>
         </section>
+        <AriPageTip lang={lang} />
       </main>
 
       <Footer

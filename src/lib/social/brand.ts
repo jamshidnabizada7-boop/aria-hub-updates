@@ -17,6 +17,9 @@
  *  - top hairline + bottom strip gold framing, dot-grid ambience
  */
 
+// ARI remains opt-in per saved design; automation defaults never select a mascot.
+export { ARI_POSTER_PRESETS } from './ari-poster';
+
 export type PostTemplate =
   | 'spotlight'
   | 'deadline'

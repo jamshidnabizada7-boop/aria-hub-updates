@@ -1,3 +1,4 @@
+import { AriPageTip } from '@/components/site/ari/ari-tip';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight, Tag, HelpCircle, CheckCircle2, FileText, Sparkles, Globe, ShieldCheck } from 'lucide-react';
@@ -333,6 +334,7 @@ export default async function ServicesPage({
             </div>
           </div>
         </div>
+        <AriPageTip lang={lang} />
       </main>
 
       <Footer

@@ -41,6 +41,8 @@ import type { Lang } from '@/lib/lang-route';
 import { OpportunityPoster, buildPosterData } from '@/components/site/opportunity-poster';
 import { SocialCanvas, type PosterSize } from '@/lib/social/templates';
 import { PremiumSocialCanvas } from '@/lib/social/studio/premium-canvas';
+import { AriPosterControls } from './ari-poster-controls';
+import type { AriPosterConfig } from '@/lib/social/ari-poster';
 import { PremiumStudioControls } from '@/components/admin/premium-studio-controls';
 import {
   defaultDesignFamilyForTemplate, resolveDesignFamily,
@@ -441,7 +443,7 @@ export function BrandStudioPanel() {
         captionOverride: { [lang]: activeCaption },
       },
       contentJson: activeFamily === 'legacy' && activePost.template === 'spotlight' && activePost.opp
-        ? { template: 'spotlight', lang, size, themeId, sourceSlug: activePost.opp.slug, posterData: { ...activePost.opp, ...(activeOverrides.title ? { title: activeOverrides.title, titleI18n: { [lang]: activeOverrides.title } } : {}), ...(activeOverrides.deadlineDate ? { deadline: activeOverrides.deadlineDate } : {}) } }
+        ? { template: 'spotlight', lang, size, themeId, ari: activeOverrides.ari, sourceSlug: activePost.opp.slug, posterData: { ...activePost.opp, ...(activeOverrides.title ? { title: activeOverrides.title, titleI18n: { [lang]: activeOverrides.title } } : {}), ...(activeOverrides.deadlineDate ? { deadline: activeOverrides.deadlineDate } : {}) } }
         : activeFamily === 'legacy'
         ? socialPropsFor(activePost, lang, size, qrDataUrl, loc, tr, { themeId, layout, overrides: activeOverrides, visualUrl })
         : {
@@ -463,6 +465,7 @@ export function BrandStudioPanel() {
             deadlineDate: String(activeOverrides.deadlineDate ?? activePost.opp?.deadline ?? '') || null,
             badge: String(activeOverrides.badge ?? ''),
             cta: String(activeOverrides.cta ?? ''),
+            ari: activeOverrides.ari,
             media: (activeOverrides.media ?? {}) as StudioMediaConfig,
           },
       captionJson: { [lang]: activeCaption },
@@ -628,6 +631,7 @@ export function BrandStudioPanel() {
           deadlineDate={String(activeOverrides.deadlineDate ?? activePost.opp?.deadline ?? '') || null}
           badge={String(activeOverrides.badge ?? '')}
           cta={String(activeOverrides.cta ?? '')}
+          ari={activeOverrides.ari as AriPosterConfig | undefined}
           media={(activeOverrides.media ?? {}) as StudioMediaConfig}
           qrDataUrl={qrDataUrl}
         />
@@ -653,7 +657,7 @@ export function BrandStudioPanel() {
       );
       if (activeOverrides.title) data.title = activeOverrides.title as string;
       if (activeOverrides.deadlineDate) data.deadline = activeOverrides.deadlineDate as string;
-      return <OpportunityPoster data={data} lang={lang} size={size} themeId={themeId} qrDataUrl={qrDataUrl} />;
+      return <OpportunityPoster data={data} lang={lang} size={size} themeId={themeId} qrDataUrl={qrDataUrl} ari={activeOverrides.ari as AriPosterConfig | undefined} />;
     }
     return <SocialCanvas {...socialPropsFor(activePost, lang, size, qrDataUrl, loc, tr, { themeId, layout, overrides: activeOverrides, visualUrl })} />;
   }, [activePost, activeFamily, lang, size, qrDataUrl, loc, tr, themeId, layout, activeOverrides, visualUrl]);
@@ -970,6 +974,7 @@ export function BrandStudioPanel() {
                   </div>
                 )}
 
+                <AriPosterControls lang={lang} value={activeOverrides.ari as AriPosterConfig | undefined} onChange={v => setOverride('ari', v)} />
                 <PremiumStudioControls
                   template={activePost.template}
                   family={activeFamily}
@@ -1414,6 +1419,7 @@ function socialPropsFor(
   const deadlineOverride = typeof o.deadlineDate === 'string' && o.deadlineDate ? o.deadlineDate : null;
   const base = {
     template: post.template, lang, size, qrDataUrl,
+    ari: design?.overrides?.ari as AriPosterConfig | undefined,
     themeId: design?.themeId, layout: design?.layout, title,
     visualUrl: design?.visualUrl ?? null,
   };

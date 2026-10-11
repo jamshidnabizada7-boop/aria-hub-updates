@@ -1,4 +1,6 @@
 'use client';
+import { AriPosterFrame } from '@/lib/social/ari-poster-frame';
+import type { AriPosterConfig } from '@/lib/social/ari-poster';
 
 import type { CSSProperties, ReactNode } from 'react';
 import { BriefcaseBusiness, CalendarDays, FileText, MapPin } from 'lucide-react';
@@ -417,7 +419,7 @@ function Surreal({ props }: { props:PremiumCanvasProps }) {
     </CanvasRoot>
   );
 }
-export function PremiumSocialCanvas(raw: PremiumCanvasProps) {
+function BasePremiumSocialCanvas(raw: PremiumCanvasProps) {
   const designFamily = resolveDesignFamily(raw.designFamily);
   const defaults = defaultMediaForDesignFamily(designFamily);
   const props: PremiumCanvasProps = {
@@ -448,4 +450,8 @@ export function PremiumSocialCanvas(raw: PremiumCanvasProps) {
     case 'legacy':
     default: return <CenterObject props={props}/>;
   }
+}
+
+export function PremiumSocialCanvas(props: PremiumCanvasProps) {
+  return <AriPosterFrame ari={props.ari} height={CANVAS_SIZES[props.size].h} themeId={props.themeId} rtl={props.lang !== 'en'}><BasePremiumSocialCanvas {...props} /></AriPosterFrame>;
 }

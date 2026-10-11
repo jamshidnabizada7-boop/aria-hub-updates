@@ -1,3 +1,4 @@
+import { AriPageTip } from '@/components/site/ari/ari-tip';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getSiteData } from '@/lib/get-site';
@@ -255,6 +256,7 @@ export default async function TrackSubmissionPage({ params }: { params: Promise<
             </div>
           </section>
         </div>
+        <AriPageTip lang={lang} />
       </main>
       <Footer
         settings={data.settings}

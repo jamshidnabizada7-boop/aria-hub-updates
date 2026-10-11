@@ -16,6 +16,7 @@ import type { Lang } from '@/lib/i18n-config';
 import type { PostTemplate } from '@/lib/social/brand';
 
 interface RenderProps {
+  ari?: import('@/lib/social/ari-poster').AriPosterConfig;
   sourceSlug?: string;
   visualUrl?: string | null;
   template: PostTemplate;
@@ -92,6 +93,7 @@ export default function StudioRenderCanvas({ p }: { p?: string }) {
             lang={props.lang}
             size={props.size || 'square'}
             themeId={props.themeId}
+            ari={props.ari}
             title={String(props.title ?? '')}
             note={props.note}
             eyebrow={props.eyebrow}
@@ -113,6 +115,7 @@ export default function StudioRenderCanvas({ p }: { p?: string }) {
             lang={props.lang}
             size={props.size || 'square'}
             themeId={props.themeId}
+            ari={props.ari}
             qrDataUrl={qr}
           />
         ) : (
@@ -121,6 +124,7 @@ export default function StudioRenderCanvas({ p }: { p?: string }) {
             lang={props.lang}
             size={props.size || 'square'}
             themeId={props.themeId}
+            ari={props.ari}
             layout={props.layout}
             visualUrl={props.visualUrl}
             title={String(props.title ?? '')}

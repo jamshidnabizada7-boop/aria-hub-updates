@@ -626,3 +626,22 @@
 .posting-workspace fieldset[hidden] { display: none; }
 @media (max-width: 420px) { .journey .account-panel { padding: 1.25rem; } }
 @media (prefers-reduced-motion: reduce) { .journey *, .posting-workspace * { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+/* ARI uses the existing palette and respects overlays, safe areas and print. */
+.ari-dock[hidden] { display: none; }
+.ari-panel { max-height: min(650px, calc(100dvh - 110px)); overflow-y: auto; }
+.ari-float { animation: ari-float 5s ease-in-out infinite; }
+.ari-launcher[data-greeting="true"] > span { animation: ari-wave .8s ease-in-out 1; }
+@keyframes ari-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes ari-wave { 0%, 100% { transform: rotate(0); } 30% { transform: rotate(-8deg); } 65% { transform: rotate(6deg); } }
+@media (prefers-reduced-motion: reduce) { .ari-float, .ari-launcher[data-greeting="true"] > span { animation: none; } }
+@media print { .ari-dock, .ari-panel, .ari-tip { display: none !important; } }
+
+.ari-open-eyes { animation: ari-open-eyes 7s steps(1, end) infinite; }
+.ari-blink { opacity: 0; animation: ari-blink 7s steps(1, end) infinite; }
+@keyframes ari-open-eyes { 0%, 96%, 100% { opacity: 1; } 97% { opacity: 0; } }
+@keyframes ari-blink { 0%, 96%, 100% { opacity: 0; } 97% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+ .ari-panel, .ari-float, .ari-launcher[data-greeting="true"] > span, .ari-open-eyes, .ari-blink { animation: none; }
+ .ari-blink { opacity: 0; }
+}
