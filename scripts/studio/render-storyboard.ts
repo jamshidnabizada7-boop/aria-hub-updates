@@ -32,7 +32,7 @@ export function parseStoryboardArgs(argv: string[]): Args {
   if (!output || extname(output).toLowerCase()!=='.mp4') throw new Error('Output must be an .mp4 file');
   if (!Number.isInteger(duration)||duration<2||duration>12) throw new Error('Duration must be an integer between 2 and 12 seconds per frame');
   if (frames.length<2||frames.length>12) throw new Error('Supply 2-12 approved PNG/JPEG scenes');
-  if (frames.some(f=>!['.png','.jpg','.jpeg'].includes(extname(f).toLowerCase()))) throw new Error('Only PNG and JPEG frames are allowed');
+  if (frames.some(f=>/^\w+:\/\//.test(f) || !['.png','.jpg','.jpeg'].includes(extname(f).toLowerCase()))) throw new Error('Only local PNG and JPEG frames are allowed');
   return { output:resolve(output), frames:frames.map(resolve), duration, ffmpeg };
 }
 
