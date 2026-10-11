@@ -41,6 +41,9 @@ export function EditorialWorkbench({ lang, size }: { lang: Lang; size: PosterSiz
   const [artPrompt, setArtPrompt] = useState('');
   const [artCostAcknowledged, setArtCostAcknowledged] = useState(false);
   const [artBusy, setArtBusy] = useState(false);
+  const [reelScenes, setReelScenes] = useState<string[]>([]);
+  const [reelBusy, setReelBusy] = useState(false);
+  const [reelUrl, setReelUrl] = useState('');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [snapshots, setSnapshots] = useState<{platform:string;views:number|null;reach:number|null;paid:boolean|null}[]>([]);
@@ -133,6 +136,18 @@ export function EditorialWorkbench({ lang, size }: { lang: Lang; size: PosterSiz
       await refreshLibrary();
     }catch(e){setError(e instanceof Error?e.message:'Artwork generation failed');}
     finally{setArtBusy(false);}
+  };
+  const makeReel=async()=>{
+    if(reelScenes.length<2)return;
+    setReelBusy(true);setError('');setReelUrl('');
+    try{
+      const res=await fetch('/api/admin/studio/reel',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({visualIds:reelScenes,secondsPerSlide:3,acknowledgeRights:true,acknowledgeRenderingCost:true})});
+      const body=await res.json();if(!res.ok)throw new Error(body.error||'Video rendering failed');
+      setReelUrl(body.videoUrl);
+      setNotice('MP4 created from approved visual scenes. Preview and verify before any manual publication.');
+    }catch(e){setError(e instanceof Error?e.message:'Video export failed');}
+    finally{setReelBusy(false);}
   };
   const recordMetric=async()=>{
     if(!campaignId)return;
@@ -270,6 +285,20 @@ export function EditorialWorkbench({ lang, size }: { lang: Lang; size: PosterSiz
           <Button type="button" variant="outline" size="sm" disabled={!artCostAcknowledged||artPrompt.trim().length<30||artBusy}
             onClick={()=>void requestArtwork()}>{artBusy?'Generating…':'Generate artwork (opt-in)'}</Button>
           <p className="text-[11px] text-muted-foreground">Requires server feature flag, provider key, Blob storage, and admin confirmation. New artwork remains disabled until reviewed.</p>
+        </div>
+        <div className="rounded-xl border p-3 space-y-2">
+          <p className="text-xs font-semibold">Reel builder · approved slides → MP4</p>
+          <p className="text-[11px] text-muted-foreground">Select 2–6 licensed image assets. Produces a silent portrait slideshow Reel if FFmpeg, durable storage and the server feature flag are configured. It is not AI motion video.</p>
+          <div className="max-h-36 overflow-y-auto space-y-1">
+            {visuals.filter(v=>/\.(?:png|jpe?g)(?:\?|$)/i.test(v.url)).map(v=><label key={v.id} className="flex gap-2 text-xs">
+              <input type="checkbox" checked={reelScenes.includes(v.id)} onChange={e=>setReelScenes(prev=>e.target.checked?[...prev,v.id].slice(0,6):prev.filter(x=>x!==v.id))}/>
+              <span>{v.label}</span>
+            </label>)}
+          </div>
+          <Button variant="outline" size="sm" disabled={reelBusy||reelScenes.length<2} type="button" onClick={()=>void makeReel()}>
+            {reelBusy?'Rendering…':`Render silent MP4 (${reelScenes.length} scenes)`}
+          </Button>
+          {reelUrl && <a className="block break-all text-xs text-primary underline" href={reelUrl} target="_blank" rel="noopener noreferrer">Open generated MP4 for review</a>}
         </div>
         <div className="rounded-lg border p-3 text-xs" role="status">
           <div className="mb-1 flex items-center gap-2 font-semibold"><ShieldCheck className="h-4 w-4"/> Editorial review</div>
