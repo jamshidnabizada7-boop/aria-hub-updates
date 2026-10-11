@@ -1839,6 +1839,8 @@ model StudioCampaign {
   content        Json     // { headline, note, caption, eyebrow?, cta? }
   media          Json?    // approved Studio media layers
   sourceUrl      String?
+  posterUrl      String?  // approved durable PNG exported by an admin
+  queueId        String?  @unique // idempotent manual-publish queue link
   consentConfirmed Boolean @default(false)
   status         String   @default("draft") // draft | approved | archived
   approvedAt     DateTime?
