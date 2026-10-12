@@ -68,5 +68,6 @@ export async function discoveryInventory() {
 }
 export function validDiscoverySnapshot(snapshot: unknown): snapshot is DiscoverySnapshot {
   const s = snapshot as DiscoverySnapshot | null;
-  return Boolean(s && discoverySpec(s.spec?.id) && Number.isSafeInteger(s.count) && s.count >= DISCOVERY_MINIMUM && Number.isFinite(Date.parse(s.capturedAt)) && /^[a-f0-9]{64}$/.test(s.fingerprint));
+  const spec=discoverySpec(s?.spec?.id);
+  return Boolean(s && spec && s.spec.kind===spec.kind && s.spec.province===spec.province && Number.isSafeInteger(s.count) && s.count >= DISCOVERY_MINIMUM && Number.isFinite(Date.parse(s.capturedAt)) && Date.parse(s.capturedAt)<=Date.now()+60000 && /^[a-f0-9]{64}$/.test(s.fingerprint));
 }

@@ -5,7 +5,7 @@ import { decryptCredentials } from '@/lib/social/credentials';
 import { ensureSocialDelivery, markDeliveryPublishing, markDeliveryResult } from '@/lib/social/delivery';
 import type { Lang } from '@/lib/i18n-config';
 import { DISCOVERY_MINIMUM, discoveryCaption, type DiscoverySnapshot } from '@/lib/social/discovery/catalog';
-import { readDiscoverySnapshot } from '@/lib/social/discovery/inventory';
+import { readDiscoverySnapshot, validDiscoverySnapshot } from '@/lib/social/discovery/inventory';
 import { invalidateDiscoveryMedia } from '@/lib/social/discovery/queue';
 
 const CAPTION_LIMITS: Record<string, number> = { telegram: 1000, facebook: 4500, x: 270, instagram: 2100, linkedin: 2900, whatsapp: 1000 };
@@ -93,7 +93,10 @@ export async function publishQueueRow(
     }
     const collection = row.templateType === 'collection' ? (row.contentJson as Record<string,unknown>).collection as DiscoverySnapshot : null;
     async function countStillCurrent() {
-      if(!collection)return true;
+      if(row.templateType!=='collection')return true;
+      if(!validDiscoverySnapshot(collection)){
+        await invalidateDiscoveryMedia(id,'publishing',claimAt,'invalid_campaign_snapshot');return false;
+      }
       const current=await readDiscoverySnapshot(collection.spec?.id);
       if(!current || current.count < DISCOVERY_MINIMUM || current.count!==collection.count || Date.now()-Date.parse(collection.capturedAt)>15*60000){
         await invalidateDiscoveryMedia(id,'publishing',claimAt,'campaign_count_changed_or_snapshot_stale');return false;

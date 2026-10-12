@@ -1,7 +1,7 @@
 import {db} from '@/lib/db';
 import {applicantSameOrigin} from '@/lib/applicant-origin';
 import {CloudDraftId,CloudDraftWrite,checkedCloudDraft,encryptCVDraft,decryptCVDraft} from '@/lib/applicants/cv-cloud-crypto';
-import {cloudOwner,cvResponse} from '../route';
+import {cloudOwner,cvResponse} from '@/lib/applicants/cv-cloud-auth';
 export const runtime='nodejs';export const dynamic='force-dynamic';
 type Ctx={params:Promise<{draftId:string}>};
 async function context(req:Request,params:Ctx['params']){

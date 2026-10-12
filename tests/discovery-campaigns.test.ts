@@ -1,7 +1,7 @@
 import { describe, expect, test, afterAll, mock } from 'bun:test';
 mock.module('server-only',()=>({}));
 import { DISCOVERY_SPECS, discoverySpec, discoveryHeadline, discoveryUrl, discoveryCaption } from '../src/lib/social/discovery/catalog';
-import { discoveryWhere, readDiscoverySnapshot } from '../src/lib/social/discovery/inventory';
+import { discoveryWhere, readDiscoverySnapshot, validDiscoverySnapshot } from '../src/lib/social/discovery/inventory';
 import { newAttribution, signAttribution, readAttribution, recordRegistrationAttribution, recordVerifiedRegistration } from '../src/lib/social/discovery/attribution';
 import { db } from '../src/lib/db';
 import {queueDiscoveryCampaign} from '../src/lib/social/discovery/queue';
@@ -35,6 +35,13 @@ describe('discovery copy and attribution',()=>{
     expect(readAttribution(token)).toEqual(a);expect(readAttribution(token+'x')).toBeNull();
     expect(readAttribution(signAttribution({...a,expires:Date.now()-1}))).toBeNull();
     expect(readAttribution(signAttribution({...a,platform:'evil'}))).toBeNull();
+  });
+  test('rejects forged collection kinds and future capture dates',()=>{
+    const snapshot={spec:discoverySpec('jobs-balkh')!,count:30,capturedAt:new Date().toISOString(),fingerprint:'a'.repeat(64)};
+    expect(validDiscoverySnapshot(snapshot)).toBe(true);
+    expect(validDiscoverySnapshot({...snapshot,spec:{...snapshot.spec,kind:'scholarships'}})).toBe(false);
+    expect(validDiscoverySnapshot({...snapshot,spec:{...snapshot.spec,province:'Kabul'}})).toBe(false);
+    expect(validDiscoverySnapshot({...snapshot,capturedAt:'2099-01-01T00:00:00Z'})).toBe(false);
   });
 });
 
