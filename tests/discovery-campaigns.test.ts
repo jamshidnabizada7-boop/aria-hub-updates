@@ -4,6 +4,7 @@ import { DISCOVERY_SPECS, discoverySpec, discoveryHeadline, discoveryUrl, discov
 import { discoveryWhere, readDiscoverySnapshot } from '../src/lib/social/discovery/inventory';
 import { newAttribution, signAttribution, readAttribution, recordRegistrationAttribution, recordVerifiedRegistration } from '../src/lib/social/discovery/attribution';
 import { db } from '../src/lib/db';
+import {queueDiscoveryCampaign} from '../src/lib/social/discovery/queue';
 
 describe('discovery copy and attribution',()=>{
   test('whitelists collections and produces localized facts without inflated claims',()=>{
@@ -50,6 +51,16 @@ const cases: [string,string,string|null,Date|null][]=[
   ['unconfirmed','published','single_source',new Date('2099-01-01')],
 ];
 describe.skipIf(!available)('real database count and publication safety',()=>{
+  test('serializes concurrent campaign requests and prevents identical inventory repeats',async()=>{
+    for(let index=0;index<6;index++)await db.opportunity.create({data:{slug:prefix+'-rotation-'+index,title:'Synthetic reviewed job '+index,description:'Responsibilities and application instructions for this synthetic reviewed job. '.repeat(4),jobType:'job',status:'published',verificationStatus:'verified_official',sourceUrl:'https://example.org/jobs/'+prefix+index,applyUrl:'https://example.org/apply/'+prefix+index,applyUrlType:'direct_application',deadline:new Date('2099-01-01'),locations:{create:[{province:'Kabul',confidence:1,rawLabel:'Kabul'},{province:'Balkh',confidence:1,rawLabel:'Balkh'}]}}});
+    const scheduled=new Date(Date.now()+100*86400000);
+    const results=await Promise.allSettled([queueDiscoveryCampaign('jobs-kabul','fa','atlas',scheduled),queueDiscoveryCampaign('jobs-kabul','ps','signal',scheduled)]);
+    const successes=results.filter((result):result is PromiseFulfilledResult<Awaited<ReturnType<typeof queueDiscoveryCampaign>>>=>result.status==='fulfilled');
+    try{
+      expect(successes.length).toBe(1);expect(results.filter(result=>result.status==='rejected').length).toBe(1);
+      await expect(queueDiscoveryCampaign('jobs-balkh','en','ledger',new Date(scheduled.getTime()+86400000))).rejects.toThrow('collection_already_queued_or_recently_published');
+    }finally{for(const result of successes)await db.socialPostQueue.delete({where:{id:result.value.id}});}
+  });
   test('tracks only consented visits, deduplicates retries and records server-side account conversions',async()=>{
     const row=await db.socialPostQueue.create({data:{templateType:'collection',scheduledFor:new Date(),status:'published',contentJson:{template:'collection',collection:{spec:discoverySpec('jobs')!,count:5,capturedAt:new Date().toISOString(),fingerprint:'a'.repeat(64)}},captionJson:{},results:{facebook:{ok:true}}}});
     const user=await db.user.create({data:{email:prefix+'@test.invalid',name:'Synthetic attribution account'}});
