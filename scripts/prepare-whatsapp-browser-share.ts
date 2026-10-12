@@ -10,12 +10,15 @@ import { composeCaptionWithLimit } from '../src/lib/social/publisher';
 
 const arg = (name: string) => process.argv.find(a => a.startsWith(`--${name}=`))?.slice(name.length + 3);
 const destination = arg('destination') || 'channel';
-if (!['channel', 'group', 'linkedin-company'].includes(destination)) throw Error('unsupported_destination');
+if (!['channel', 'group', 'linkedin-company', 'facebook-profile'].includes(destination)) throw Error('unsupported_destination');
+const platform = destination === 'linkedin-company' ? 'linkedin' : destination === 'facebook-profile' ? 'facebook' : 'whatsapp';
 const target = destination === 'channel'
   ? { name: 'بخش نشر اعلانات وظایف آنلاین آریا', url: 'https://whatsapp.com/channel/0029Vb64Wf25q08koeYn8b3h', transport: 'whatsapp_web' }
   : destination === 'linkedin-company'
     ? { name: 'Aria Hub', url: 'https://www.linkedin.com/company/145224326/admin/dashboard/', transport: 'linkedin_web', publicUrl: 'https://www.linkedin.com/company/aria-hub/' }
-    : { name: 'ثبت نام وظیفه آریا', url: null, transport: 'whatsapp_web', audience: 'reviewed remote work only' };
+    : destination === 'facebook-profile'
+      ? { name: 'Mosa Nabizada', url: 'https://www.facebook.com/profile.php?id=61569513465876', transport: 'facebook_web', mentionCandidate: { name: 'Ahmad Jamshid Nabizada', url: 'https://www.facebook.com/ahmad.jamshid.tjk' } }
+      : { name: 'ثبت نام وظیفه آریا', url: null, transport: 'whatsapp_web', audience: 'reviewed remote work only' };
 const queueId = arg('queue');
 const rows = await db.socialPostQueue.findMany({
   where: { status: 'published', ...(queueId ? { id: queueId } : { scheduledFor: { gte: new Date(Date.now() - 24 * 3600000) } }) },
@@ -39,13 +42,13 @@ for (const row of rows) {
     if (destination === 'group' && snapshot.spec.kind !== 'remote') continue;
     const current = await readDiscoverySnapshot(snapshot.spec.id, now);
     if (!current || current.count !== snapshot.count || current.fingerprint !== snapshot.fingerprint) continue;
-    caption = discoveryCaption(snapshot, 'fa', row.id, destination === 'linkedin-company' ? 'linkedin' : 'whatsapp');
+    caption = discoveryCaption(snapshot, 'fa', row.id, platform);
   } else if (['spotlight', 'deadline'].includes(row.templateType) && row.contentRef) {
     const opportunity = await db.opportunity.findFirst({ where: {
       slug: row.contentRef, status: 'published', OR: [{ deadline: { gt: now } }, { deadline: date }],
     }, select: { id: true } });
     if (!opportunity || remoteIds && !remoteIds.has(opportunity.id)) continue;
-    caption = composeCaptionWithLimit(row.captionJson, ['fa'], destination === 'linkedin-company' ? 2900 : 1000);
+    caption = composeCaptionWithLimit(row.captionJson, ['fa'], platform === 'linkedin' ? 2900 : platform === 'facebook' ? 4500 : 1000);
   } else continue;
   if (!caption || !caption.includes('myariahub.com')) continue;
   const key = `whatsapp-browser:${destination}:${row.id}`;
