@@ -18,6 +18,7 @@
  */
 
 export type PostTemplate =
+  | 'collection'
   | 'spotlight'
   | 'deadline'
   | 'tip'

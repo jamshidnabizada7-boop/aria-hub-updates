@@ -1794,6 +1794,8 @@ model SocialPostQueue {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   deliveries    SocialDelivery[]
+  discoveryEvents DiscoveryCampaignEvent[]
+  discoveryMetrics DiscoveryCampaignMetric[]
 
   @@unique([contentRef, scheduledFor]) // a post can never be double-queued for a slot
   @@index([scheduledFor, status])
@@ -1842,6 +1844,37 @@ model StudioDesign {
 
   @@unique([contentRef, forDate])
   @@index([forDate])
+}
+
+// Consented first-party campaign measurements. No IP, email or personal profile is stored.
+model DiscoveryCampaignEvent {
+  id          String @id @default(cuid())
+  queueId     String
+  queue       SocialPostQueue @relation(fields: [queueId], references: [id], onDelete: Cascade)
+  platform    String
+  kind        String // landing_view | opportunity_click | registration | verified_registration
+  visitorHash String
+  createdAt   DateTime @default(now())
+  @@unique([queueId, platform, kind, visitorHash])
+  @@index([queueId, kind])
+  @@index([createdAt])
+}
+
+model DiscoveryCampaignMetric {
+  id          String @id @default(cuid())
+  queueId     String
+  queue       SocialPostQueue @relation(fields: [queueId], references: [id], onDelete: Cascade)
+  platform    String
+  source      String // meta_insights | linkedin_analytics | native_export
+  capturedAt  DateTime
+  reach       Int?
+  impressions Int?
+  engagement  Int?
+  linkClicks  Int?
+  paid        Boolean?
+  createdAt   DateTime @default(now())
+  @@unique([queueId, platform, capturedAt])
+  @@index([queueId, platform])
 }
 
 model PipelineRun {

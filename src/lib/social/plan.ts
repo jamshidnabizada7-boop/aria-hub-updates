@@ -184,7 +184,7 @@ export async function buildDailyPlan(lang: Lang): Promise<DailyPlan> {
   const stats: PlanStat[] = [
     {
       count: oppCount,
-      value: `${toEasternDigits(String(oppCount), lang)}+`,
+      value: toEasternDigits(String(oppCount), lang),
       labelKey: 'social.post.statLiveOpps',
       subKey: 'social.post.statSubNow',
     },

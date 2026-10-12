@@ -8,6 +8,7 @@ import { isIP } from 'node:net';
 import { applicantCookie, applicantFromRequest, APPLICANT_COOKIE, ApplicantError, changeApplicantPassword, currentApplicant, expiredApplicantCookie, forgotApplicantPassword, loginApplicant, registerApplicant, requireApplicantEnabled, resetApplicantPassword, revokeApplicantSession, sendVerification } from '@/lib/applicant-auth';
 import { cookies } from 'next/headers';
 import { enrollApplicant, revokeAllApplicantSessions } from '@/lib/applicant-auth';
+import { recordRegistrationAttribution } from '@/lib/social/discovery/attribution';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -45,7 +46,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ action: string
     const password = String(data.password || '');
     const lang = ['en','fa','ps'].includes(data.lang) ? data.lang : 'fa';
     if (action === 'register') {
-      await registerApplicant(email, password, String(data.name || ''), lang);
+      const createdId = await registerApplicant(email, password, String(data.name || ''), lang);
+      if (createdId) await recordRegistrationAttribution(req, createdId);
       return json({ success: true, message: 'If registration succeeds, check your email for a verification link.' });
     }
     if (action === 'enroll') {

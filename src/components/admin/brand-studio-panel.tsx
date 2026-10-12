@@ -22,6 +22,7 @@ import {
   Lightbulb, Loader2, Megaphone, Moon, MousePointerClick, Newspaper, Package,
   Palette, Quote, RefreshCw, Search, Sparkles, Star, Telescope, UserPlus, Wand2, Play } from 'lucide-react';
 import { toPng } from 'html-to-image';
+import { DiscoveryCampaignPanel } from './discovery-campaign-panel';
 import QRCode from 'qrcode';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -58,6 +59,7 @@ import type { DailyPlan, PlanIdea, PlanNews, PlanOpp, PlanPost, PlanStat, PlanSt
 const TEMPLATES: PostTemplate[] = TEMPLATE_DEFS.map((d) => d.key);
 
 const TYPE_ICON: Record<PostTemplate, React.ComponentType<{ className?: string }>> = {
+  collection: BarChart3,
   spotlight: Star,
   deadline: AlarmClock,
   tip: Lightbulb,
@@ -540,7 +542,9 @@ export function BrandStudioPanel() {
     try {
       const w = 1080;
       const h = canvasHeight(size);
-      const url = await toPng(node, { pixelRatio: 1, width: w, height: h, cacheBust: true });
+      await document.fonts.ready;
+      await Promise.all(Array.from(node.querySelectorAll('img')).map(img => img.decode()));
+      const url = await toPng(node, { pixelRatio: 2, width: w, height: h, cacheBust: true });
       const a = document.createElement('a');
       const code = lang.toUpperCase();
       a.download = `ariahub-${activePost.key.slice(0, 48)}-${code}-${size}.png`;
@@ -562,6 +566,7 @@ export function BrandStudioPanel() {
     const matches = (label: string) => !q || label.toLowerCase().includes(q);
     const catOf = (o: { category?: { name?: string | null } | null }) => (o.category?.name ? o.category.name.toLowerCase() : '');
     switch (labTemplate) {
+      case 'collection': return [];
       case 'spotlight':
         return pools.opportunity
           .filter((o) => matches(loc(o.title, o.titleI18n)) && (typeFilter === 'all' || catOf(o).includes(typeFilter)))
@@ -661,6 +666,7 @@ export function BrandStudioPanel() {
 
   return (
     <div className="space-y-4">
+      <DiscoveryCampaignPanel lang={lang} />
       {/* header */}
       <div className="rounded-2xl border bg-card p-4">
         <div className="flex items-start gap-3">
@@ -1384,6 +1390,7 @@ function captionInputFor(post: PlanPost, lang: Lang, loc: Loc, tr: Tr): CaptionI
     case 'story':
       return { template: 'story', lang, title: post.title, personName: post.meta, personMeta: undefined };
     case 'packages':
+    case 'collection':
     case 'teaser':
     case 'greeting':
     case 'hiring':

@@ -79,6 +79,10 @@ export default async function PrivacyPolicyPage({
 
           <div className="prose prose-sm dark:prose-invert sm:prose-base max-w-none space-y-6 text-muted-foreground text-start">
             <p>{dateText}</p>
+            <section>
+              <h2 className="text-xl font-semibold text-foreground">{lang==='en'?'Social campaign measurement':lang==='fa'?'اندازه‌گیری کمپاین‌های اجتماعی':'د ټولنیزو کمپاینونو اندازه کول'}</h2>
+              <p>{lang==='en'?'When you accept analytics cookies, ARIA HUB measures campaign visits, opportunity clicks, new registrations and email-verified accounts. A first-party cookie attributes a new account to the first campaign for up to 30 days. Measurement records use pseudonymous hashes, without storing your IP address or email in the campaign database. Event records are retained for up to 180 days. Choose essential cookies only to disable this measurement.':lang==='fa'?'با پذیرش کوکی‌های تحلیلی، آریا هاب بازدید کمپاین، کلیک فرصت، ثبت‌نام جدید و تأیید ایمیل را اندازه‌گیری می‌کند. یک کوکی داخلی تا ۳۰ روز حساب جدید را به نخستین کمپاین نسبت می‌دهد. سوابق با شناسهٔ مستعار ذخیره می‌شوند؛ آی‌پی و ایمیل شما در دیتابیس کمپاین ذخیره نمی‌شود. سوابق رویداد تا ۱۸۰ روز نگهداری می‌شوند. انتخاب فقط کوکی‌های ضروری این اندازه‌گیری را غیرفعال می‌کند.':'د تحلیلي کوکیو په منلو سره آریا هاب د کمپاین لیدنې، د فرصت کلیکونه، نوې نوملیکنې او د ایمیل تایید شوي حسابونه اندازه کوي. یو داخلي کوکي تر ۳۰ ورځو نوی حساب لومړي کمپاین ته منسوبوي. ریکارډونه په مستعارو پېژندونو ساتل کېږي؛ ستاسو آی‌پي او ایمیل د کمپاین په ډیټابیس کې نه ساتل کېږي. د پېښو ریکارډونه تر ۱۸۰ ورځو ساتل کېږي. یوازې اړین کوکي غوره کول دا اندازه کول بندوي.'}</p>
+            </section>
 
             {dbHtml ? (
               <div dangerouslySetInnerHTML={{ __html: dbHtml }} />

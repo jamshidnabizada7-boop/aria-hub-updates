@@ -8,7 +8,7 @@ if (!['localhost','127.0.0.1'].includes(new URL(base).hostname)) throw Error('Re
 const out = process.env.STUDIO_REVIEW_OUTPUT || '/tmp/studio-review';
 await mkdir(out,{recursive:true});
 const fixtures = JSON.parse(await readFile('scripts/tests/fixtures/studio-public-listings.json','utf8'));
-const browser = await chromium.launch({headless:true});
+const browser = await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH ? {executablePath:process.env.CHROMIUM_PATH} : {})});
 let checks = 0;
 const issues: string[] = [];
 function check(value: unknown, message: string) { checks++; if (!value) issues.push(message); }

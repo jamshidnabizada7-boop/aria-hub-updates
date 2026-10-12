@@ -98,6 +98,7 @@ jobs:
           done
           curl --silent --fail http://127.0.0.1:3000/en > /dev/null || { cat /tmp/studio-review-server.log; exit 1; }
           bun scripts/tests/studio-editorial-review.ts
+          DISCOVERY_REVIEW_URL=http://127.0.0.1:3000 bun scripts/tests/discovery-poster-review.ts
 
       - uses: actions/upload-artifact@v4
         if: always()

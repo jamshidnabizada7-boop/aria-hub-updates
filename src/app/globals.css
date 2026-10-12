@@ -626,3 +626,8 @@
 .posting-workspace fieldset[hidden] { display: none; }
 @media (max-width: 420px) { .journey .account-panel { padding: 1.25rem; } }
 @media (prefers-reduced-motion: reduce) { .journey *, .posting-workspace * { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+/* Poster code uses this explicit family; next/font's generated family names
+   alone do not satisfy inline social-canvas typography. Local, licensed assets. */
+@font-face { font-family: "Vazirmatn"; src: url("/fonts/Vazirmatn-Medium.ttf") format("truetype"); font-weight: 400 650; font-display: swap; }
+@font-face { font-family: "Vazirmatn"; src: url("/fonts/Vazirmatn-Bold.ttf") format("truetype"); font-weight: 700 850; font-display: swap; }
+@font-face { font-family: "Vazirmatn"; src: url("/fonts/Vazirmatn-Black.ttf") format("truetype"); font-weight: 900; font-display: swap; }

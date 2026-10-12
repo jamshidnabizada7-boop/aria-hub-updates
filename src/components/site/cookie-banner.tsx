@@ -23,6 +23,8 @@ export function CookieBanner() {
 
   const dismiss = (value: string) => {
     try { localStorage.setItem(KEY, value); } catch {}
+    window.dispatchEvent(new Event('aria-cookie-consent'));
+    if (value !== 'all') void fetch('/api/discovery/track', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({kind:'revoke',consent:true}) }).catch(()=>{});
     setShow(false);
   };
 

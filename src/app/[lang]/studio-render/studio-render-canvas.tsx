@@ -14,8 +14,14 @@ import type { DesignFamilyId, StudioMediaConfig } from '@/lib/social/studio/type
 import { resolveTheme } from '@/lib/social/themes';
 import type { Lang } from '@/lib/i18n-config';
 import type { PostTemplate } from '@/lib/social/brand';
+import { DiscoveryCanvas } from '@/lib/social/discovery/canvas';
+import { discoveryUrl, type DiscoverySnapshot, type DiscoveryStyle } from '@/lib/social/discovery/catalog';
 
 interface RenderProps {
+  collection?: DiscoverySnapshot;
+  campaignStyle?: DiscoveryStyle;
+  queueId?: string;
+  platform?: string;
   sourceSlug?: string;
   visualUrl?: string | null;
   template: PostTemplate;
@@ -69,7 +75,7 @@ export default function StudioRenderCanvas({ p }: { p?: string }) {
   useEffect(() => {
     if (!props) return;
     const slug = props.sourceSlug || props.posterData?.slug;
-    const url = slug
+    const url = props.collection ? discoveryUrl(props.collection.spec, props.lang, props.queueId, props.platform) : slug
       ? `https://www.myariahub.com/${props.lang}/opportunities/${slug}`
       : 'https://www.myariahub.com';
     const th = resolveTheme(props.themeId);
@@ -85,7 +91,7 @@ export default function StudioRenderCanvas({ p }: { p?: string }) {
   return (
     <div className="flex min-h-screen items-start justify-center bg-white p-0">
       <div data-studio-canvas="1" data-render-ready={qr ? "1" : "0"}>
-        {props.designFamily && props.designFamily !== 'legacy' ? (
+        {props.template === 'collection' && props.collection ? <DiscoveryCanvas snapshot={props.collection} lang={props.lang} size={props.size} style={props.campaignStyle} qrDataUrl={qr}/> : props.designFamily && props.designFamily !== 'legacy' ? (
           <PremiumSocialCanvas
             template={props.template}
             designFamily={props.designFamily}

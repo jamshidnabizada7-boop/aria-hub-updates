@@ -1,4 +1,6 @@
 import { rotatedFamily, rotationCategory } from '@/lib/social/studio/rotation';
+import { discoveryCandidate, discoveryContent, discoveryCaptions, refreshDiscoveryRow } from '@/lib/social/discovery/queue';
+import { DISCOVERY_STYLES } from '@/lib/social/discovery/catalog';
 import { getLocalizedContent } from '@/lib/i18n-content';
 /**
  * Social auto-publisher — turns the deterministic daily plan into a scheduled
@@ -66,6 +68,8 @@ export function aftSlotToUtc(slotHm: string, dayShift = 0): Date {
 }
 
 type AutomationStateShape = {
+  discoveryCampaignsEnabled?: boolean;
+  lastDiscoveryCleanupDate?: string;
   publishTimes?: string[];
   captionLangs?: Lang[];
   translateBatch?: number;
@@ -208,14 +212,20 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
     const stored = await tx.automationState.findUnique({ where: { id: 'singleton' } });
     const state = (stored?.state ?? {}) as AutomationStateShape;
     const todayAft = new Date(Date.now() + AFT_OFFSET_MIN * 60000).toISOString().slice(0, 10);
+    if (state.lastDiscoveryCleanupDate !== todayAft) {
+      await tx.discoveryCampaignEvent.deleteMany({where:{createdAt:{lt:new Date(Date.now()-180*86400000)}}});
+      const cleanupPatch=JSON.stringify({lastDiscoveryCleanupDate:todayAft});
+      await tx.$executeRawUnsafe('INSERT INTO "AutomationState" (id,state,"updatedAt") VALUES (\'singleton\',$1::jsonb,now()) ON CONFLICT (id) DO UPDATE SET state="AutomationState".state || $1::jsonb,"updatedAt"=now()',cleanupPatch);
+    }
     if (state.lastQueueBuildDate === todayAft) return { created: 0 };
     const primary = state.captionLangs?.[0] ?? 'fa';
     const slots = state.opportunityBatchTimes?.length ? state.opportunityBatchTimes : DEFAULT_OPPORTUNITY_BATCH_TIMES_AFT;
     const batchSize = Math.min(10, Math.max(1, state.opportunityBatchSize ?? DEFAULT_OPPORTUNITY_BATCH_SIZE));
     const target = Math.min(state.opportunityDailyTarget ?? DEFAULT_OPPORTUNITY_DAILY_TARGET, opportunityDistributionCapacity(slots, batchSize));
-    const posts = await buildOpportunityDistributionPlan(primary, { target, repeatDays: state.opportunityRepeatDays ?? DEFAULT_OPPORTUNITY_REPEAT_DAYS });
+    const collection = state.discoveryCampaignsEnabled === false ? null : await discoveryCandidate();
+    const posts = collection && target<=1 ? [] : await buildOpportunityDistributionPlan(primary, { target: Math.max(1,target-(collection ? 1:0)), repeatDays: state.opportunityRepeatDays ?? DEFAULT_OPPORTUNITY_REPEAT_DAYS });
     // A morning import can populate an initially empty database later today.
-    if (!posts.length) return { created: 0 };
+    if (!posts.length && !collection) return { created: 0 };
     const designs = await tx.studioDesign.findMany({ where: { forDate: todayAft } });
     const dayStart = new Date(todayAft + 'T00:00:00.000Z');
     dayStart.setUTCMinutes(dayStart.getUTCMinutes() - AFT_OFFSET_MIN);
@@ -256,6 +266,10 @@ export async function buildTodaysQueue(): Promise<{ created: number }> {
         },
         captionJson: captions,
       });
+    }
+    if (collection && !refs.has('collection:'+collection.spec.id)) {
+      const day = Math.floor((Date.now()+270*60000)/86400000);
+      rows.push({scheduledFor:aftSlotToUtc('19:00'),templateType:'collection',contentRef:'collection:'+collection.spec.id,contentJson:discoveryContent(collection,primary,DISCOVERY_STYLES[day%DISCOVERY_STYLES.length]),captionJson:discoveryCaptions(collection)});
     }
     const result = await tx.socialPostQueue.createMany({ data: rows, skipDuplicates: true });
     const patch = JSON.stringify({ lastQueueBuildDate: todayAft });
@@ -313,7 +327,8 @@ async function renderQueueImage(baseUrl: string, props: CanvasProps, requireDura
       args: launchArgs,
     });
     const vh = props.size === 'story' ? 2100 : props.size === 'portrait' ? 1500 : 1180;
-    const page = await browser.newPage({ viewport: { width: 1180, height: vh }, serviceWorkers: 'block' });
+    const jpeg = props.exportFormat === 'jpeg';
+    const page = await browser.newPage({ viewport: { width: 1180, height: vh }, deviceScaleFactor: jpeg ? 1 : 2, serviceWorkers: 'block' });
     const renderOrigin = new URL(baseUrl).origin;
     await page.route('**/*', async (route) => {
       const requestUrl = route.request().url();
@@ -341,8 +356,13 @@ async function renderQueueImage(baseUrl: string, props: CanvasProps, requireDura
     if (!el) throw new Error('canvas element not found');
     // JPEG is compatible with Instagram feed image publishing; Studio's
     // interactive PNG export is unchanged. No temporary file is retained.
-    const file = `post-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
-    const buf = await el.screenshot({ type: 'jpeg', quality: 92 });
+    const file = `post-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${jpeg ? 'jpg':'png'}`;
+    const png = await el.screenshot({ type: 'png' });
+    const sharp = (await import('sharp')).default;
+    // One conversion from the lossless capture; 4:4:4 preserves coloured text edges.
+    const buf = jpeg ? await sharp(png).toColourspace('srgb').jpeg({quality:98,chromaSubsampling:'4:4:4'}).toBuffer() : png;
+    if (jpeg && buf.length >= 8_000_000) throw Error('Instagram image exceeds 8 MB; revise the artwork');
+    const contentType = jpeg ? 'image/jpeg' : 'image/png';
 
     // Prefer durable object storage on EVERY host when configured. A separate
     // worker (for example Oracle VM) must not fabricate a myariahub.com URL for
@@ -350,7 +370,7 @@ async function renderQueueImage(baseUrl: string, props: CanvasProps, requireDura
     if (process.env.BLOB_READ_WRITE_TOKEN) {
       try {
         const { put } = await import('@vercel/blob');
-        const blob = await put(`generated-posts/${file}`, buf, { access: 'public', addRandomSuffix: false, contentType: 'image/jpeg', abortSignal: AbortSignal.timeout(30000) });
+        const blob = await put(`generated-posts/${file}`, buf, { access: 'public', addRandomSuffix: false, contentType, abortSignal: AbortSignal.timeout(30000) });
         if (!(await verifyPublicImageUrl(blob.url))) {
           console.error('[render] blob uploaded but public verification failed:', blob.url);
           return null;
@@ -422,8 +442,9 @@ export async function renderDueQueue(baseUrl: string, limit = 2): Promise<{ rend
       renderAttempts: { lt: 3 },
       OR: [{ nextRenderAttemptAt: null }, { nextRenderAttemptAt: { lte: new Date() } }],
       requiresManualPublish: false,
-      templateType: { in: ['spotlight', 'deadline'] },
+      templateType: { in: ['spotlight', 'deadline', 'collection'] },
       scheduledFor: { lte: new Date(Date.now() + 3600000) },
+      AND:[{OR:[{templateType:{not:'collection'}},{scheduledFor:{lte:new Date(Date.now()+5*60000)}}]}],
     },
     orderBy: { scheduledFor: 'asc' },
     take: limit,
@@ -461,20 +482,30 @@ export async function renderOneQueueRow(id: string, baseUrl = socialRenderBaseUr
   });
   if (claim.count === 0) return false;
 
-  const img = await renderQueueImage(baseUrl, row.contentJson as CanvasProps, ['spotlight', 'deadline'].includes(row.templateType));
+  let props = row.contentJson as CanvasProps;
+  if (row.templateType === 'collection') {
+    const refreshed=await refreshDiscoveryRow(id);
+    if(!refreshed) {await db.socialPostQueue.updateMany({where:{id,status:'rendering',claimedAt:claimAt},data:{status:'cancelled',claimedAt:null,error:'insufficient_verified_opportunities'}});return false;}
+    props=refreshed.contentJson;
+    await db.socialPostQueue.updateMany({where:{id,status:'rendering',claimedAt:claimAt},data:{contentJson:refreshed.contentJson,captionJson:refreshed.captionJson}});
+  }
+  const durable=['spotlight','deadline','collection'].includes(row.templateType);
+  const img = await renderQueueImage(baseUrl, {...props, platform:'qr'}, durable);
+  const instagram = img ? await renderQueueImage(baseUrl, {...props,size:'portrait',exportFormat:'jpeg',platform:'instagram'}, durable) : null;
+  const complete=Boolean(img && instagram);
   await db.socialPostQueue.updateMany({
     where: { id, status: 'rendering', claimedAt: claimAt },
     data: {
-      status: img ? 'ready' : 'failed',
-      imageStatus: img ? 'ready' : 'failed',
+      status: complete ? 'ready' : 'failed',
+      imageStatus: complete ? 'ready' : 'failed',
       claimedAt: null,
       renderAttempts: { increment: 1 },
-      nextRenderAttemptAt: img ? null : new Date(Date.now() + 5 * Math.pow(3, row.renderAttempts) * 60000),
-      error: img ? null : 'media render/upload failed — opportunity posts will not publish without a durable image',
-      ...(img ? { imagePaths: { square: img.publicUrl, ...(img.localPath ? { local: img.localPath } : {}) } } : {}),
+      nextRenderAttemptAt: complete ? null : new Date(Date.now() + 5 * Math.pow(3, row.renderAttempts) * 60000),
+      error: complete ? null : 'media render/upload failed — posts will not publish without complete platform assets',
+      ...(complete ? { imagePaths: { square: img!.publicUrl, facebook:img!.publicUrl,linkedin:img!.publicUrl,instagram:instagram!.publicUrl, ...(img!.localPath ? { local: img!.localPath } : {}) } } : {}),
     },
   });
-  return Boolean(img);
+  return complete;
 }
 
 export function composeCaption(captions: unknown, langs: Lang[]): string {

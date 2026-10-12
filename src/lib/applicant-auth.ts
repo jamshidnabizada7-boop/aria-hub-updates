@@ -123,13 +123,16 @@ export async function registerApplicant(emailRaw: string, password: string, name
   }
   const existing = await db.user.findUnique({where:{email},select:{id:true}});
   if(existing) { await resendPending(); return; }
+  let createdId: string;
   try {
-    await db.user.create({data:{email,name:name.trim(),passwordHash:await bcrypt.hash(password,12),applicantProfile:{create:{preferredLocale:lang}}}});
+    const created = await db.user.create({data:{email,name:name.trim(),passwordHash:await bcrypt.hash(password,12),applicantProfile:{create:{preferredLocale:lang}}}});
+    createdId = created.id;
   } catch(error) {
     if(error instanceof Prisma.PrismaClientKnownRequestError && error.code==='P2002') {await resendPending();return;}
     throw error;
   }
   await sendVerification(email, lang);
+  return createdId;
 }
 export async function verifyApplicantEmail(emailRaw: string, raw: string): Promise<boolean> {
   const email = cleanEmail(emailRaw);

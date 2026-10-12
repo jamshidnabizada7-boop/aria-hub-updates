@@ -4,6 +4,9 @@ import { publishToPlatform } from '@/lib/social/channels';
 import { decryptCredentials } from '@/lib/social/credentials';
 import { ensureSocialDelivery, markDeliveryPublishing, markDeliveryResult } from '@/lib/social/delivery';
 import type { Lang } from '@/lib/i18n-config';
+import { DISCOVERY_MINIMUM, discoveryCaption, type DiscoverySnapshot } from '@/lib/social/discovery/catalog';
+import { readDiscoverySnapshot } from '@/lib/social/discovery/inventory';
+import { invalidateDiscoveryMedia } from '@/lib/social/discovery/queue';
 
 const CAPTION_LIMITS: Record<string, number> = { telegram: 1000, facebook: 4500, x: 270, instagram: 2100, linkedin: 2900, whatsapp: 1000 };
 const UNKNOWN = 'publish outcome unknown — verify the destination before explicitly retrying';
@@ -70,7 +73,7 @@ export async function publishQueueRow(
   const claim = await db.socialPostQueue.updateMany({
     where: {
       id, status: { in: allowed },
-      ...(!options.manual ? { requiresManualPublish: false, templateType: { in: ['spotlight', 'deadline'] } } : {}),
+      ...(!options.manual ? { requiresManualPublish: false, templateType: { in: ['spotlight', 'deadline', 'collection'] } } : {}),
     },
     data: { status: 'publishing', claimedAt: claimAt },
   });
@@ -79,8 +82,8 @@ export async function publishQueueRow(
 
   try {
     const row = await db.socialPostQueue.findUniqueOrThrow({ where: { id } });
-    const requireImage = ['spotlight', 'deadline'].includes(row.templateType);
-    const images = (row.imagePaths ?? {}) as { square?: string; local?: string };
+    const requireImage = ['spotlight', 'deadline', 'collection'].includes(row.templateType);
+    const images = (row.imagePaths ?? {}) as Record<string,string>;
     if (requireImage && (row.imageStatus !== 'ready' || !durableImage(images.square))) {
       await db.socialPostQueue.updateMany({
         where: owned,
@@ -88,10 +91,20 @@ export async function publishQueueRow(
       });
       return { ok: false, attempted: false, error: 'durable_media_required' };
     }
+    const collection = row.templateType === 'collection' ? (row.contentJson as Record<string,unknown>).collection as DiscoverySnapshot : null;
+    async function countStillCurrent() {
+      if(!collection)return true;
+      const current=await readDiscoverySnapshot(collection.spec?.id);
+      if(!current || current.count < DISCOVERY_MINIMUM || current.count!==collection.count || Date.now()-Date.parse(collection.capturedAt)>15*60000){
+        await invalidateDiscoveryMedia(id,'publishing',claimAt,'campaign_count_changed_or_snapshot_stale');return false;
+      }
+      return true;
+    }
+    if(!(await countStillCurrent()))return {ok:false,attempted:false,error:'campaign_refreshed_before_delivery'};
     if (!options.manual) {
       const today = new Date();
       today.setUTCHours(0, 0, 0, 0);
-      const eligible = row.contentRef && await db.opportunity.findFirst({
+      const eligible = collection || row.contentRef && await db.opportunity.findFirst({
         where: { slug: row.contentRef, status: 'published', OR: [{ deadline: null }, { deadline: { gte: today } }] },
         select: { id: true },
       });
@@ -119,6 +132,13 @@ export async function publishQueueRow(
         results[channel.platform] = { ok: true };
         continue;
       }
+      // Recheck each destination, including retries, before claiming a network send.
+      if(!(await countStillCurrent()))return {ok:false,attempted,error:'campaign_refreshed_before_delivery'};
+      const imageUrl=images[channel.platform] ?? images.square ?? null;
+      if(requireImage && !durableImage(imageUrl)) {
+        await db.socialPostQueue.updateMany({where:owned,data:{status:'pending',imageStatus:'none',claimedAt:null,error:'platform_media_required'}});
+        return {ok:false,attempted,error:'platform_media_required'};
+      }
       const deliveryClaim = await markDeliveryPublishing(delivery.id, Boolean(options.manual && options.force));
       if (!deliveryClaim) {
         retryPending ||= delivery.status === 'pending' || delivery.status === 'retry_wait';
@@ -127,10 +147,13 @@ export async function publishQueueRow(
         continue;
       }
       attempted = true;
-      const caption = composeCaptionWithLimit(row.captionJson, langs, CAPTION_LIMITS[channel.platform] ?? 2200);
+      const posterLang=String((row.contentJson as Record<string,unknown>).lang);
+      const captionLangs=collection ? [(['en','fa','ps'].includes(posterLang)?posterLang:langs[0]) as Lang] : langs;
+      const captions = collection ? Object.fromEntries(captionLangs.map(lang=>[lang,discoveryCaption(collection,lang,id,channel.platform)])) : row.captionJson;
+      const caption = composeCaptionWithLimit(captions, captionLangs, CAPTION_LIMITS[channel.platform] ?? 2200);
       const result = await publishToPlatform(channel.platform, decryptCredentials(channel.credentials), {
         caption,
-        imageUrl: images.square ?? null,
+        imageUrl,
         // Automatic and opportunity delivery never relies on worker-local files.
         imagePath: requireImage ? null : images.local ?? null,
         link: deepLinkOf(caption) || process.env.NEXT_PUBLIC_SITE_URL || 'https://www.myariahub.com',
@@ -143,6 +166,8 @@ export async function publishQueueRow(
       blocked ||= after.status === 'blocked';
       results[channel.platform] = { ok: result.ok, ...(result.error ? { error: result.error } : {}), ...(result.downgraded ? { downgraded: result.downgraded } : {}) };
       if (result.ok) external[channel.platform] = { id: result.id ?? null, permalink: result.permalink ?? null };
+      if (result.ok && collection) await db.socialDelivery.update({where:{id:delivery.id},data:{metadata:{collection,asset:imageUrl}}});
+      await db.socialPostQueue.updateMany({where:owned,data:{results,externalIds:external}});
       await db.publishChannel.update({
         where: { id: channel.id },
         data: {
@@ -190,7 +215,7 @@ export async function publishDueQueue(limit = 2): Promise<{ published: number; f
     where: {
       status: { in: ['ready', 'failed', 'partial'] },
       requiresManualPublish: false,
-      templateType: { in: ['spotlight', 'deadline'] },
+      templateType: { in: ['spotlight', 'deadline', 'collection'] },
       scheduledFor: { lte: now },
       imageStatus: 'ready',
       OR: [
