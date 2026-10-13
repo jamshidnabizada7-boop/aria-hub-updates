@@ -4,7 +4,7 @@ import { resolveWhatsAppMode,checkPlatformConnection } from '../src/lib/social/c
 describe('WhatsApp destination modes', () => {
   test('a reachable Meta Test Number does not prove production delivery',async()=>{
     const original=globalThis.fetch;
-    globalThis.fetch=async()=>new Response(JSON.stringify({id:'test',display_phone_number:'+1 555-174-3607',verified_name:'Test Number'}),{status:200});
+    globalThis.fetch=Object.assign(async()=>new Response(JSON.stringify({id:'test',display_phone_number:'+1 555-174-3607',verified_name:'Test Number'}),{status:200}),{preconnect:original.preconnect});
     try{
       const result=await checkPlatformConnection('whatsapp',{mode:'individual',phoneNumberId:'test',accessToken:'test-only',recipient:'example'});
       expect(result.ok).toBe(false);expect(result.details?.testNumber).toBe(true);expect(result.details?.deliveryVerified).toBe(false);

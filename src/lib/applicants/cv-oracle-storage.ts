@@ -6,10 +6,10 @@ const PREFIX=Buffer.from('ARIA-CV1'),MAX=8*1024*1024;
 function config(path:string){
  if(!/^[a-z0-9_-]{5,160}\/[a-z0-9_-]{5,160}\.(pdf|docx|jpg|png|webp)$/.test(path))throw Error('cv_storage_key_invalid');
  const root=process.env.CV_PRIVATE_DIRECTORY||'',key=process.env.CV_PRIVATE_STORAGE_KEY||'';
- if(!isAbsolute(root)||root===resolve(root,'..')||!/^[a-f0-9]{64}$/i.test(key))throw Error('cv_storage_not_configured');
- const absolute=resolve(root);
+ if(!isAbsolute(root)||root===resolve(/* turbopackIgnore: true */ root,'..')||!/^[a-f0-9]{64}$/i.test(key))throw Error('cv_storage_not_configured');
+ const absolute=resolve(/* turbopackIgnore: true */ root);
  // Never allow a web-served location to become the private object store.
- if(absolute===resolve(process.cwd())||absolute.startsWith(resolve(process.cwd())+sep))throw Error('cv_storage_unsafe_directory');
+ if(absolute===resolve(/* turbopackIgnore: true */ process.cwd())||absolute.startsWith(resolve(/* turbopackIgnore: true */ process.cwd())+sep))throw Error('cv_storage_unsafe_directory');
  return {root:absolute,key:Buffer.from(key,'hex'),owner:join(absolute,path.split('/')[0]),file:join(absolute,path)+'.enc',aad:Buffer.from('aria-private-cv:'+path)};
 }
 async function privateDirectory(dir:string){
@@ -35,7 +35,7 @@ export async function storeOracleCV(path:string,bytes:Uint8Array){
 export async function fetchOracleCV(path:string):Promise<Uint8Array>{
  const cfg=config(path);const meta=await lstat(cfg.file);
  if(!meta.isFile()||meta.isSymbolicLink()||meta.size>MAX+36)throw Error('cv_storage_object_invalid');
- const blob=await readFile(cfg.file);
+ const blob=await readFile(/* turbopackIgnore: true */ cfg.file);
  if(!blob.subarray(0,8).equals(PREFIX)||blob.length<37)throw Error('cv_storage_object_invalid');
  const decipher=createDecipheriv('aes-256-gcm',cfg.key,blob.subarray(8,20));
  decipher.setAAD(cfg.aad);decipher.setAuthTag(blob.subarray(20,36));
