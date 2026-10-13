@@ -17,7 +17,7 @@ export async function GET(){
   const stale=new Date(Date.now()-15*60_000);
   const recent=new Date(Date.now()-30*86400000);
   const [applicants,documents,processingStale,reviewed,cloudDrafts,
-   savedSearches,alerts,deliveries,consents,employerJobs,members,feedback] = await Promise.all([
+   savedSearches,alerts,deliveries,consents,employerJobs,members,feedback,opportunityDigests] = await Promise.all([
    db.applicantProfile.count(),
    db.applicantDocument.groupBy({by:['status'],_count:{_all:true}}),
    db.applicantDocument.count({where:{status:'processing',processingClaimedAt:{lt:stale}}}),
@@ -29,7 +29,8 @@ export async function GET(){
    db.applicantNotificationPreference.count({where:{emailEnabled:true}}),
    db.opportunity.groupBy({by:['status'],where:{sourceName:'Employer'},_count:{_all:true}}),
    db.organizationMember.count({where:{status:'pending'}}),
-   db.matcherFeedback.groupBy({by:['signal'],where:{createdAt:{gte:recent}},_count:{_all:true}})
+   db.matcherFeedback.groupBy({by:['signal'],where:{createdAt:{gte:recent}},_count:{_all:true}}),
+   db.auditLog.count({where:{action:'alert_digest_sent',createdAt:{gte:recent}}})
   ]);
   const counts=(rows:Array<{status:string;_count:{_all:number}}>)=>Object.fromEntries(rows.map(r=>[r.status,r._count._all]));
   const disk=process.env.CV_PRIVATE_DIRECTORY?await statfs(process.env.CV_PRIVATE_DIRECTORY).catch(()=>null):null;
@@ -45,7 +46,7 @@ export async function GET(){
    observedAt:new Date().toISOString(),
    applicant:{accounts:applicants,cvStates:counts(documents),staleOcrClaims:processingStale,
     reviewedDocuments:reviewed,encryptedCloudDrafts:cloudDrafts,activeSavedSearches:savedSearches},
-   notifications:{recentAlerts:alerts,emailConsentAccounts:consents,emailDeliveryStates:counts(deliveries)},
+   notifications:{recentAlerts:alerts,emailConsentAccounts:consents,emailDeliveryStates:counts(deliveries),opportunityDigestsAccepted:opportunityDigests},
    employers:{jobStates:counts(employerJobs),pendingMembershipReviews:members},
    matchQuality:Object.fromEntries(feedback.map(r=>[r.signal,r._count._all])),
    serviceStates:states,

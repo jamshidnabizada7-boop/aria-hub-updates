@@ -201,7 +201,7 @@ export function AdminApp({ admin }: { admin: AdminUser }) {
             <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
               <MenuIcon className="h-5 w-5" />
             </Button>
-            <h1 className="text-lg font-bold">{t(NAV.find((n): n is Extract<NavItem, { key: string }> => 'key' in n && n.key === active)?.labelKey || 'admin.nav.dashboard')}</h1>
+            <h1 className="text-lg font-bold">{active==='applicantOps'?'Applicant operations':t(NAV.find((n): n is Extract<NavItem, { key: string }> => 'key' in n && n.key === active)?.labelKey || 'admin.nav.dashboard')}</h1>
           </div>
           <div className="flex items-center gap-2">
             <Button asChild variant="outline" size="sm" className="gap-2 text-xs">
@@ -503,7 +503,7 @@ function CrudTable({ model }: { model: string }) {
 
   // Pick display columns: always show status/featured if present, plus first few text fields.
   const priority = ['key', 'slug', 'title', 'name', 'country', 'question', 'label', 'company', 'platform', 'column', 'code'];
-  const displayFields = [
+  const displayFields = model==='alertSubscriber' ? ['email','categorySlug','lang','frequency','lastDigestAt'] : [
     ...priority.filter((p) => fields.includes(p)),
     ...fields.filter((f) => !priority.includes(f) && f !== 'id' && !['description', 'content', 'answer', 'message', 'instructions', 'bio', 'eligibility', 'benefits', 'applicationProcess', 'requirements', 'documents', 'gallery', 'tags', 'features', 'faqs', 'attachments', 'seoTitle', 'seoDescription', 'translations'].includes(f)),
   ].slice(0, 5);

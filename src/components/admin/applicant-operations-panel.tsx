@@ -3,7 +3,7 @@ import {useEffect,useState} from 'react';
 
 type Report={
  observedAt:string;applicant:{accounts:number;cvStates:Record<string,number>;staleOcrClaims:number;reviewedDocuments:number;encryptedCloudDrafts:number;activeSavedSearches:number};
- notifications:{recentAlerts:number;emailConsentAccounts:number;emailDeliveryStates:Record<string,number>};
+ notifications:{recentAlerts:number;emailConsentAccounts:number;emailDeliveryStates:Record<string,number>;opportunityDigestsAccepted:number};
  employers:{jobStates:Record<string,number>;pendingMembershipReviews:number};
  matchQuality:Record<string,number>;
  providerFlags:{cvOcr:boolean;email:boolean;mobilePush:boolean;whatsapp:boolean};
@@ -35,7 +35,7 @@ export function ApplicantOperationsPanel({onNavigate}:{onNavigate?:(key:string)=
   {!data?<p role="status">{busy?'Loading operational counters…':'No data available'}</p>:<>
    <p className="text-xs text-muted-foreground">Observed: {new Date(data.observedAt).toLocaleString()}</p>
    <section className="space-y-3"><h3 className="font-bold">Applicants and CV/OCR queue</h3><Stats rows={{accounts:data.applicant.accounts,staleClaims:data.applicant.staleOcrClaims,reviewed:data.applicant.reviewedDocuments,cloudDrafts:data.applicant.encryptedCloudDrafts,savedSearches:data.applicant.activeSavedSearches,...data.applicant.cvStates}}/></section>
-   <section className="space-y-3"><h3 className="font-bold">Email and match notifications</h3><Stats rows={{recentAlerts:data.notifications.recentAlerts,emailOptIns:data.notifications.emailConsentAccounts,...data.notifications.emailDeliveryStates}}/></section>
+   <section className="space-y-3"><h3 className="font-bold">Email and match notifications</h3><Stats rows={{recentAlerts:data.notifications.recentAlerts,emailOptIns:data.notifications.emailConsentAccounts,opportunityDigestsAccepted:data.notifications.opportunityDigestsAccepted,...data.notifications.emailDeliveryStates}}/><p className="text-xs text-muted-foreground">Sent/accepted means the mail provider accepted delivery; inbox receipt cannot be confirmed from here. Alert Subscribers shows each opportunity subscriber’s last digest date.</p></section>
    <section className="space-y-3"><h3 className="font-bold">Employer moderation</h3><Stats rows={{pendingClaims:data.employers.pendingMembershipReviews,...data.employers.jobStates}}/></section>
    <section className="space-y-3"><h3 className="font-bold">Relevance feedback</h3><Stats rows={data.matchQuality}/></section>
    {data.serviceStates&&<section className="space-y-3"><h3 className="font-bold">Service readiness</h3><div className="grid gap-3 sm:grid-cols-2">{Object.entries(data.serviceStates).map(([key,s])=><div key={key} className="rounded-xl border p-4"><h4 className="font-semibold capitalize">{key==='cv'?'Private CV storage':key==='copilot'?'Career Copilot':key}</h4><p className="mt-1 text-sm">{s.ready?'Configured':'Setup needed'} · {s.detail}</p>{s.freeGiB!=null&&<p className="mt-2 text-xs text-muted-foreground">Available storage: {s.freeGiB} GB · 2 GB reserve required</p>}</div>)}</div></section>}
