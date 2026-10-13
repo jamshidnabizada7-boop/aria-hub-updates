@@ -3,7 +3,17 @@
   "mcpServers": {
     "aria-hub-repair": {
       "type": "streamable-http",
-      "url": "https://www.myariahub.com/mcp/repair"
+      "url": "https://www.myariahub.com/mcp/repair",
+      "extensions": {
+        "com.openai": {
+          "auth": {
+            "type": "oauth",
+            "client": { "mode": "dcr" },
+            "resource": "https://www.myariahub.com/mcp/repair",
+            "defaultScopes": ["aria.repair.read", "aria.repair.write"]
+          }
+        }
+      }
     }
   }
 }
