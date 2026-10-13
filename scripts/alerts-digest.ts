@@ -4,7 +4,7 @@
  *
  * Modes:
  *   default                 DRY RUN — writes HTML previews to
- *                           logs/alerts-digest/<email>.html + prints a summary.
+ *                           private HTML previews named by subscriber ID.
  *   --send                  Actually sends via SMTP (requires SMTP_HOST,
  *                           SMTP_PORT, SMTP_USER, SMTP_PASS env vars).
  *
@@ -26,6 +26,8 @@
  *   - every emailed subscriber gets lastDigestAt = now
  */
 import { PrismaClient } from '@prisma/client';
+import {sendHtmlEmail,smtpConfigured} from '../src/lib/mailer';
+import {digestIsDue,digestAttemptKey} from '../src/lib/alerts/digest-policy';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { MatcherProfileSchema, rankOpportunities } from '../src/lib/opportunity-matcher';
 import { getLocalizedContent } from '../src/lib/i18n-content';
@@ -58,12 +60,14 @@ async function releaseDigestLock(): Promise<void> {
 
 const BASE_URL = process.env.PUBLIC_BASE_URL || 'https://www.myariahub.com';
 const MAX_ITEMS = 6;
+const PREVIEWS=process.env.ALERT_PREVIEW_DIRECTORY||'logs/alerts-digest';
 
 const SEND = process.argv.includes('--send');
 const freqIdx = process.argv.indexOf('--frequency');
 const FREQ_FILTER = freqIdx > -1 ? process.argv[freqIdx + 1] : null;
 
 type Lang = 'en' | 'fa' | 'ps';
+const htmlEsc=(value:string)=>value.replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]!));
 
 const L = {
   en: {
@@ -119,10 +123,10 @@ function renderEmail(
       (it) => `
       <tr>
         <td style="padding:14px 0;border-bottom:1px solid #e5e7eb;">
-          <a href="${BASE_URL}/${lang}/opportunities/${it.slug}" style="color:#0f172a;font-weight:700;font-size:15px;text-decoration:none;">${it.title}</a>
-          ${it.organization ? `<div style="color:#475569;font-size:13px;margin-top:4px;">${it.organization}</div>` : ''}
+          <a href="${BASE_URL}/${lang}/opportunities/${encodeURIComponent(it.slug)}" style="color:#0f172a;font-weight:700;font-size:15px;text-decoration:none;">${htmlEsc(it.title)}</a>
+          ${it.organization ? `<div style="color:#475569;font-size:13px;margin-top:4px;">${htmlEsc(it.organization)}</div>` : ''}
           ${it.deadline ? `<div style="color:#b45309;font-size:12px;margin-top:4px;">${t.deadline}: ${fmtDate(it.deadline, lang)}</div>` : ''}
-          <a href="${BASE_URL}/${lang}/opportunities/${it.slug}" style="display:inline-block;margin-top:8px;background:#2563eb;color:#fff;padding:7px 14px;border-radius:999px;font-size:12px;font-weight:700;text-decoration:none;">${t.apply}</a>
+          <a href="${BASE_URL}/${lang}/opportunities/${encodeURIComponent(it.slug)}" style="display:inline-block;margin-top:8px;background:#2563eb;color:#fff;padding:7px 14px;border-radius:999px;font-size:12px;font-weight:700;text-decoration:none;">${t.apply}</a>
         </td>
       </tr>`
     )
@@ -146,7 +150,31 @@ function renderEmail(
   return { subject: t.subject(items.length), html };
 }
 
+
+/** Durable send reservation: an uncertain SMTP outcome is never replayed. */
+async function sendDigest(kind:'category'|'matcher',id:string,to:string,frequency:string,subject:string,html:string){
+ const attemptId=digestAttemptKey(kind,id,frequency,new Date());
+ const state=JSON.stringify({kind,subscriberId:id,status:'sending',startedAt:new Date().toISOString()});
+ const inserted=await db.$executeRaw`INSERT INTO "AutomationState" (id,state,"updatedAt") VALUES (${attemptId},${state}::jsonb,now()) ON CONFLICT (id) DO NOTHING`;
+ if(!inserted)return false;
+ const delegate=kind==='category'?db.alertSubscriber:db.matcherAlertSubscriber;
+ const consent=await delegate.findUnique({where:{id},select:{status:true}});
+ if(consent?.status!=='active'){await db.automationState.update({where:{id:attemptId},data:{state:{kind,subscriberId:id,status:'suppressed',reason:'consent_removed'}}});return false;}
+ try{
+  const receipt=await sendHtmlEmail({to,subject,html});if(!receipt.sent)throw Error('smtp_unavailable');
+  await db.$transaction([
+   db.automationState.update({where:{id:attemptId},data:{state:{kind,subscriberId:id,status:'sent',sentAt:new Date().toISOString()}}}),
+   db.auditLog.create({data:{action:'alert_digest_sent',entity:kind==='category'?'AlertSubscriber':'MatcherAlertSubscriber',entityId:id,details:JSON.stringify({attemptId,frequency})}})
+  ]);
+  return true;
+ }catch(error){
+  await db.automationState.update({where:{id:attemptId},data:{state:{kind,subscriberId:id,status:'failed_or_unknown',errorCode:error instanceof Error?error.name:'delivery_failure'}}});
+  console.error(JSON.stringify({worker:'alerts-digest',subscriberId:id,error:'delivery_failed_or_unknown'}));return false;
+ }
+}
+
 async function main() {
+  if(SEND&&(!smtpConfigured()||process.env.OPPORTUNITY_EMAIL_ALERTS_ENABLED!=='true'))throw Error('digest_delivery_disabled_or_smtp_missing');
   const now = new Date();
   const subscribers = await db.alertSubscriber.findMany({
     where: {
@@ -161,11 +189,13 @@ async function main() {
 
   let emailed = 0;
   let skippedNoMatch = 0;
-  mkdirSync('logs/alerts-digest', { recursive: true });
+  if(!SEND)mkdirSync(PREVIEWS, { recursive: true,mode:0o700 });
 
   for (const sub of subscribers) {
+    if(!digestIsDue(sub.lastDigestAt,sub.frequency,now))continue;
     const days = sub.frequency === 'daily' ? 1 : 7;
-    const since = new Date(now.getTime() - days * 24 * 3600 * 1000);
+    const floor = new Date(now.getTime() - days * 24 * 3600 * 1000);
+    const since = sub.lastDigestAt && sub.lastDigestAt > floor ? sub.lastDigestAt : floor;
     const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 
     const where: Record<string, unknown> = {
@@ -211,34 +241,14 @@ async function main() {
     const { subject, html } = renderEmail(lang, localized, unsubBase);
 
     if (SEND) {
-      const host = process.env.SMTP_HOST;
-      const user = process.env.SMTP_USER;
-      const pass = process.env.SMTP_PASS;
-      if (!host || !user || !pass) {
-        console.error('SEND requested but SMTP_HOST/SMTP_USER/SMTP_PASS are missing — aborting before any send.');
-        process.exit(1);
-      }
-      const nodemailer = await import('nodemailer');
-      const transport = nodemailer.createTransport({
-        host,
-        port: Number(process.env.SMTP_PORT || 587),
-        secure: Number(process.env.SMTP_PORT || 587) === 465,
-        auth: { user, pass },
-      });
-      await transport.sendMail({
-        from: process.env.SMTP_FROM || `ARIA HUB <${user}>`,
-        to: sub.email,
-        subject,
-        html,
-      });
-      console.log(`  → sent to ${sub.email} (${items.length} items, ${lang})`);
+      if(!(await sendDigest('category',sub.id,sub.email,sub.frequency,subject,html)))continue;
     } else {
-      const safeName = sub.email.replace(/[^a-z0-9._-]/gi, '_');
-      writeFileSync(`logs/alerts-digest/${safeName}.html`, html);
-      console.log(`  → preview for ${sub.email}: ${items.length} items, ${lang}, subject="${subject}"`);
+      const safeName = sub.id;
+      writeFileSync(`${PREVIEWS}/${safeName}.html`, html,{mode:0o600});
+      console.log(`  → preview for ${sub.id}: ${items.length} items, ${lang}, subject="${subject}"`);
     }
 
-    await db.alertSubscriber.update({
+    if(SEND)await db.alertSubscriber.update({
       where: { id: sub.id },
       data: { lastDigestAt: now },
     });
@@ -260,9 +270,10 @@ async function main() {
   let matcherSkipped = 0;
 
   for (const sub of matcherSubscribers) {
+    if(!digestIsDue(sub.lastDigestAt,sub.frequency,now))continue;
     const parsedProfile = MatcherProfileSchema.safeParse(sub.profile);
     if (!parsedProfile.success) {
-      console.warn(`  → matcher alert ${sub.email}: invalid saved profile, skipped`);
+      console.warn(`  → matcher alert ${sub.id}: invalid saved profile, skipped`);
       matcherSkipped++;
       continue;
     }
@@ -354,34 +365,14 @@ async function main() {
     const { subject, html } = renderEmail(lang, localized, unsubBase);
 
     if (SEND) {
-      const host = process.env.SMTP_HOST;
-      const user = process.env.SMTP_USER;
-      const pass = process.env.SMTP_PASS;
-      if (!host || !user || !pass) {
-        console.error('SEND requested but SMTP_HOST/SMTP_USER/SMTP_PASS are missing — aborting before any send.');
-        process.exit(1);
-      }
-      const nodemailer = await import('nodemailer');
-      const transport = nodemailer.createTransport({
-        host,
-        port: Number(process.env.SMTP_PORT || 587),
-        secure: Number(process.env.SMTP_PORT || 587) === 465,
-        auth: { user, pass },
-      });
-      await transport.sendMail({
-        from: process.env.SMTP_FROM || `ARIA HUB <${user}>`,
-        to: sub.email,
-        subject,
-        html,
-      });
-      console.log(`  → matcher alert sent to ${sub.email} (${localized.length} strong matches, ${lang})`);
+      if(!(await sendDigest('matcher',sub.id,sub.email,sub.frequency,subject,html)))continue;
     } else {
-      const safeName = `matcher_${sub.email.replace(/[^a-z0-9._-]/gi, '_')}`;
-      writeFileSync(`logs/alerts-digest/${safeName}.html`, html);
-      console.log(`  → matcher preview for ${sub.email}: ${localized.length} strong matches, ${lang}`);
+      const safeName = 'matcher_'+sub.id;
+      writeFileSync(`${PREVIEWS}/${safeName}.html`, html,{mode:0o600});
+      console.log(`  → matcher preview for ${sub.id}: ${localized.length} strong matches, ${lang}`);
     }
 
-    await db.matcherAlertSubscriber.update({
+    if(SEND)await db.matcherAlertSubscriber.update({
       where: { id: sub.id },
       data: { lastDigestAt: now },
     });
@@ -394,7 +385,7 @@ async function main() {
 }
 
 (async () => {
-  if (!(await acquireDigestLock())) {
+  if (SEND&&!(await acquireDigestLock())) {
     console.log('alerts-digest: another run is in progress (or crashed <30 min ago) — skipping');
     await db.$disconnect();
     process.exit(0);
@@ -402,10 +393,10 @@ async function main() {
   try {
     await main();
   } catch (e) {
-    console.error(e);
-    process.exit(1);
+    console.error('alerts-digest failed', e instanceof Error ? e.name : 'unknown_error');
+    process.exitCode=1;
   } finally {
-    await releaseDigestLock().catch(() => undefined);
+    if(SEND)await releaseDigestLock().catch(() => undefined);
     await db.$disconnect();
   }
 })();

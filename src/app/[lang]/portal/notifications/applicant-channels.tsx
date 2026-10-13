@@ -91,6 +91,8 @@ export function ApplicantChannels({lang,pushConsent,onChange}:{lang:Lang;pushCon
    </div>}
   </section>
   <section className="rounded-xl border bg-card p-4"><h3 className="font-semibold">{t.wa}</h3>
+   <p className="mt-2 text-sm text-muted-foreground">{{en:'Follow our public WhatsApp Channel for opportunity updates. Personalized private match alerts are a separate service.',fa:'برای دریافت فرصت‌ها، کانال عمومی واتس‌اپ ما را دنبال کنید. اعلان خصوصی فرصت‌های مطابق پروفایل، خدمت جداگانه است.',ps:'د فرصتونو د خبرتیاوو لپاره زموږ عام واټس‌اپ چینل تعقیب کړئ. شخصي برابرې خبرتیاوې جلا خدمت دی.'}[lang]}</p>
+   <a className="my-3 inline-flex rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground" href="https://whatsapp.com/channel/0029Vb64Wf25q08koeYn8b3h" target="_blank" rel="noopener noreferrer">{{en:'Follow ARIA HUB on WhatsApp',fa:'دنبال‌کردن آریا هاب در واتس‌اپ',ps:'په واټس‌اپ کې آریا هاب تعقیب کړئ'}[lang]}</a>
    {!waAvailable?<p className="mt-1 text-sm text-muted-foreground">{t.disabled}</p>:
     waVerified?<><p className="mt-1 text-sm">{t.verified}</p><button className="mt-2 rounded-lg border px-3 py-2" disabled={busy} onClick={()=>void whatsApp('delete')}>{t.cancel}</button></>:
     <div className="mt-3 space-y-2">

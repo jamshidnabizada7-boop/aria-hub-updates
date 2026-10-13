@@ -56,6 +56,7 @@ export function OrganizationsPanel({ onNavigate }: { onNavigate?: (key: string) 
   const [addSourceFor, setAddSourceFor] = useState<string | null>(null);
   const [editFor, setEditFor] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [createOpen,setCreateOpen]=useState(false);
   // §10 client-side pagination for the orgs table (25 rows/page)
   const [orgPage, setOrgPage] = useState(0);
   const orgPageSize = 25;
@@ -92,6 +93,7 @@ export function OrganizationsPanel({ onNavigate }: { onNavigate?: (key: string) 
       if (!res.ok || !json.success) throw new Error(json.error || `HTTP ${res.status}`);
       toast.success(successMsg);
       await load();
+      setCreateOpen(false);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -129,6 +131,7 @@ export function OrganizationsPanel({ onNavigate }: { onNavigate?: (key: string) 
           <p className="text-sm text-muted-foreground">Canonical organization records and their official sources.</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button size="sm" onClick={()=>setCreateOpen(true)}><PlusCircle className="mr-1 h-4 w-4"/>Add organization</Button>
           <Button variant={tab === 'orgs' ? 'default' : 'outline'} size="sm" onClick={() => setTab('orgs')}>
             <Building2 className="mr-1 h-3.5 w-3.5" /> Organizations
           </Button>
@@ -141,6 +144,8 @@ export function OrganizationsPanel({ onNavigate }: { onNavigate?: (key: string) 
         </div>
       </div>
 
+      <p className="rounded-lg border bg-muted/30 p-3 text-sm">Organizations link job listings to their real employer or organizer. Expand a row to edit its identity, review employer claims, or manage official import sources. Verification is a manual review decision.</p>
+      {createOpen&&<CreateOrganization busy={busy} onCancel={()=>setCreateOpen(false)} onSave={organization=>void act({action:'create',organization},'Organization created')}/>}
       {suggestions.length > 0 && (
         <div className="rounded-lg border border-sky-500/40 bg-sky-500/5 p-3">
           <p className="mb-2 text-xs font-bold uppercase tracking-wider text-sky-700 dark:text-sky-400">
@@ -339,7 +344,7 @@ export function OrganizationsPanel({ onNavigate }: { onNavigate?: (key: string) 
             })()}
           {!loading && (orgs ?? []).length === 0 && (
             <p className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-              No organizations yet — create them via the Phase 2 backfill or the seed script.
+              No organizations yet. Choose Add organization to create an employer or organizer.
             </p>
           )}
           {!loading && orgTotal > orgPageSize && (
@@ -387,6 +392,11 @@ export function OrganizationsPanel({ onNavigate }: { onNavigate?: (key: string) 
       )}
     </div>
   );
+}
+
+function CreateOrganization({busy,onSave,onCancel}:{busy:boolean;onSave:(data:Record<string,string>)=>void;onCancel:()=>void}){
+ const [name,setName]=useState(''),[country,setCountry]=useState(''),[website,setWebsite]=useState('');
+ return <form className="space-y-3 rounded-xl border bg-card p-4" onSubmit={e=>{e.preventDefault();onSave({name,country,website});}}><h3 className="font-semibold">Add organization</h3><div className="grid gap-3 sm:grid-cols-3"><label className="text-sm">Organization name<Input required minLength={2} maxLength={160} value={name} onChange={e=>setName(e.target.value)} /></label><label className="text-sm">Country (optional)<Input maxLength={100} value={country} onChange={e=>setCountry(e.target.value)}/></label><label className="text-sm">Official website (optional)<Input type="url" maxLength={500} placeholder="https://…" value={website} onChange={e=>setWebsite(e.target.value)}/></label></div><div className="flex gap-2"><Button type="submit" disabled={busy||name.trim().length<2}>Create organization</Button><Button type="button" variant="outline" disabled={busy} onClick={onCancel}>Cancel</Button></div></form>;
 }
 
 function InlineEdit({ org, busy, onSave, onCancel }: {

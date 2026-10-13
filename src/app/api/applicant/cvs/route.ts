@@ -69,6 +69,8 @@ export async function POST(req:Request){
  }catch(err){
   if(err instanceof CVLifecycleError)return response({error:err.code,documentId:err.documentId},409);
   if(err instanceof CVFileError)return response({error:err.code},400);
+  if(err instanceof Error&&['cv_storage_capacity_unavailable','cv_storage_not_configured','cv_storage_directory_not_private'].includes(err.message))return response({error:err.message},503);
+  console.error('[applicant-cv] upload failed',{code:err instanceof Error?err.name:'unknown'});
   return response({error:'cv_upload_failed'},503);
  }
 }

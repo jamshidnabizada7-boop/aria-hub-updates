@@ -496,14 +496,14 @@ export function AutomationPanel() {
                         }}
                       >
                         {busy === `test-${platform}` ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-                        {t('admin.automation.test')}
+                        {['facebook','instagram','linkedin','whatsapp'].includes(platform)?'Check connection':t('admin.automation.test')}
                       </Button>
                     </div>
                   </div>
                 );
               })}
             </div>
-            <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground" dir="auto">{t('admin.automation.channelsHint')}</p>
+            <div className="mt-3 space-y-2 rounded-lg border p-3 text-xs leading-relaxed"><p><strong>Connection check:</strong> validates the saved identity or token. It does not send a post or WhatsApp message and does not prove delivery.</p><p><strong>WhatsApp individual recipient:</strong> sends to one configured number through Meta’s Business API. It does not publish to your public Channel or ordinary Web groups. A Meta Test Number is for testing; production private alerts need a registered sender and approved templates.</p><p><strong>Public WhatsApp updates:</strong> <a className="underline" href="https://whatsapp.com/channel/0029Vb64Wf25q08koeYn8b3h" target="_blank" rel="noopener noreferrer">Open ARIA HUB’s Channel</a>. Browser Channel/group sharing requires the signed-in desktop session. Email and web push are separate notification services.</p><p><strong>Instagram:</strong> enable the verified Instagram publisher to send the same ARIA HUB campaign from Oracle. Each destination has its own delivery result; a successful Facebook post does not prove an Instagram post succeeded.</p></div>
           </section>
 
           {/* ── posting queue ── */}

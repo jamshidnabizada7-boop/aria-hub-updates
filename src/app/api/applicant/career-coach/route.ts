@@ -43,7 +43,7 @@ export async function POST(req:Request){
   try{res=await fetch('https://api.groq.com/openai/v1/chat/completions',{
    method:'POST',signal:AbortSignal.timeout(15000),
    headers:{Authorization:'Bearer '+process.env.GROQ_API_KEY,'Content-Type':'application/json'},
-   body:JSON.stringify({model:process.env.APPLICANT_COPILOT_MODEL||'llama-3.1-8b-instant',
+   body:JSON.stringify({model:process.env.APPLICANT_COPILOT_MODEL||'qwen/qwen3.8-27b',
     temperature:0.2,max_tokens:900,
     messages:[{role:'system',content:COACH_SYSTEM},{role:'user',content:coachAiPrompt(input.task,input.lang,ctx)}]
    }),cache:'no-store'

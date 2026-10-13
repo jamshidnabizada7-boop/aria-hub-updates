@@ -23,6 +23,10 @@ import {
 import { listSuggestions, confirmSuggestion, dismissSuggestion } from '@/lib/import/source-suggestions';
 import { evaluateAutoPublishEligibility, setSourceCertification, parseSourceCertification } from '@/lib/import/source-certification';
 import { reviewMembership } from '@/lib/employers/membership';
+import {z} from 'zod';
+import {resolveOrganization} from '@/lib/organizations/resolve';
+import {isSafePublicUrl} from '@/lib/security/url-guard';
+import {applicantSameOrigin} from '@/lib/applicant-origin';
 
 export async function GET() {
   const admin = await getCurrentAdmin();
@@ -38,6 +42,7 @@ export async function GET() {
 export async function PATCH(request: Request) {
   const admin = await getCurrentAdmin();
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if(!applicantSameOrigin(request))return NextResponse.json({error:'Invalid origin'},{status:403});
 
   let body: Record<string, unknown>;
   try {
@@ -50,6 +55,21 @@ export async function PATCH(request: Request) {
 
   try {
     switch (action) {
+      case 'create': {
+        if(!['super_admin','admin'].includes(admin.role))return NextResponse.json({error:'Administrator access required'},{status:403});
+        const input=z.object({name:z.string().trim().min(2).max(160),country:z.string().trim().max(100).optional(),website:z.string().trim().max(500).optional()}).strict().safeParse(body.organization);
+        if(!input.success)return NextResponse.json({error:'Enter an organization name (2–160 characters) and valid optional details.'},{status:400});
+        if(input.data.website&&!isSafePublicUrl(input.data.website))return NextResponse.json({error:'Use a public HTTP or HTTPS website.'},{status:400});
+        const result=await db.$transaction(async tx=>{
+          const resolved=await resolveOrganization(tx,input.data.name,{createIfMissing:true});
+          if(!resolved.organization||!resolved.created)return resolved;
+          await tx.organization.update({where:{id:resolved.organization.id},data:{country:input.data.country||null,website:input.data.website||null}});
+          await tx.auditLog.create({data:{entity:'organization',entityId:resolved.organization.id,action:'organization.create',details:JSON.stringify({by:email})}});
+          return resolved;
+        });
+        if(!result.created)return NextResponse.json({error:'An organization with this name already exists.',id:result.organization?.id},{status:409});
+        return NextResponse.json({success:true,id:result.organization?.id},{status:201});
+      }
       case 'edit': {
         const id = String(body.id ?? '');
         const patch = (body.patch ?? {}) as Record<string, unknown>;

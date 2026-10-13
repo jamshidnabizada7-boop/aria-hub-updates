@@ -1,6 +1,7 @@
 'use client';
 import {CVExtractionReview} from './cv-extraction-review';
-import {useCallback,useEffect,useState} from 'react';
+import {useCallback,useEffect,useState,useRef} from 'react';
+import {cvUploadError} from '@/lib/applicants/cv-upload-errors';
 type Lang='en'|'fa'|'ps';
 type Item={id:string;originalName:string;mimeType:string;byteSize:number;status:string;createdAt:string;reviewedAt:string|null;processingError:string|null};
 const dict={
@@ -11,6 +12,7 @@ const dict={
 export function CVLibrary({lang}:{lang:Lang}){
  const t=dict[lang];const [items,setItems]=useState<Item[]>([]),[file,setFile]=useState<File|null>(null),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[loading,setLoading]=useState(true),[reviewId,setReviewId]=useState<string|null>(null);
  const [available,setAvailable]=useState(false);
+ const fileInput=useRef<HTMLInputElement>(null);
  const statusLabels={en:{storing:'Saving securely',uploaded:'Queued for extraction',processing:'Reading your CV',review:'Ready for your review',reviewed:'Reviewed',failed:'Unable to read this file',deleting:'Deleting'},fa:{storing:'ذخیره امن',uploaded:'در صف استخراج',processing:'در حال خواندن سی‌وی',review:'آماده بازبینی شما',reviewed:'بازبینی‌شده',failed:'خواندن فایل ممکن نشد',deleting:'در حال حذف'},ps:{storing:'خوندي کول',uploaded:'د استخراج په کتار کې',processing:'سي وي لوستل کېږي',review:'ستاسو تایید ته چمتو',reviewed:'تایید شوی',failed:'فایل ونه لوستل شو',deleting:'ړنګېږي'}}[lang];
  const readyText={en:'Your file is stored privately. Extraction will appear here automatically. Review the suggestions before saving them.',fa:'فایل شما به صورت خصوصی ذخیره شد. معلومات استخراج‌شده خودکار در اینجا نمایش داده می‌شود؛ پیش از ذخیره بازبینی کنید.',ps:'ستاسو فایل په شخصي ډول خوندي شو. استخراج شوي معلومات به دلته ښکاره شي؛ د خوندي کولو مخکې یې تایید کړئ.'}[lang];
  const refresh=useCallback(async(silent=false)=>{try{const r=await fetch('/api/applicant/cvs',{cache:'no-store',credentials:'same-origin'});const d=await r.json();if(!r.ok)throw Error(d.error);setAvailable(true);setItems(d.items||[]);if(!silent)setMessage('');}catch(e){setAvailable(false);if(!silent)setMessage(e instanceof Error&&e.message==='unavailable_or_unauthorized'?t.disabled:t.error);}finally{setLoading(false);}},[t.disabled,t.error]);
@@ -18,14 +20,14 @@ export function CVLibrary({lang}:{lang:Lang}){
  const processing=items.some(item=>['uploaded','processing','storing'].includes(item.status));
  useEffect(()=>{if(!processing)return;const timer=setInterval(()=>void refresh(true),15000);return()=>clearInterval(timer);},[processing,refresh]);
  async function upload(e:React.FormEvent){e.preventDefault();if(!file)return;setBusy(true);setMessage('');
- try{const fd=new FormData();fd.append('file',file);const r=await fetch('/api/applicant/cvs',{method:'POST',body:fd});const d=await r.json();if(!r.ok){setMessage(d.error==='already_uploaded'?(lang==='en'?'This CV is already in your library.':lang==='fa'?'این سی‌وی در کتابخانه شما موجود است.':'دا سي وي ستاسو په کتابتون کې شته.'):t.error);return;}setFile(null);await refresh();setMessage(readyText);}catch{setMessage(t.error);}finally{setBusy(false);}}
+ try{if(!file.size||file.size>8*1024*1024){setMessage(cvUploadError('invalid_file_size',lang));return;}const fd=new FormData();fd.append('file',file);const r=await fetch('/api/applicant/cvs',{method:'POST',body:fd});const d=await r.json().catch(()=>({error:r.status===413?'upload_too_large':'request_failed'}));if(!r.ok){setMessage(cvUploadError(d.error,lang));return;}setFile(null);if(fileInput.current)fileInput.current.value='';await refresh();setMessage(readyText);}catch{setMessage(cvUploadError('request_failed',lang));}finally{setBusy(false);}}
  async function remove(id:string){if(!window.confirm(t.confirm))return;setBusy(true);try{const r=await fetch('/api/applicant/cvs/'+encodeURIComponent(id),{method:'DELETE'});if(!r.ok){setMessage(t.error);return;}await refresh();}catch{setMessage(t.error);}finally{setBusy(false);}}
  return <section className="mx-auto max-w-4xl px-4 py-12" dir={lang==='en'?'ltr':'rtl'}>
  <h1 className="text-3xl font-bold">{t.title}</h1><p className="mt-3 text-muted-foreground">{t.intro}</p>
  <form onSubmit={upload} className="my-7 space-y-3 rounded-xl border bg-card p-5">
   <fieldset disabled={busy||loading||!available} className="space-y-3 disabled:opacity-60">
   <label htmlFor="cv-file" className="block text-sm font-semibold">{t.select}</label>
-  <input id="cv-file" type="file" accept=".pdf,.docx,.jpg,.jpeg,.png,.webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png,image/webp" onChange={e=>setFile(e.target.files?.[0]||null)} className="block w-full rounded-lg border p-3 text-sm" />
+  <input ref={fileInput} id="cv-file" type="file" accept=".pdf,.docx,.jpg,.jpeg,.png,.webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png,image/webp" onChange={e=>setFile(e.target.files?.[0]||null)} className="block w-full rounded-lg border p-3 text-sm" />
   <p className="text-xs text-muted-foreground">{t.supported}</p>
   <button type="submit" disabled={!file||busy} className="rounded-lg bg-primary px-5 py-3 font-semibold text-primary-foreground disabled:opacity-40">{busy?t.busy:t.upload}</button>
   </fieldset>

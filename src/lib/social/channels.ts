@@ -16,7 +16,7 @@ import { readPublicImage } from '@/lib/import/public-image-url';
  *   x         → { accessToken, apiSecret? }   (OAuth2 user-context token)
  *   instagram → { igUserId, accessToken }     (Graph API container flow)
  *   linkedin  → { accessToken, authorUrn }    (urn:li:person:… / urn:li:organization:…)
- *   whatsapp  → { accessToken, channelId }    (WhatsApp Business channel — Cloud API)
+ *   whatsapp  → { accessToken, phoneNumberId, recipient, mode } (Business messaging; separate from public Channels)
  *
  * Images are passed as PUBLIC urls (https://…/generated-posts/…) — required
  * by Facebook/Instagram/Telegram-by-url. When only a local file exists,
@@ -642,10 +642,14 @@ async function checkWhatsAppConnection(creds: Record<string, unknown>): Promise<
       };
     }
     const data = r.json as { display_phone_number?: string; verified_name?: string } | null;
+    if(data?.verified_name?.toLowerCase()==='test number')return {
+      ok:false,error:'whatsapp: Meta Test Number is not a production sender. Register a real business number before enabling private or scheduled recipient messages.',
+      details:{mode,recipient,testNumber:true,channelPublishing:false,deliveryVerified:false,graphVersion:META_GRAPH_VERSION}
+    };
     return {
       ok: true,
       identity: data?.verified_name || data?.display_phone_number || phoneNumberId,
-      details: { mode, recipient, graphVersion: META_GRAPH_VERSION },
+      details: { mode, recipient, graphVersion: META_GRAPH_VERSION,channelPublishing:false,deliveryVerified:false },
     };
   }
 

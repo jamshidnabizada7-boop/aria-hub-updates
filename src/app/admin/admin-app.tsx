@@ -210,7 +210,7 @@ export function AdminApp({ admin }: { admin: AdminUser }) {
           </div>
         </header>
         <main id="main-content" className="flex-1 overflow-x-hidden p-4 lg:p-6">
-          {active === 'applicantOps' ? <ApplicantOperationsPanel /> : active === 'dashboard' ? <Dashboard onNavigate={setActive} /> : active === 'settings' ? <SettingsPanel /> : active === 'autoImport' ? <AutoImportPanel /> : active === 'documentTemplate' ? <TemplatesPanel /> : active === 'submissions' ? <SubmissionsPanel /> : active === 'discovery' ? <DiscoveryInboxPanel onEditOpportunity={(id) => { setRepairOpportunity({ id, issue: 'core' }); setActive('opportunity'); }} /> : active === 'contentHealth' ? <ContentHealthPanel onEditOpportunity={(id, issue) => { setRepairOpportunity({ id, issue }); setActive('opportunity'); }} /> : active === 'orders' ? <OrdersPanel /> : active === 'brandStudio' ? <BrandStudioPanel /> : active === 'automation' ? <AutomationPanel /> : active === 'opportunity' ? <OpportunityFormPanel focus={repairOpportunity} onFocusHandled={() => setRepairOpportunity(null)} /> : active === 'cvBuilder' ? <CVBuilderAdminPanel /> : <CrudTable model={active} />}
+          {active === 'organizations' ? <OrganizationsPanel onNavigate={setActive} /> : active === 'applicantOps' ? <ApplicantOperationsPanel onNavigate={setActive} /> : active === 'dashboard' ? <Dashboard onNavigate={setActive} /> : active === 'settings' ? <SettingsPanel /> : active === 'autoImport' ? <AutoImportPanel /> : active === 'documentTemplate' ? <TemplatesPanel /> : active === 'submissions' ? <SubmissionsPanel /> : active === 'discovery' ? <DiscoveryInboxPanel onEditOpportunity={(id) => { setRepairOpportunity({ id, issue: 'core' }); setActive('opportunity'); }} /> : active === 'contentHealth' ? <ContentHealthPanel onEditOpportunity={(id, issue) => { setRepairOpportunity({ id, issue }); setActive('opportunity'); }} /> : active === 'orders' ? <OrdersPanel /> : active === 'brandStudio' ? <BrandStudioPanel /> : active === 'automation' ? <AutomationPanel /> : active === 'opportunity' ? <OpportunityFormPanel focus={repairOpportunity} onFocusHandled={() => setRepairOpportunity(null)} /> : active === 'cvBuilder' ? <CVBuilderAdminPanel /> : <CrudTable model={active} />}
         </main>
       </div>
     </div>
@@ -315,7 +315,7 @@ function Dashboard({ onNavigate }: { onNavigate: (key: string) => void }) {
               <div className="min-w-0 flex-1">
                 <p className="flex items-center gap-2 text-sm font-bold">
                   {q.count}
-                  {q.count > 0 && (
+                  {q.count > 0 && q.nav !== 'alertSubscriber' && (
                     <span className="rounded-full bg-amber-500/15 px-1.5 py-px text-[10px] font-bold text-amber-600">
                       {t('admin.queue.actionNeeded')}
                     </span>
@@ -411,6 +411,8 @@ function CrudTable({ model }: { model: string }) {
   const [filterCategory, setFilterCategory] = useState('all');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<any>(null);
+  const [viewingMessage, setViewingMessage] = useState<any>(null);
+  const [messageSaving, setMessageSaving] = useState(false);
 
   // Reset search & page when switching models or filters so stale filters don't carry over.
   useEffect(() => { setSearch(''); setSelectedIds([]); setFilterCategory('all'); setPage(1); }, [model]);
@@ -448,6 +450,18 @@ function CrudTable({ model }: { model: string }) {
   }, [model, page, pageSize, search, filterCategory, reloadKey]);
 
   const reload = () => setReloadKey((k) => k + 1);
+  const setMessageStatus = async (status: string) => {
+    if (!viewingMessage) return;
+    setMessageSaving(true);
+    try {
+      const res = await fetch('/api/admin/crud', {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({model:'contactMessage',id:viewingMessage.id,data:{status}})});
+      if (!res.ok) throw new Error('save_failed');
+      setViewingMessage((previous: any) => ({...previous,status}));
+      reload();
+      toast({title:t('admin.toast.saved')});
+    } catch { toast({title:t('admin.toast.failedSave'),variant:'destructive'}); }
+    finally { setMessageSaving(false); }
+  };
 
   const handleDelete = async (id: string) => {
     if (!confirm(t('admin.confirm.delete'))) return;
@@ -497,6 +511,9 @@ function CrudTable({ model }: { model: string }) {
 
   return (
     <div className="space-y-4">
+      {['contactMessage','subscriber','alertSubscriber'].includes(model) && <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
+        {model==='contactMessage' ? 'Open a message, prepare a reply in your email app, then mark it replied after sending. Changing its status does not send email.' : model==='subscriber' ? 'These are newsletter contacts. Opportunity alerts are managed separately under Alert Subscribers; newsletter signup alone does not enable job alerts.' : 'Active subscribers receive matching, published opportunities by email at their daily or weekly frequency. Pending subscriptions await email confirmation. Unsubscribed contacts receive no alerts.'}
+      </div>}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex gap-2">
           <div className="relative">
@@ -567,6 +584,7 @@ function CrudTable({ model }: { model: string }) {
                     {showStatus && <td className="px-4 py-3">{renderCell(item, 'status')}</td>}
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1">
+                        {model==='contactMessage' && <Button variant="outline" size="sm" onClick={()=>setViewingMessage(item)}>Read / reply</Button>}
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditing(item); setShowForm(true); }}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
@@ -586,6 +604,16 @@ function CrudTable({ model }: { model: string }) {
       {showForm && (
         <CrudForm model={model} fields={fields} item={editing} label={label} statusOptions={statusOptions} onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); reload(); }} />
       )}
+      {viewingMessage && <Dialog open onOpenChange={(open)=>{if(!open)setViewingMessage(null);}}><DialogContent className="max-w-xl"><DialogHeader><DialogTitle>{viewingMessage.subject || 'Contact message'}</DialogTitle></DialogHeader>
+        <p className="text-sm">{viewingMessage.name} · {viewingMessage.email}</p>
+        <p className="text-xs text-muted-foreground">Status: {viewingMessage.status}</p>
+        <div className="max-h-80 overflow-auto whitespace-pre-wrap rounded-lg border p-4 text-sm">{viewingMessage.message}</div>
+        <p className="text-xs text-muted-foreground">Reply opens an email draft. Review and send it yourself, then mark the message replied.</p>
+        <DialogFooter className="flex flex-wrap gap-2">
+          <Button asChild><a href={`mailto:${encodeURIComponent(viewingMessage.email)}?subject=${encodeURIComponent('Re: '+(viewingMessage.subject || 'Your ARIA HUB message'))}`}>Prepare email reply</a></Button>
+          {['read','replied','archived'].map(status=><Button key={status} variant="outline" disabled={messageSaving || viewingMessage.status===status} onClick={()=>setMessageStatus(status)}>Mark {status}</Button>)}
+        </DialogFooter>
+      </DialogContent></Dialog>}
 
       {/* Pagination Controls */}
       {!loading && total > 0 && (
@@ -715,7 +743,7 @@ function CrudForm({ model, fields, item, label, statusOptions, onClose, onSaved 
     }
     // defaults for new items
     if (!item) {
-      if (fields.includes('status')) init.status = 'published';
+      if (fields.includes('status')) init.status = statusOptions?.includes('published') ? 'published' : (statusOptions?.[0] || 'draft');
       if (fields.includes('order')) init.order = 0;
       if (fields.includes('featured')) init.featured = false;
       if (fields.includes('enabled')) init.enabled = true;

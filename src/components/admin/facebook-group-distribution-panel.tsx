@@ -176,6 +176,8 @@ export function FacebookGroupDistributionPanel() {
             <p className="mt-1 text-muted-foreground">
               {data.platform.reason} ARIA HUB prepares each destination, caption and match explanation; an administrator opens the group and publishes manually.
             </p>
+            <ol className="mt-3 list-inside list-decimal space-y-1 text-xs"><li>Add only groups whose rules permit your opportunity links.</li><li>Activate the directory entry, choose a campaign from the queue, and review its destination and caption.</li><li>Open the permitted group, share the prepared poster, then record its real post link as completed.</li></ol>
+            <p className="mt-2 text-xs">Active or audience-matched does not mean a group has granted posting permission. Oracle can prepare the queue; this section does not automatically publish to Facebook groups.</p>
           </div>
         </div>
       </div>
