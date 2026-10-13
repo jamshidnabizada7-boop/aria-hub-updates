@@ -7,6 +7,9 @@ import type { Lang } from '@/lib/i18n-config';
 import { DISCOVERY_MINIMUM, discoveryCaption, type DiscoverySnapshot } from '@/lib/social/discovery/catalog';
 import { readDiscoverySnapshot, validDiscoverySnapshot } from '@/lib/social/discovery/inventory';
 import { invalidateDiscoveryMedia } from '@/lib/social/discovery/queue';
+import { appendPostDetails } from '@/lib/social/post-details';
+import { readPostDetailLines } from '@/lib/social/post-details-data';
+import { publishFacebookStory } from '@/lib/social/facebook-story';
 
 const CAPTION_LIMITS: Record<string, number> = { telegram: 1000, facebook: 4500, x: 270, instagram: 2100, linkedin: 2900, whatsapp: 1000 };
 const UNKNOWN = 'publish outcome unknown — verify the destination before explicitly retrying';
@@ -98,7 +101,7 @@ export async function publishQueueRow(
         await invalidateDiscoveryMedia(id,'publishing',claimAt,'invalid_campaign_snapshot');return false;
       }
       const current=await readDiscoverySnapshot(collection.spec?.id);
-      if(!current || current.count < DISCOVERY_MINIMUM || current.count!==collection.count || Date.now()-Date.parse(collection.capturedAt)>15*60000){
+      if(!current || current.count < DISCOVERY_MINIMUM || current.count!==collection.count || current.fingerprint!==collection.fingerprint || Date.now()-Date.parse(collection.capturedAt)>15*60000){
         await invalidateDiscoveryMedia(id,'publishing',claimAt,'campaign_count_changed_or_snapshot_stale');return false;
       }
       return true;
@@ -153,7 +156,12 @@ export async function publishQueueRow(
       const posterLang=String((row.contentJson as Record<string,unknown>).lang);
       const captionLangs=collection ? [(['en','fa','ps'].includes(posterLang)?posterLang:langs[0]) as Lang] : langs;
       const captions = collection ? Object.fromEntries(captionLangs.map(lang=>[lang,discoveryCaption(collection,lang,id,channel.platform)])) : row.captionJson;
-      const caption = composeCaptionWithLimit(captions, captionLangs, CAPTION_LIMITS[channel.platform] ?? 2200);
+      const captionLimit = CAPTION_LIMITS[channel.platform] ?? 2200;
+      const addDetails = ['facebook', 'linkedin', 'instagram', 'whatsapp'].includes(channel.platform);
+      const originalCaption = composeCaptionWithLimit(captions, captionLangs, addDetails ? 100000 : captionLimit);
+      const caption = addDetails
+        ? appendPostDetails(originalCaption, await readPostDetailLines(row.contentRef, row.contentJson, captionLangs[0]), captionLimit)
+        : originalCaption;
       const result = await publishToPlatform(channel.platform, decryptCredentials(channel.credentials), {
         caption,
         imageUrl,
@@ -180,6 +188,10 @@ export async function publishQueueRow(
           ...(result.tokenExpired ? { enabled: false } : {}),
         },
       });
+      if (channel.platform === 'facebook' && result.ok) {
+        // Story delivery is independent; never turn Feed success into a retry.
+        await publishFacebookStory(id).catch(() => undefined);
+      }
     }
     const values = Object.values(results);
     const anyOk = values.some((value) => value.ok);

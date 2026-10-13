@@ -7,6 +7,8 @@ import { db } from '../src/lib/db';
 import { discoveryCaption, discoverySpec, type DiscoverySnapshot } from '../src/lib/social/discovery/catalog';
 import { readDiscoverySnapshot, readDiscoveryListings, validDiscoverySnapshot } from '../src/lib/social/discovery/inventory';
 import { composeCaptionWithLimit } from '../src/lib/social/publisher';
+import { appendPostDetails } from '../src/lib/social/post-details';
+import { readPostDetailLines } from '../src/lib/social/post-details-data';
 
 const arg = (name: string) => process.argv.find(a => a.startsWith(`--${name}=`))?.slice(name.length + 3);
 const destination = arg('destination') || 'channel';
@@ -48,9 +50,10 @@ for (const row of rows) {
       slug: row.contentRef, status: 'published', OR: [{ deadline: { gt: now } }, { deadline: date }],
     }, select: { id: true } });
     if (!opportunity || remoteIds && !remoteIds.has(opportunity.id)) continue;
-    caption = composeCaptionWithLimit(row.captionJson, ['fa'], platform === 'linkedin' ? 2900 : platform === 'facebook' ? 4500 : 1000);
+    caption = composeCaptionWithLimit(row.captionJson, ['fa'], 100000);
   } else continue;
   if (!caption || !caption.includes('myariahub.com')) continue;
+  caption = appendPostDetails(caption, await readPostDetailLines(row.contentRef, row.contentJson, 'fa'), platform === 'linkedin' ? 2900 : platform === 'facebook' ? 4500 : 1000);
   const key = `whatsapp-browser:${destination}:${row.id}`;
   const state = await db.automationState.findUnique({ where: { id: 'singleton' } });
   const previous = (state?.state as Record<string, unknown> | null)?.[key];

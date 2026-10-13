@@ -1,5 +1,7 @@
 import { db } from '@/lib/db';
 import { randomUUID } from 'node:crypto';
+import { checkSocialTokenHealth } from '@/lib/social/token-health';
+import { reconcileFacebookStories } from '@/lib/social/facebook-story';
 import {
   buildTodaysQueue,
   publishDueQueue,
@@ -84,6 +86,9 @@ export async function runSocialTick(
   };
 
   try {
+    // Daily provider checks are independent of whether this cycle has a post.
+    await checkSocialTokenHealth().catch(() => undefined);
+    await reconcileFacebookStories().catch(() => undefined);
     try {
       result.queue = await buildTodaysQueue();
     } catch (error) {

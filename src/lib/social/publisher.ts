@@ -302,7 +302,7 @@ async function verifyPublicImageUrl(url: string): Promise<boolean> {
   }
 }
 
-async function renderQueueImage(baseUrl: string, props: CanvasProps, requireDurableMedia: boolean): Promise<{ file: string; publicUrl: string; localPath: string | null } | null> {
+export async function renderQueueImage(baseUrl: string, props: CanvasProps, requireDurableMedia: boolean): Promise<{ file: string; publicUrl: string; localPath: string | null } | null> {
   // Chrome resolution order: env override → known local installs (self-host /
   // workstation) → @sparticuz/chromium (serverless bundle for Vercel). Without
   // the serverless fallback the render step silently returned null on Vercel
