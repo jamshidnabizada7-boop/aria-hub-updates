@@ -68,6 +68,22 @@ If ChatGPT's existing Translation Gateway only shows four tools, refresh its
 connected tool list or reconnect it. The updated endpoint exposes seven:
 the original four body tools plus claim/commit/release public-fact tools.
 
+### Account schedules verified on 13 October 2026
+
+- `ARIA HUB Hourly Opportunity Repairs`: cloud task
+  `6ace425693108191a3822bc776305eea`, active, every one hour, Asia/Karachi.
+- `ARIA HUB Hourly Translations`: existing cloud task
+  `6acbff6fb7d88191953a6d895967d75a`, resumed, every one hour, Asia/Karachi.
+- Both saved prompts require repeated batches with no fixed overall record
+  cap. Repair's connected App and skill are present in ChatGPT; translation's
+  refreshed App exposes all seven tools.
+- Real ChatGPT repair verification committed three records (five fields),
+  including two official application destinations, and released unfinished
+  claims. Body and bilingual public-fact translation saves also passed.
+- Automatic execution remains separate from these manual verification saves.
+  Use ChatGPT's native next-run and run-history display for execution timing;
+  an active configuration is not proof that a scheduled run has completed.
+
 ## Repair guarantees and limits
 
 - Bounded, expiring claims; concurrent record edits reject stale saves.
