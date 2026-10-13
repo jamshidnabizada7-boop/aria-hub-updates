@@ -26,7 +26,7 @@ Alert Subscribers manages opportunity category, language, status and frequency, 
 - **WhatsApp private alerts:** the saved Cloud API sender is a Meta Test Number. Its misleading enabled publishing switch was paused with encrypted settings preserved. Private alerts require a production sender, recipient verification and approved templates. The public Channel and email remain available independently.
 - **Owned WhatsApp group:** accepts reviewed remote work only. No eligible package was available for this run.
 - **Facebook groups:** the admin section prepares matches, captions and a manual posting handoff. It does not automatically publish to groups from Oracle. A destination marked active is not proof of membership or permission to promote links.
-- **Facebook profiles:** browser delivery must use the explicitly authorized Mosa identity. Do not duplicate the Page's Oracle post or substitute an unrelated profile.
+- **Facebook profiles:** Mosa's saved native login worked. A Public campaign with a real Ahmad tag was published and verified at https://www.facebook.com/photo/?fbid=122166521012650448. Default account privacy was not changed. Browser delivery must use the explicitly authorized Mosa identity; do not duplicate the Page's Oracle post or substitute an unrelated profile.
 
 Desktop sharing remains scheduled at 08:35, 13:35 and 19:35 Asia/Karachi, requiring the computer and Codex to stay running. Its prompt now records Instagram's Oracle delivery. Each destination requires fresh eligibility checks, a durable reservation, one send, native proof and completion. Failed or unknown sends must never be blindly replayed.
 
