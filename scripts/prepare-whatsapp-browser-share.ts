@@ -9,6 +9,9 @@ import { readDiscoverySnapshot, readDiscoveryListings, validDiscoverySnapshot } 
 import { composeCaptionWithLimit } from '../src/lib/social/publisher';
 import { appendPostDetails } from '../src/lib/social/post-details';
 import { readPostDetailLines } from '../src/lib/social/post-details-data';
+import {buildCaption} from '../src/lib/social/captions';
+import {getLocalizedContent} from '../src/lib/i18n-content';
+import {deadlineSnapshot} from '../src/lib/social/studio/rotation';
 
 const arg = (name: string) => process.argv.find(a => a.startsWith(`--${name}=`))?.slice(name.length + 3);
 const destination = arg('destination') || 'channel';
@@ -48,9 +51,16 @@ for (const row of rows) {
   } else if (['spotlight', 'deadline'].includes(row.templateType) && row.contentRef) {
     const opportunity = await db.opportunity.findFirst({ where: {
       slug: row.contentRef, status: 'published', OR: [{ deadline: { gt: now } }, { deadline: date }],
-    }, select: { id: true } });
+    }, select: { id: true,title:true,titleI18n:true,deadline:true } });
     if (!opportunity || remoteIds && !remoteIds.has(opportunity.id)) continue;
-    caption = composeCaptionWithLimit(row.captionJson, ['fa'], 100000);
+    if(row.templateType==='deadline'){
+      const captured=Number(asset.pathname.match(/post-(\d{13})-/)?.[1]);
+      const end=opportunity.deadline?.toISOString();
+      const atCapture=deadlineSnapshot(end,captured),current=deadlineSnapshot(end,now.getTime());
+      // A static image cannot become a new countdown merely by changing its caption.
+      if(!atCapture||!current||current.status==='closed'||atCapture.value!==current.value||atCapture.unit!==current.unit)continue;
+      caption=buildCaption({template:'deadline',lang:'fa',title:getLocalizedContent(opportunity.title,opportunity.titleI18n as Record<string,string>|null,'fa')||opportunity.title,slug:row.contentRef,daysLeft:Math.ceil((opportunity.deadline!.getTime()-now.getTime())/86400000),deadlineText:new Intl.DateTimeFormat('fa-AF',{year:'numeric',month:'long',day:'numeric',timeZone:'Asia/Kabul'}).format(opportunity.deadline!)});
+    }else caption = composeCaptionWithLimit(row.captionJson, ['fa'], 100000);
   } else continue;
   if (!caption || !caption.includes('myariahub.com')) continue;
   caption = appendPostDetails(caption, await readPostDetailLines(row.contentRef, row.contentJson, 'fa'), platform === 'linkedin' ? 2900 : platform === 'facebook' ? 4500 : 1000);
