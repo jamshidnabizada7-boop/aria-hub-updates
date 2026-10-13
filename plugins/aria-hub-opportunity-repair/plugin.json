@@ -19,9 +19,10 @@
         "longDescription": "Inspect ARIA HUB's repair queue, read original sources, preview corrections and save verified application destinations, categories, countries and eligibility facts. Missing facts remain unknown. Uses the hosted ARIA HUB service with administrator authorization, source-change checks and an audit trail. Does not publish opportunities or access applicant data.",
         "shortDescription": "Repair verified opportunities"
       },
-      "requires_local_executor": false
+      "requires_local_executor": false,
+      "apps": "./.app.json"
     }
   },
   "name": "aria-hub-opportunity-repair",
-  "version": "1.1.0"
+  "version": "1.2.0"
 }

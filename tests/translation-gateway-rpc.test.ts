@@ -193,6 +193,23 @@ describeIf('translation gateway RPCs', () => {
     expect(empty.count).toBe(0);
   });
 
+  test('hourly claims return strict booleans for legacy null statuses and hand off to Pashto', async () => {
+    const existing=(await admin.query('SELECT id FROM "Opportunity"')).rows.map(r=>r.id);
+    const id=await seedFixture({faStatus:null,psStatus:null});
+    const rpc='SELECT public.claim_translation_batch_excluding(1,12000,false,$1::text,$2::text[]) AS r';
+    const first=(await worker.query(rpc,['hourly-test',existing])).rows[0].r;
+    expect(first.items[0].id).toBe(id);
+    expect(first.items[0].needFa).toBe(true);
+    expect(first.items[0].needPs).toBe(false);
+    const item=first.items[0];
+    await worker.query('SELECT public.commit_translation_batch($1,$2::jsonb)',[first.claimId,JSON.stringify({items:[{id,sourceHash:item.sourceHash,fa:translate(item.fields)}]})]);
+    const second=(await worker.query(rpc,['hourly-test',existing])).rows[0].r;
+    expect(second.items[0].id).toBe(id);
+    expect(second.items[0].needFa).toBe(false);
+    expect(second.items[0].needPs).toBe(true);
+    await release(second.claimId);
+  });
+
   test('claim returns pending rows with source fields and hashes', async () => {
     const id = await seedFixture();
     const { claimId, item } = await claimOne(id);

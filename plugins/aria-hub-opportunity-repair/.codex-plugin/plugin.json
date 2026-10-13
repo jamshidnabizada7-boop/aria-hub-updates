@@ -12,7 +12,7 @@
   },
   "requires_local_executor": false,
   "name": "aria-hub-opportunity-repair",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Repair ARIA HUB application links, missing category or country, and weak matching data using verified source evidence.",
   "author": {
     "name": "Ahmad Jamshid",
@@ -21,5 +21,6 @@
   },
   "keywords": [],
   "skills": "./skills",
-  "mcpServers": "./.mcp.json"
+  "mcpServers": "./.mcp.json",
+  "apps": "./.app.json"
 }
