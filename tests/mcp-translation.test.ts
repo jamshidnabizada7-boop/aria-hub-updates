@@ -72,7 +72,7 @@ describe('ARIA Translation MCP — OAuth 2.1 & Discovery Suite', () => {
     expect(client.redirect_uris).toEqual(['https://example.org/cb']);
 
     // Lookup client in store
-    const stored = getClient(client.client_id);
+    const stored = await getClient(client.client_id);
     expect(stored).toBeDefined();
     expect(stored?.client_id).toBe(client.client_id);
   });
@@ -237,7 +237,7 @@ describe('ARIA Translation MCP — Streamable HTTP Transport & Tools Suite', () 
     expect(body.result.serverInfo.name).toBe('aria-hub-translation-gateway');
   });
 
-  test('MCP tools/list exposes EXACTLY the four required tools', async () => {
+  test('MCP tools/list preserves four body tools and adds three public fact tools', async () => {
     const req = new Request('http://localhost/mcp/translation', {
       method: 'POST',
       headers: {
@@ -256,15 +256,18 @@ describe('ARIA Translation MCP — Streamable HTTP Transport & Tools Suite', () 
     expect(res.status).toBe(200);
     const body = await res.json();
     const tools = body.result.tools;
-    expect(tools.length).toBe(4);
+    expect(tools.length).toBe(7);
 
     const names = tools.map((t: { name: string }) => t.name).sort();
     expect(names).toEqual([
       'claimTranslationBatch',
+      'claimFactTranslationBatch',
       'commitTranslationBatch',
+      'commitFactTranslationBatch',
       'failTranslationBatch',
+      'releaseFactTranslationBatch',
       'translationQueueStatus',
-    ]);
+    ].sort());
 
     // Check annotations
     const statusTool = tools.find((t: { name: string }) => t.name === 'translationQueueStatus');
@@ -284,7 +287,7 @@ describe('ARIA Translation MCP — Streamable HTTP Transport & Tools Suite', () 
   });
 
   test('Unauthenticated write tool calls are rejected with HTTP 401', async () => {
-    const toolsToTest = ['claimTranslationBatch', 'commitTranslationBatch', 'failTranslationBatch'];
+    const toolsToTest = ['claimTranslationBatch', 'commitTranslationBatch', 'failTranslationBatch','claimFactTranslationBatch','commitFactTranslationBatch','releaseFactTranslationBatch'];
     for (const tool of toolsToTest) {
       const req = new Request('http://localhost/mcp/translation', {
         method: 'POST',

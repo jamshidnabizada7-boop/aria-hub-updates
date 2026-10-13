@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { registerClient } from '@/lib/mcp-oauth';
+import { checkRateLimit,clientIpOf } from '@/lib/security/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,10 +11,12 @@ const CORS_HEADERS = {
 };
 
 export async function POST(request: Request) {
+  if(!checkRateLimit(`mcp-register:${clientIpOf(request)}`,30,3600000))return NextResponse.json({error:'rate_limited'},{status:429,headers:CORS_HEADERS});
   try {
     let body: Record<string, unknown> = {};
     try {
-      body = await request.json();
+      const text=await request.text();if(text.length>20000)throw new Error('Request too large');body=JSON.parse(text);
+      if(!body||Array.isArray(body)||typeof body!=='object')throw new Error('JSON object required');
     } catch {
       return NextResponse.json(
         { error: 'invalid_request', error_description: 'Request body must be JSON' },
@@ -26,7 +29,7 @@ export async function POST(request: Request) {
       ? body.redirect_uris.map(String)
       : ['https://chatgpt.com/api/auth/oauth_callback'];
 
-    const client = registerClient({
+    const client = await registerClient({
       client_name: clientName,
       redirect_uris: redirectUris,
       grant_types: Array.isArray(body.grant_types) ? body.grant_types.map(String) : undefined,
@@ -58,8 +61,8 @@ export async function POST(request: Request) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Registration failed';
     return NextResponse.json(
-      { error: 'server_error', error_description: msg },
-      { status: 500, headers: CORS_HEADERS },
+      { error: 'invalid_client_metadata', error_description: /redirect|auth_method/.test(msg)?msg:'Registration could not be completed' },
+      { status: /redirect|auth_method/.test(msg)?400:503, headers: CORS_HEADERS },
     );
   }
 }

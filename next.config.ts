@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return {
       beforeFiles: [
+        { source: '/.well-known/oauth-protected-resource/mcp/repair', destination: '/api/oauth/repair-resource' },
         {
           source: '/.well-known/aria-translation-gateway.openapi.yaml',
           destination: '/aria-translation-gateway.openapi.yaml',

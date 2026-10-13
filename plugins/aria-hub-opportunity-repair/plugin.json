@@ -1,0 +1,21 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "aria-hub-opportunity-repair",
+  "version": "1.0.0",
+  "description": "Repair ARIA HUB application links, missing category or country, and weak matching data using verified source evidence.",
+  "author": { "name": "ARIA HUB", "url": "https://www.myariahub.com" },
+  "extensions": {
+    "com.openai": {
+      "requires_local_executor": false,
+      "interface": {
+        "displayName": "ARIA HUB Opportunity Repair",
+        "shortDescription": "Repair verified opportunities",
+        "longDescription": "Inspect ARIA HUB's repair queue, read original sources, preview corrections and save verified application destinations, categories, countries and eligibility facts. Missing facts remain unknown. Uses the hosted ARIA HUB service with administrator authorization, source-change checks and an audit trail. Does not publish opportunities or access applicant data.",
+        "developerName": "ARIA HUB",
+        "category": "Productivity",
+        "capabilities": ["Interactive"],
+        "defaultPrompt": "Repair the next 5 ARIA HUB opportunities with missing application links, weak matching data or missing category/country. Verify original sources, preview and save supported fixes, and report anything unresolved."
+      }
+    }
+  }
+}

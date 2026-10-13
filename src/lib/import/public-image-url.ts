@@ -38,7 +38,7 @@ export function isPublicImageUrlSyntax(raw: string): boolean {
 }
 
 /** Validate every redirect target and resolved address before importing media. */
-export async function fetchPublicImage(raw: string, signal: AbortSignal): Promise<Response> {
+export async function fetchPublicImage(raw: string, signal: AbortSignal, onResolved?: (url: string) => void): Promise<Response> {
   signal = AbortSignal.any([signal, AbortSignal.timeout(30000)]);
   let url = raw;
   for (let hop = 0; hop < 5; hop++) {
@@ -75,7 +75,7 @@ export async function fetchPublicImage(raw: string, signal: AbortSignal): Promis
       req.on('error', reject);
       req.end();
     });
-    if (response.status < 300 || response.status >= 400) return response;
+    if (response.status < 300 || response.status >= 400) { onResolved?.(url); return response; }
     const location = response.headers.get('location');
     await response.body?.cancel();
     if (!location) throw new Error('image redirect lacked a location');

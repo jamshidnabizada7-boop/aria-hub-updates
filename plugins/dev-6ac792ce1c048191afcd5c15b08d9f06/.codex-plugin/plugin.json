@@ -1,0 +1,17 @@
+{
+  "apps": "./.app.json",
+  "author": { "name": "App developer" },
+  "description": "ARIA HUB Translation Gateway",
+  "requires_local_executor": false,
+  "interface": {
+    "capabilities": [],
+    "category": "Other",
+    "defaultPrompt": null,
+    "developerName": "App developer",
+    "displayName": "ARIA HUB Translation Gateway",
+    "longDescription": "ARIA HUB Translation Gateway",
+    "shortDescription": "ARIA HUB Translation Gateway"
+  },
+  "name": "dev-6ac792ce1c048191afcd5c15b08d9f06",
+  "version": "1.1.0"
+}

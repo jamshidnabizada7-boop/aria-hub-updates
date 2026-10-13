@@ -76,6 +76,7 @@ export async function POST(request: Request) {
         codeVerifier,
         redirectUri,
         clientId,
+        resource: params.resource,
       });
 
       return NextResponse.json(tokens, { status: 200, headers: CORS_HEADERS });
@@ -98,6 +99,7 @@ export async function POST(request: Request) {
         refreshToken,
         clientId,
         scopes,
+        resource: params.resource,
       });
 
       return NextResponse.json(tokens, { status: 200, headers: CORS_HEADERS });

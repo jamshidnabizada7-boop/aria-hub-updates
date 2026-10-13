@@ -29,7 +29,7 @@ mock.module('@/lib/ai/failover', () => ({
     // The engine's integrity gate (§12/§13) rejects translations that drop
     // critical numbers — a realistic translator preserves them, so the script
     // must too.
-    const nums = prompt.match(/\$\s?[\d,]+|\d[\d,\.]*\s?%|(?:19|20)\d{2}|\d{2,}/g) || [];
+    const nums = prompt.match(/\d+(?:[.,]\d+)*/g) || [];
     if (nums.length) out += ` اعداد: ${nums.join(' ')}`;
     return { text: JSON.stringify({ t: out.trim() }) };
   },

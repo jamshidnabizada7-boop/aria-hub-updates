@@ -113,12 +113,12 @@ const URL_RE = /https?:\/\/[^\s<>"')\]]+/gi;
 const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
 /**
  * Numbers that carry meaning: money, percentages, ages, years, vacancy-style
- * ids (≥2 consecutive digits). Compared with separators/currency stripped so
+ * ids and single-digit requirements. Compared as exact numeric tokens so
  * localized punctuation (۱۰,۰۰۰ / ۵۰٪) never triggers a false rejection.
  * A lost or changed number rejects the translation for retry — it never
  * reaches the public fields.
  */
-const CRITICAL_NUMBER_RE = /\$\s?[\d,]+|\d[\d,.]*\s?%|\b(?:19|20)\d{2}\b|\b\d{2,}\b/g;
+const CRITICAL_NUMBER_RE = /\d+(?:[.,]\d+)*/g;
 
 export function validateIntegrity(source: string, result: string): string[] {
   const problems: string[] = [];
@@ -137,11 +137,11 @@ export function validateIntegrity(source: string, result: string): string[] {
   // Compare numbers on separator/currency-stripped forms: translators
   // legitimately localize "$10,000" as "۱۰,۰۰۰ دالر" — the AMOUNT must
   // survive, not the ASCII punctuation.
-  const stripNum = (x: string) => x.replace(/[\s,$€£]/g, '');
-  const outText = stripNum(out);
+  const stripNum = (x: string) => x.replace(/,/g, '');
+  const outNums = new Set((out.match(CRITICAL_NUMBER_RE) || []).map(stripNum));
   const srcNums = (src.match(CRITICAL_NUMBER_RE) || []).map(stripNum);
   for (const n of new Set(srcNums)) {
-    if (n.length >= 2 && !outText.includes(n)) {
+    if (!outNums.has(n)) {
       problems.push(`critical number lost/changed: ${n}`);
     }
   }
