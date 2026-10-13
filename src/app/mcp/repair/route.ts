@@ -6,6 +6,7 @@ import { repairIssue,commitRepairInput } from '@/lib/repair-contract';
 import { repairQueueStatus,claimRepairBatch,readRepairSource,previewRepair,commitRepair,releaseRepairBatch } from '@/lib/opportunity-repair';
 import { db } from '@/lib/db';
 import { checkDurableRateLimit } from '@/lib/security/durable-rate-limit';
+import { withToolPolicies } from '@/lib/mcp-tool-policies';
 export const dynamic='force-dynamic';
 const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization, mcp-session-id, mcp-protocol-version','Cache-Control':'no-store'};
 function createServer(client:string){
@@ -33,6 +34,7 @@ export async function POST(request:Request){
   const transport=new WebStandardStreamableHTTPServerTransport({enableJsonResponse:true});const server=createServer(auth.clientId||'discovery');await server.connect(transport);
   const headers=new Headers(request.headers);headers.set('accept','application/json, text/event-stream');headers.set('content-type','application/json');
   const response=await transport.handleRequest(new Request(request.url,{method:'POST',headers}),{parsedBody:body});
+  if(body.method==='tools/list'&&response.ok)return Response.json(withToolPolicies(await response.json(),REPAIR_SCOPES),{headers:cors});
   return new Response(response.body,{status:response.status,headers:{...Object.fromEntries(response.headers),...cors}});
 }
 export async function GET(){return Response.json({name:'ARIA HUB Opportunity Repair',protocol:'MCP Streamable HTTP',auth:'OAuth 2.1',resource_metadata:`${mcpBaseUrl()}/.well-known/oauth-protected-resource/mcp/repair`},{headers:cors});}

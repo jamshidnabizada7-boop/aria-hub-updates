@@ -12,6 +12,7 @@ import {
 } from '@/lib/translation-gateway';
 import { verifyMcpToken, MCP_SCOPES } from '@/lib/mcp-oauth';
 import { factTranslationStatus,claimFactTranslations,commitFactTranslations,releaseFactTranslations,factCommitInput } from '@/lib/mcp-fact-translations';
+import { withToolPolicies } from '@/lib/mcp-tool-policies';
 
 export const dynamic = 'force-dynamic';
 
@@ -479,7 +480,7 @@ export async function POST(request: Request): Promise<Response> {
   const wantsSse = acceptHeader.includes('text/event-stream');
 
   const transport = new WebStandardStreamableHTTPServerTransport({
-    enableJsonResponse: !wantsSse,
+    enableJsonResponse: true,
   });
 
   const server = createTranslationServer(
@@ -513,6 +514,8 @@ export async function POST(request: Request): Promise<Response> {
   for (const [k, v] of Object.entries(CORS_HEADERS)) {
     finalHeaders.set(k, v);
   }
+
+  if(method==='tools/list'&&response.ok)return Response.json(withToolPolicies(await response.json(),MCP_SCOPES),{headers:finalHeaders});
 
   return new Response(response.body, {
     status: response.status,
