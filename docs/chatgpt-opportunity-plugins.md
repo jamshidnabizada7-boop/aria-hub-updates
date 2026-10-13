@@ -16,7 +16,14 @@ background translation/repair schedule.
 
 Translation preserves the existing private App binding
 `asdk_app_6ac792ce1c048191afcd5c15b08d9f06` and adds workflow instructions.
-Repair is a private remote MCP plugin. Neither archive contains credentials.
+Repair is a private remote MCP plugin with the registered ChatGPT App dependency
+`asdk_app_6ace0ce034c88191913a30dbdd3e0f46`. Both workflow plugins are version
+1.2.0. Neither archive contains credentials.
+
+ChatGPT needs the registered App connection as well as the portable MCP
+configuration. A skill can load successfully without callable remote tools
+when that connection is missing. The Repair package now includes its verified
+App binding; its ChatGPT listing shows the gateway as connected.
 
 ## Connect in ChatGPT
 
@@ -85,6 +92,9 @@ technical scraper IDs. Controlled vocabularies are already localized without
 AI. Both JavaScript and SQL validators protect exact numeric tokens, including
 single-digit experience/duration values. Do not report complete localization
 using only body status; also inspect `publicFacts` pending counts.
+Hourly claims return strict boolean language flags even for legacy null
+statuses. A completed Persian save makes pending Pashto claimable; this handoff
+is tested against the restricted database worker role.
 
 ## OAuth
 
