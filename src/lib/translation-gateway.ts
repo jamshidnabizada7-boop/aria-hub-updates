@@ -30,7 +30,7 @@ export type GatewayAction =
 
 const RPC_BY_ACTION: Record<GatewayAction, string> = {
   claimTranslationBatch:
-    'SELECT public.claim_translation_batch($1::int, $2::int, $3::boolean, $4::text) AS result',
+    'SELECT public.claim_translation_batch_excluding($1::int, $2::int, $3::boolean, $4::text, $5::text[]) AS result',
   commitTranslationBatch:
     'SELECT public.commit_translation_batch($1::text, $2::jsonb) AS result',
   failTranslationBatch:
@@ -165,11 +165,12 @@ export async function executeClaimBatch(
   charBudget: unknown = 250_000,
   includeExpired = false,
   caller = 'chatgpt',
+  excludeIds: string[] = [],
 ): Promise<Record<string, unknown>> {
   const pool = getPool();
   const l = clampInt(limit, 30, 1, 50);
   const b = clampInt(charBudget, 250_000, 2_000, 600_000);
-  const res = await pool.query(RPC_BY_ACTION.claimTranslationBatch, [l, b, includeExpired === true, caller]);
+  const res = await pool.query(RPC_BY_ACTION.claimTranslationBatch, [l, b, includeExpired === true, caller, excludeIds]);
   return (res.rows[0]?.result ?? {}) as Record<string, unknown>;
 }
 

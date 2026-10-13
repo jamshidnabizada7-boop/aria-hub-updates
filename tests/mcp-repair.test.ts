@@ -3,7 +3,7 @@ import { createHash,randomUUID } from 'node:crypto';
 import { db } from '../src/lib/db';
 import { putMcpState } from '../src/lib/mcp-state';
 import { claimRepairBatch,previewRepair,commitRepair,releaseRepairBatch } from '../src/lib/opportunity-repair';
-import { claimFactTranslations,commitFactTranslations,validFactTranslation } from '../src/lib/mcp-fact-translations';
+import { claimFactTranslations,commitFactTranslations,releaseFactTranslations,validFactTranslation } from '../src/lib/mcp-fact-translations';
 import { issueTokens,verifyMcpToken,exchangeRefreshToken,MCP_SCOPES,REPAIR_SCOPES,resourceForScopes,revokeMcpToken,getClient } from '../src/lib/mcp-oauth';
 import { POST as repairPost } from '../src/app/mcp/repair/route';
 import { categoryEvidence,matchEvidence } from '../src/lib/repair-evidence';
@@ -21,6 +21,29 @@ beforeAll(async()=>{await db.$executeRaw`ALTER TABLE "McpSecurityState" ENABLE R
 afterAll(async()=>{await db.opportunity.deleteMany({where:{id:{startsWith:prefix}}});await db.opportunityCategory.deleteMany({where:{id:{startsWith:prefix}}});await db.$disconnect();});
 
 describe('Repair provenance, stale source and safe saves',()=>{
+  test('Released blocked records rotate behind untouched records; a run can exclude its seen IDs',async()=>{
+    const existing=(await db.opportunity.findMany({select:{id:true}})).map(r=>r.id);
+    const older=await fixture();const newer=await fixture();
+    const first=await claimRepairBatch(prefix,'all',1,false,existing);
+    expect(first.items[0].id).toBe(newer.id);
+    await releaseRepairBatch(prefix,first.claimId!,'Source blocked');
+    const next=await claimRepairBatch(prefix,'all',1,false,existing);
+    expect(next.items[0].id).toBe(older.id);
+    await releaseRepairBatch(prefix,next.claimId!,'Source blocked');
+    const exhausted=await claimRepairBatch(prefix,'all',1,false,[...existing,older.id,newer.id]);
+    expect(exhausted.count).toBe(0);
+    await db.opportunity.update({where:{id:newer.id},data:{description:'Changed source facts for fresh review'}});
+    const changed=await claimRepairBatch(prefix,'all',1,false,existing);
+    expect(changed.items[0].id).toBe(newer.id);
+    await releaseRepairBatch(prefix,changed.claimId!,'test cleanup');
+  });
+  test('An identical patch cannot create a fake successful repair',async()=>{
+    const row=await fixture({country:'Afghanistan'});const c=await claim(row.id);
+    await cache(c.claimId,row.id,row.description);
+    await expect(commitRepair(prefix,{claimId:c.claimId,id:row.id,sourceHash:c.row.sourceHash,patch:{country:'Afghanistan'},evidence:[{field:'country',sourceUrl:source,quote:'Afghanistan'}]})).rejects.toThrow('no_changes_to_save');
+    expect(await db.auditLog.count({where:{entityId:row.id,action:'opportunity.source_repair'}})).toBe(0);
+    await releaseRepairBatch(prefix,c.claimId,'test cleanup');
+  });
   test('Unknown and privileged fields are rejected',async()=>{const row=await fixture();const c=await claim(row.id);await expect(previewRepair(prefix,{claimId:c.claimId,id:row.id,sourceHash:c.row.sourceHash,patch:{status:'published'},evidence:[{field:'status',sourceUrl:source,quote:'published'}]})).rejects.toThrow();await releaseRepairBatch(prefix,c.claimId,'test');});
   test('Invented quotes cannot repair a missing country',async()=>{const row=await fixture();const c=await claim(row.id);await cache(c.claimId,row.id,row.description);await expect(previewRepair(prefix,{claimId:c.claimId,id:row.id,sourceHash:c.row.sourceHash,patch:{country:'Germany'},evidence:[{field:'country',sourceUrl:source,quote:'Germany'}]})).rejects.toThrow('source_quote_not_verified');await releaseRepairBatch(prefix,c.claimId,'test');});
   test('Claim belongs to its authorized client',async()=>{const row=await fixture();const c=await claim(row.id);await expect(releaseRepairBatch('other-client',c.claimId,'test')).rejects.toThrow('claim_invalid');await releaseRepairBatch(prefix,c.claimId,'test');});
@@ -41,6 +64,16 @@ describe('Repair provenance, stale source and safe saves',()=>{
 });
 
 describe('Complete public fact translations',()=>{
+  test('Unfinished fact records rotate and failed IDs can be excluded for the run',async()=>{
+    const existing=(await db.opportunity.findMany({select:{id:true}})).map(r=>r.id);
+    const older=await fixture({extractedData:{contractDuration:'Renewable contract for 3 years'}});
+    const newer=await fixture({extractedData:{contractDuration:'Renewable contract for 4 years'}});
+    const first=await claimFactTranslations(prefix,1,12000,false,existing);
+    expect(first.items[0].id).toBe(newer.id);await releaseFactTranslations(prefix,first.claimId!);
+    const next=await claimFactTranslations(prefix,1,12000,false,existing);
+    expect(next.items[0].id).toBe(older.id);await releaseFactTranslations(prefix,next.claimId!);
+    expect((await claimFactTranslations(prefix,1,12000,false,[...existing,newer.id,older.id])).count).toBe(0);
+  });
   test('Single digit durations and identifiers cannot be dropped',()=>{expect(validFactTranslation('3 years','سه سال')).toBe(false);expect(validFactTranslation('3 years','۳ سال')).toBe(true);});
   test('Both SQL gateway and body validator reject single-digit changes',async()=>{expect(validateIntegrity('3 years of experience','۱۳ سال تجربه').length).toBeGreaterThan(0);const result=await db.$queryRaw<{problems:string[]}[]>`SELECT public.aria_tgw_validate_field('3 years of experience','۱۳ سال تجربه') AS problems`;expect(result[0].problems).toContain('number_lost:3');});
   test('Partial facts reject atomically; full Afghan Persian and Pashto facts save',async()=>{

@@ -10,6 +10,7 @@ import type { Prisma } from '@prisma/client';
 const select={id:true,title:true,language:true,extractedData:true,extractedDataI18n:true,translationOrigin:true} satisfies Prisma.OpportunitySelect;
 type Row=Prisma.OpportunityGetPayload<{select:typeof select}>;
 type Claim={client:string;items:{id:string;sourceHash:string;fa:Record<string,string>;ps:Record<string,string>}[];expiresAt:string;done:string[]};
+type Attempt={id:string;attemptedAt:number};
 const key=(id:string)=>`fact-claim:${id}`;
 const hash=(row:Row)=>createHash('sha256').update(JSON.stringify([row.id,row.language,row.extractedData,row.extractedDataI18n,row.translationOrigin])).digest('hex');
 const locked=(row:Row,lang:'fa'|'ps')=>/^MANUAL/.test(String(factObject(row.translationOrigin)[lang]||''));
@@ -23,16 +24,20 @@ export async function factTranslationStatus(){
   for(const row of rows){pendingFa+=Object.keys(needed(row,'fa')).length;pendingPs+=Object.keys(needed(row,'ps')).length;manualLocked+=Number(locked(row,'fa')||locked(row,'ps'));}
   return {pendingFa,pendingPs,manualLocked,unit:'public facts',technicalKeysExcluded:true};
 }
-export async function claimFactTranslations(client:string,limit:number,charBudget:number,includeExpired=false){
+export async function claimFactTranslations(client:string,limit:number,charBudget:number,includeExpired=false,excludeIds:string[]=[]){
   return db.$transaction(async tx=>{
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(742199)`;
-    const today=new Date();today.setUTCHours(0,0,0,0);
-    const rows=await tx.opportunity.findMany({where:{status:'published',...(!includeExpired?{OR:[{deadline:null},{deadline:{gte:today}}]}:{})},select,orderBy:{createdAt:'desc'}});
+    const now=new Date();const day=new Date(new Date(now.getTime()+270*60000).toISOString().slice(0,10)+'T00:00:00Z');
+    const rows=await tx.opportunity.findMany({where:{status:'published',...(!includeExpired?{OR:[{deadline:null},{deadline:{gt:now}},{deadline:day}]}:{})},select,orderBy:{createdAt:'desc'}});
     const active=await tx.$queryRaw<{data:Claim}[]>`SELECT data FROM "McpSecurityState" WHERE key LIKE 'fact-claim:%' AND "expiresAt">now()`;
     const busy=new Set(active.flatMap(c=>c.data.items.filter(i=>!c.data.done.includes(i.id)).map(i=>i.id)));
+    const attempts=await tx.$queryRaw<{data:Attempt}[]>`SELECT data FROM "McpSecurityState" WHERE key LIKE 'fact-attempt:%' AND "expiresAt">now()`;
+    const attemptedAt=new Map(attempts.map(a=>[a.data.id,a.data.attemptedAt]));
+    rows.sort((a,b)=>(attemptedAt.get(a.id)||0)-(attemptedAt.get(b.id)||0));
+    const excluded=new Set(excludeIds);
     const items:Claim['items']=[];let chars=0;
     for(const row of rows){
-      if(busy.has(row.id))continue;
+      if(busy.has(row.id)||excluded.has(row.id))continue;
       const fa=needed(row,'fa');
       // A manual Persian translation is never replaced, and Pashto stays
       // gated until the Persian facts for that record are complete.
@@ -44,6 +49,7 @@ export async function claimFactTranslations(client:string,limit:number,charBudge
     }
     const claimId=randomUUID(),expiresAt=new Date(Date.now()+45*60000);
     if(items.length)await putMcpState(key(claimId),{client,items,expiresAt:expiresAt.toISOString(),done:[]},expiresAt,tx);
+    for(const item of items)await putMcpState(`fact-attempt:${item.id}`,{id:item.id,attemptedAt:Date.now()},new Date(Date.now()+30*86400000),tx);
     return {claimId:items.length?claimId:null,expiresAt:items.length?expiresAt.toISOString():null,count:items.length,chars,items,instructions:'Translate every key in each supplied fa and ps map, preserving names, codes and all numbers. Persian Afghanistan first. Do not translate technical IDs. These facts are separate from the main body translations.'};
   },{timeout:30000});
 }

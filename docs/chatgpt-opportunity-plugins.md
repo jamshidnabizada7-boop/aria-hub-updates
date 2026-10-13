@@ -29,15 +29,33 @@ tokens must never be pasted into chat.
 
 Start a ChatGPT conversation, select the plugin in the composer, and ask:
 
-> Repair the next 5 opportunities with no usable apply link, weak match data,
+> Repair as many eligible opportunities as this run can safely complete, with no usable apply link, weak match data,
 > or missing category/country. Read original sources, preview and save only
-> supported corrections, and report unresolved cases.
+> supported corrections, repeat batches while time and quota remain, and report unresolved cases.
 
 For translation, select Translation Gateway:
 
-> Translate the next small batch completely into Persian Afghanistan and
+> Translate as many eligible records as this run can complete into Persian Afghanistan and
 > Pashto, including the public-fact translation lane. Preserve all paragraphs,
 > application instructions, URLs, identifiers and numeric values.
+
+## Hourly ChatGPT cloud tasks
+
+Configure cloud scheduled tasks in ChatGPT with the saved plugins connected.
+Use the supplied `skills/repair-opportunities/hourly-task.md` and
+`skills/translate-opportunities/hourly-task.md` prompts. Suggested slots are
+repair at :00 and translation at :15 every hour, Asia/Karachi. These are
+configuration instructions; a plugin release or an Oracle deployment does
+not activate a ChatGPT task. Verify the task is saved and active in ChatGPT.
+
+Each run repeats adaptive batches until eligible work is exhausted or the
+actual model, tool, context or run-time limit is reached. There is no fixed
+total record cap. Batch limits still protect transactions. Repair excludes
+all attempted IDs during a run; translation excludes failed IDs per lane.
+Least recently attempted records rotate across runs, including blocked
+sources. Body and public-fact batches alternate. Every completed result is
+saved promptly; unfinished claims are released. Unsupported facts, expired
+records and manual translations are not fabricated or overwritten.
 
 If ChatGPT's existing Translation Gateway only shows four tools, refresh its
 connected tool list or reconnect it. The updated endpoint exposes seven:

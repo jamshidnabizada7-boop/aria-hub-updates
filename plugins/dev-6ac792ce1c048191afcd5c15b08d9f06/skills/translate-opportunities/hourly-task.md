@@ -1,0 +1,7 @@
+# Hourly translation task
+
+Task name: ARIA HUB hourly full translation
+Schedule: every hour, preferably at :15, Asia/Karachi.
+Execution: ChatGPT cloud, connected existing ARIA HUB Translation Gateway.
+
+Read and follow the translate-opportunities skill. Fully translate as many eligible, non-expired ARIA HUB records as this run can safely complete into professional Persian of Afghanistan and Pashto. Alternate repeated body and applicant-facing public-fact batches, saving complete records immediately. Preserve every paragraph, list, qualification, application instruction, URL, email, identifier and numeric value. Translate Persian before Pashto, honor claim flags, include every required field and every fact key, and preserve manual translations. Keep separate failed-record excludeIds for the two lanes; move past unresolved failures rather than reclaiming them repeatedly. Successful Persian records can be claimed later for pending Pashto. Continue until both eligible lanes are empty or ChatGPT's actual time, context or tool quota requires stopping; there is no fixed total record count. Never truncate or summarize to increase throughput. Release unfinished claims. Report actual successful body and public-fact record counts separately, remaining work and required owner action. Stay quiet when no work or no new actionable result is available. If public-fact tools or authorization are missing, report that limitation honestly and continue the usable lane.

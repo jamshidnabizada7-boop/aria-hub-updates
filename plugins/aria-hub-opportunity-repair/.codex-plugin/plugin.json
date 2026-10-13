@@ -1,0 +1,25 @@
+{
+  "interface": {
+    "capabilities": [
+      "Interactive"
+    ],
+    "category": "Productivity",
+    "defaultPrompt": "Repair as many eligible ARIA HUB opportunities as this run can safely complete. Repeat bounded batches for missing application links, weak matching data and missing category/country. Verify original sources, preview and save supported changes, skip records already attempted this run, and report actual successful saves and unresolved issues.",
+    "developerName": "Ahmad Jamshid",
+    "displayName": "ARIA HUB Opportunity Repair",
+    "longDescription": "Inspect ARIA HUB's repair queue, read original sources, preview corrections and save verified application destinations, categories, countries and eligibility facts. Missing facts remain unknown. Uses the hosted ARIA HUB service with administrator authorization, source-change checks and an audit trail. Does not publish opportunities or access applicant data.",
+    "shortDescription": "Repair verified opportunities"
+  },
+  "requires_local_executor": false,
+  "name": "aria-hub-opportunity-repair",
+  "version": "1.1.0",
+  "description": "Repair ARIA HUB application links, missing category or country, and weak matching data using verified source evidence.",
+  "author": {
+    "name": "Ahmad Jamshid",
+    "email": "ahmad.nab789@gmail.com",
+    "url": "https://www.myariahub.com"
+  },
+  "keywords": [],
+  "skills": "./skills",
+  "mcpServers": "./.mcp.json"
+}

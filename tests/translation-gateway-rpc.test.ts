@@ -180,6 +180,19 @@ describeIf('translation gateway RPCs', () => {
     expect(ok.rows[0].r.ok).toBe(true);
   });
 
+  test('hourly body batches exclude failed IDs and rotate released records', async () => {
+    const existing=(await admin.query('SELECT id FROM "Opportunity"')).rows.map(r=>r.id);
+    const firstId=await seedFixture();const secondId=await seedFixture();
+    const rpc='SELECT public.claim_translation_batch_excluding(1,12000,false,$1::text,$2::text[]) AS r';
+    const first=(await worker.query(rpc,['hourly-test',existing])).rows[0].r;
+    expect(first.count).toBe(1);const claimed=first.items[0].id;
+    await release(first.claimId);
+    const next=(await worker.query(rpc,['hourly-test',existing])).rows[0].r;
+    expect(next.items[0].id).not.toBe(claimed);await release(next.claimId);
+    const empty=(await worker.query(rpc,['hourly-test',[...existing,firstId,secondId]])).rows[0].r;
+    expect(empty.count).toBe(0);
+  });
+
   test('claim returns pending rows with source fields and hashes', async () => {
     const id = await seedFixture();
     const { claimId, item } = await claimOne(id);

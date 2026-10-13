@@ -13,6 +13,8 @@ import { categoryEvidence,matchEvidence } from './repair-evidence';
 const select={id:true,slug:true,title:true,description:true,sourceName:true,sourceUrl:true,originalUrl:true,applyUrl:true,applyUrlType:true,categoryId:true,country:true,deadline:true,status:true,eligibility:true,eligibilityI18n:true,educationReq:true,educationReqI18n:true,experience:true,experienceI18n:true,requirements:true,requirementsI18n:true,guidelines:true,guidelinesI18n:true,extractedData:true,faStatus:true,psStatus:true,translationOrigin:true,matchProfile:true} satisfies Prisma.OpportunitySelect;
 type RepairRow=Prisma.OpportunityGetPayload<{select:typeof select}>;
 type Claim={client:string;ids:string[];expiresAt:string;done:string[]};
+type Attempt={id:string;sourceHash:string;attemptedAt:number};
+const attemptKey=(id:string)=>`repair-attempt:${id}`;
 type Source={url:string;text:string;links:{url:string;label:string}[];capturedAt:string};
 const claimKey=(id:string)=>`repair-claim:${id}`;
 const sourceKey=(claim:string,id:string,url:string)=>`repair-source:${claim}:${id}:${createHash('sha256').update(url).digest('hex')}`;
@@ -22,18 +24,26 @@ export async function repairQueueStatus(){
   const rows=await db.opportunity.findMany({where:{status:{in:['published','draft']}},select});
   return {total:rows.length,published:rows.filter(r=>r.status==='published').length,apply:rows.filter(r=>matchesHealthIssue(r,'apply')).length,core:rows.filter(r=>matchesHealthIssue(r,'core')).length,evidence:rows.filter(r=>matchesHealthIssue(r,'evidence')).length,translation:rows.filter(r=>matchesHealthIssue(r,'translation')).length,countsOverlap:true};
 }
-export async function claimRepairBatch(client:string,issue:'apply'|'core'|'evidence'|'all',limit:number,includeExpired=false){
+export async function claimRepairBatch(client:string,issue:'apply'|'core'|'evidence'|'all',limit:number,includeExpired=false,excludeIds:string[]=[]){
   return db.$transaction(async tx=>{
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(742198)`;
     const now=new Date();const day=new Date(new Date(now.getTime()+270*60000).toISOString().slice(0,10)+'T00:00:00Z');
     const rows=await tx.opportunity.findMany({where:{status:{in:['published','draft']},...(!includeExpired?{OR:[{deadline:null},{deadline:{gt:now}},{deadline:day}]}:{})},select,orderBy:[{status:'desc'},{createdAt:'desc'}]});
     const locked=await tx.$queryRaw<{data:Claim}[]>`SELECT data FROM "McpSecurityState" WHERE key LIKE 'repair-claim:%' AND "expiresAt" > now()`;
     const busy=new Set(locked.flatMap(c=>c.data.ids.filter(id=>!c.data.done.includes(id))));
-    const candidates=rows.filter(row=>!busy.has(row.id)&&(issue==='all'?(['apply','core','evidence'] as const).some(i=>matchesHealthIssue(row,i)):matchesHealthIssue(row,issue))).slice(0,limit);
+    const attempts=await tx.$queryRaw<{data:Attempt}[]>`SELECT data FROM "McpSecurityState" WHERE key LIKE 'repair-attempt:%' AND "expiresAt" > now()`;
+    const lastAttempt=new Map(attempts.map(a=>[a.data.id,a.data]));
+    const excluded=new Set(excludeIds);
+    const eligible=rows.filter(row=>!busy.has(row.id)&&!excluded.has(row.id)&&(issue==='all'?(['apply','core','evidence'] as const).some(i=>matchesHealthIssue(row,i)):matchesHealthIssue(row,issue)));
+    // Rotate across hourly runs instead of returning the same blocked sources
+    // at the front of every batch. Changed source facts get a fresh attempt.
+    const attemptedAt=(row:RepairRow)=>{const a=lastAttempt.get(row.id);return a?.sourceHash===repairSourceHash(row as unknown as Record<string,unknown>)?a.attemptedAt:0;};
+    const candidates=eligible.sort((a,b)=>attemptedAt(a)-attemptedAt(b)).slice(0,limit);
     const claimId=randomUUID();const expiresAt=new Date(now.getTime()+30*60000);
     if(candidates.length)await putMcpState(claimKey(claimId),{client,ids:candidates.map(row=>row.id),expiresAt:expiresAt.toISOString(),done:[]},expiresAt,tx);
+    for(const row of candidates)await putMcpState(attemptKey(row.id),{id:row.id,sourceHash:repairSourceHash(row as unknown as Record<string,unknown>),attemptedAt:now.getTime()},new Date(now.getTime()+30*86400000),tx);
     const categories=await tx.opportunityCategory.findMany({select:{id:true,name:true,slug:true,nameI18n:true},orderBy:{order:'asc'}});
-    return {claimId:candidates.length?claimId:null,expiresAt:candidates.length?expiresAt.toISOString():null,count:candidates.length,items:candidates.map(publicRow),categories};
+    return {claimId:candidates.length?claimId:null,expiresAt:candidates.length?expiresAt.toISOString():null,count:candidates.length,items:candidates.map(publicRow),categories,eligibleRemaining:eligible.length-candidates.length};
   },{timeout:30000});
 }
 async function readHtml(url:string):Promise<Source>{
@@ -69,6 +79,8 @@ async function validateRepair(client:string,input:unknown){
     else fields.push([field,value]);
   }
   if(!fields.length)throw new Error('empty_patch');
+  const changed=fields.some(([field,value])=>JSON.stringify(field.startsWith('matchProfile.')?row.matchProfile?.[field.slice(13) as keyof typeof row.matchProfile]:row[field as keyof RepairRow])!==JSON.stringify(value));
+  if(!changed)throw new Error('no_changes_to_save');
   for(const [field,value] of fields){
     const proof=request.evidence.find(e=>e.field===field);if(!proof)throw new Error(`evidence_required:${field}`);
     const source=await readMcpState<Source>(sourceKey(request.claimId,request.id,proof.sourceUrl));
@@ -103,7 +115,7 @@ export async function commitRepair(client:string,input:unknown){
     const row=await tx.opportunity.findUniqueOrThrow({where:{id:request.id},select});if(repairSourceHash(row as unknown as Record<string,unknown>)!==request.sourceHash)throw new Error('source_hash_changed');
     const {matchProfile,...patch}=request.patch;const data:Prisma.OpportunityUpdateInput={...patch};
     if(patch.applyUrl)data.applyUrlType=classifyApplyUrl(patch.applyUrl,row.sourceUrl,row.originalUrl);
-    const changedText=['eligibility','educationReq','experience','requirements','guidelines'].some(key=>key in patch);
+    const changedText=(['eligibility','educationReq','experience','requirements','guidelines'] as const).some(key=>patch[key]!==undefined&&patch[key]!==row[key]);
     if(changedText){const origin=(row.translationOrigin||{}) as Record<string,string>;data.faStatus='pending';data.psStatus='pending';data.translationOrigin={...origin,...(origin.fa==='MANUAL'?{fa:'MANUAL_STALE'}:{}),...(origin.ps==='MANUAL'?{ps:'MANUAL_STALE'}:{})};
       for(const field of ['eligibility','educationReq','experience','requirements','guidelines'] as const){if(patch[field]!==undefined){const old=row[`${field}I18n`];Object.assign(data,{[`${field}I18n`]:{...(old&&typeof old==='object'&&!Array.isArray(old)?old:{}),en:patch[field]}});}}
     }
@@ -111,7 +123,9 @@ export async function commitRepair(client:string,input:unknown){
     if(matchProfile){const provenance=Object.fromEntries(request.evidence.filter(e=>e.field.startsWith('matchProfile.')).map(e=>[e.field.slice(13),{sourceUrl:e.sourceUrl,quote:e.quote,method:'chatgpt_source_review',at:new Date().toISOString()}]));const mp={...matchProfile,reviewed:false,extractionVersion:'repair-v1',provenance:{...((row.matchProfile?.provenance||{}) as object),...provenance}};await tx.opportunityMatchProfile.upsert({where:{opportunityId:row.id},create:{opportunityId:row.id,...mp},update:mp});}
     await tx.auditLog.create({data:{action:'opportunity.source_repair',entity:'Opportunity',entityId:row.id,details:JSON.stringify({client,claimId:request.claimId,sourceHash:request.sourceHash,before:publicRow(row).fields,patch:request.patch,evidence:request.evidence})}});
     await putMcpState(claimKey(request.claimId),{...claim,done:[...claim.done,row.id]},new Date(claim.expiresAt),tx);
-    const after=await tx.opportunity.findUniqueOrThrow({where:{id:row.id},select});return {committed:true,id:row.id,status:after.status,health:opportunityHealth(after),remainingUnknown:opportunityHealth(after).missing};
+    const after=await tx.opportunity.findUniqueOrThrow({where:{id:row.id},select});
+    await putMcpState(attemptKey(row.id),{id:row.id,sourceHash:repairSourceHash(after as unknown as Record<string,unknown>),attemptedAt:Date.now()},new Date(Date.now()+30*86400000),tx);
+    return {committed:true,id:row.id,status:after.status,health:opportunityHealth(after),remainingUnknown:opportunityHealth(after).missing};
   },{timeout:15000});
 }
 export async function releaseRepairBatch(client:string,claimId:string,reason:string){const claim=await getClaim(claimId,client);await putMcpState(claimKey(claimId),{...claim,done:claim.ids,reason},new Date(claim.expiresAt));return {released:true,claimId};}
