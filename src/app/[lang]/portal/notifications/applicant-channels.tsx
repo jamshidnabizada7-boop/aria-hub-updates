@@ -20,13 +20,17 @@ export function ApplicantChannels({lang,pushConsent,onChange}:{lang:Lang;pushCon
  const [thisDevice,setThisDevice]=useState(false);
  const [availablePush,setAvailablePush]=useState(false),[pushKey,setPushKey]=useState(''),[pushCount,setPushCount]=useState(0);
  const [waAvailable,setWaAvailable]=useState(false),[waVerified,setWaVerified]=useState(false);
+ const [waInbound,setWaInbound]=useState(false),[verificationUrl,setVerificationUrl]=useState('');
+ const freeCopy={en:{start:'Connect my WhatsApp',open:'Open WhatsApp and send verification',check:'I sent it — check verification',waiting:'Send the prepared message from the number you entered, then check verification here. The link expires in 10 minutes.',consent:'Sending the prepared verification message confirms that this number is yours and opts you into matching alerts. Free private replies are available for 24 hours after your message; email and the public Channel remain available afterward.',verified:'WhatsApp verified. Free private replies are available within 24 hours after your messages. Reply STOP or remove consent here to unsubscribe.'},
+  fa:{start:'اتصال واتس‌اپ من',open:'بازکردن واتس‌اپ و ارسال پیام تأیید',check:'پیام را فرستادم — بررسی تأیید',waiting:'پیام آماده را از شماره‌ای که وارد کردید بفرستید؛ سپس تأیید را اینجا بررسی کنید. پیوند پس از ۱۰ دقیقه منقضی می‌شود.',consent:'ارسال پیام آماده، مالکیت شماره و رضایت شما برای دریافت اعلان فرصت‌های مناسب را تأیید می‌کند. پاسخ خصوصی رایگان تا ۲۴ ساعت پس از پیام شما ممکن است؛ پس از آن ایمیل و کانال عمومی در دسترس است.',verified:'واتس‌اپ تأیید شد. پاسخ خصوصی رایگان تا ۲۴ ساعت پس از پیام‌های شما ممکن است. برای لغو، STOP بفرستید یا رضایت را اینجا لغو کنید.'},
+  ps:{start:'زما واټس‌اپ نښلول',open:'واټس‌اپ پرانیزئ او د تایید پیغام ولېږئ',check:'پیغام مې ولېږه — تایید وګورئ',waiting:'چمتو شوی پیغام له خپلې ورکړل شوې شمېرې ولېږئ، بیا دلته تایید وګورئ. لینک په ۱۰ دقیقو کې پای ته رسېږي.',consent:'د چمتو شوي پیغام لېږل د شمېرې مالکیت او د مناسبو فرصتونو خبرتیاوو اجازه تاییدوي. وړیا شخصي ځوابونه ستاسو له پیغام وروسته تر ۲۴ ساعتونو شته؛ وروسته برېښنالیک او عام چینل کارولای شئ.',verified:'واټس‌اپ تایید شو. وړیا شخصي ځوابونه ستاسو له پیغام وروسته تر ۲۴ ساعتونو شته. د بندولو لپاره STOP ولیکئ یا دلته اجازه لغوه کړئ.'}}[lang];
  const [phone,setPhone]=useState(''),[code,setCode]=useState(''),[pending,setPending]=useState(false);
  const [status,setStatus]=useState(''),[busy,setBusy]=useState(false);
  async function refresh(){
   const [p,w]=await Promise.all([fetch('/api/applicant/push-subscriptions',{cache:'no-store'}),
    fetch('/api/applicant/whatsapp-contact',{cache:'no-store'})]);
   if(p.ok){const d=await p.json();setAvailablePush(Boolean(d.available));setPushKey(d.publicKey||'');setPushCount(Number(d.activeSubscriptions)||0);}
-  if(w.ok){const d=await w.json();setWaAvailable(Boolean(d.available));setWaVerified(Boolean(d.verified));}
+  if(w.ok){const d=await w.json();setWaAvailable(Boolean(d.available));setWaVerified(Boolean(d.verified));setWaInbound(d.mode==='inbound');if(d.verified){setPending(false);setVerificationUrl('');}}
   if('serviceWorker' in navigator){const reg=await navigator.serviceWorker.getRegistration('/');setThisDevice(Boolean(await reg?.pushManager?.getSubscription()));}
  }
  useEffect(()=>{void refresh().catch(()=>{});},[]);
@@ -76,7 +80,8 @@ export function ApplicantChannels({lang,pushConsent,onChange}:{lang:Lang;pushCon
    const r=await fetch('/api/applicant/whatsapp-contact',{method:action==='delete'?'DELETE':'POST',
     headers:{'Content-Type':'application/json'},body:JSON.stringify(action==='request'?{action,phone,consent:true}:action==='confirm'?{action,code}:{})});
    if(!r.ok)throw Error(t.error);
-   if(action==='request'){setPending(true);setStatus(t.waiting);}
+   const result=await r.json();
+   if(action==='request'){setPending(true);setVerificationUrl(result.mode==='inbound'&&/^https:\/\/wa\.me\/\d+\?text=/.test(result.verificationUrl)?result.verificationUrl:'');setStatus(result.mode==='inbound'?freeCopy.waiting:t.waiting);}
    else {setPending(false);setCode('');setPhone('');setStatus(action==='confirm'?t.verified:'');onChange();}
    await refresh();
   }catch{setStatus(t.error);}finally{setBusy(false);}
@@ -94,13 +99,14 @@ export function ApplicantChannels({lang,pushConsent,onChange}:{lang:Lang;pushCon
    <p className="mt-2 text-sm text-muted-foreground">{{en:'Follow our public WhatsApp Channel for opportunity updates. Personalized private match alerts are a separate service.',fa:'برای دریافت فرصت‌ها، کانال عمومی واتس‌اپ ما را دنبال کنید. اعلان خصوصی فرصت‌های مطابق پروفایل، خدمت جداگانه است.',ps:'د فرصتونو د خبرتیاوو لپاره زموږ عام واټس‌اپ چینل تعقیب کړئ. شخصي برابرې خبرتیاوې جلا خدمت دی.'}[lang]}</p>
    <a className="my-3 inline-flex rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground" href="https://whatsapp.com/channel/0029Vb64Wf25q08koeYn8b3h" target="_blank" rel="noopener noreferrer">{{en:'Follow ARIA HUB on WhatsApp',fa:'دنبال‌کردن آریا هاب در واتس‌اپ',ps:'په واټس‌اپ کې آریا هاب تعقیب کړئ'}[lang]}</a>
    {!waAvailable?<p className="mt-1 text-sm text-muted-foreground">{t.disabled}</p>:
-    waVerified?<><p className="mt-1 text-sm">{t.verified}</p><button className="mt-2 rounded-lg border px-3 py-2" disabled={busy} onClick={()=>void whatsApp('delete')}>{t.cancel}</button></>:
+    waVerified?<><p className="mt-1 text-sm">{waInbound?freeCopy.verified:t.verified}</p><button className="mt-2 rounded-lg border px-3 py-2" disabled={busy} onClick={()=>void whatsApp('delete')}>{t.cancel}</button></>:
     <div className="mt-3 space-y-2">
      {!pending?<><label className="block text-sm">{t.phone}
       <input type="tel" autoComplete="tel" dir="ltr" className="mt-1 w-full rounded-lg border bg-background p-2" placeholder="+93700123456"
        value={phone} onChange={e=>setPhone(e.target.value)} maxLength={16}/></label>
-      <p className="text-xs text-muted-foreground">{help.waConsent}</p>
-      <button type="button" className="rounded-lg border px-3 py-2" disabled={busy||!/^\+[1-9]\d{7,14}$/.test(phone)} onClick={()=>void whatsApp('request')}>{t.request}</button></>:
+      <p className="text-xs text-muted-foreground">{waInbound?freeCopy.consent:help.waConsent}</p>
+      <button type="button" className="rounded-lg border px-3 py-2" disabled={busy||!/^\+[1-9]\d{7,14}$/.test(phone)} onClick={()=>void whatsApp('request')}>{waInbound?freeCopy.start:t.request}</button></>:
+     verificationUrl?<div className="flex flex-wrap gap-2"><a className="rounded-lg bg-primary px-3 py-2 text-primary-foreground" href={verificationUrl} target="_blank" rel="noopener noreferrer">{freeCopy.open}</a><button type="button" className="rounded-lg border px-3 py-2" disabled={busy} onClick={()=>{setBusy(true);void refresh().then(onChange).catch(()=>setStatus(t.error)).finally(()=>setBusy(false));}}>{freeCopy.check}</button><button type="button" aria-label={{en:'Change number or restart verification',fa:'تغییر شماره یا آغاز دوباره تأیید',ps:'شمېره بدلول یا بیا تاییدول'}[lang]} className="rounded-lg border px-3 py-2" disabled={busy} onClick={()=>{setPending(false);setVerificationUrl('');}}>←</button></div>:
      <><label className="block text-sm">{t.code}<input dir="ltr" inputMode="numeric" autoComplete="one-time-code" value={code} maxLength={6} onChange={e=>setCode(e.target.value)} className="mt-1 w-full rounded-lg border bg-background p-2"/></label>
       <button type="button" className="rounded-lg border px-3 py-2" disabled={busy||!/^\d{6}$/.test(code)} onClick={()=>void whatsApp('confirm')}>{t.confirm}</button></>}
     </div>}

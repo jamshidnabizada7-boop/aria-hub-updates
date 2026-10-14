@@ -2060,12 +2060,14 @@ model ApplicantWhatsAppContact {
   applicantProfileId String @unique
   applicantProfile   ApplicantProfile @relation(fields: [applicantProfileId], references: [id], onDelete: Cascade)
   phoneHash          String
+  phoneLookupHash    String? @unique
   encryptedNumber    String @db.Text
   verifyHash         String?
   verifyExpiresAt    DateTime?
   verifyAttempts     Int @default(0)
   verifiedAt         DateTime?
   consentedAt        DateTime?
+  lastInboundAt      DateTime?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 }
@@ -2082,6 +2084,7 @@ model ApplicantChannelDelivery {
   claimedAt      DateTime?
   sentAt         DateTime?
   errorCode      String?
+  providerMessageId String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   @@unique([notificationId,channel,targetId])

@@ -5,6 +5,7 @@ import {statfs} from 'node:fs/promises';
 import {smtpConfigured} from '@/lib/mailer';
 import {applicantSameOrigin} from '@/lib/applicant-origin';
 import {whatsappConfigured,pushConfigured} from '@/lib/applicants/channel-providers';
+import {whatsappInboundConfigured,whatsappTemplateSendsAllowed} from '@/lib/applicants/whatsapp-policy';
 export const dynamic='force-dynamic';
 export const runtime='nodejs';
 const response=(value:object,status=200)=>NextResponse.json(value,{status,headers:{'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});
@@ -39,7 +40,7 @@ export async function GET(){
    cv:{ready:process.env.CLOUD_CV_STORAGE_ENABLED==='true'&&freeBytes!==null&&freeBytes>=2*1024**3,detail:freeBytes===null?'Private storage unavailable':freeBytes<2*1024**3?'Storage reserve too low for uploads':'Private uploads and local extraction enabled',freeGiB:freeBytes===null?null:Math.round(freeBytes/1024**3*10)/10},
    email:{ready:process.env.APPLICANT_MATCH_ALERT_EMAIL_ENABLED==='true'&&smtpConfigured(),detail:process.env.APPLICANT_MATCH_ALERT_EMAIL_ENABLED!=='true'?'Applicant digest worker disabled':smtpConfigured()?'SMTP configured; delivery receipts appear below':'SMTP setup required'},
    copilot:{ready:process.env.APPLICANT_COPILOT_AI_ENABLED==='true'&&Boolean(process.env.GROQ_API_KEY),detail:process.env.APPLICANT_COPILOT_AI_ENABLED==='true'&&process.env.GROQ_API_KEY?'AI available with per-account limits and consent':'Guided assistance only; AI disabled'},
-   whatsapp:{ready:whatsappConfigured(),detail:whatsappConfigured()?'Private verified-number alerts configured':'Private alerts need a registered sender and approved templates; the public Channel is available separately'},
+   whatsapp:{ready:whatsappConfigured(),detail:whatsappInboundConfigured()?'Free private replies only within 24 hours after a verified user message; outside that window use email, push or the public Channel':!whatsappTemplateSendsAllowed()?'Strict zero spend: billable templates blocked. Real sender setup requires live app and signed inbound webhook for free replies.':'Private alerts need a registered sender and approved templates; the public Channel is available separately'},
    push:{ready:pushConfigured(),detail:pushConfigured()?'Device opt-in push configured':'Push provider setup required'}
   };
   return response({

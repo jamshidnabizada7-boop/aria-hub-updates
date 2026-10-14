@@ -6,7 +6,8 @@
  */
 import {PrismaClient} from '@prisma/client';
 import {openChannel} from '../src/lib/applicants/channel-security';
-import {sendWhatsAppTemplate,deliverPushToGateway,pushConfigured,whatsappConfigured} from '../src/lib/applicants/channel-providers';
+import {sendWhatsAppTemplate,sendWhatsAppServiceAlert,deliverPushToGateway,pushConfigured,whatsappConfigured} from '../src/lib/applicants/channel-providers';
+import {whatsappFreeServiceConfigured,channelFailureStatus} from '../src/lib/applicants/whatsapp-policy';
 import {safeLocale} from '../src/lib/applicants/notification-service';
 const db=new PrismaClient(),SEND=process.argv.includes('--send');
 const enabled=()=>process.env.APPLICANT_AUTH_ENABLED==='true'&&
@@ -22,8 +23,10 @@ async function main(){
  if(SEND&&!pushConfigured()&&!whatsappConfigured())throw Error('no_channel_provider_ready');
  const stale=new Date(Date.now()-15*60000);
  if(SEND){
-  await db.applicantChannelDelivery.updateMany({where:{status:'processing',claimedAt:{lt:stale}},
+  await db.applicantChannelDelivery.updateMany({where:{status:'processing',channel:'push',claimedAt:{lt:stale}},
     data:{status:'pending',claimedAt:null}});
+  await db.applicantChannelDelivery.updateMany({where:{status:'processing',channel:'whatsapp',claimedAt:{lt:stale}},
+    data:{status:'review',errorCode:'whatsapp_delivery_unknown'}});
  }
  const rows=await db.applicantChannelDelivery.findMany({
   where:{status:'pending',nextAttemptAt:{lte:new Date()}},orderBy:[{createdAt:'asc'},{id:'asc'}],take:60,
@@ -39,6 +42,7 @@ async function main(){
     data:{status:'processing',claimedAt:new Date()}});
   if(claimed.count!==1)continue;
   const note=row.notification,account=note.applicantProfile,pref=account.notificationPreference;
+  let providerMessageId:string|null=null;
   try{
    const available=note.opportunity.status==='published'&&(!note.opportunity.deadline||note.opportunity.deadline>new Date());
    if(!available||account.user.disabled||!account.user.emailVerified||!pref)
@@ -59,22 +63,25 @@ async function main(){
      applicantProfileId:note.applicantProfileId,verifiedAt:{not:null},consentedAt:{not:null}}});
     if(!sub)throw Error('whatsapp_contact_revoked');
     const phone=openChannel(sub.encryptedNumber,note.applicantProfileId,'whatsapp');
-    await sendWhatsAppTemplate(phone,process.env.WHATSAPP_MATCH_TEMPLATE!,lang,[label,link]);
+    providerMessageId=whatsappFreeServiceConfigured()
+     ?await sendWhatsAppServiceAlert(sub.id,note.applicantProfileId,phone,lang,label,link)
+     :await sendWhatsAppTemplate(phone,process.env.WHATSAPP_MATCH_TEMPLATE!,lang,[label,link]);
    }else throw Error('invalid_channel');
    await db.applicantChannelDelivery.updateMany({where:{id:row.id,status:'processing'},
-    data:{status:'sent',sentAt:new Date(),claimedAt:null,errorCode:null}});
+    data:{status:'sent',sentAt:new Date(),claimedAt:null,errorCode:null,providerMessageId}});
    sent++;
   }catch(e){
-   const code=e instanceof Error?e.message:'delivery_failure';
+   const code=providerMessageId&&row.channel==='whatsapp'?'whatsapp_delivery_unknown':e instanceof Error?e.message:'delivery_failure';
    if(code==='push_subscription_expired')await db.applicantPushSubscription.updateMany({
     where:{id:row.targetId,applicantProfileId:note.applicantProfileId},data:{disabledAt:new Date()}});
-   const permanentlyUnsafe=/consent|revoked|not_permitted|invalid_channel|unapproved|unsafe_link|subscription_expired/.test(code);
    const attempts=row.attempts+1;
+   const status=channelFailureStatus(row.channel,code,attempts);
+   const windowClosed=code==='whatsapp_free_window_closed';
    await db.applicantChannelDelivery.updateMany({where:{id:row.id,status:'processing'},
-    data:{status:permanentlyUnsafe||attempts>=5?'suppressed':'pending',
-     attempts,claimedAt:null,errorCode:code.slice(0,120),
-     nextAttemptAt:new Date(Date.now()+Math.min(12*3600000,Math.pow(2,attempts)*5*60000))}});
-   if(permanentlyUnsafe)suppressed++;else failed++;
+    data:{status:windowClosed?'pending':status,
+     attempts:windowClosed?row.attempts:attempts,claimedAt:null,errorCode:code.slice(0,120),providerMessageId,
+     nextAttemptAt:new Date(Date.now()+(windowClosed?3600000:Math.min(12*3600000,Math.pow(2,attempts)*5*60000)))}});
+   if(status==='suppressed')suppressed++;else failed++;
   }
  }
  console.log(JSON.stringify({mode:SEND?'send':'dry_run',pending:rows.length,sent,suppressed,failed,

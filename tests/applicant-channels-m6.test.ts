@@ -9,6 +9,7 @@ import {GET as pushGet,POST as pushPost,DELETE as pushDelete} from '../src/app/a
 const db=new PrismaClient(),owners:string[]=[];
 const vars=['APPLICANT_AUTH_ENABLED','APPLICANT_MATCHER_V3_ENABLED','APPLICANT_NOTIFICATIONS_ENABLED',
  'APPLICANT_CHANNEL_ENCRYPTION_KEY','APPLICANT_WHATSAPP_VERIFICATION_ENABLED','APPLICANT_WHATSAPP_DELIVERY_ENABLED',
+ 'WHATSAPP_ZERO_SPEND','WHATSAPP_BILLABLE_SENDS_ENABLED',
  'WHATSAPP_PHONE_NUMBER_ID','WHATSAPP_META_ACCESS_TOKEN','WHATSAPP_MATCH_TEMPLATE','WHATSAPP_VERIFY_TEMPLATE',
  'APPLICANT_PUSH_SUBSCRIPTIONS_ENABLED','APPLICANT_VAPID_PUBLIC_KEY'] as const;
 const previous=Object.fromEntries(vars.map(k=>[k,process.env[k]]));
@@ -16,6 +17,7 @@ Object.assign(process.env,{
  APPLICANT_AUTH_ENABLED:'true',APPLICANT_MATCHER_V3_ENABLED:'true',APPLICANT_NOTIFICATIONS_ENABLED:'true',
  APPLICANT_CHANNEL_ENCRYPTION_KEY:'a'.repeat(64),
  APPLICANT_WHATSAPP_VERIFICATION_ENABLED:'true',APPLICANT_WHATSAPP_DELIVERY_ENABLED:'true',
+ WHATSAPP_ZERO_SPEND:'false',WHATSAPP_BILLABLE_SENDS_ENABLED:'true',
  WHATSAPP_PHONE_NUMBER_ID:'123456789123',WHATSAPP_META_ACCESS_TOKEN:'candidate-only-fake-token',
  WHATSAPP_MATCH_TEMPLATE:'aria_match_optin',WHATSAPP_VERIFY_TEMPLATE:'aria_verify_optin',
  APPLICANT_PUSH_SUBSCRIPTIONS_ENABLED:'true',APPLICANT_VAPID_PUBLIC_KEY:'a'.repeat(87)
@@ -97,7 +99,7 @@ describe('candidate notification channels',()=>{
   const calls:Array<Record<string,unknown>>=[];
   globalThis.fetch=(async(_url:unknown,init?:RequestInit)=>{
    const raw=JSON.parse(String(init?.body||'{}'));calls.push(raw);
-   return new Response(JSON.stringify({messages:[{id:'fixture'}]}),{status:200,headers:{'content-type':'application/json'}});
+   return new Response(JSON.stringify({messages:[{id:'wamid.fixture'}]}),{status:200,headers:{'content-type':'application/json'}});
   }) as typeof fetch;
   const path='/api/applicant/whatsapp-contact';
   expect((await whatsappPost(req(path,'POST',a.token,{action:'request',phone:'+93700123456',consent:true},'https://evil.example.com'))).status).toBe(403);

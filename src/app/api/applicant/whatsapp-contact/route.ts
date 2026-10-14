@@ -5,8 +5,10 @@ import {notificationAccount,applicantResponse} from '@/lib/applicants/notificati
 import {WhatsAppNumber,enabledChannelCrypto,sealChannel,openChannel,otpHash,matchOtpHash,newOtp} from '@/lib/applicants/channel-security';
 import {whatsappConfigured,sendWhatsAppTemplate} from '@/lib/applicants/channel-providers';
 import {allowDurable} from '@/lib/security/durable-rate-limit';
+import {whatsappInboundConfigured,freeWhatsAppWindow} from '@/lib/applicants/whatsapp-policy';
+import {newInboundChallenge,inboundChallengeHash,whatsappLookupHash} from '@/lib/applicants/whatsapp-inbound';
 export const runtime='nodejs';export const dynamic='force-dynamic';
-const available=()=>process.env.APPLICANT_WHATSAPP_VERIFICATION_ENABLED==='true'&&enabledChannelCrypto()&&whatsappConfigured();
+const available=()=>process.env.APPLICANT_WHATSAPP_VERIFICATION_ENABLED==='true'&&enabledChannelCrypto()&&(whatsappInboundConfigured()||whatsappConfigured());
 const Request=z.discriminatedUnion('action',[
  z.object({action:z.literal('request'),phone:WhatsAppNumber,consent:z.literal(true)}).strict(),
  z.object({action:z.literal('confirm'),code:z.string().regex(/^\d{6}$/)}).strict()
@@ -14,8 +16,8 @@ const Request=z.discriminatedUnion('action',[
 export async function GET(req:Request){
  const a=await notificationAccount(req);if(!a)return applicantResponse({error:'unauthorized'},401);
  const contact=await db.applicantWhatsAppContact.findUnique({where:{applicantProfileId:a.profile.id},
-  select:{verifiedAt:true,consentedAt:true}});
- return applicantResponse({available:available(),verified:!!contact?.verifiedAt&&!!contact?.consentedAt});
+  select:{verifiedAt:true,consentedAt:true,lastInboundAt:true}});
+ return applicantResponse({available:available(),mode:whatsappInboundConfigured()?'inbound':'template',verified:!!contact?.verifiedAt&&!!contact?.consentedAt,freeWindowOpen:freeWhatsAppWindow(contact?.lastInboundAt||null)});
 }
 export async function POST(req:Request){
  if(!applicantSameOrigin(req))return applicantResponse({error:'invalid_origin'},403);
@@ -29,6 +31,24 @@ export async function POST(req:Request){
   if(!parsed.success)return applicantResponse({error:'invalid_request'},400);
   const data=parsed.data;
   if(data.action==='request'){
+   if(whatsappInboundConfigured()){
+    if(data.phone.slice(1)===process.env.WHATSAPP_BUSINESS_NUMBER)return applicantResponse({error:'sender_cannot_be_recipient'},400);
+    const challenge=newInboundChallenge(),phoneLookupHash=whatsappLookupHash(data.phone);
+    const occupied=await db.applicantWhatsAppContact.findUnique({where:{phoneLookupHash},select:{id:true,applicantProfileId:true,verifiedAt:true,verifyExpiresAt:true}});
+    if(occupied&&occupied.applicantProfileId!==a.profile.id){
+     if(occupied.verifiedAt||!occupied.verifyExpiresAt||occupied.verifyExpiresAt>new Date())return applicantResponse({error:'number_unavailable'},409);
+     // An expired unverified request cannot reserve someone else's number forever.
+     await db.applicantWhatsAppContact.updateMany({where:{id:occupied.id,verifiedAt:null,verifyExpiresAt:{lte:new Date()}},data:{phoneLookupHash:null,verifyHash:null}});
+    }
+    const encryptedNumber=sealChannel(data.phone,a.profile.id,'whatsapp');
+    const pending={phoneHash:otpHash(a.profile.id,data.phone,'phone'),phoneLookupHash,encryptedNumber,
+     verifyHash:inboundChallengeHash(challenge),verifyExpiresAt:new Date(Date.now()+10*60000),verifyAttempts:0,verifiedAt:null,consentedAt:null,lastInboundAt:null};
+    await db.$transaction([
+     db.applicantWhatsAppContact.upsert({where:{applicantProfileId:a.profile.id},create:{applicantProfileId:a.profile.id,...pending},update:pending}),
+     db.applicantNotificationPreference.upsert({where:{applicantProfileId:a.profile.id},create:{applicantProfileId:a.profile.id,whatsappEnabled:false},update:{whatsappEnabled:false}})
+    ]);
+    return applicantResponse({mode:'inbound',verificationUrl:`https://wa.me/${process.env.WHATSAPP_BUSINESS_NUMBER}?text=${encodeURIComponent('ARIA VERIFY '+challenge)}`,expiresInSeconds:600});
+   }
    const code=newOtp();
    const encrypted=sealChannel(data.phone,a.profile.id,'whatsapp');
    // No fallback to a free-form WhatsApp message. An approved template is

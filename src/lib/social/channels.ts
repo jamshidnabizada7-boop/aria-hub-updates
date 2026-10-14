@@ -506,6 +506,10 @@ async function publishWhatsApp(creds: Record<string, unknown>, input: PublishInp
     return { ok: false, error: 'whatsapp: Groups API is not enabled for this deployment; verify official endpoint and account eligibility first' };
   }
 
+  if (process.env.WHATSAPP_ZERO_SPEND !== 'false' || process.env.WHATSAPP_BILLABLE_SENDS_ENABLED !== 'true') {
+    return {ok:false,error:'whatsapp: strict zero-spend mode blocks scheduled social sends. Free private replies require a signed incoming message and are handled by the applicant service-window worker.'};
+  }
+
   const target = mode === 'group'
     ? String(creds.groupId || '')
     : String(creds.recipient || creds.recipientPhone || '');
