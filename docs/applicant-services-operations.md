@@ -34,7 +34,7 @@ Desktop sharing remains scheduled at 08:35, 13:35 and 19:35 Asia/Karachi, requir
 
 Relevant automated checks: 53 tests, including real local SMTP/digest duplicate suppression, private CV HTTP flows, extraction review, organization validation and WhatsApp Test Number readiness. TypeScript checking passed. Synthetic production verification records and files were removed afterward.
 
-Current web release: `/opt/aria-hub/releases/20261013-applicant-services-0e55b75`. The current release also contains the updated standalone browser-share helper from `0675a39`, which rejects stale deadline artwork and generates its caption from current data. Previous release links and restricted configuration backups remain available on Oracle. Credentials and private applicant files are never stored in this document or Git.
+Current web release: `/opt/aria-hub/releases/20261014-whatsapp-free-6f2e84c`, with the standalone installer update from `de07c57`. It contains the updated browser-share helper, which rejects stale deadline artwork and generates its caption from current data. Previous release links and restricted configuration backups remain available on Oracle. Credentials and private applicant files are never stored in this document or Git.
 
 ## Strict zero-spend WhatsApp path
 
@@ -49,3 +49,7 @@ Endpoint: `https://www.myariahub.com/api/webhooks/whatsapp`. It rejects requests
 The channel worker stores the provider acceptance ID. Stale WhatsApp claims and lost/ambiguous send responses become `review`, never automatic replays. An API acceptance is not a delivery receipt. Expired free windows defer without consuming failure attempts; expired opportunities and withdrawn consent suppress the pending send. Never clear unresolved reservations automatically.
 
 Verification: 12 targeted tests passed in an isolated local Postgres database, covering forgery rejection, ownership, consent, expiry, encrypted storage, template cost gates and unknown outcomes; TypeScript passed. Production activation remains separately gated.
+
+Oracle build and preflight passed. The additive migration was applied to the local Oracle Postgres database after a restricted schema backup. `/etc/aria-hub/whatsapp-free.env` contains the privately copied existing system-user credential and correct sender, with all activation flags false and both cost gates closed. Web and applicant-channel services load it last. The obsolete self/test recipient was cleared, the encrypted prior channel record was backed up, and the social WhatsApp switch remains disabled. Web health passed after release switch; the public webhook returned 503 while inactive and the unauthenticated applicant contact endpoint returned 401. The database role can query the new ledger columns. Free private delivery is not yet verified.
+
+The user subsequently approved switching MY ARIA HUB to Live, subscribing incoming business-message events to Oracle, and privately storing its existing app secret for signature verification. This authorization persists; do not ask again for the same scope. Password/security-code entry remains a user handoff. Paid sends and billing remain unapproved.
