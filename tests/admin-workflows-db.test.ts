@@ -10,9 +10,9 @@ const {db}=await import('../src/lib/db');
 const crud=await import('../src/app/api/admin/crud/route');
 const audit=await import('../src/app/api/admin/site-audit/route');
 const {NextRequest}=await import('next/server');
-const run='admin-audit-'+Date.now(),templateIds:string[]=[],sessionIds:string[]=[];
+const run='admin-audit-'+Date.now(),templateIds:string[]=[],sessionIds:string[]=[],menuIds:string[]=[];
 const req=(url:string,method='GET',body?:object)=>new NextRequest('http://localhost'+url,{method,...(body?{headers:{'Content-Type':'application/json',origin:'http://localhost'},body:JSON.stringify(body)}:{})});
-afterAll(async()=>{if(!isolated)return;await db.documentTemplate.deleteMany({where:{id:{in:templateIds}}});await db.interviewSession.deleteMany({where:{id:{in:sessionIds}}});await db.$disconnect();});
+afterAll(async()=>{if(!isolated)return;await db.documentTemplate.deleteMany({where:{id:{in:templateIds}}});await db.interviewSession.deleteMany({where:{id:{in:sessionIds}}});await db.menuItem.deleteMany({where:{id:{in:menuIds}}});await db.$disconnect();});
 databaseTest('canonical template CRUD retains drafts, translations, arrays and premium flags',async()=>{
  const created=await crud.POST(req('/api/admin/crud','POST',{model:'documentTemplate',data:{title:run,slug:run,status:'draft',content:'Draft content',titleI18n:{en:run,fa:'نمونه آزمایشی'},requiredFields:['Name','Experience'],writingTips:['Use facts'],isPremium:false}}));
  expect(created.status).toBe(200);const result=await created.json();templateIds.push(result.item.id);
@@ -44,4 +44,10 @@ databaseTest('visibility audit explains disabled and empty sections and only kno
 });
 databaseTest('admin authentication is required for all audit and CRUD actions',async()=>{
  authenticated=false;try{expect((await audit.GET()).status).toBe(401);expect((await audit.PUT(req('/api/admin/site-audit','PUT',{key:'hero',enabled:true}))).status).toBe(401);expect((await crud.GET(req('/api/admin/crud?model=documentTemplate'))).status).toBe(401);}finally{authenticated=true;}
+});
+databaseTest('menu parents cannot create self references, descendant cycles or broken parent links',async()=>{
+ const a=await db.menuItem.create({data:{label:run+'a',url:null,visible:false}});menuIds.push(a.id);
+ const b=await db.menuItem.create({data:{label:run+'b',parentId:a.id,url:null,visible:false}});menuIds.push(b.id);
+ for(const parentId of [a.id,b.id,'missing-'+run])expect((await crud.PUT(req('/api/admin/crud','PUT',{model:'menuItem',id:a.id,data:{parentId}}))).status).toBe(400);
+ expect((await crud.PUT(req('/api/admin/crud','PUT',{model:'menuItem',id:b.id,data:{parentId:''}}))).status).toBe(200);
 });

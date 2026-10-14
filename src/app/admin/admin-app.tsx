@@ -756,9 +756,11 @@ function CrudForm({ model, fields, item, label, statusOptions, onClose, onSaved 
       if (model === 'subscriber' && fields.includes('status')) init.status = 'active';
       if (model === 'templateComment' && fields.includes('status')) init.status = 'approved';
       if (model === 'importSource') {
+        init.type='job';
         if (fields.includes('scheduleMinutes')) init.scheduleMinutes = 60;
         if (fields.includes('autoPublish')) init.autoPublish = false;
       }
+      if(model==='documentTemplate')init.status='draft';
       if (model === 'interviewSession') {
         if (fields.includes('mode')) init.mode = 'practice';
         if (fields.includes('status')) init.status = 'in_progress';
@@ -862,6 +864,7 @@ function CrudForm({ model, fields, item, label, statusOptions, onClose, onSaved 
     
     // Clean up empty i18n fields before submission
     const payload = { ...data };
+    if(model==='documentTemplate')for(const key of ['requiredFields','writingTips','commonMistakes'])if(Array.isArray(payload[key]))payload[key]=payload[key].map((v:string)=>v.trim()).filter(Boolean);
     Object.keys(payload).forEach(key => {
       if (key.endsWith('I18n')) {
         // Remove i18n field if it's empty or has no translations
@@ -1013,7 +1016,7 @@ function FieldInput({ field, value, item, model, allFields = [], statusOptions, 
   };
   
   const isRequired = getRequiredFields(model).includes(field);
-  if(model==='documentTemplate'&&['requiredFields','writingTips','commonMistakes'].includes(field))return <div className="space-y-2"><Label>{field}</Label><Textarea value={Array.isArray(value)?value.join('\n'):value||''} onChange={e=>onChange(e.target.value.split('\n').map(v=>v.trim()).filter(Boolean))} placeholder="One item per line"/></div>;
+  if(model==='documentTemplate'&&['requiredFields','writingTips','commonMistakes'].includes(field))return <div className="space-y-2"><Label>{field}</Label><Textarea aria-label={field} value={Array.isArray(value)?value.join('\n'):value||''} onChange={e=>onChange(e.target.value.split('\n'))} placeholder="One item per line"/></div>;
   
   // Define multilingual fields
   const multilingualFields = [
@@ -1115,14 +1118,14 @@ function FieldInput({ field, value, item, model, allFields = [], statusOptions, 
   }
 
   if (isType) {
+    const options=model==='importSource'?['job','scholarship','fellowship','training','news']:['image','video'];
     return (
       <div>
         <Label className="mb-1.5 block text-sm font-medium">{getFieldLabel()}</Label>
-        <Select value={value || 'image'} onValueChange={onChange}>
+        <Select value={value || options[0]} onValueChange={onChange}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="image">image</SelectItem>
-            <SelectItem value="video">video</SelectItem>
+            {options.map(option=><SelectItem key={option} value={option}>{option}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>

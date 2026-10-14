@@ -105,7 +105,21 @@ function fillSlug(model: string, data: any, isCreate: boolean): void {
   if (typeof data.slug === 'string' && data.slug.trim()) return;
   if (!isCreate && data.slug === undefined) return;
   if (data.slug !== undefined && typeof data.slug !== 'string') return;
-  data.slug = slugify(String(data.title ?? '')) || `${model}-${Math.random().toString(36).slice(2, 10)}`;
+  data.slug = slugify(String(data.title ?? data.name ?? data.label ?? '')) || `${model}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/** Reject menu cycles rather than silently losing an entire subtree. */
+async function validMenuParent(id:string|undefined,parentId:unknown):Promise<boolean>{
+ if(parentId===undefined||parentId===null||parentId==='')return true;
+ if(typeof parentId!=='string')return false;
+ const visited=new Set<string>();let next:string|null=parentId;
+ while(next){
+  if(next===id||visited.has(next)||visited.size>100)return false;
+  visited.add(next);
+  const parent=await db.menuItem.findUnique({where:{id:next},select:{parentId:true}});
+  if(!parent)return false;next=parent.parentId;
+ }
+ return true;
 }
 
 /** Normalize user-entered dates to ISO. Returns the offending field name, or null. */
@@ -469,6 +483,7 @@ export async function POST(req: NextRequest) {
   }
   if (!model || !MODELS[model]) return NextResponse.json({ error: 'Invalid model' }, { status: 400 });
   if(READ_ONLY_ADMIN_MODELS.has(model)||model==='section')return NextResponse.json({error:'Use the dedicated workflow; this record cannot be created manually.'},{status:405});
+  if(model==='menuItem'&&!await validMenuParent(undefined,data?.parentId))return NextResponse.json({error:'Choose an existing parent without a menu cycle.'},{status:400});
 
   // Clean i18n fields first
   cleanI18nFields(data);
@@ -560,6 +575,7 @@ export async function PUT(req: NextRequest) {
   }
   if (!model || !MODELS[model] || !id) return NextResponse.json({ error: 'Invalid params' }, { status: 400 });
   if(READ_ONLY_ADMIN_MODELS.has(model)||model==='section')return NextResponse.json({error:'Use the dedicated workflow; this record cannot be edited manually.'},{status:405});
+  if(model==='menuItem'&&!await validMenuParent(id,data?.parentId))return NextResponse.json({error:'Choose an existing parent without a menu cycle.'},{status:400});
 
   // Clean i18n fields first
   cleanI18nFields(data);
