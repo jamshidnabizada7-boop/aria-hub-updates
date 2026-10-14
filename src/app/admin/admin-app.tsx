@@ -145,7 +145,7 @@ export function AdminApp({ admin }: { admin: AdminUser }) {
   };
 
   return (
-    <div className="flex min-h-screen bg-muted/30">
+    <div dir={lang==='en'?'ltr':'rtl'} className="flex min-h-screen bg-muted/30">
       {/* Sidebar */}
       <aside className={cn(
         'fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col transform border-r border-border/60 bg-card transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0',

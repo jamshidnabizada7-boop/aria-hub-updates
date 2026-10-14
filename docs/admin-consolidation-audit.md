@@ -24,6 +24,7 @@
 | Table columns repeated titles beside raw translation JSON | Translation copies and duplicate status columns are omitted from summaries. Field labels are readable, and menu parents/gallery albums show names. Translation tabs remain available in editors. |
 | Disabled homepage anchors and nested resource menus were confusing | Off sections have no dead anchor preview link. Resource links appear directly under More. |
 | A live English-page check found CMS process text rendered in Persian before hydration | CMS sections and footer now use the URL language context during server rendering. Separate render tests cover English, Persian and Pashto. |
+| Screenshot review found RTL count reversal and repeated technical keys beside names | Admin direction follows its language; public/total counts keep LTR numeric order. Section names appear once. |
 
 ## Complete task organization
 
