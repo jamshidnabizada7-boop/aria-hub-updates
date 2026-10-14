@@ -6,7 +6,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Input } from '@/components/ui/input';
 import { SectionHeading } from '../section-heading';
 import { useT } from '@/hooks/use-t';
-import { useLangStore } from '@/lib/lang-store';
+import {useEffectiveLang} from '@/components/site/lang-context';
 import { getLocalizedContent } from '@/lib/i18n-content';
 import type { Faq } from '@/lib/types';
 import { LifeBuoy, Search, HelpCircle } from 'lucide-react';
@@ -88,7 +88,7 @@ export const DEFAULT_FAQS: Faq[] = [
 
 export function FaqsSection({ faqs }: { faqs: Faq[] }) {
   const t = useT();
-  const lang = useLangStore((s) => s.code);
+  const lang = useEffectiveLang();
   const [query, setQuery] = useState('');
 
   const effectiveFaqs = faqs && faqs.length > 0 ? faqs : DEFAULT_FAQS;

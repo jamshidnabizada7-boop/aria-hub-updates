@@ -6,14 +6,14 @@ import { Globe2, Zap, ShieldCheck, BadgeDollarSign, Users2, Award, ArrowUpRight 
 import * as LucideIcons from 'lucide-react';
 import { SectionHeading } from '../section-heading';
 import { useT } from '@/hooks/use-t';
-import { useLangStore } from '@/lib/lang-store';
+import {useEffectiveLang} from '@/components/site/lang-context';
 import { getLocalizedContent } from '@/lib/i18n-content';
 import { cn } from '@/lib/utils';
 import type { WhyChooseUsFeature } from '@/lib/types';
 
 export function WhyChooseUsSection({ lang: serverLang, features = [] }: { lang?: string; features?: WhyChooseUsFeature[] }) {
   const t = useT();
-  const storeLang = useLangStore((s) => s.code);
+  const storeLang = useEffectiveLang();
   const lang = serverLang ?? storeLang;
   const defaultFeatures = [
     { icon: 'Globe2', key: 'f1', color: 'from-primary to-chart-2', glow: 'bg-primary/20', title: '', description: '' },

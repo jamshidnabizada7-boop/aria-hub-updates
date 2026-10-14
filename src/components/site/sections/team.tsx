@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { SectionHeading } from '../section-heading';
 import { SmartImage } from '../smart-image';
 import { useT } from '@/hooks/use-t';
-import { useLangStore } from '@/lib/lang-store';
+import {useEffectiveLang} from '@/components/site/lang-context';
 import { getLocalizedContent } from '@/lib/i18n-content';
 import type { TeamMember } from '@/lib/types';
 
@@ -44,7 +44,7 @@ export function TeamSection({ members }: { members: TeamMember[] }) {
 }
 
 function TeamCard({ member }: { member: TeamMember }) {
-  const lang = useLangStore((s) => s.code);
+  const lang = useEffectiveLang();
   const [hovered, setHovered] = useState(false);
   
   const name = getLocalizedContent(member.name, member.nameI18n as any, lang);

@@ -6,13 +6,13 @@ import { X, ChevronLeft, ChevronRight, ZoomIn } from 'lucide-react';
 import { SectionHeading } from '../section-heading';
 import { SmartImage } from '../smart-image';
 import { useT } from '@/hooks/use-t';
-import {useLangStore} from '@/lib/lang-store';
+import {useEffectiveLang} from '@/components/site/lang-context';
 import type { GalleryItem } from '@/lib/types';
 import { cn, normalizeImageUrl } from '@/lib/utils';
 
 export function GallerySection({ items }: { items: GalleryItem[] }) {
   const t = useT();
-  const lang=useLangStore(s=>s.code);
+  const lang=useEffectiveLang();
   const [active, setActive] = useState<number | null>(null);
   const [filter, setFilter] = useState<string>('all');
 

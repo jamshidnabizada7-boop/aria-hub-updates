@@ -5,14 +5,14 @@ import { ArrowRight, Calendar, Shield, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MagneticButton } from '../magnetic-button';
 import { useT } from '@/hooks/use-t';
-import { useLangStore } from '@/lib/lang-store';
+import {useEffectiveLang} from '@/components/site/lang-context';
 import { useLangHref } from '@/hooks/use-lang-href';
 import { getLocalizedContent } from '@/lib/i18n-content';
 import type { CtaBanner as CtaBannerType } from '@/lib/types';
 
 export function CtaBannerSection({ banners }: { banners: CtaBannerType[] }) {
   const t = useT();
-  const lang = useLangStore((s) => s.code);
+  const lang = useEffectiveLang();
   const hrefFn = useLangHref();
   if (!banners.length) return null;
   const banner = banners[0];

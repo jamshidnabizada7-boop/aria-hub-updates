@@ -10,7 +10,7 @@ import { SectionHeading } from '../section-heading';
 import { SmartImage } from '../smart-image';
 import { useT } from '@/hooks/use-t';
 import { useLangHref } from '@/hooks/use-lang-href';
-import { useLangStore } from '@/lib/lang-store';
+import {useEffectiveLang} from '@/components/site/lang-context';
 import { getLocalizedContent } from '@/lib/i18n-content';
 import type { Opportunity, OpportunityCategory } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -105,7 +105,7 @@ export function OpportunitiesSection({
 }
 
 function OpportunityCard({ opportunity, t }: { opportunity: Opportunity; t: (k: string) => string }) {
-  const lang = useLangStore((s) => s.code);
+  const lang = useEffectiveLang();
 
   // Get localized content. Cards show a 2-line snippet — prefer the compact
   // aiSummary (getSiteData no longer ships full 3-language descriptions to

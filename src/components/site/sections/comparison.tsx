@@ -4,14 +4,14 @@ import { motion } from 'framer-motion';
 import { Check, X, Minus, Sparkles } from 'lucide-react';
 import { SectionHeading } from '../section-heading';
 import { useT } from '@/hooks/use-t';
-import { useLangStore } from '@/lib/lang-store';
+import {useEffectiveLang} from '@/components/site/lang-context';
 import { getLocalizedContent } from '@/lib/i18n-content';
 import type { ComparisonRow } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 export function ComparisonSection({ lang: serverLang, rows }: { lang?: string; rows: ComparisonRow[] }) {
   const t = useT();
-  const storeLang = useLangStore((s) => s.code);
+  const storeLang = useEffectiveLang();
   const lang = serverLang ?? storeLang;
   if (!rows.length) return null;
 

@@ -6,13 +6,13 @@ import { SectionHeading } from '../section-heading';
 import { Reveal, revealItem } from '../reveal';
 import { Icon } from '../icon';
 import { useT } from '@/hooks/use-t';
-import { useLangStore } from '@/lib/lang-store';
+import {useEffectiveLang} from '@/components/site/lang-context';
 import { getLocalizedContent } from '@/lib/i18n-content';
 import type { ProcessStep } from '@/lib/types';
 
 export function ProcessSection({ steps }: { steps: ProcessStep[] }) {
   const t = useT();
-  const lang = useLangStore((s) => s.code);
+  const lang = useEffectiveLang();
   if (!steps.length) return null;
 
   return (

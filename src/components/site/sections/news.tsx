@@ -9,7 +9,7 @@ import { SectionHeading } from '../section-heading';
 import { SmartImage } from '../smart-image';
 import { DetailModal } from '../detail-modal';
 import { useT } from '@/hooks/use-t';
-import { useLangStore } from '@/lib/lang-store';
+import {useEffectiveLang} from '@/components/site/lang-context';
 import { getLocalizedContent } from '@/lib/i18n-content';
 import type { News } from '@/lib/types';
 
@@ -21,7 +21,7 @@ function parseTags(v: string | null): string[] {
 export function NewsSection({
   lang: serverLang, news }: { lang?: string; news: News[] }) {
   const t = useT();
-  const storeLang = useLangStore((s) => s.code);
+  const storeLang = useEffectiveLang();
   const lang = serverLang ?? storeLang;
   const [selected, setSelected] = useState<News | null>(null);
   if (!news.length) return null;
@@ -138,7 +138,7 @@ export function NewsSection({
 }
 
 function NewsDetail({ news, t, lang: serverLang }: { news: News; t: (k: string) => string; lang?: string }) {
-  const storeLang = useLangStore((s) => s.code);
+  const storeLang = useEffectiveLang();
   const lang = serverLang ?? storeLang;
   
   // Get localized content

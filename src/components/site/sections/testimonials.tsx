@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Star, Quote, ChevronLeft, ChevronRight } from 'lucide-react';
 import { SectionHeading } from '../section-heading';
 import { useT } from '@/hooks/use-t';
-import { useLangStore } from '@/lib/lang-store';
+import {useEffectiveLang} from '@/components/site/lang-context';
 import { getLocalizedContent } from '@/lib/i18n-content';
 import type { Testimonial } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -26,7 +26,7 @@ function AvatarWithFallback({ src, name }: { src: string; name: string }) {
 
 export function TestimonialsSection({ lang: serverLang, testimonials }: { lang?: string; testimonials: Testimonial[] }) {
   const t = useT();
-  const storeLang = useLangStore((s) => s.code);
+  const storeLang = useEffectiveLang();
   const lang = serverLang ?? storeLang;
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);

@@ -11,7 +11,7 @@ import { Icon } from '../icon';
 import { SmartImage } from '../smart-image';
 import { useT } from '@/hooks/use-t';
 import { useLangHref } from '@/hooks/use-lang-href';
-import { useLangStore } from '@/lib/lang-store';
+import {useEffectiveLang} from '@/components/site/lang-context';
 import { getLocalizedContent } from '@/lib/i18n-content';
 import type { Service } from '@/lib/types';
 
@@ -94,7 +94,7 @@ function ServiceCard({ service, lang: serverLang }: { service: Service; lang?: s
   const ref = useRef<HTMLAnchorElement>(null);
   const t = useT();
   const hrefFn = useLangHref();
-  const storeLang = useLangStore((s) => s.code);
+  const storeLang = useEffectiveLang();
   const lang = serverLang ?? storeLang;
 
   // Get localized content

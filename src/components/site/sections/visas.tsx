@@ -10,7 +10,7 @@ import { SmartImage } from '../smart-image';
 import { DetailModal } from '../detail-modal';
 import { useT } from '@/hooks/use-t';
 import { useLangHref } from '@/hooks/use-lang-href';
-import { useLangStore } from '@/lib/lang-store';
+import {useEffectiveLang} from '@/components/site/lang-context';
 import { getLocalizedContent, getLocalizedArray } from '@/lib/i18n-content';
 import type { Visa } from '@/lib/types';
 
@@ -85,7 +85,7 @@ export function VisasSection({ visas }: { visas: Visa[] }) {
 }
 
 function VisaCard({ visa, t, onOpen }: { visa: Visa; t: (k: string) => string; onOpen: () => void }) {
-  const lang = useLangStore((s) => s.code);
+  const lang = useEffectiveLang();
   
   // Get localized content
   const country = getLocalizedContent(visa.country, visa.countryI18n as any, lang);
@@ -149,7 +149,7 @@ function VisaCard({ visa, t, onOpen }: { visa: Visa; t: (k: string) => string; o
 }
 
 function VisaDetail({ visa, t }: { visa: Visa; t: (k: string) => string }) {
-  const lang = useLangStore((s) => s.code);
+  const lang = useEffectiveLang();
   
   // Get localized content
   const country = getLocalizedContent(visa.country, visa.countryI18n as any, lang);

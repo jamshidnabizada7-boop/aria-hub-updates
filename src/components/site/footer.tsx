@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useT } from '@/hooks/use-t';
 import { useToast } from '@/hooks/use-toast';
-import { useLangStore } from '@/lib/lang-store';
+import {useEffectiveLang} from '@/components/site/lang-context';
 import { useLangHref } from '@/hooks/use-lang-href';
 import { resolveAnchorUrl } from '@/lib/anchor-routes';
 import { getLocalizedContent } from '@/lib/i18n-content';
@@ -26,7 +26,7 @@ export function Footer({
   socialLinks: SocialLink[];
 }) {
   const t = useT();
-  const lang = useLangStore((s) => s.code);
+  const lang = useEffectiveLang();
   const hrefFn = useLangHref();
   const { toast } = useToast();
   const [email, setEmail] = useState('');

@@ -7,14 +7,14 @@ import { Button } from '@/components/ui/button';
 import { SectionHeading } from '../section-heading';
 import { Icon } from '../icon';
 import { useT } from '@/hooks/use-t';
-import { useLangStore } from '@/lib/lang-store';
+import {useEffectiveLang} from '@/components/site/lang-context';
 import { getLocalizedContent, getLocalizedArray } from '@/lib/i18n-content';
 import type { PricingPackage } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 export function PricingSection({ packages }: { packages: PricingPackage[] }) {
   const t = useT();
-  const lang = useLangStore((s) => s.code);
+  const lang = useEffectiveLang();
   if (!packages.length) return null;
 
   return (

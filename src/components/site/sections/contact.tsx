@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { SectionHeading } from '../section-heading';
 import { useT } from '@/hooks/use-t';
 import { useToast } from '@/hooks/use-toast';
-import { useLangStore } from '@/lib/lang-store';
+import {useEffectiveLang} from '@/components/site/lang-context';
 import { getLocalizedContent } from '@/lib/i18n-content';
 import type { Department, Branch, SiteSettings } from '@/lib/types';
 
@@ -27,7 +27,7 @@ export function ContactSection({
   lang?: string;
 }) {
   const t = useT();
-  const storeLang = useLangStore((s) => s.code);
+  const storeLang = useEffectiveLang();
   const lang = langProp || storeLang;
   const deptName = (d: Department): string =>
     getLocalizedContent(d.name, d.nameI18n as Record<string, string> | null, lang);

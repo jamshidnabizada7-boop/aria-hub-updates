@@ -23,6 +23,7 @@
 | Menu parent choices could silently hide whole subtrees through cycles | API rejects self-parenting, descendant cycles and nonexistent parents. Category slugs derive from names when no title is present. |
 | Table columns repeated titles beside raw translation JSON | Translation copies and duplicate status columns are omitted from summaries. Field labels are readable, and menu parents/gallery albums show names. Translation tabs remain available in editors. |
 | Disabled homepage anchors and nested resource menus were confusing | Off sections have no dead anchor preview link. Resource links appear directly under More. |
+| A live English-page check found CMS process text rendered in Persian before hydration | CMS sections and footer now use the URL language context during server rendering. Separate render tests cover English, Persian and Pashto. |
 
 ## Complete task organization
 
@@ -51,4 +52,4 @@ Navigation reconciliation is dry by default (`scripts/reconcile-admin-navigation
 
 ## Verification
 
-TypeScript passed. Four catalog/navigation checks passed, and five isolated Postgres workflow checks passed, covering real template saves, draft visibility, read-only enforcement, private-response exclusion, homepage controls, unsupported keys, authentication, menu-cycle rejection and shallow resource navigation. Oracle build and live browser verification are recorded after deployment below.
+TypeScript passed. Four catalog/navigation checks, five isolated Postgres workflow checks and three locale-rendering checks passed, covering real template saves, draft visibility, read-only enforcement, private-response exclusion, homepage controls, unsupported keys, authentication, menu-cycle rejection, shallow resource navigation and route-language CMS rendering. Oracle build and live browser verification are recorded after deployment below.
