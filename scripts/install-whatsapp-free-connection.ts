@@ -38,7 +38,7 @@ async function main(){
  // Existing environment files use root:ariahub. Resolve the group from them.
  const {stat}=await import('node:fs/promises');const owner=await stat('/etc/aria-hub/applicant.env');await chown(path,0,owner.gid);
  await db.$transaction([
-  db.publishChannel.update({where:{id:row.id},data:{enabled:false,credentials:encryptCredentials({...credentials,phoneNumberId:phoneId,mode:'individual'}),lastError:'Strict zero spend: scheduled social sends disabled; free private replies require live signed inbound webhook activation.'}}),
+  db.publishChannel.update({where:{id:row.id},data:{enabled:false,credentials:encryptCredentials({...credentials,phoneNumberId:phoneId,mode:'individual',recipient:'',recipientPhone:''}),lastError:'Strict zero spend: scheduled social sends disabled; free private replies require live signed inbound webhook activation.'}}),
   db.auditLog.create({data:{action:'whatsapp_real_sender_prepared',entity:'PublishChannel',entityId:row.id,details:JSON.stringify({realSender:true,zeroSpend:true,billableSends:false,inboundActivation:false,backup})}})
  ]);
  console.log(JSON.stringify({status:'installed_inactive',realSender:true,zeroSpend:true,billableSends:false,backup,environmentFile:path}));
