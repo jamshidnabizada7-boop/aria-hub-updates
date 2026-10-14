@@ -29,7 +29,6 @@ import { useT } from '@/hooks/use-t';
 import { cn } from '@/lib/utils';
 import { MultilingualInput } from '@/components/admin/multilingual-input';
 import { AutoImportPanel } from '@/components/admin/auto-import-panel';
-import { TemplatesPanel } from '@/components/admin/templates-panel';
 import { SubmissionsPanel } from '@/components/admin/submissions-panel';
 import { ContentHealthPanel } from '@/components/admin/content-health-panel';
 import { ApplicantOperationsPanel } from '@/components/admin/applicant-operations-panel';
@@ -41,6 +40,9 @@ import { BrandStudioPanel } from '@/components/admin/brand-studio-panel';
 import { AutomationPanel } from '@/components/admin/automation-panel';
 import { OpportunityFormPanel } from '@/components/admin/opportunity-form-panel';
 import { CVBuilderAdminPanel } from '@/components/admin/cv-builder-panel';
+import {SiteVisibilityPanel} from '@/components/admin/site-visibility-panel';
+import {ADMIN_WORKSPACES,ADMIN_PUBLIC_PATHS,READ_ONLY_ADMIN_MODELS,canonicalAdminPanel,adminWorkspaceFor} from '@/lib/admin-catalog';
+import {useLangStore} from '@/lib/lang-store';
 interface AdminUser { id: string; email: string; name: string; role: string; }
 
 // All manageable models with their icon and translation key.
@@ -124,12 +126,18 @@ const NAV: NavItem[] = [
 
 export function AdminApp({ admin }: { admin: AdminUser }) {
   const [active, setActive] = useState('dashboard');
+  const [navSearch,setNavSearch]=useState('');
   const [repairOpportunity, setRepairOpportunity] = useState<{ id: string; issue: 'apply' | 'core' | 'evidence' | 'translation' } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [pwDialog, setPwDialog] = useState(false);
   const router = useRouter();
   const t = useT();
   const { toast } = useToast();
+  const code=useLangStore(s=>s.code),lang=code==='fa'||code==='ps'?code:'en';
+  const workspace=adminWorkspaceFor(active)||ADMIN_WORKSPACES[0];
+  const labelFor=(key:string)=>key==='applicantOps'?({en:'Applicant operations',fa:'عملیات متقاضیان',ps:'د غوښتونکو چارې'}[lang]):t(NAV.find((n):n is Extract<NavItem,{key:string}>=>'key' in n&&n.key===key)?.labelKey||key);
+  const navigate=(key:string)=>{const panel=canonicalAdminPanel(key);if(!adminWorkspaceFor(panel))return;setActive(panel);setRepairOpportunity(null);setSidebarOpen(false);setNavSearch('');window.history.replaceState(null,'','#'+panel);};
+  useEffect(()=>{const restore=()=>{const key=canonicalAdminPanel(window.location.hash.slice(1));if(adminWorkspaceFor(key))setActive(key);};restore();window.addEventListener('hashchange',restore);return()=>window.removeEventListener('hashchange',restore);},[]);
 
   const logout = async () => {
     await fetch('/api/admin/auth/logout', { method: 'POST' });
@@ -140,7 +148,7 @@ export function AdminApp({ admin }: { admin: AdminUser }) {
     <div className="flex min-h-screen bg-muted/30">
       {/* Sidebar */}
       <aside className={cn(
-        'fixed inset-y-0 left-0 z-40 w-64 transform border-r border-border/60 bg-card transition-transform lg:static lg:translate-x-0',
+        'fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col transform border-r border-border/60 bg-card transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       )}>
         <div className="flex h-16 items-center gap-2.5 border-b border-border/60 px-5">
@@ -150,26 +158,14 @@ export function AdminApp({ admin }: { admin: AdminUser }) {
             <p className="text-[10px] text-muted-foreground">{t('admin.panel.title')}</p>
           </div>
         </div>
-        <nav className="max-h-[calc(100vh-4rem-4rem)] overflow-y-auto p-3">
-          {NAV.map((item, idx) =>
-            'header' in item ? (
-              <p key={`h-${idx}`} className="mt-3 mb-1 px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 first:mt-0">{t(item.header)}</p>
-            ) : (
-              <button
-                key={item.key}
-                onClick={() => { setActive(item.key); setRepairOpportunity(null); setSidebarOpen(false); }}
-                className={cn(
-                  'mb-0.5 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  active === item.key ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-                )}
-              >
-                <item.icon className="h-4 w-4 shrink-0" />
-                <span className="truncate">{item.key==='applicantOps'?'Applicant operations':t(item.labelKey)}</span>
-              </button>
-            )
-          )}
+        <div className="px-3 pt-3"><Input aria-label={lang==='en'?'Find an admin task':lang==='fa'?'جستجوی بخش مدیریت':'د ادارې برخه ومومئ'} placeholder={lang==='en'?'Find a task…':lang==='fa'?'جستجوی بخش…':'برخه ولټوئ…'} value={navSearch} onChange={e=>setNavSearch(e.target.value)}/></div>
+        <nav aria-label="Admin workspaces" className="min-h-0 flex-1 overflow-y-auto p-3">
+          {ADMIN_WORKSPACES.filter(w=>!navSearch||[w.title[lang],...w.panels.map(labelFor)].join(' ').toLocaleLowerCase().includes(navSearch.toLocaleLowerCase())).map(w=>{
+           const entry=NAV.find((n):n is Extract<NavItem,{key:string}>=>'key' in n&&n.key===w.panels[0]);const Icon=entry?.icon||Layers;
+           return <div key={w.key}><button aria-current={workspace.key===w.key?'page':undefined} onClick={()=>navigate(w.panels[0])} className={cn('mb-1 flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-start text-sm font-medium transition-colors',workspace.key===w.key?'bg-primary text-primary-foreground':'text-muted-foreground hover:bg-accent hover:text-foreground')}><Icon className="h-4 w-4 shrink-0"/><span>{w.title[lang]}</span></button>{navSearch&&w.panels.filter(p=>labelFor(p).toLocaleLowerCase().includes(navSearch.toLocaleLowerCase())).map(p=><button key={p} onClick={()=>navigate(p)} className="mb-1 ms-4 block rounded px-3 py-2 text-start text-xs text-primary hover:bg-accent">{labelFor(p)}</button>)}</div>;
+          })}
         </nav>
-        <div className="absolute inset-x-0 bottom-0 border-t border-border/60 bg-card p-3">
+        <div className="shrink-0 border-t border-border/60 bg-card p-3">
           <div className="mb-2 flex items-center gap-2 px-2">
             <div className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-primary to-chart-2 text-xs font-bold text-primary-foreground">
               {admin.name.charAt(0)}
@@ -201,7 +197,7 @@ export function AdminApp({ admin }: { admin: AdminUser }) {
             <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
               <MenuIcon className="h-5 w-5" />
             </Button>
-            <h1 className="text-lg font-bold">{active==='applicantOps'?'Applicant operations':t(NAV.find((n): n is Extract<NavItem, { key: string }> => 'key' in n && n.key === active)?.labelKey || 'admin.nav.dashboard')}</h1>
+            <h1 className="text-lg font-bold">{workspace.title[lang]}</h1>
           </div>
           <div className="flex items-center gap-2">
             <Button asChild variant="outline" size="sm" className="gap-2 text-xs">
@@ -210,7 +206,9 @@ export function AdminApp({ admin }: { admin: AdminUser }) {
           </div>
         </header>
         <main id="main-content" className="flex-1 overflow-x-hidden p-4 lg:p-6">
-          {active === 'organizations' ? <OrganizationsPanel onNavigate={setActive} /> : active === 'applicantOps' ? <ApplicantOperationsPanel onNavigate={setActive} /> : active === 'dashboard' ? <Dashboard onNavigate={setActive} /> : active === 'settings' ? <SettingsPanel /> : active === 'autoImport' ? <AutoImportPanel /> : active === 'documentTemplate' ? <TemplatesPanel /> : active === 'submissions' ? <SubmissionsPanel /> : active === 'discovery' ? <DiscoveryInboxPanel onEditOpportunity={(id) => { setRepairOpportunity({ id, issue: 'core' }); setActive('opportunity'); }} /> : active === 'contentHealth' ? <ContentHealthPanel onEditOpportunity={(id, issue) => { setRepairOpportunity({ id, issue }); setActive('opportunity'); }} /> : active === 'orders' ? <OrdersPanel /> : active === 'brandStudio' ? <BrandStudioPanel /> : active === 'automation' ? <AutomationPanel /> : active === 'opportunity' ? <OpportunityFormPanel focus={repairOpportunity} onFocusHandled={() => setRepairOpportunity(null)} /> : active === 'cvBuilder' ? <CVBuilderAdminPanel /> : <CrudTable model={active} />}
+          {workspace.panels.length>1&&<nav aria-label="Workspace tasks" className="mb-5 flex flex-wrap gap-2 rounded-xl border bg-card p-2">{workspace.panels.map(key=><button key={key} aria-current={active===key?'page':undefined} className={cn('rounded-lg px-3 py-2 text-sm font-medium',active===key?'bg-primary text-primary-foreground':'hover:bg-accent')} onClick={()=>navigate(key)}>{labelFor(key)}</button>)}</nav>}
+          {ADMIN_PUBLIC_PATHS[active]&&active!=='section'&&<div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-card p-3 text-sm"><span>{labelFor(active)}</span><div className="flex flex-wrap gap-3"><button className="text-primary underline" onClick={()=>navigate('section')}>{lang==='en'?'Check website visibility':lang==='fa'?'بررسی نمایش در وب‌سایت':'په وېبپاڼه کې ښودنه وګورئ'}</button><a className="text-primary underline" href={`/${lang}${ADMIN_PUBLIC_PATHS[active]}`} target="_blank" rel="noopener noreferrer">{t('admin.button.viewSite')}</a></div></div>}
+          {active === 'section'?<SiteVisibilityPanel onNavigate={navigate} labelFor={labelFor}/>:active === 'organizations' ? <OrganizationsPanel onNavigate={navigate} /> : active === 'applicantOps' ? <ApplicantOperationsPanel onNavigate={navigate} /> : active === 'dashboard' ? <Dashboard onNavigate={navigate} /> : active === 'settings' ? <SettingsPanel /> : active === 'autoImport' ? <AutoImportPanel /> : active === 'submissions' ? <SubmissionsPanel /> : active === 'discovery' ? <DiscoveryInboxPanel onEditOpportunity={(id) => { navigate('opportunity'); setRepairOpportunity({ id, issue: 'core' }); }} /> : active === 'contentHealth' ? <ContentHealthPanel onEditOpportunity={(id, issue) => { navigate('opportunity'); setRepairOpportunity({ id, issue }); }} /> : active === 'orders' ? <OrdersPanel /> : active === 'brandStudio' ? <BrandStudioPanel /> : active === 'automation' ? <AutomationPanel /> : active === 'opportunity' ? <OpportunityFormPanel focus={repairOpportunity} onFocusHandled={() => setRepairOpportunity(null)} /> : active === 'cvBuilder' ? <CVBuilderAdminPanel /> : <CrudTable key={active} model={active} />}
         </main>
       </div>
     </div>
@@ -413,6 +411,7 @@ function CrudTable({ model }: { model: string }) {
   const [editing, setEditing] = useState<any>(null);
   const [viewingMessage, setViewingMessage] = useState<any>(null);
   const [messageSaving, setMessageSaving] = useState(false);
+  const readOnly=READ_ONLY_ADMIN_MODELS.has(model);
 
   // Reset search & page when switching models or filters so stale filters don't carry over.
   useEffect(() => { setSearch(''); setSelectedIds([]); setFilterCategory('all'); setPage(1); }, [model]);
@@ -434,6 +433,7 @@ function CrudTable({ model }: { model: string }) {
         const r = await fetch(`/api/admin/crud?${params.toString()}`);
         const data = await r.json();
         if (cancelled) return;
+        if(!r.ok)throw Error(data.error||'Could not load records');
         setItems(data.items || []);
         setFields(data.fields || []);
         setLabel(data.label || model);
@@ -511,6 +511,7 @@ function CrudTable({ model }: { model: string }) {
 
   return (
     <div className="space-y-4">
+      {readOnly&&<p className="rounded-xl border bg-muted/30 p-4 text-sm">These records are created by real user activity and automated workers. Review them here; changes belong in the originating workflow.</p>}
       {['contactMessage','subscriber','alertSubscriber'].includes(model) && <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
         {model==='contactMessage' ? 'Open a message, prepare a reply in your email app, then mark it replied after sending. Changing its status does not send email.' : model==='subscriber' ? 'These are newsletter contacts. Opportunity alerts are managed separately under Alert Subscribers; newsletter signup alone does not enable job alerts.' : 'Active subscribers receive matching, published opportunities by email at their daily or weekly frequency. Pending subscriptions await email confirmation. Unsubscribed contacts receive no alerts.'}
       </div>}
@@ -532,14 +533,14 @@ function CrudTable({ model }: { model: string }) {
           )}
         </div>
         <div className="flex gap-2">
-          {selectedIds.length > 0 && (
+          {!readOnly&&selectedIds.length > 0 && (
             <Button variant="destructive" onClick={handleBulkDelete} className="gap-2 rounded-xl">
               <Trash2 className="h-4 w-4" /> {t('admin.button.delete')} ({selectedIds.length})
             </Button>
           )}
-          <Button onClick={() => { setEditing(null); setShowForm(true); }} className="gap-2 rounded-xl bg-gradient-to-r from-primary to-chart-2">
+          {!readOnly&&<Button onClick={() => { setEditing(null); setShowForm(true); }} className="gap-2 rounded-xl bg-gradient-to-r from-primary to-chart-2">
             <Plus className="h-4 w-4" /> {t('admin.button.addNew')}
-          </Button>
+          </Button>}
         </div>
       </div>
       {!loading && total > 0 && (
@@ -555,7 +556,7 @@ function CrudTable({ model }: { model: string }) {
               <thead className="border-b border-border/60 bg-muted/40">
                 <tr>
                   <th className="px-4 py-3 text-left w-10">
-                    <input type="checkbox" className="rounded border-border/60" onChange={(e) => setSelectedIds(e.target.checked ? filtered.map(i => i.id) : [])} checked={filtered.length > 0 && selectedIds.length === filtered.length} />
+                    {!readOnly&&<input aria-label="Select all records" type="checkbox" className="rounded border-border/60" onChange={(e) => setSelectedIds(e.target.checked ? filtered.map(i => i.id) : [])} checked={filtered.length > 0 && selectedIds.length === filtered.length} />}
                   </th>
                   {displayFields.map((f) => (
                     <th key={f} className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground">{f}</th>
@@ -571,26 +572,26 @@ function CrudTable({ model }: { model: string }) {
                 {filtered.map((item) => (
                   <tr key={item.id} className="transition-colors hover:bg-muted/30">
                     <td className="px-4 py-3">
-                      <input type="checkbox" className="rounded border-border/60" checked={selectedIds.includes(item.id)} onChange={(e) => {
+                      {!readOnly&&<input aria-label="Select record" type="checkbox" className="rounded border-border/60" checked={selectedIds.includes(item.id)} onChange={(e) => {
                         if (e.target.checked) setSelectedIds([...selectedIds, item.id]);
                         else setSelectedIds(selectedIds.filter(id => id !== item.id));
-                      }} />
+                      }} />}
                     </td>
                     {displayFields.map((f) => (
                       <td key={f} className="max-w-[200px] px-4 py-3">
-                        {renderCell(item, f, handleToggle)}
+                        {renderCell(item, f, readOnly?undefined:handleToggle)}
                       </td>
                     ))}
                     {showStatus && <td className="px-4 py-3">{renderCell(item, 'status')}</td>}
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1">
                         {model==='contactMessage' && <Button variant="outline" size="sm" onClick={()=>setViewingMessage(item)}>Read / reply</Button>}
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditing(item); setShowForm(true); }}>
+                        {!readOnly&&<><Button aria-label="Edit record" variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditing(item); setShowForm(true); }}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(item.id)}>
+                        <Button aria-label="Delete record" variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(item.id)}>
                           <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        </Button></>}
                       </div>
                     </td>
                   </tr>
@@ -746,6 +747,7 @@ function CrudForm({ model, fields, item, label, statusOptions, onClose, onSaved 
       if (fields.includes('status')) init.status = statusOptions?.includes('published') ? 'published' : (statusOptions?.[0] || 'draft');
       if (fields.includes('order')) init.order = 0;
       if (fields.includes('featured')) init.featured = false;
+      if (fields.includes('isPremium')) init.isPremium = false;
       if (fields.includes('enabled')) init.enabled = true;
       if (fields.includes('visible')) init.visible = true;
       if (fields.includes('isMain')) init.isMain = false;
@@ -946,7 +948,7 @@ function FieldInput({ field, value, item, model, allFields = [], statusOptions, 
     visaDocument: 'visaCountry',
   };
   const relationSource =
-    field === 'categoryId' ? CATEGORY_SOURCE[model] : field === 'countryId' ? COUNTRY_SOURCE[model] : undefined;
+    field === 'categoryId' ? CATEGORY_SOURCE[model] : field === 'countryId' ? COUNTRY_SOURCE[model] : field==='albumId'&&model==='galleryItem'?'galleryAlbum':field==='parentId'&&model==='menuItem'?'menuItem':undefined;
 
   const [relationOptions, setRelationOptions] = useState<{ id: string; name: string }[]>([]);
   useEffect(() => {
@@ -956,7 +958,7 @@ function FieldInput({ field, value, item, model, allFields = [], statusOptions, 
       .then((r) => r.json())
       .then((d) => {
         if (!alive || !Array.isArray(d.items)) return;
-        setRelationOptions(d.items.map((i: any) => ({ id: i.id, name: i.name })));
+        setRelationOptions(d.items.map((i: any) => ({ id: i.id, name: i.name||i.title||i.label||i.id })));
       })
       .catch(() => {});
     return () => {
@@ -1011,6 +1013,7 @@ function FieldInput({ field, value, item, model, allFields = [], statusOptions, 
   };
   
   const isRequired = getRequiredFields(model).includes(field);
+  if(model==='documentTemplate'&&['requiredFields','writingTips','commonMistakes'].includes(field))return <div className="space-y-2"><Label>{field}</Label><Textarea value={Array.isArray(value)?value.join('\n'):value||''} onChange={e=>onChange(e.target.value.split('\n').map(v=>v.trim()).filter(Boolean))} placeholder="One item per line"/></div>;
   
   // Define multilingual fields
   const multilingualFields = [
@@ -1024,7 +1027,7 @@ function FieldInput({ field, value, item, model, allFields = [], statusOptions, 
   
   const isMultilingual = multilingualFields.includes(field);
   const isLong = ['description', 'content', 'answer', 'message', 'instructions', 'bio', 'eligibility', 'benefits', 'applicationProcess', 'requirements', 'documents', 'gallery', 'tags', 'features', 'faqs', 'attachments', 'translations'].includes(field);
-  const isBool = ['featured', 'enabled', 'visible', 'isMain', 'isDefault', 'openInNewTab', 'socialHideOnScroll', 'maintenanceMode', 'isRequired', 'autoPublish'].includes(field);
+  const isBool = ['featured', 'enabled', 'visible', 'isMain', 'isDefault', 'openInNewTab', 'socialHideOnScroll', 'maintenanceMode', 'isRequired', 'autoPublish', 'isPremium', 'active'].includes(field);
   const isNumber = ['order', 'sort', 'value', 'rating', 'score', 'duration', 'scheduleMinutes', 'found', 'imported', 'updated', 'skipped', 'duplicates', 'failed', 'processingMs'].includes(field);
   const isStatus = field === 'status';
   const isDirection = field === 'direction';

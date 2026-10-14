@@ -39,7 +39,7 @@ const fetchSiteData = async (): Promise<SiteData> => {
       db.siteSetting.findFirst().catch(() => null),
       db.language.findMany({ where: { enabled: true }, orderBy: { order: 'asc' } }).catch(() => []),
       db.section.findMany({ orderBy: { order: 'asc' } }).catch(() => []),
-      db.menuItem.findMany({ where: { visible: true }, orderBy: { order: 'asc' } }).catch(() => []),
+      db.menuItem.findMany({ orderBy: { order: 'asc' } }).catch(() => []),
       db.serviceCategory.findMany({ orderBy: { order: 'asc' } }).catch(() => []),
       db.service.findMany({ where: { status: 'published' }, orderBy: { sort: 'asc' }, include: { category: true } }).catch(() => []),
       db.visa.findMany({ where: { status: 'published' }, orderBy: { sort: 'asc' } }).catch(() => []),
@@ -94,7 +94,7 @@ const fetchSiteData = async (): Promise<SiteData> => {
       db.whyChooseUsFeature.findMany({ where: { enabled: true }, orderBy: { order: 'asc' } }).catch(() => []),
     ]);
 
-    const menuTree = ensureApplicationTools(buildMenuTree(menuItems as any) as MenuItem[]);
+    const menuTree = buildMenuTree(menuItems as any) as MenuItem[];
     const footer: Record<string, any[]> = {};
     for (const fl of footerLinks) {
       (footer[fl.column] ||= []).push(fl);
@@ -117,7 +117,7 @@ const fetchSiteData = async (): Promise<SiteData> => {
       counters: counters as any,
       faqs: faqs as any,
       news: news as any,
-      socialLinks: ensureRequiredSocialLinks(socialLinks) as any,
+      socialLinks: socialLinks as any,
       footer,
       departments: departments as any,
       branches: branches as any,
@@ -135,7 +135,7 @@ const fetchSiteData = async (): Promise<SiteData> => {
       settings: getDefaultSettings() as any,
       languages: [],
       sections: [],
-      menu: ensureApplicationTools([]),
+      menu: [],
       serviceCategories: [],
       services: [],
       visas: [],
@@ -180,7 +180,7 @@ export const getToolPageData = cache(async () => {
     const [settings, languages, menuItems, socialLinks, footerLinks] = await Promise.all([
       db.siteSetting.findFirst().catch(() => null),
       db.language.findMany({ where: { enabled: true }, orderBy: { order: 'asc' } }).catch(() => []),
-      db.menuItem.findMany({ where: { visible: true }, orderBy: { order: 'asc' } }).catch(() => []),
+      db.menuItem.findMany({ orderBy: { order: 'asc' } }).catch(() => []),
       db.socialLink.findMany({ where: { enabled: true }, orderBy: { order: 'asc' } }).catch(() => []),
       db.footerLink.findMany({ orderBy: { order: 'asc' } }).catch(() => []),
     ]);
@@ -191,7 +191,7 @@ export const getToolPageData = cache(async () => {
     return {
       settings: (settings as any) || getDefaultSettings(),
       languages: languages as any,
-      menu: ensureApplicationTools(buildMenuTree(menuItems as any) as MenuItem[]),
+      menu: buildMenuTree(menuItems as any) as MenuItem[],
       socialLinks: socialLinks as any,
       footer,
     };
@@ -200,7 +200,7 @@ export const getToolPageData = cache(async () => {
     return {
       settings: getDefaultSettings() as any,
       languages: [],
-      menu: ensureApplicationTools([]),
+      menu: [],
       socialLinks: [],
       footer: {},
     };
@@ -219,7 +219,7 @@ function getDefaultSettings() {
   };
 }
 
-function buildMenuTree(items: { id: string; label: string; url: string | null; parentId: string | null; icon: string | null; order: number; openInNewTab: boolean }[]) {
+function buildMenuTree(items: { id: string; label: string; url: string | null; parentId: string | null; icon: string | null; order: number; openInNewTab: boolean; visible?: boolean }[]) {
   const map = new Map<string, any>();
   items.forEach(i => map.set(i.id, { ...i, children: [] }));
   const roots: any[] = [];
@@ -231,41 +231,8 @@ function buildMenuTree(items: { id: string; label: string; url: string | null; p
       roots.push(node);
     }
   }
-  return roots;
-}
-
-function ensureApplicationTools(menu: MenuItem[]): MenuItem[] {
-  const tools = menu.find(item => item.label.toLowerCase() === 'tools' && !item.url);
-  const parent: MenuItem = tools || {
-    id: 'application-tools', label: 'Tools', labelI18n: { en: 'Tools', fa: 'ابزارها', ps: 'وسیلې' },
-    url: null, parentId: null, icon: null, order: 99, visible: true, openInNewTab: false, children: [],
-  };
-  const defaults = [
-    { label: 'CV Builder', url: '/cv-builder', i18n: { en: 'CV Builder', fa: 'سی‌وی ساز', ps: 'سي وي جوړونکی' } },
-    { label: 'Letter Builder', url: '/letters', i18n: { en: 'Letter Builder', fa: 'نامه‌ساز', ps: 'د لیک جوړوونکی' } },
-    { label: 'Opportunity Matcher', url: '/opportunity-matcher', i18n: { en: 'Opportunity Matcher', fa: 'فرصت‌یاب', ps: 'د فرصت موندونکی' } },
-  ];
-  const duplicateDestinations = new Set(['/cv-builder?templates=1', '/letters?type=cover', '/letters?type=recommendation']);
-  const seen = new Set<string>();
-  const children = (parent.children || []).filter(child => {
-    if (duplicateDestinations.has(child.url || '')) return false;
-    if (child.url && seen.has(child.url)) return false;
-    if (child.url) seen.add(child.url);
-    return true;
-  }).map(child => {
-    const canonical = defaults.find(item => item.url === child.url);
-    return canonical ? { ...child, label: canonical.label, labelI18n: canonical.i18n } : child;
-  });
-  for (const [index, item] of defaults.entries()) {
-    if (children.some(child => child.url === item.url)) continue;
-    children.push({ id: `application-tool-${index}`, label: item.label, labelI18n: item.i18n,
-      url: item.url, parentId: parent.id, icon: null, order: index + 1, visible: true,
-      openInNewTab: false, children: [] });
-  }
-  const rank = new Map(defaults.map((item, index) => [item.url, index]));
-  children.sort((a, b) => (rank.get(a.url || '') ?? 100) - (rank.get(b.url || '') ?? 100));
-  const updated = { ...parent, children };
-  return tools ? menu.map(item => item.id === tools.id ? updated : item) : [...menu, updated];
+  const visibleTree=(nodes:any[]):any[]=>nodes.filter(n=>n.visible!==false).map(n=>({...n,children:visibleTree(n.children)}));
+  return visibleTree(roots);
 }
 
 const DEFAULT_SOCIAL_LINKS = [
@@ -275,33 +242,4 @@ const DEFAULT_SOCIAL_LINKS = [
   { id: 'default-linkedin', platform: 'linkedin', label: 'LinkedIn', url: 'https://linkedin.com/company/myariahub', color: '#0A66C2', enabled: true, order: 4 },
   { id: 'default-telegram', platform: 'telegram', label: 'Telegram', url: 'https://t.me/myariahub', color: '#229ED9', enabled: true, order: 5 },
 ];
-
-function ensureRequiredSocialLinks(links: any[]): any[] {
-  if (!links || links.length === 0) return DEFAULT_SOCIAL_LINKS;
-  const hasPlatform = (p: string) => links.some((l) => l.platform?.toLowerCase() === p);
-  const result = [...links];
-  if (!hasPlatform('x') && !hasPlatform('twitter')) {
-    result.push({
-      id: 'default-x',
-      platform: 'x',
-      label: 'X (Twitter)',
-      url: 'https://x.com/myariahub',
-      color: '#000000',
-      enabled: true,
-      order: 99,
-    });
-  }
-  if (!hasPlatform('youtube')) {
-    result.push({
-      id: 'default-youtube',
-      platform: 'youtube',
-      label: 'YouTube',
-      url: 'https://www.youtube.com/@myariahub',
-      color: '#FF0000',
-      enabled: true,
-      order: 100,
-    });
-  }
-  return result;
-}
 

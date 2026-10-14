@@ -36,6 +36,7 @@ import { ReadingProgress } from './reading-progress';
 import { SectionIndicator } from './section-indicator';
 import dynamic from 'next/dynamic';
 import { Hero } from './sections/hero';
+import { ProcessSection } from './sections/process';
 import { ServicesSection } from './sections/services';
 import { CtaBannerSection } from './sections/cta-banner';
 import { CountersSection } from './sections/counters';
@@ -149,51 +150,7 @@ export function Home({ data, lang, home }: { data: SiteData; lang: Lang; home: H
         {/* A — Focused, search-first hero with real counts */}
         {on('hero') && <Hero lang={lang} stats={home.stats} />}
 
-        {/* A2 — "How it works" guidance strip (fixes user confusion) */}
-        {on('process') && (
-          <section aria-labelledby="home-how" className="py-10 sm:py-16">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <Reveal>
-            <div className="rounded-2xl border border-border/60 bg-card/50 p-5 backdrop-blur-sm sm:p-6">
-              <h2
-                id="home-how"
-                dir="auto"
-                className="text-center text-xs font-semibold uppercase tracking-wider text-primary"
-              >
-                {t('home.howItWorks.eyebrow')}
-              </h2>
-              <ol className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5">
-                {([
-                  { icon: Search, step: '1', titleKey: 'home.howItWorks.step1.title', descKey: 'home.howItWorks.step1.desc', accent: 'bg-primary/15 text-primary' },
-                  { icon: FileText, step: '2', titleKey: 'home.howItWorks.step2.title', descKey: 'home.howItWorks.step2.desc', accent: 'bg-chart-2/15 text-chart-2' },
-                  { icon: MousePointerClick, step: '3', titleKey: 'home.howItWorks.step3.title', descKey: 'home.howItWorks.step3.desc', accent: 'bg-chart-4/15 text-chart-4' },
-                ] as const).map(({ icon: Icon, step, titleKey, descKey, accent }) => (
-                  <li
-                    key={step}
-                    className="relative flex items-start gap-4 rounded-xl border border-border/50 bg-background/60 p-4 transition-colors hover:border-primary/30"
-                  >
-                    <span
-                      aria-hidden="true"
-                      className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${accent}`}
-                    >
-                      <Icon className="h-5 w-5" />
-                    </span>
-                    <span className="min-w-0">
-                      <span dir="auto" className="block text-sm font-bold leading-snug">
-                        {t(titleKey)}
-                      </span>
-                      <span dir="auto" className="mt-1 block text-xs leading-relaxed text-muted-foreground">
-                        {t(descKey)}
-                      </span>
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-            </Reveal>
-          </div>
-        </section>
-        )}
+        {on('process') && data.processSteps.length>0 && <ProcessSection steps={data.processSteps}/>}
 
         {/* Opportunities block: spotlight, stories, closing soon, categories, latest */}
         {on('opportunities') && (

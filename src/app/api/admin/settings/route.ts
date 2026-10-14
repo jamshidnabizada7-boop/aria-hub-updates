@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentAdmin, logAction } from '@/lib/admin-auth';
+import {revalidateSiteContent} from '@/lib/revalidate-site';
 
 const ALLOWED = [
   'siteName', 'siteNameI18n', 'tagline', 'taglineI18n', 'description', 'descriptionI18n', 'email', 'phone', 'address', 'addressI18n',
@@ -59,8 +60,7 @@ export async function PUT(req: NextRequest) {
     await logAction({ userId: admin.id, action: 'update', entity: 'siteSetting', entityId: 'singleton', req });
     
     // Invalidate site cache so frontend reflects new settings immediately
-    const { revalidatePath } = require('next/cache');
-    revalidatePath('/', 'layout');
+    revalidateSiteContent();
     
     return NextResponse.json({ success: true, settings });
   } catch (e: any) {

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import {PageShell} from '@/components/site/page-shell';
 import { notFound } from 'next/navigation';
 import { isLang, type Lang } from '@/lib/lang-route';
 import { getPublicOrganization } from '@/lib/organizations/public-profile';
@@ -78,7 +79,7 @@ export default async function OrganizationPage({ params }: Props) {
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10">
+    <PageShell lang={lang}><div className="mx-auto max-w-4xl px-4 py-10">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
       <div className="flex flex-wrap items-center gap-3">
@@ -144,6 +145,6 @@ export default async function OrganizationPage({ params }: Props) {
           </p>
         )}
       </div>
-    </div>
+    </div></PageShell>
   );
 }

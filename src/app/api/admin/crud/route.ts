@@ -4,6 +4,8 @@ import { getCurrentAdmin, logAction } from '@/lib/admin-auth';
 import { Prisma } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { classifyApplyUrl, normalizeApplyUrl } from '@/lib/apply';
+import {READ_ONLY_ADMIN_MODELS} from '@/lib/admin-catalog';
+import {revalidateSiteContent} from '@/lib/revalidate-site';
 
 // Model registry: maps model key → prisma delegate + editable fields
 const MODELS: Record<string, { delegate: any; fields: string[]; label: string; statusOptions?: string[] }> = {
@@ -31,7 +33,7 @@ const MODELS: Record<string, { delegate: any; fields: string[]; label: string; s
   // menuItem: `key`/pageSlug intentionally NOT editable here — section keys drive the homepage layout.
   menuItem: { label: 'Menu Items', delegate: db.menuItem, fields: ['label', 'labelI18n', 'url', 'parentId', 'icon', 'order', 'visible', 'openInNewTab'] },
   documentCategory: { label: 'Document Categories', delegate: db.documentCategory, fields: ['name', 'nameI18n', 'slug', 'description', 'descriptionI18n', 'icon', 'order'] },
-  documentTemplate: { label: 'Document Templates', delegate: db.documentTemplate, fields: ['title', 'slug', 'excerpt', 'content', 'status', 'isPremium', 'categoryId', 'requiredFields', 'writingTips', 'commonMistakes'], statusOptions: ['published', 'draft', 'archived'] },
+  documentTemplate: { label: 'Document Templates', delegate: db.documentTemplate, fields: ['title', 'titleI18n', 'slug', 'excerpt', 'excerptI18n', 'content', 'contentI18n', 'status', 'isPremium', 'featured', 'categoryId', 'previewUrl', 'fileDocxUrl', 'filePdfUrl', 'requiredFields', 'writingTips', 'commonMistakes'], statusOptions: ['published', 'draft', 'archived'] },
   section: { label: 'Sections', delegate: db.section, fields: ['key', 'title', 'subtitle', 'enabled', 'order'] },
   language: { label: 'Languages', delegate: db.language, fields: ['code', 'name', 'nativeName', 'direction', 'enabled', 'isDefault', 'flag', 'order', 'translations'] },
   serviceCategory: { label: 'Service Categories', delegate: db.serviceCategory, fields: ['name', 'slug', 'icon', 'description', 'order'] },
@@ -420,7 +422,7 @@ export async function GET(req: NextRequest) {
       delegate.findMany({
         where: Object.keys(where).length ? where : undefined,
         orderBy,
-        include: Object.keys(include).length ? include : undefined,
+        ...(READ_ONLY_ADMIN_MODELS.has(model)?{select:Object.fromEntries(['id','createdAt',...fields].map(field=>[field,true]))}:{include:Object.keys(include).length ? include : undefined}),
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
@@ -466,6 +468,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
   if (!model || !MODELS[model]) return NextResponse.json({ error: 'Invalid model' }, { status: 400 });
+  if(READ_ONLY_ADMIN_MODELS.has(model)||model==='section')return NextResponse.json({error:'Use the dedicated workflow; this record cannot be created manually.'},{status:405});
 
   // Clean i18n fields first
   cleanI18nFields(data);
@@ -533,7 +536,7 @@ export async function POST(req: NextRequest) {
           if (item.slug) revalidatePath(`/${lang}/opportunities/${item.slug}`);
         }
       } else {
-        revalidatePath('/', 'layout');
+        revalidateSiteContent();
       }
     } catch (e) { console.error('[crud] revalidate error:', e); }
     return NextResponse.json({ success: true, item });
@@ -556,6 +559,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
   if (!model || !MODELS[model] || !id) return NextResponse.json({ error: 'Invalid params' }, { status: 400 });
+  if(READ_ONLY_ADMIN_MODELS.has(model)||model==='section')return NextResponse.json({error:'Use the dedicated workflow; this record cannot be edited manually.'},{status:405});
 
   // Clean i18n fields first
   cleanI18nFields(data);
@@ -629,7 +633,7 @@ export async function PUT(req: NextRequest) {
           if (item.slug) revalidatePath(`/${lang}/opportunities/${item.slug}`);
         }
       } else {
-        revalidatePath('/', 'layout');
+        revalidateSiteContent();
       }
     } catch (e) { console.error('[crud] revalidate error:', e); }
     return NextResponse.json({ success: true, item });
@@ -645,6 +649,7 @@ export async function DELETE(req: NextRequest) {
   const model = req.nextUrl.searchParams.get('model');
   const idParam = req.nextUrl.searchParams.get('id');
   if (!model || !MODELS[model] || !idParam) return NextResponse.json({ error: 'Invalid params' }, { status: 400 });
+  if(READ_ONLY_ADMIN_MODELS.has(model)||model==='section')return NextResponse.json({error:'Use the dedicated workflow; this record cannot be deleted manually.'},{status:405});
   const { delegate } = MODELS[model];
 
   const ids = idParam.split(',');
@@ -657,7 +662,7 @@ export async function DELETE(req: NextRequest) {
       await delegate.delete({ where: { id: ids[0] } });
       await logAction({ userId: admin.id, action: 'delete', entity: model, entityId: ids[0], req });
     }
-    try { revalidatePath('/', 'layout'); } catch (e) { console.error('[crud] revalidate error:', e); }
+    try { revalidateSiteContent(); } catch (e) { console.error('[crud] revalidate error:', e); }
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return handleError(e);

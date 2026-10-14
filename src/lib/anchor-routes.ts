@@ -17,7 +17,7 @@ const ANCHOR_ROUTES: Record<string, string> = {
   opportunities: '/opportunities',
   promote: '/advertise',
   payments: '/#payments',
-  gallery: '/#gallery',
+  gallery: '/gallery',
   jobs: '/opportunities?category=job',
   scholarships: '/opportunities?category=scholarship',
   internships: '/opportunities?category=internship',

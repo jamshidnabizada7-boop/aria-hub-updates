@@ -1,0 +1,16 @@
+import Link from 'next/link';
+import {db} from '@/lib/db';
+import {PageShell} from '@/components/site/page-shell';
+import {getLocalizedContent} from '@/lib/i18n-content';
+import {isLang} from '@/lib/lang-route';
+export const dynamic='force-dynamic';
+export async function generateMetadata({params}:{params:Promise<{lang:string}>}){const {lang}=await params;return {title:lang==='fa'?'سازمان‌ها | آریا هاب':lang==='ps'?'ادارې | آریا هاب':'Organizations | ARIA HUB',alternates:{canonical:`/${lang}/organizations`}};}
+export default async function OrganizationsPage({params,searchParams}:{params:Promise<{lang:string}>;searchParams:Promise<{q?:string;page?:string}>}){
+ const raw=await params,lang=isLang(raw.lang)?raw.lang:'fa',query=await searchParams;
+ const q=(query.q||'').trim().slice(0,100),page=Math.min(1000,Math.max(1,Number.parseInt(query.page||'1')||1));
+ const where={active:true,...(q?{name:{contains:q,mode:'insensitive' as const}}:{})};
+ const [rows,total]=await Promise.all([db.organization.findMany({where,select:{slug:true,name:true,nameI18n:true,country:true,verified:true,_count:{select:{opportunities:{where:{status:'published',OR:[{deadline:null},{deadline:{gte:new Date()}}]}}}}},orderBy:{name:'asc'},skip:(page-1)*40,take:40}),db.organization.count({where})]);
+ const c={en:{title:'Organizations',search:'Search organizations',submit:'Search',active:'active opportunities',none:'No organizations found.',previous:'Previous',next:'Next',verified:'Verified'},fa:{title:'سازمان‌ها',search:'جستجوی سازمان‌ها',submit:'جستجو',active:'فرصت فعال',none:'سازمانی پیدا نشد.',previous:'قبلی',next:'بعدی',verified:'تأییدشده'},ps:{title:'ادارې',search:'ادارې ولټوئ',submit:'لټون',active:'فعال فرصتونه',none:'اداره ونه موندل شوه.',previous:'مخکینی',next:'راتلونکی',verified:'تایید شوې'}}[lang];
+ const pageLink=(n:number)=>`/${lang}/organizations?${new URLSearchParams({q,page:String(n)})}`;
+ return <PageShell lang={lang}><div className="mx-auto max-w-6xl px-4"><h1 className="text-3xl font-bold">{c.title}</h1><form className="my-6 flex gap-2"><input aria-label={c.search} name="q" defaultValue={q} maxLength={100} placeholder={c.search} className="min-w-0 flex-1 rounded-xl border bg-background px-4 py-3"/><button className="rounded-xl bg-primary px-5 py-3 font-semibold text-primary-foreground">{c.submit}</button></form><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{rows.map(org=><Link key={org.slug} href={`/${lang}/organizations/${org.slug}`} className="rounded-2xl border bg-card p-5 transition hover:border-primary"><h2 dir="auto" className="font-bold">{getLocalizedContent(org.name,org.nameI18n as Record<string,string>|null,lang)}</h2>{org.country&&<p dir="auto" className="mt-2 text-sm text-muted-foreground">{org.country}</p>}<p className="mt-3 text-sm">{org._count.opportunities} {c.active}</p>{org.verified&&<span className="mt-2 inline-block text-xs text-emerald-600">✓ {c.verified}</span>}</Link>)}</div>{!rows.length&&<p className="py-10">{c.none}</p>}<nav aria-label="Pagination" className="mt-6 flex gap-5">{page>1&&<Link className="text-primary underline" href={pageLink(page-1)}>{c.previous}</Link>}{page*40<total&&<Link className="text-primary underline" href={pageLink(page+1)}>{c.next}</Link>}</nav></div></PageShell>;
+}
