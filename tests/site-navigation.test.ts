@@ -15,3 +15,8 @@ test('one navigation destination per page; opportunity categories remain distinc
  expect(urls).toContain('/opportunities');expect(urls).toContain('/opportunities?category=job');expect(urls).toContain('/opportunities?category=scholarship');
  expect(urls).toContain('/visas');expect(urls).toContain('/contact');expect(urls).not.toContain('/');
 });
+test('resource groups flatten into More without another redundant submenu',()=>{
+ const result=cleanSiteNavigation([item('Explore',null,[item('Organizations','/organizations'),item('Gallery','/gallery')])]);
+ expect(result[0].label).toBe('More');expect(result[0].children.map(i=>i.url)).toEqual(['/organizations','/gallery']);
+ expect(result[0].children.every(i=>i.children.length===0)).toBe(true);
+});

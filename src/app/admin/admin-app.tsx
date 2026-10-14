@@ -41,7 +41,7 @@ import { AutomationPanel } from '@/components/admin/automation-panel';
 import { OpportunityFormPanel } from '@/components/admin/opportunity-form-panel';
 import { CVBuilderAdminPanel } from '@/components/admin/cv-builder-panel';
 import {SiteVisibilityPanel} from '@/components/admin/site-visibility-panel';
-import {ADMIN_WORKSPACES,ADMIN_PUBLIC_PATHS,READ_ONLY_ADMIN_MODELS,canonicalAdminPanel,adminWorkspaceFor} from '@/lib/admin-catalog';
+import {ADMIN_WORKSPACES,ADMIN_PUBLIC_PATHS,READ_ONLY_ADMIN_MODELS,canonicalAdminPanel,adminWorkspaceFor,adminFieldName} from '@/lib/admin-catalog';
 import {useLangStore} from '@/lib/lang-store';
 interface AdminUser { id: string; email: string; name: string; role: string; }
 
@@ -505,7 +505,7 @@ function CrudTable({ model }: { model: string }) {
   const priority = ['key', 'slug', 'title', 'name', 'country', 'question', 'label', 'company', 'platform', 'column', 'code'];
   const displayFields = model==='alertSubscriber' ? ['email','categorySlug','lang','frequency','lastDigestAt'] : [
     ...priority.filter((p) => fields.includes(p)),
-    ...fields.filter((f) => !priority.includes(f) && f !== 'id' && !['description', 'content', 'answer', 'message', 'instructions', 'bio', 'eligibility', 'benefits', 'applicationProcess', 'requirements', 'documents', 'gallery', 'tags', 'features', 'faqs', 'attachments', 'seoTitle', 'seoDescription', 'translations'].includes(f)),
+    ...fields.filter((f) => !f.endsWith('I18n') && !priority.includes(f) && !['id','status'].includes(f) && !['description', 'content', 'answer', 'message', 'instructions', 'bio', 'eligibility', 'benefits', 'applicationProcess', 'requirements', 'documents', 'gallery', 'tags', 'features', 'faqs', 'attachments', 'seoTitle', 'seoDescription', 'translations'].includes(f)),
   ].slice(0, 5);
   const showStatus = fields.includes('status');
 
@@ -559,7 +559,7 @@ function CrudTable({ model }: { model: string }) {
                     {!readOnly&&<input aria-label="Select all records" type="checkbox" className="rounded border-border/60" onChange={(e) => setSelectedIds(e.target.checked ? filtered.map(i => i.id) : [])} checked={filtered.length > 0 && selectedIds.length === filtered.length} />}
                   </th>
                   {displayFields.map((f) => (
-                    <th key={f} className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground">{f}</th>
+                    <th key={f} className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground">{adminFieldName(f)}</th>
                   ))}
                   {showStatus && <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('admin.table.status')}</th>}
                   <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('admin.table.actions')}</th>
@@ -567,7 +567,7 @@ function CrudTable({ model }: { model: string }) {
               </thead>
               <tbody className="divide-y divide-border/40">
                 {filtered.length === 0 && (
-                  <tr><td colSpan={displayFields.length + 2} className="px-4 py-12 text-center text-muted-foreground">{t('admin.table.noItems')}</td></tr>
+                  <tr><td colSpan={displayFields.length + 2 + Number(showStatus)} className="px-4 py-12 text-center text-muted-foreground">{t('admin.table.noItems')}</td></tr>
                 )}
                 {filtered.map((item) => (
                   <tr key={item.id} className="transition-colors hover:bg-muted/30">
@@ -694,6 +694,8 @@ function CrudTable({ model }: { model: string }) {
 }
 
 function renderCell(item: any, field: string, onToggle?: (item: any, field: string) => void) {
+  if(field==='parentId'&&item.parent)return <span className="text-xs">{item.parent.label}</span>;
+  if(field==='albumId'&&item.album)return <span className="text-xs">{item.album.title}</span>;
   const val = item[field];
   if (val === true || val === false) {
     if (['enabled', 'visible', 'featured', 'isMain', 'isDefault'].includes(field) && onToggle) {
@@ -1016,7 +1018,7 @@ function FieldInput({ field, value, item, model, allFields = [], statusOptions, 
   };
   
   const isRequired = getRequiredFields(model).includes(field);
-  if(model==='documentTemplate'&&['requiredFields','writingTips','commonMistakes'].includes(field))return <div className="space-y-2"><Label>{field}</Label><Textarea aria-label={field} value={Array.isArray(value)?value.join('\n'):value||''} onChange={e=>onChange(e.target.value.split('\n'))} placeholder="One item per line"/></div>;
+  if(model==='documentTemplate'&&['requiredFields','writingTips','commonMistakes'].includes(field))return <div className="space-y-2"><Label>{adminFieldName(field)}</Label><Textarea aria-label={field} value={Array.isArray(value)?value.join('\n'):value||''} onChange={e=>onChange(e.target.value.split('\n'))} placeholder="One item per line"/></div>;
   
   // Define multilingual fields
   const multilingualFields = [
@@ -1044,7 +1046,7 @@ function FieldInput({ field, value, item, model, allFields = [], statusOptions, 
     const key = `admin.form.${field}`;
     const translated = t(key);
     // If translation returns the key itself (not found), use capitalized field name
-    const label = translated !== key ? translated : field.charAt(0).toUpperCase() + field.slice(1);
+    const label = translated !== key ? translated : adminFieldName(field);
     return isRequired ? `${label} *` : label;
   };
 

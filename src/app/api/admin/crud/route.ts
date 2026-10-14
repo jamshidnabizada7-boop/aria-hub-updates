@@ -360,6 +360,8 @@ export async function GET(req: NextRequest) {
   const include: any = {};
   if (['service', 'opportunity', 'news', 'interviewQuestion', 'visaQuestion', 'visaDocument'].includes(model)) include.category = true;
   if (['visaQuestion', 'visaDocument', 'visaExperience'].includes(model)) include.country = true;
+  if(model==='menuItem')include.parent={select:{label:true}};
+  if(model==='galleryItem')include.album={select:{title:true}};
 
   const sortField = fields.includes('order') ? 'order' : fields.includes('sort') ? 'sort' : 'createdAt';
   // Feed-like models: newest first (sort/order fields are all 0 there, which

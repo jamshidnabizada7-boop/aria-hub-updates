@@ -30,7 +30,7 @@ export function cleanSiteNavigation(menu:MenuItem[]):MenuItem[]{
  const rank=(item:MenuItem)=>item.label==='Opportunities'?0:item.label==='Tools'?1:item.label==='Services'?2:3;
  const cleaned=clean([...menu].sort((a,b)=>rank(a)-rank(b)||a.order-b.order));
  const primary=cleaned.filter(item=>rank(item)<3);
- const secondary=cleaned.filter(item=>rank(item)===3);
+ const secondary=cleaned.filter(item=>rank(item)===3).flatMap(item=>!item.url&&item.children.length?item.children:item);
  if(secondary.length)primary.push({id:'site-more',label:'More',labelI18n:{en:'More',fa:'بیشتر',ps:'نور'},url:null,parentId:null,icon:null,order:99,visible:true,openInNewTab:false,children:secondary});
  return primary;
 }

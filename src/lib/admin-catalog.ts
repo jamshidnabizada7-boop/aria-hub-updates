@@ -34,3 +34,4 @@ export const HOMEPAGE_AREAS = [
  {key:'ctaBanner',model:'ctaBanner'}, {key:'contact',model:null},
 ] as const;
 export const HOMEPAGE_KEYS = new Set<string>(HOMEPAGE_AREAS.map(a=>a.key));
+export function adminFieldName(field:string){return (field.charAt(0).toUpperCase()+field.slice(1)).replace(/([a-z])([A-Z])/g,'$1 $2').replace(/I18n$/,'translations');}
