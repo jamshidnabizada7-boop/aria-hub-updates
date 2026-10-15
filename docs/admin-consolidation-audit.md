@@ -54,3 +54,13 @@ Navigation reconciliation is dry by default (`scripts/reconcile-admin-navigation
 ## Verification
 
 TypeScript passed. Four catalog/navigation checks, five isolated Postgres workflow checks and three locale-rendering checks passed, covering real template saves, draft visibility, read-only enforcement, private-response exclusion, homepage controls, unsupported keys, authentication, menu-cycle rejection, shallow resource navigation and route-language CMS rendering. Oracle build and live browser verification are recorded after deployment below.
+
+### Production release and browser evidence
+
+Deployed main commit `fa261f3` to Oracle. Active release: `/opt/aria-hub/releases/20261014-admin-consolidation-688b419` (use `RELEASE_SHA`, not its directory suffix). The previous build and original WhatsApp release remain available for rollback. No schema migration was required.
+
+All 12 focused tests passed (122 assertions), TypeScript passed and the Oracle production build passed. Logged-in browser checks verified all 16 workspaces, 19 visibility rows, task search, the template draft editor, read-only activity, a real menu save, gallery viewing and organization search/profile navigation. No production test content was created. Actual live English, Afghan Persian and Pashto HTML rendered all four saved process steps in the correct route language.
+
+Proof images: `../admin-audit-evidence/admin-visibility-20261015.png` and `../admin-audit-evidence/admin-visibility-full-20261015.png`. The final screenshot shows correct LTR admin layout and numeric public/total ordering. Live counts change as imports run.
+
+Navigation backup: `/opt/aria-hub/private/admin-navigation/before-1792002682148.json` (restricted directory and file). Web, social worker and applicant channel timer were active after release. Credentials, permissions, billing and schedules were unchanged.
