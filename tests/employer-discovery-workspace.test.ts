@@ -1,6 +1,8 @@
 import {describe,test,expect,beforeAll,afterAll,mock} from 'bun:test';
 import {randomBytes,createHash} from 'node:crypto';import {mkdtemp,rm} from 'node:fs/promises';import {tmpdir} from 'node:os';import {join} from 'node:path';import bcrypt from 'bcryptjs';
 mock.module('server-only',()=>({}));
+// Inspect the server component's output without loading Next's browser router in the RSC test runtime.
+mock.module('next/link',()=>({default:'a'}));
 const url=new URL(process.env.DATABASE_URL||'postgresql://localhost/not_allowed');
 if(!['localhost','127.0.0.1'].includes(url.hostname)||!url.pathname.endsWith('_test'))throw Error('Use an isolated localhost *_test database.');
 process.env.APPLICANT_AUTH_ENABLED='true';process.env.CLOUD_CV_STORAGE_ENABLED='true';process.env.CV_PRIVATE_STORAGE_PROVIDER='oracle';process.env.CV_PRIVATE_STORAGE_KEY=randomBytes(32).toString('hex');
@@ -91,6 +93,20 @@ describe('Employer discovery and consented applications: real DB and route bound
   expect((await docRoute.GET(req('/cv','GET',undefined,ownerCookie),{params:Promise.resolve({id:submission})})).status).toBe(404);
   const row=await db.employerApplication.findUniqueOrThrow({where:{id:submission}});expect(row.email).toBe('');expect(row.coverLetter).toBe('');expect(row.documentId).toBeNull();
   expect((await inbox.PATCH(req('/api/employers/applications','PATCH',{id:submission,status:'hired'},ownerCookie))).status).toBe(400);
+ });
+ test('dashboard recommendations use saved preferences and remove expired opportunities',async()=>{
+  const {PortalDiscovery}=await import('../src/components/site/portal-discovery');
+  const profile=await db.applicantProfile.findUniqueOrThrow({where:{userId:candidate}});
+  const category=await db.opportunityCategory.upsert({where:{slug:'job'},create:{slug:'job',name:'Jobs'},update:{}});
+  const recommended=await db.opportunity.create({data:{title:'Project Coordination Job '+run,slug:'recommended-workspace-'+run,organizationId:org,organization:'Workspace test',categoryId:category.id,status:'published',country:'Afghanistan',jobType:'full-time',eligibility:'Open to Afghan citizens.',educationReq:'Bachelor degree',requirements:'Project management and reporting',description:'An isolated recommendation fixture.',deadline:new Date(Date.now()+86400000)}});
+  await db.applicantSavedSearch.create({data:{applicantProfileId:profile.id,name:'Afghanistan jobs',profile:{intents:['job'],education:'bachelors',nationality:'Afghanistan',residence:'Afghanistan',destinations:['Afghanistan'],fieldArea:'any',skills:['Project management','Reporting'],lang:'en'}}});
+  function links(node:any):string[]{if(Array.isArray(node))return node.flatMap(links);if(!node||typeof node!=='object')return [];return [...(node.props?.href?[node.props.href]:[]),...links(node.props?.children)];}
+  const page=await PortalDiscovery({profileId:profile.id,lang:'en'});
+  const recommendations=page.props.children[1];
+  expect(links(recommendations)).toContain('/en/opportunities/'+recommended.slug);
+  await db.opportunity.update({where:{id:recommended.id},data:{deadline:new Date(Date.now()-86400000)}});
+  const after=await PortalDiscovery({profileId:profile.id,lang:'en'});
+  expect(links(after)).not.toContain('/en/opportunities/'+recommended.slug);
  });
  test('organization merge preserves private follows and submitted application records',async()=>{
   const {mergeOrganizations}=await import('../src/lib/import/organization-actions');
