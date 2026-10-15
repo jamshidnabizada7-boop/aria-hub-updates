@@ -1,5 +1,6 @@
 'use client';
 import { useRef, useState } from 'react';
+import {AccountLane} from '@/components/site/account-choices';
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, LockKeyhole, Loader2, Eye, EyeOff, MailCheck } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -115,6 +116,7 @@ export function AccountClient({lang,mode,enabled=true,emailAvailable=true}:{lang
  const helper=mode==='login'?t.helper:mode==='register'?t.registerHelper:mode==='forgot-password'?t.forgotHelper:t.resetHelper;
  return <main id="main-content" className="account-panel" dir={lang==='en'?'ltr':'rtl'}>
   <Link href={'/'+lang+'/get-started'} className="mb-7 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4 rtl:-scale-x-100"/>{t.start}</Link>
+  <AccountLane lang={lang}/>
   <span className="mb-5 grid h-12 w-12 place-items-center rounded-xl bg-primary/10 text-primary">{checkEmail?<MailCheck className="h-6 w-6" aria-hidden="true"/>:<LockKeyhole className="h-6 w-6" aria-hidden="true"/>}</span>
   <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
   <p className="mt-3 text-sm leading-7 text-muted-foreground">{checkEmail?t.verificationBody:helper}</p>

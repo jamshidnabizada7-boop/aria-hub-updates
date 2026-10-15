@@ -278,6 +278,7 @@ model Organization {
 
   country            String?
   organizationType   String?
+  industry           String?
 
   description        String?
   descriptionI18n    Json?
@@ -299,6 +300,8 @@ model Organization {
   sources            ImportSource[]
   members            OrganizationMember[]
   sourceSuggestions  OrganizationSourceSuggestion[]
+  followers          OrganizationFollow[]
+  receivedApplications EmployerApplication[]
 }
 
 // âââ Source suggestion engine (Phase 21) âââââââââââââââââââââââââââââââââââââ
@@ -359,6 +362,8 @@ model OrganizationAlias {
 }
 
 model Opportunity {
+  acceptsNativeApplications Boolean @default(false)
+  receivedApplications EmployerApplication[]
   id              String               @id @default(cuid())
   title           String
   titleI18n       Json?
@@ -1202,6 +1207,8 @@ model ApplicantProfile {
   pushSubscriptions ApplicantPushSubscription[]
   whatsappContact ApplicantWhatsAppContact?
   trackedApplications ApplicantApplication[]
+  organizationFollows OrganizationFollow[]
+  submittedApplications EmployerApplication[]
   verifiedCareerFacts Json?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -1210,6 +1217,7 @@ model ApplicantProfile {
 // Private CV library: metadata only; raw bytes live in a strictly private bucket.
 // Import proposals and confidence remain opt-in and are never automatically applied.
 model ApplicantDocument {
+  sharedApplications EmployerApplication[]
   id                  String   @id @default(cuid())
   applicantProfileId  String
   applicantProfile    ApplicantProfile @relation(fields: [applicantProfileId], references: [id], onDelete: Cascade)
@@ -1357,6 +1365,45 @@ model ApplicantApplication {
   @@unique([applicantProfileId, opportunitySlug])
   @@index([applicantProfileId, updatedAt])
   @@index([status, nextActionAt])
+}
+
+// Following is private to the applicant; no employer access to follower identities.
+model OrganizationFollow {
+ id String @id @default(cuid())
+ applicantProfileId String
+ applicantProfile ApplicantProfile @relation(fields:[applicantProfileId],references:[id],onDelete:Cascade)
+ organizationId String
+ organization Organization @relation(fields:[organizationId],references:[id],onDelete:Cascade)
+ createdAt DateTime @default(now())
+ @@unique([applicantProfileId,organizationId])
+ @@index([organizationId])
+}
+
+// Explicitly submitted applications, separate from the applicant's PRIVATE tracker.
+// Deleting/withdrawing a shared document immediately revokes employer download access.
+model EmployerApplication {
+ id String @id @default(cuid())
+ applicantProfileId String
+ applicantProfile ApplicantProfile @relation(fields:[applicantProfileId],references:[id],onDelete:Cascade)
+ organizationId String
+ organization Organization @relation(fields:[organizationId],references:[id],onDelete:Cascade)
+ opportunityId String
+ opportunity Opportunity @relation(fields:[opportunityId],references:[id],onDelete:Cascade)
+ documentId String?
+ document ApplicantDocument? @relation(fields:[documentId],references:[id],onDelete:SetNull)
+ name String
+ email String
+ coverLetter String
+ status String @default("submitted")
+ consentedAt DateTime
+ withdrawnAt DateTime?
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ history Json @default("[]")
+ @@unique([applicantProfileId,opportunityId])
+ @@index([organizationId,status,createdAt])
+ @@index([applicantProfileId,createdAt])
+ @@index([documentId])
 }
 
 model OrganizationMember {

@@ -1,3 +1,4 @@
+import {applicantSameOrigin} from '@/lib/applicant-origin';
 /**
  * Employer auth endpoints (Phase 12) — minimal credentials layer.
  * register | login | logout | me
@@ -51,6 +52,7 @@ function employerCookieValue(request: Request): string | undefined {
 }
 
 export async function POST(request: Request, ctx: { params: Promise<{ action: string }> }) {
+  if(!applicantSameOrigin(request))return NextResponse.json({error:'Invalid origin'},{status:403});
   const { action } = await ctx.params;
 
   if (action === 'logout') {
@@ -76,6 +78,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ action: st
 
   try {
     if (action === 'register') {
+      if(password.length<12||password.length>128)return NextResponse.json({error:'Use a password of 12–128 characters.'},{status:400});
       const user = await registerEmployer(email, password, typeof body.name === 'string' ? body.name : undefined);
       const res = NextResponse.json({ success: true, user });
       res.cookies.set(sessionCookie({ userId: user.id, email: user.email,credentialTag:user.credentialTag }));

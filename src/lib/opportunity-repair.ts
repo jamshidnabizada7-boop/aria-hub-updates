@@ -11,7 +11,7 @@ import { decodeProtectedEmails,embeddedApplicationForms,type EmbeddedApplication
 import type { Prisma } from '@prisma/client';
 import { categoryEvidence,matchEvidence } from './repair-evidence';
 
-const select={id:true,slug:true,title:true,description:true,sourceName:true,sourceUrl:true,originalUrl:true,applyUrl:true,applyUrlType:true,applyUrlEvidence:true,categoryId:true,country:true,deadline:true,status:true,eligibility:true,eligibilityI18n:true,educationReq:true,educationReqI18n:true,experience:true,experienceI18n:true,requirements:true,requirementsI18n:true,guidelines:true,guidelinesI18n:true,extractedData:true,faStatus:true,psStatus:true,translationOrigin:true,matchProfile:true} satisfies Prisma.OpportunitySelect;
+const select={id:true,slug:true,title:true,description:true,sourceName:true,sourceUrl:true,originalUrl:true,applyUrl:true,acceptsNativeApplications:true,organizationId:true,applyUrlType:true,applyUrlEvidence:true,categoryId:true,country:true,deadline:true,status:true,eligibility:true,eligibilityI18n:true,educationReq:true,educationReqI18n:true,experience:true,experienceI18n:true,requirements:true,requirementsI18n:true,guidelines:true,guidelinesI18n:true,extractedData:true,faStatus:true,psStatus:true,translationOrigin:true,matchProfile:true} satisfies Prisma.OpportunitySelect;
 type RepairRow=Prisma.OpportunityGetPayload<{select:typeof select}>;
 type Claim={client:string;ids:string[];expiresAt:string;done:string[]};
 type Attempt={id:string;sourceHash:string;attemptedAt:number};

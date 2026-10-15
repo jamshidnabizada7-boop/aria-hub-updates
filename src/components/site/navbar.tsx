@@ -20,6 +20,7 @@ import { LANGS, sanitizeLangPath, withLangPrefix } from '@/lib/lang-route';
 import type { MenuItem, Language } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { SearchDialog } from './search-dialog';
+import {AccountChoices} from './account-choices';
 import Image from 'next/image';
 import { getLocalizedContent } from '@/lib/i18n-content';
 
@@ -357,9 +358,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
               </Button>
 
               {applicantSignedIn && notificationsAvailable && <a href={hrefFn('/portal/notifications')} aria-label={code==='fa'?'اطلاع‌رسانی‌ها':code==='ps'?'خبرتیاوې':'Notifications'} className="hidden items-center rounded-xl border border-border px-3 py-2 text-sm font-semibold lg:inline-flex"><Bell className="h-4 w-4" /></a>}
-              {applicantAvailable&&<a href={hrefFn(applicantSignedIn ? '/portal' : '/login')} className="hidden min-h-11 items-center whitespace-nowrap rounded-xl border border-border px-3 py-2 text-sm font-semibold lg:inline-flex">
-                {applicantSignedIn ? (code==='fa'?'داشبورد من':code==='ps'?'زما ډشبورډ':'My Dashboard') : (code==='fa'?'ورود':code==='ps'?'ننوتل':'Log In')}
-              </a>}
+              <AccountChoices lang={code} signedIn={applicantSignedIn} />
               <Button
                 size="sm"
                 className="hidden min-h-11 rounded-xl bg-primary px-4 text-sm font-semibold shadow-float hover:opacity-90 lg:inline-flex"
@@ -388,7 +387,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
                   </nav>
                   <div className="p-4 space-y-3">
                     {applicantSignedIn && notificationsAvailable && <a href={hrefFn('/portal/notifications')} onClick={() => setMobileOpen(false)} className="flex items-center justify-center gap-2 rounded-xl border p-3 text-center text-sm font-semibold"><Bell className="h-4 w-4"/>{code==='fa'?'اطلاع‌رسانی‌های من':code==='ps'?'زما خبرتیاوې':'My Notifications'}</a>}
-                    {applicantAvailable&&<a href={hrefFn(applicantSignedIn ? '/portal' : '/login')} onClick={() => setMobileOpen(false)} className="block rounded-xl border p-3 text-center text-sm font-semibold">{applicantSignedIn ? (code==='fa'?'داشبورد من':code==='ps'?'زما ډشبورډ':'My Dashboard') : (code==='fa'?'ورود':code==='ps'?'ننوتل':'Log In')}</a>}
+                    <AccountChoices lang={code} signedIn={applicantSignedIn} mobile />
                     <Button asChild className="min-h-[44px] w-full rounded-xl bg-gradient-to-r from-primary to-chart-2">
                       <a href={hrefFn('/get-started')} onClick={() => setMobileOpen(false)}>{t('nav.getStarted')}</a>
                     </Button>

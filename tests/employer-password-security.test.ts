@@ -25,7 +25,7 @@ const isolated = ['127.0.0.1', 'localhost'].includes(testUrl.hostname) && (testU
 let callSeq = 0;
 const POST = async (action: string, body: any, cookie?: string) => {
   const { POST: handler } = await import('../src/app/api/employers/auth/[action]/route');
-  const headers: Record<string, string> = { 'content-type': 'application/json', 'x-forwarded-for': `10.77.${++callSeq}.${callSeq}` };
+  const headers: Record<string, string> = { host:'localhost',origin:'http://localhost','content-type': 'application/json', 'x-forwarded-for': `10.77.${++callSeq}.${callSeq}` };
   if (cookie) headers.cookie = cookie;
   const req = new Request(`http://localhost/api/employers/auth/${action}`, { method: 'POST', headers, body: JSON.stringify(body) });
   const res = await handler(req, { params: Promise.resolve({ action }) });

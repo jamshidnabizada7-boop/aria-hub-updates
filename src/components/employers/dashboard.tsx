@@ -12,7 +12,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { Copy, LogOut, Plus, RefreshCw } from 'lucide-react';
+import { Building2, Copy, LogOut, Plus, RefreshCw } from 'lucide-react';
+import {OrganizationWorkspace,PendingOrganizations} from './organization-workspace';
+import {ApplicationInbox,EmployerTeam} from './application-inbox';
 import { AF_PROVINCES } from '@/lib/geo/provinces';
 
 const PROVINCE_OPTIONS = AF_PROVINCES as readonly string[];
@@ -25,20 +27,22 @@ interface EmployerOrg {
 interface JobRow {
   id: string; slug: string; title: string; status: string;
   deadline: string | null; createdAt: string; location: string | null;
-  salary: string | null; jobType: string | null;
+  salary: string | null; jobType: string | null;description:string;country:string|null;acceptsNativeApplications:boolean;
 }
 
 const fmt = (d: string | null) => (d ? new Date(d).toISOString().slice(0, 10) : '—');
 
-export function EmployerDashboard({ userName, organizations }: { userName: string; organizations: EmployerOrg[] }) {
+export function EmployerDashboard({ userName, organizations,initialClaim='',lang='en' }: { userName: string; organizations: EmployerOrg[];initialClaim?:string;lang?:'en'|'fa'|'ps' }) {
+  const labels=lang==='fa'?{overview:'نمای کلی',jobs:'وظایف من',applications:'درخواست‌ها',post:'نشر وظیفه',profile:'مشخصات سازمان',team:'تیم و دسترسی',organization:'افزودن سازمان',account:'تنظیمات حساب'}:lang==='ps'?{overview:'لنډیز',jobs:'زما دندې',applications:'غوښتنلیکونه',post:'دنده خپرول',profile:'د ادارې معلومات',team:'ټیم او لاسرسی',organization:'اداره زیاتول',account:'د حساب تنظیمات'}:{overview:'Overview',jobs:'My vacancies',applications:'Application inbox',post:'Post a vacancy',profile:'Organization profile',team:'Team & access',organization:'Add organization',account:'Account settings'};
+  const logout=async()=>{try{const r=await fetch('/api/employers/auth/logout',{method:'POST'});if(r.ok)window.location.assign('/'+lang+'/employers/login');else toast.error('Could not sign out.');}catch{toast.error('Could not sign out.');}};
   const [activeOrgId, setActiveOrgId] = useState<string | null>(organizations[0]?.organizationId ?? null);
   const [jobs, setJobs] = useState<{ active: JobRow[]; pending: JobRow[]; closed: JobRow[] } | null>(null);
   const [analytics,setAnalytics]=useState<{total:number;published:number;pending:number;closed:number;expiringSoon:number}|null>(null);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState<'overview' | 'jobs' | 'post' | 'profile' | 'team' | 'account'>('overview');
+  const [tab, setTab] = useState<'overview' | 'jobs' | 'post' | 'profile' | 'team' | 'account' | 'applications' | 'organization'>(initialClaim?'organization':'overview');
   const [posting, setPosting] = useState(false);
-  const [claimSlug, setClaimSlug] = useState('');
+  const [claimSlug, setClaimSlug] = useState(initialClaim);
   const [claimEmail, setClaimEmail] = useState('');
 
   const activeOrg = organizations.find((o) => o.organizationId === activeOrgId) ?? null;
@@ -122,13 +126,12 @@ export function EmployerDashboard({ userName, organizations }: { userName: strin
   // ─── No organization yet: claim flow ────────────────────────────────────────
   if (!activeOrg) {
     return (
-      <div className="mx-auto max-w-lg px-4 py-12">
+      <div id="main-content" role="main" className="mx-auto max-w-3xl px-4 py-12">
         <h1 className="text-2xl font-bold">Welcome, {userName}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          You have no organization yet. Claim yours by its ARIA HUB slug — an admin verifies
-          every claim manually (we compare your evidence email against the organization&apos;s
-          official domains; nothing is auto-approved).
-        </p>
+        <PendingOrganizations lang={lang}/>
+        <OrganizationWorkspace lang={lang}/>
+        <h2 className="mt-8 text-xl font-bold">{lang==='fa'?'سازمان شما قبلاً وجود دارد؟':lang==='ps'?'ستاسې اداره مخکې ثبت شوې؟':'Organization already listed?'}</h2>
+        <p className="mt-2 text-sm text-muted-foreground"><a href={'/'+lang+'/organizations'} className="text-primary underline">{lang==='fa'?'یافتن سازمان و درخواست دسترسی':lang==='ps'?'اداره ومومئ او د لاسرسي غوښتنه وکړئ':'Find your organization and request access'}</a></p>
         <div className="mt-4 space-y-2 rounded-lg border bg-card p-4">
           <Input placeholder="Organization slug (e.g. acted)" value={claimSlug} onChange={(e) => setClaimSlug(e.target.value)} />
           <Input placeholder="Your email at the organization (evidence)" value={claimEmail} onChange={(e) => setClaimEmail(e.target.value)} />
@@ -136,7 +139,7 @@ export function EmployerDashboard({ userName, organizations }: { userName: strin
             Request ownership
           </Button>
           <p className="text-xs text-muted-foreground">
-            Signed in as {userName} · <a className="underline" href="/api/employers/auth/logout">sign out</a>
+            Signed in as {userName} · <button className="underline" onClick={()=>void logout()}>Sign out</button>
           </p>
         </div>
       </div>
@@ -144,12 +147,12 @@ export function EmployerDashboard({ userName, organizations }: { userName: strin
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <div id="main-content" role="main" className="mx-auto grid max-w-7xl gap-6 px-4 py-10 lg:grid-cols-[220px_1fr]" dir={lang==='en'?'ltr':'rtl'}>
+      <div className="flex flex-wrap items-center justify-between gap-5 rounded-3xl bg-[#102c46] p-7 text-white lg:col-span-2">
         <div>
-          <h1 className="text-2xl font-bold">{activeOrg.organizationName}</h1>
-          <p className="text-sm text-muted-foreground">
-            Employer dashboard · {activeOrg.role}
+          <p className="mb-3 flex items-center gap-2 text-xs font-bold tracking-widest text-teal-200"><Building2 className="h-4 w-4"/>ARIA HUB · EMPLOYERS</p><h1 className="text-2xl font-bold">{activeOrg.organizationName}</h1>
+          <p className="mt-2 text-sm text-slate-200">
+            {lang==='fa'?'بخش کارفرما':lang==='ps'?'د کار ورکوونکي برخه':'Employer workspace'} · {activeOrg.role}
             {activeOrg.organizationVerified ? ' · verified organization' : ' · unverified organization'}
           </p>
         </div>
@@ -160,22 +163,23 @@ export function EmployerDashboard({ userName, organizations }: { userName: strin
               {organizations.map((o) => <option key={o.organizationId} value={o.organizationId}>{o.organizationName}</option>)}
             </select>
           )}
-          <a href="/api/employers/auth/logout"><Button variant="outline" size="sm" className="gap-1"><LogOut className="h-3.5 w-3.5" /> Sign out</Button></a>
+          <Button onClick={()=>void logout()} variant="outline" size="sm" className="gap-1 border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white"><LogOut className="h-3.5 w-3.5" /> Sign out</Button>
         </div>
       </div>
 
-      <div className="mb-5 flex flex-wrap gap-2">
-        {(['overview', 'jobs', 'post', 'profile', 'team', 'account'] as const).map((t) => (
+      <nav aria-label="Employer workspace" className="flex h-fit flex-wrap gap-2 rounded-2xl border bg-card p-3 lg:sticky lg:top-6 lg:flex-col">
+        {(['overview', 'jobs', 'applications', 'post', 'profile', 'team', 'organization', 'account'] as const).filter(t=>t==='team'?activeOrg.role==='owner':['post','applications'].includes(t)?canManage:true).map((t) => (
           <Button key={t} variant={tab === t ? 'default' : 'outline'} size="sm"
-            className="capitalize"
+            className="min-h-11 justify-start rounded-xl"
             onClick={() => setTab(t)}>
-            {t === 'post' ? 'Post job' : t === 'account' ? 'Account' : t}
+            {labels[t]}
           </Button>
         ))}
-      </div>
+      <a href={'/'+lang+'/organizations/'+activeOrg.organizationSlug} className="mt-4 border-t px-3 py-4 text-xs font-semibold text-primary">{lang==='fa'?'دیدن صفحۀ عمومی':lang==='ps'?'عامه پاڼه وګورئ':'View public organization'} ↗</a><a href={'/'+lang+'/portal'} className="px-3 py-2 text-xs text-muted-foreground">{lang==='fa'?'رفتن به بخش جوینده':lang==='ps'?'د فرصت لټوونکي برخې ته':'Switch to jobseeker'}</a></nav>
+      <div className="min-w-0 space-y-6">
 
       {tab === 'overview' && jobs && (
-        <section aria-label="Employer vacancy analytics" className="space-y-3">
+        <section aria-label="Employer vacancy analytics" className="space-y-5"><div className="rounded-3xl border bg-card p-6"><h2 className="text-xl font-bold">{lang==='fa'?'استخدام بعدی خود را آغاز کنید':lang==='ps'?'خپل راتلونکی استخدام پیل کړئ':'Your next hire starts here'}</h2><p className="mt-3 text-sm leading-7 text-muted-foreground">{lang==='fa'?'مشخصات سازمان را تکمیل کنید، وظیفه نشر کنید و درخواست‌ها را با تیم خود بررسی کنید.':lang==='ps'?'د ادارې معلومات بشپړ کړئ، دنده خپره کړئ او له خپل ټیم سره غوښتنلیکونه وڅېړئ.':'Complete your organization profile, publish a vacancy and review applications with your team.'}</p><div className="mt-5 flex flex-wrap gap-2">{canManage&&<Button className="min-h-11 rounded-xl" onClick={()=>setTab('post')}>{labels.post}</Button>}<Button variant="outline" className="min-h-11 rounded-xl" onClick={()=>setTab('profile')}>{labels.profile}</Button></div><p className="mt-5 rounded-xl bg-muted/50 p-3 text-xs text-muted-foreground">Organization slug: <strong className="text-foreground">{activeOrg.organizationSlug}</strong> · Share this with colleagues when they request access.</p></div>
          <p className="text-xs text-muted-foreground">Organization-only vacancy counts. These are not applicant views or confirmed applications.</p>
          <div className="grid gap-3 md:grid-cols-4">
           {([['Active jobs',analytics?.published??jobs.active.length],['Pending moderation',analytics?.pending??jobs.pending.length],
@@ -207,7 +211,7 @@ export function EmployerDashboard({ userName, organizations }: { userName: strin
                       {job.location ?? '—'} · deadline {fmt(job.deadline)} · posted {fmt(job.createdAt)}
                     </span>
                     <div className="ml-auto flex flex-wrap gap-1.5">
-                      <a href={`/en/opportunities/${job.slug}`} target="_blank" rel="noreferrer noopener">
+                      <a href={`/${lang}/opportunities/${job.slug}`} hidden={bucket!=='active'} target="_blank" rel="noreferrer noopener">
                         <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">View public</Button>
                       </a>
                       {canManage && bucket !== 'closed' && (
@@ -230,6 +234,7 @@ export function EmployerDashboard({ userName, organizations }: { userName: strin
                         </Button>
                       )}
                     </div>
+                    {canManage&&<JobEditForm job={job} busy={busy} onSave={patch=>void act(job.id,{action:'edit',...patch},'Changes submitted for review')}/>}
                   </div>
                 ))}
                 {(jobs?.[bucket].length ?? 0) === 0 && (
@@ -241,31 +246,19 @@ export function EmployerDashboard({ userName, organizations }: { userName: strin
         </div>
       )}
 
-      {tab === 'post' && (
+      {tab === 'post' && canManage && (
         <PostJobForm busy={posting} onSubmit={(form) => void postJob(form)} />
       )}
 
-      {tab === 'profile' && activeOrg && (
-        <div className="space-y-2 rounded-lg border bg-card p-4 text-sm">
-          <p><span className="font-semibold">Organization:</span> {activeOrg.organizationName}</p>
-          <p><span className="font-semibold">Slug:</span> {activeOrg.organizationSlug}</p>
-          <p><span className="font-semibold">Verified:</span> {activeOrg.organizationVerified ? 'Yes — the verified badge is shown on your jobs' : 'Not yet — an ARIA HUB admin verifies organizations manually'}</p>
-          <p><span className="font-semibold">Your role:</span> {activeOrg.role}</p>
-          <p className="text-xs text-muted-foreground">Profile edits (logo, description, careers page) go through ARIA HUB admins for now — contact us after claiming.</p>
-        </div>
-      )}
-
-      {tab === 'team' && (
-        <div className="rounded-lg border bg-card p-4 text-sm text-muted-foreground">
-          Team management: colleagues create their own accounts, then request ownership/recruiter
-          access for the same organization slug. Every request is reviewed manually by ARIA HUB
-          admins before any job access is granted.
-        </div>
-      )}
+      {tab === 'profile' && activeOrg && <OrganizationWorkspace key={activeOrgId} lang={lang} id={activeOrg.organizationId} readOnly={activeOrg.role!=='owner'}/>}
+      {tab === 'team' && activeOrg && <EmployerTeam key={activeOrgId} organizationId={activeOrg.organizationId}/>}
+      {tab === 'applications' && activeOrg && <ApplicationInbox key={activeOrgId} organizationId={activeOrg.organizationId} lang={lang}/>}
+      {tab === 'organization' && <><PendingOrganizations lang={lang}/><OrganizationWorkspace lang={lang}/><div className="space-y-3 rounded-2xl border bg-card p-6"><h2 className="font-bold">Request access to an existing organization</h2><Input aria-label="Organization slug" placeholder="Organization slug" value={claimSlug} onChange={e=>setClaimSlug(e.target.value)}/><Input aria-label="Work email evidence" placeholder="Your work email (evidence)" type="email" value={claimEmail} onChange={e=>setClaimEmail(e.target.value)}/><Button disabled={!claimSlug||!claimEmail} onClick={()=>void claimOrg()}>Request access</Button></div></>}
 
       {tab === 'account' && (
         <AccountPanel />
       )}
+      </div>
     </div>
   );
 }
@@ -295,7 +288,7 @@ function ExtendButton({ busy, onExtend }: { busy: boolean; onExtend: (date: stri
 function PostJobForm({ busy, onSubmit }: { busy: boolean; onSubmit: (form: Record<string, string>) => void }) {
   const [form, setForm] = useState({
     title: '', description: '', location: '', salary: '', jobType: 'full-time',
-    deadline: '', applyUrl: '', applyEmail: '', applyPhone: '',applyMethod:'website',
+    deadline: '', applyUrl: '', applyEmail: '', applyPhone: '',applyMethod:'ariahub',
     vacancyNumber: '', numberOfVacancies: '', province: '', city: '', district: '',
     contractType: '', contractDuration: '', genderRequirement: '', nationalityRequirement: '',
     salaryGrade: '', education: '', experience: '', responsibilities: '', requirements: '',
@@ -304,7 +297,7 @@ function PostJobForm({ busy, onSubmit }: { busy: boolean; onSubmit: (form: Recor
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm({ ...form, [k]: e.target.value });
   const valid = form.title.length >= 5 && form.description.length >= 80 && (
-    form.applyMethod==='website'?Boolean(form.applyUrl):
+    form.applyMethod==='ariahub'?true:form.applyMethod==='website'?Boolean(form.applyUrl):
     form.applyMethod==='email'?Boolean(form.applyEmail):
     form.applyMethod==='phone'||form.applyMethod==='whatsapp'?Boolean(form.applyPhone):
     form.guidelines.trim().length>=12
@@ -327,6 +320,7 @@ function PostJobForm({ busy, onSubmit }: { busy: boolean; onSubmit: (form: Recor
         <Input type="date" value={form.deadline} onChange={set('deadline')} />
         <label className="text-sm">How candidates apply
           <select className="mt-1 w-full rounded-md border bg-background p-2" value={form.applyMethod} onChange={set('applyMethod')}>
+            <option value="ariahub">Receive applications on ARIA HUB (private employer inbox)</option>
             <option value="website">Official HTTPS application page</option>
             <option value="email">Application email</option>
             <option value="phone">Call by telephone</option>
@@ -442,4 +436,8 @@ function AccountPanel() {
       </form>
     </div>
   );
+}
+
+function JobEditForm({job,busy,onSave}:{job:JobRow;busy:boolean;onSave:(patch:Record<string,unknown>)=>void}){
+ return <details className="w-full border-t pt-2"><summary className="cursor-pointer text-xs font-semibold text-primary">Edit / preview job details</summary><form className="my-4 space-y-3" onSubmit={e=>{e.preventDefault();onSave(Object.fromEntries(new FormData(e.currentTarget)));}}><p className="text-xs text-muted-foreground">Edits return the job to moderation and translation review. Existing applications remain available.</p><label className="block text-sm">Title<input name="title" required minLength={5} maxLength={200} defaultValue={job.title} className="mt-1 min-h-11 w-full rounded-lg border bg-background px-3"/></label><label className="block text-sm">Description<textarea name="description" required minLength={80} maxLength={40000} defaultValue={job.description} className="mt-1 min-h-48 w-full rounded-lg border bg-background p-3"/></label><div className="grid gap-3 sm:grid-cols-2"><label className="text-sm">Location<input name="location" defaultValue={job.country||''} maxLength={200} className="mt-1 min-h-11 w-full rounded-lg border bg-background px-3"/></label><label className="text-sm">Salary<input name="salary" defaultValue={job.salary||''} maxLength={200} className="mt-1 min-h-11 w-full rounded-lg border bg-background px-3"/></label><label className="text-sm">Deadline<input name="deadline" type="date" defaultValue={job.deadline?.slice(0,10)||''} className="mt-1 min-h-11 w-full rounded-lg border bg-background px-3"/></label></div><button disabled={busy} className="min-h-11 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground">Save & submit for review</button></form></details>;
 }

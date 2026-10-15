@@ -1,5 +1,6 @@
+import {isSafePublicUrl} from '@/lib/security/url-guard';
 import {applicationPhoneUrl} from './application-phone';
-export type EmployerApplyMethod='website'|'email'|'phone'|'whatsapp'|'in_person';
+export type EmployerApplyMethod='website'|'email'|'phone'|'whatsapp'|'in_person'|'ariahub';
 export function resolveEmployerApplication(input:{
  applyMethod?:string|null;applyUrl?:string|null;applyEmail?:string|null;applyPhone?:string|null;guidelines?:string|null;
 }):{url:string|null;type:string;method:EmployerApplyMethod}{
@@ -8,6 +9,7 @@ export function resolveEmployerApplication(input:{
  const method=input.applyMethod||(
   input.applyEmail?.trim()?'email':input.applyUrl?.trim()?'website':input.applyPhone?.trim()?'phone':'website'
  );
+ if(method==='ariahub')return {url:null,type:'native_application',method:'ariahub'};
  if(!['website','email','phone','whatsapp','in_person'].includes(method))throw Error('Invalid application method.');
  if(method==='in_person'){
   if(!input.guidelines||input.guidelines.trim().length<12||input.guidelines.length>3000)
@@ -29,6 +31,6 @@ export function resolveEmployerApplication(input:{
  let u:URL;
  try{u=new URL(raw);}catch{throw Error('Provide a valid HTTPS application URL.');}
  if(u.protocol!=='https:'||u.username||u.password||u.hostname==='localhost'||u.hostname.endsWith('.local')
-   ||u.hostname.length>253||raw.length>2048)throw Error('Only public HTTPS application URLs are allowed.');
+   ||u.hostname.length>253||raw.length>2048||!isSafePublicUrl(raw))throw Error('Only public HTTPS application URLs are allowed.');
  return {url:u.toString(),type:'direct_application',method:'website'};
 }

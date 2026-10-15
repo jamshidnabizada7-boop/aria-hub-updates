@@ -1,3 +1,4 @@
+import {applicantSameOrigin} from '@/lib/applicant-origin';
 /**
  * Employer organization claims (Phase 12).
  * GET  /api/employers/claims → the caller's claims with organization names
@@ -45,6 +46,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if(!applicantSameOrigin(request))return NextResponse.json({error:'Invalid origin'},{status:403});
   const employer = await getCurrentEmployer(employerCookieValue(request));
   if (!employer) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 

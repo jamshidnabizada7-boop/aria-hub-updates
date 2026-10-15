@@ -19,6 +19,8 @@ export interface PublicOrgOpportunity {
 }
 
 export interface PublicOrganization {
+  id:string;
+  industry:string|null;
   name: string;
   slug: string;
   logoUrl: string | null;
@@ -38,7 +40,7 @@ export async function getPublicOrganization(slug: string, lang: 'en' | 'fa' | 'p
   const org = await db.organization.findUnique({
     where: { slug },
     select: {
-      name: true, slug: true, logoUrl: true, website: true,
+      id:true,industry:true,name: true, slug: true, logoUrl: true, website: true,
       organizationType: true, country: true, active: true, verified: true, verifiedAt: true,
       description: true, descriptionI18n: true, nameI18n: true,
       opportunities: {
@@ -57,6 +59,7 @@ export async function getPublicOrganization(slug: string, lang: 'en' | 'fa' | 'p
   const i18nDescription = (org.descriptionI18n as Record<string, string> | null)?.[lang];
 
   return {
+    id:org.id,industry:org.industry,
     name: i18nName || org.name,
     slug: org.slug,
     logoUrl: org.logoUrl,

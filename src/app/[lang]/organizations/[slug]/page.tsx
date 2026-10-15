@@ -1,3 +1,4 @@
+import {OrganizationFollowButton} from '@/components/site/organization-follow';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import {PageShell} from '@/components/site/page-shell';
@@ -114,6 +115,8 @@ export default async function OrganizationPage({ params }: Props) {
           </a>
         )}
       </div>
+
+      <div className="mt-5 flex flex-wrap items-center gap-3"><OrganizationFollowButton organizationId={org.id} lang={lang}/>{org.industry&&<span className="text-sm text-muted-foreground">{org.industry}</span>}<Link className="ms-auto text-xs text-primary underline" href={`/${lang}/employers/dashboard?claim=${encodeURIComponent(org.slug)}`}>{lang==='fa'?'این سازمان را مدیریت می‌کنید؟':lang==='ps'?'دا اداره اداره کوئ؟':'Manage this organization?'}</Link></div>
 
       {org.description && (
         <p className="mt-5 whitespace-pre-line rounded-lg border bg-card p-4 text-sm leading-relaxed">

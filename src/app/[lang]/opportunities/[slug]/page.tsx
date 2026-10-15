@@ -91,6 +91,7 @@ const FORM_URL_RE =
 interface ApplyInfo {
   /** Exact application link (email/form/portal). NEVER the scraped source page. */
   primaryHref: string | null;
+  nativeSlug?: string;
   primaryLabelKey: string;
   isMailto: boolean;
   isPhone: boolean;
@@ -99,6 +100,7 @@ interface ApplyInfo {
 }
 
 function getApplyInfo(opp: OpportunityDetail): ApplyInfo {
+  if(opp.acceptsNativeApplications&&opp.sourceName==='Employer'&&opp.organizationId)return {primaryHref:null,nativeSlug:opp.slug,primaryLabelKey:'detail.applyNow',isMailto:false,isPhone:false,email:null};
   const applyUrl = normalizeApplyUrl(opp.applyUrl);
   // Reclassify at render time so a stale stored type cannot expose a source
   // article as an Apply destination after an admin edits the URL.
@@ -758,6 +760,7 @@ export default async function OpportunityDetailPage({
       {/* Sticky mobile action bar — Apply + Save */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:hidden print:hidden">
         <div className="mx-auto flex max-w-3xl items-center gap-2">
+          {apply.nativeSlug?<a href={'/'+lang+'/apply/'+encodeURIComponent(apply.nativeSlug)} className="flex min-h-11 flex-1 items-center justify-center rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground">{lang==='fa'?'درخواست در آریا هاب':lang==='ps'?'غوښتنلیک واستوئ':'Apply on ARIA HUB'}</a>:null}
           {apply.primaryHref ? (
             <Button asChild className="h-11 flex-1 rounded-xl bg-gradient-to-r from-primary to-chart-2 font-bold shadow-float transition-opacity hover:opacity-90">
               <a href={apply.primaryHref} target={apply.isPhone ? undefined : '_blank'} rel={apply.isPhone ? undefined : 'noopener noreferrer'}>
@@ -790,6 +793,7 @@ function ApplyCard({
 }) {
   const t = (key: string) => translate(lang, key);
 
+  if(apply.nativeSlug)return <Card className={cn('border-primary/25 bg-card p-5',className)}><a href={'/'+lang+'/apply/'+encodeURIComponent(apply.nativeSlug)} className="flex min-h-12 items-center justify-center rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground">{lang==='fa'?'درخواست از طریق آریا هاب':lang==='ps'?'د آریا هاب له لارې غوښتنلیک':'Apply on ARIA HUB'}</a><p className="mt-3 text-xs leading-6 text-muted-foreground">{lang==='fa'?'انتخاب کنید کدام سی‌وی و معلومات با کارفرما شریک شود.':lang==='ps'?'وټاکئ کوم سي وي او معلومات له کار ورکوونکي سره شریک شي.':'Choose the CV and details you share directly with this employer.'}</p></Card>;
   if (!apply.primaryHref) {
     // No verified application link: guide the user without any misleading link.
     return (

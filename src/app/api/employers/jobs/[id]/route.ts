@@ -1,3 +1,4 @@
+import {applicantSameOrigin} from '@/lib/applicant-origin';
 /**
  * Employer job actions API (Phase 13) — ownership-enforced per job.
  * PATCH /api/employers/jobs/[id] { action: edit|close|reopen|extend|duplicate, … }
@@ -10,6 +11,7 @@ import { allowDurable } from '@/lib/security/durable-rate-limit';
 import { db } from '@/lib/db';
 
 export async function PATCH(request: Request, ctx: { params: Promise<{ id: string }> }) {
+  if(!applicantSameOrigin(request))return NextResponse.json({error:'Invalid origin'},{status:403});
   const employer = await employerFromRequest(request);
   if (!employer) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { id } = await ctx.params;

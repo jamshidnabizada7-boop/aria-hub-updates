@@ -13,6 +13,8 @@ export async function exportApplicantData(db: PrismaClient, userId: string) {
       headline: true, residence: true, preferredLocale: true, verifiedCareerFacts: true,
       documents: { select: { id: true, originalName: true, mimeType: true, byteSize: true, status: true, extraction: true, reviewedAt: true, createdAt: true } },
       savedSearches: { select: { name: true, profile: true, active: true, createdAt: true } },
+      organizationFollows:{select:{createdAt:true,organization:{select:{name:true,slug:true}}}},
+      submittedApplications:{select:{name:true,email:true,coverLetter:true,status:true,consentedAt:true,withdrawnAt:true,createdAt:true,history:true,opportunity:{select:{title:true,slug:true}},organization:{select:{name:true}},document:{select:{originalName:true}}}},
       trackedApplications: { select: { opportunitySlug: true, opportunityTitle: true, opportunityOrganization: true, status: true, notes: true, nextActionAt: true, appliedAt: true } },
       notificationPreference: { select: { inAppEnabled: true, emailEnabled: true, pushEnabled: true, whatsappEnabled: true, emailFrequency: true } },
       notifications: { select: { opportunityId: true, evidence: true, readAt: true, createdAt: true } },
@@ -39,6 +41,8 @@ export async function requestAccountDeletion(db: PrismaClient, userId: string, p
     await tx.$queryRaw`SELECT "id" FROM "ApplicantProfile" WHERE "id" = ${profile.id} FOR UPDATE`;
     await tx.user.update({ where: { id: userId }, data: { disabled: true, passwordResetToken: null, passwordResetExpires: null } });
     await tx.session.deleteMany({ where: { userId } });
+    await tx.employerApplication.updateMany({where:{applicantProfileId:profile.id,withdrawnAt:null},data:{withdrawnAt:new Date(),status:'withdrawn',documentId:null,name:'',email:'',coverLetter:''}});
+    await tx.organizationFollow.deleteMany({where:{applicantProfileId:profile.id}});
     await tx.applicantSavedSearch.updateMany({ where: { applicantProfileId: profile.id }, data: { active: false } });
     await tx.applicantDocument.updateMany({ where: { applicantProfileId: profile.id }, data: { status: 'deleting', processingClaimedAt: null } });
     // Allow in-flight storage uploads to finish/fail before deleting their keys.

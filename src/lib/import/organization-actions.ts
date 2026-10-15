@@ -35,6 +35,8 @@ export interface OrgStatsRow {
 type OrgDb = {
   organization: { findMany: (a: any) => Promise<any[]>; findUnique: (a: any) => Promise<any>; update: (a: any) => Promise<any>; delete: (a: any) => Promise<any> };
   organizationAlias: { findMany: (a: any) => Promise<any[]>; findFirst: (a: any) => Promise<any>; updateMany: (a: any) => Promise<any>; update: (a: any) => Promise<any>; delete: (a: any) => Promise<any>; create: (a: any) => Promise<any>; count: (a: any) => Promise<number> };
+  organizationFollow?:{findMany:(a:any)=>Promise<any[]>;deleteMany:(a:any)=>Promise<any>;updateMany:(a:any)=>Promise<any>};
+  employerApplication?:{updateMany:(a:any)=>Promise<any>};
   organizationMember: { findMany: (a: any) => Promise<any[]>; findUnique: (a: any) => Promise<any>; update: (a: any) => Promise<any>; updateMany: (a: any) => Promise<any> };
   user: { findMany: (a: any) => Promise<any[]> };
   opportunity: { updateMany: (a: any) => Promise<any>; count: (a: any) => Promise<number>; groupBy: (a: any) => Promise<any[]> };
@@ -189,6 +191,12 @@ export async function mergeOrganizations(db: OrgDb, targetId: string, sourceId: 
   const movedSources = (await db.importSource.updateMany({ where: { organizationId: sourceId }, data: { organizationId: targetId } })).count ?? 0;
   const movedObservations = (await db.opportunitySourceObservation.updateMany({ where: { organizationId: sourceId }, data: { organizationId: targetId } })).count ?? 0;
   await db.organizationMember.updateMany({ where: { organizationId: sourceId }, data: { organizationId: targetId } }).catch(() => null);
+  if(db.organizationFollow){
+    const targetFollows=await db.organizationFollow.findMany({where:{organizationId:targetId},select:{applicantProfileId:true}});
+    await db.organizationFollow.deleteMany({where:{organizationId:sourceId,applicantProfileId:{in:targetFollows.map(r=>r.applicantProfileId)}}});
+    await db.organizationFollow.updateMany({where:{organizationId:sourceId},data:{organizationId:targetId}});
+  }
+  if(db.employerApplication)await db.employerApplication.updateMany({where:{organizationId:sourceId},data:{organizationId:targetId}});
   await db.organization.delete({ where: { id: sourceId } });
 
   await db.auditLog.create({

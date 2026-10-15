@@ -1,3 +1,4 @@
+import {applicantSameOrigin} from '@/lib/applicant-origin';
 /**
  * Employer jobs API (Phase 13) — cookie-authenticated, ownership-enforced.
  * GET  /api/employers/jobs?organizationId=… → bucketed lists for the dashboard
@@ -27,6 +28,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if(!applicantSameOrigin(request))return NextResponse.json({error:'Invalid origin'},{status:403});
   const employer = await employerFromRequest(request);
   if (!employer) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 

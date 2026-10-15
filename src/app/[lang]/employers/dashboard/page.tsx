@@ -12,11 +12,14 @@ import { EmployerDashboard } from '@/components/employers/dashboard';
  */
 export const dynamic = 'force-dynamic';
 
-export default async function EmployerDashboardPage() {
+export default async function EmployerDashboardPage({params,searchParams}:{params:Promise<{lang:string}>;searchParams:Promise<{claim?:string}>}) {
+  const raw=await params;const lang=raw.lang==='fa'||raw.lang==='ps'?raw.lang:'en';
+  const query=await searchParams;
+  const initialClaim=String(query.claim||'').slice(0,200);
   const store = await cookies();
   const employer = await getCurrentEmployer(store.get('aria-employer-session')?.value);
-  if (!employer) redirect('/en/employers/login');
+  if (!employer) redirect('/'+lang+'/employers/login'+(initialClaim?'?claim='+encodeURIComponent(initialClaim):''));
 
   const organizations = await myOrganizations(db, employer.id);
-  return <EmployerDashboard userName={employer.name ?? employer.email} organizations={organizations} />;
+  return <EmployerDashboard initialClaim={initialClaim} lang={lang} userName={employer.name ?? employer.email} organizations={organizations} />;
 }

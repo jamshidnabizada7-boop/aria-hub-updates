@@ -125,7 +125,7 @@ export default async function EmployersPage({
                 {t('employers.subtitle')}
               </p>
 
-              <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"><Link href={`/${lang}/employers/dashboard`} className="inline-flex min-h-12 items-center rounded-xl bg-primary px-6 font-semibold text-primary-foreground">{lang==='fa'?'ورود یا ثبت سازمان':lang==='ps'?'ننوتل یا اداره ثبتول':'Employer login / register organization'}</Link>
                 <Link
                   href={`/${lang}/employers/post`}
                   className="inline-flex h-12 items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-chart-2 px-7 text-sm font-semibold text-primary-foreground shadow-float transition-opacity hover:opacity-90"

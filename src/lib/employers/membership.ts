@@ -26,7 +26,7 @@ type MemberDb = {
     update: (a: any) => Promise<any>;
     delete: (a: any) => Promise<any>;
   };
-  organization: { findUnique: (a: any) => Promise<any> };
+  organization: { findUnique: (a: any) => Promise<any>; update?: (a:any)=>Promise<any> };
   opportunity: { updateMany: (a: any) => Promise<any> };
   auditLog: { create: (a: any) => Promise<any> };
 };
@@ -72,7 +72,7 @@ export async function claimOrganization(db: MemberDb, userId: string, organizati
 
 /** Admin approval: pending → active. */
 export async function reviewMembership(db: MemberDb, memberId: string, approve: boolean, adminEmail: string): Promise<void> {
-  const member = await db.organizationMember.findUnique({ where: { id: memberId }, include: { organization: { select: { name: true } } } });
+  const member = await db.organizationMember.findUnique({ where: { id: memberId }, include: { organization: { select: { name: true, verificationMethod: true } } } });
   if (!member) throw new Error('Membership request not found.');
   if (member.status !== 'pending') throw new Error('Only pending requests can be reviewed.');
   await db.organizationMember.update({
@@ -84,9 +84,12 @@ export async function reviewMembership(db: MemberDb, memberId: string, approve: 
 
   // Phase 17: an approved owner claim makes the org's employer jobs trusted
   if (approve) {
+    if(member.organization.verificationMethod==='employer_registration_pending'&&db.organization.update){
+      await db.organization.update({where:{id:member.organizationId},data:{active:true,verificationMethod:'employer_registration_reviewed'}});
+    }
     await db.opportunity.updateMany({
       where: { organizationId: member.organizationId, sourceName: 'Employer',
-        verificationStatus: { in: ['single_source', 'needs_review', null] } },
+        OR:[{verificationStatus:null},{verificationStatus:{in:['single_source','needs_review']}}] },
       data: { verificationStatus: 'verified_employer' },
     }).catch(() => null);
   }

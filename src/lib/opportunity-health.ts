@@ -9,6 +9,8 @@ export interface HealthOpportunity {
   sourceUrl: string | null;
   originalUrl: string | null;
   applyUrl: string | null;
+  acceptsNativeApplications?:boolean;
+  organizationId?:string|null;
   applyUrlEvidence?: string | null;
   categoryId: string | null;
   country: string | null;
@@ -42,7 +44,7 @@ export function opportunityHealth(row: HealthOpportunity) {
   if (evidenceCount === 0) missing.push('eligibility evidence');
   return {
     applyType,
-    hasRealApply: isRealApplyLink(applyType),
+    hasRealApply: (row.acceptsNativeApplications===true&&Boolean(row.organizationId)&&row.sourceName==='Employer')||isRealApplyLink(applyType),
     coreReady: !!row.categoryId && hasText(row.country),
     evidenceCount,
     missing,

@@ -1,0 +1,11 @@
+'use client';
+import Link from 'next/link';import {UserRound,Building2,ChevronDown} from 'lucide-react';
+import {DropdownMenu,DropdownMenuContent,DropdownMenuItem,DropdownMenuTrigger} from '@/components/ui/dropdown-menu';
+export function AccountChoices({lang,signedIn=false,mobile=false}:{lang:string;signedIn?:boolean;mobile?:boolean}){
+ const c=lang==='fa'?['حساب من','جویندۀ فرصت','مشخصات، سی‌وی و درخواست‌ها','کارفرما','اداره، استخدام و نشر وظیفه']:lang==='ps'?['زما حساب','د فرصت لټوونکی','معلومات، سي وي او غوښتنلیکونه','کار ورکوونکی','اداره، ګمارنه او دندې خپرول']:['My account','Jobseeker','Profile, CVs and applications','Employer','Organization, hiring and job posts'];
+ return <DropdownMenu><DropdownMenuTrigger className={(mobile?'flex w-full':'hidden lg:flex')+' min-h-11 items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold'}>{c[0]}<ChevronDown className="h-4 w-4"/></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-72 p-2"><DropdownMenuItem asChild><Link href={`/${lang}/${signedIn?'portal':'login'}`} className="flex gap-3 p-3"><UserRound className="h-5 w-5 text-primary"/><span><strong className="block">{c[1]}</strong><span className="text-xs text-muted-foreground">{c[2]}</span></span></Link></DropdownMenuItem><DropdownMenuItem asChild><Link href={`/${lang}/employers/dashboard`} className="flex gap-3 p-3"><Building2 className="h-5 w-5 text-primary"/><span><strong className="block">{c[3]}</strong><span className="text-xs text-muted-foreground">{c[4]}</span></span></Link></DropdownMenuItem></DropdownMenuContent></DropdownMenu>;
+}
+export function AccountLane({lang,employer=false}:{lang:string;employer?:boolean}){
+ const c=lang==='fa'?['جویندۀ فرصت','کارفرما']:lang==='ps'?['فرصت لټوونکی','کار ورکوونکی']:['Jobseeker','Employer'];
+ return <nav aria-label="Account type" className="mb-7 grid grid-cols-2 gap-2 rounded-2xl border bg-muted/40 p-1.5">{c.map((label,i)=><Link key={label} href={`/${lang}/${i?'employers/login':'login'}`} aria-current={Boolean(i)===employer?'page':undefined} className={'flex min-h-12 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold '+(Boolean(i)===employer?'bg-card text-primary shadow-sm':'text-muted-foreground')}>{i?<Building2 className="h-4 w-4"/>:<UserRound className="h-4 w-4"/>}{label}</Link>)}</nav>;
+}

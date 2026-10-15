@@ -78,7 +78,7 @@ export async function listOrgJobs(db: JobsDb, organizationId: string): Promise<{
     where: { organizationId, sourceName: 'Employer' },
     select: {
       id: true, slug: true, title: true, status: true, deadline: true, createdAt: true,
-      country: true, salary: true, jobType: true, applyUrl: true,
+      country: true, salary: true, jobType: true, applyUrl: true,description:true,acceptsNativeApplications:true,
     },
     orderBy: { createdAt: 'desc' },
     take: 200,
@@ -97,7 +97,8 @@ export async function createJob(db: JobsDb, userId: string, organizationId: stri
   const title = String(input.title ?? '').trim();
   const description = String(input.description ?? '').trim();
   if (title.length < 5 || title.length > 200) throw new Error('Title must be 5-200 characters.');
-  if (description.length < 80) throw new Error('Description must be at least 80 characters.');
+  if (description.length < 80 || description.length>40000) throw new Error('Description must be at least 80 characters.');
+  if(input.deadline&&Number.isNaN(new Date(input.deadline).getTime()))throw Error('Invalid deadline.');
   const application=resolveEmployerApplication(input);
   const applyUrl=application.url;
 
@@ -127,6 +128,7 @@ export async function createJob(db: JobsDb, userId: string, organizationId: stri
       salary: input.salary || null,
       jobType: input.jobType || 'full-time',
       applyUrl,
+      acceptsNativeApplications:application.method==='ariahub',
       applyUrlType: application.type,
       categoryId: category?.id ?? null,
       language: 'en',
@@ -150,10 +152,10 @@ async function ownedJob(db: JobsDb, userId: string, jobId: string, minRole: 'rec
     select: {
       id: true, organizationId: true, slug: true, status: true, title: true,
       description: true, deadline: true, applyUrl: true, applyUrlType: true,
-      country: true, salary: true, jobType: true, categoryId: true, organization: true,
+      country: true, salary: true, jobType: true, categoryId: true, organization: true, sourceName:true, acceptsNativeApplications:true, extractedData:true, educationReq:true,experience:true,requirements:true,responsibilities:true,guidelines:true,locations:{select:{country:true,province:true,city:true,district:true}},
     },
   });
-  if (!job?.organizationId) return null;
+  if (!job?.organizationId || job.sourceName!=='Employer') return null;
   if ((await requireMembership(db, userId, job.organizationId, minRole)) === null) return null;
   return job;
 }
@@ -163,18 +165,19 @@ export async function updateJob(db: JobsDb, userId: string, jobId: string, patch
   const job = await ownedJob(db, userId, jobId, 'recruiter');
   if (!job) throw new Error('Job not found or you do not have access to it.');
   const data: Record<string, unknown> = {};
-  if (patch.title?.trim()) data.title = patch.title.trim();
-  if (patch.description?.trim()) data.description = patch.description.trim();
-  if (patch.location !== undefined) data.country = patch.location; // employer lane convention
-  if (patch.salary !== undefined) data.salary = patch.salary;
-  if (patch.jobType !== undefined) data.jobType = patch.jobType;
-  if (patch.deadline !== undefined) data.deadline = patch.deadline ? new Date(patch.deadline) : null;
-  if (patch.applyUrl !== undefined) data.applyUrl = patch.applyUrl;
-  if (patch.applyEmail) {
-    data.applyUrl = `mailto:${String(patch.applyEmail).trim()}`;
-    data.applyUrlType = 'application_email';
+  if(patch.title!==undefined){const title=patch.title.trim();if(title.length<5||title.length>200)throw Error('Title must be 5–200 characters.');data.title=title;}
+  if(patch.description!==undefined){const description=patch.description.trim();if(description.length<80||description.length>40000)throw Error('Description must be 80–40000 characters.');data.description=description;}
+  if(patch.location!==undefined)data.country=patch.location?.slice(0,200)||null;
+  if(patch.salary!==undefined)data.salary=patch.salary?.slice(0,200)||null;
+  if(patch.jobType!==undefined)data.jobType=patch.jobType?.slice(0,100)||null;
+  if(patch.deadline!==undefined){const date=patch.deadline?new Date(patch.deadline):null;if(date&&Number.isNaN(date.getTime()))throw Error('Invalid deadline.');data.deadline=date;}
+  if(patch.applyUrl!==undefined||patch.applyEmail){
+    const resolved=resolveEmployerApplication({applyUrl:patch.applyUrl,applyEmail:patch.applyEmail});
+    data.applyUrl=resolved.url;data.applyUrlType=resolved.type;data.acceptsNativeApplications=false;
   }
-  if (!Object.keys(data).length) throw new Error('Nothing to update.');
+  if(!Object.keys(data).length)throw Error('Nothing to update.');
+  data.status='draft';
+  Object.assign(data,translationPendingFlags());
   await db.opportunity.update({ where: { id: jobId }, data });
   await db.auditLog.create({
     data: { entity: 'opportunity', entityId: jobId, action: 'employer.job-edit',
@@ -218,7 +221,7 @@ export async function duplicateJob(db: JobsDb, userId: string, jobId: string): P
       organizationId: job.organizationId, organization: job.organization,
       sourceName: 'Employer', deadline: job.deadline, country: job.country,
       salary: job.salary, jobType: job.jobType, applyUrl: job.applyUrl,
-      applyUrlType: job.applyUrlType, categoryId: job.categoryId, language: 'en',
+      applyUrlType: job.applyUrlType, acceptsNativeApplications:job.acceptsNativeApplications,extractedData:job.extractedData,educationReq:job.educationReq,experience:job.experience,requirements:job.requirements,responsibilities:job.responsibilities,guidelines:job.guidelines,...(job.locations?.length?{locations:{create:job.locations}}:{}), categoryId: job.categoryId, language: 'en',...translationPendingFlags(),
     },
   });
   await db.auditLog.create({
