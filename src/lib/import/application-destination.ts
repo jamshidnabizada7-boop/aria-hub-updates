@@ -20,7 +20,7 @@ export function applicationDestination(html: string, sourceUrl: string): string 
     if (/^mailto:/i.test(url)) {
       if (isApplyEmail(url.slice(7).split('?')[0])) candidates.push({ url, rank: 1 });
     } else if (FORM_URL_RE.test(url)) candidates.push({ url, rank: 0 });
-    else if (/\b(apply|application|submit|register)\b/i.test($(element).text())) candidates.push({ url, rank: 2 });
+    else if (/\b(apply|application|submit|register|job details|career page)\b/i.test($(element).text())) candidates.push({ url, rank: 2 });
     else if (/\/(?:opportunities|jobs?|vacancies|careers)\/(?!jobs?\/?$|vacancies\/?$)[^/?]+/i.test(new URL(url).pathname)) candidates.push({ url, rank: 2 });
   });
   // Dedicated submission fields may contain an unlinked email or portal URL.

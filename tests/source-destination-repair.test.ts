@@ -53,6 +53,10 @@ test('application extraction rejects source emails, unsafe schemes and footer li
   }
 });
 
+test('retains an employer Job details anchor whose query identifies the vacancy', () => {
+  expect(applicationDestination('<p>Submit an updated CV using the following link:</p><a href="https://careers.ifrc.org/lumesse_jobdescription.html?nPostingId=25626">Job details: Senior Officer</a>', 'https://www.jobs.af/jobs/officer')).toBe('https://careers.ifrc.org/lumesse_jobdescription.html?nPostingId=25626');
+});
+
 test('WordPress facts stop at unknown headings and capture Scholarship funding', () => {
   const facts = extractWpHtmlFacts('<p><strong>Scholarship</strong></p><p>Annual funding of 25,000 Swiss francs.</p><p><strong>Eligibility</strong></p><ul><li>Open exclusively to Afghan women.</li></ul><h2>Selection timeline</h2><p>Do not treat this as eligibility.</p><h2>Application</h2><p>Submit your diploma and CV.</p>');
   expect(facts.benefits).toBe('Annual funding of 25,000 Swiss francs.');
