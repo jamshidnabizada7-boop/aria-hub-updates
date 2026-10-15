@@ -29,3 +29,13 @@ All brand expressions reference the theme tokens and adapt to light/dark mode. D
 ## Verification
 
 In a real browser, the homepage action, applicant login and employer login had identical computed background, foreground, font, 14px action text and 18px radius in light mode. The same controls matched after dark-mode navigation. Persian phone sign-in at 390px had no horizontal overflow. These are visual/style changes; authentication and private-data behavior were not changed.
+
+## Production verification — 15 October 2026
+
+- Runtime commit `39865ef`, deployed from main to `/opt/aria-hub/releases/20261015-shared-theme-39865ef`.
+- Full Next production build, TypeScript and targeted ESLint passed. The pre-existing PDF filesystem-tracing warning remains.
+- Preflight returned HTTP 200 for home, applicant login, employer login (en/fa/ps), Get Started and templates. Unauthorized employer inbox and WhatsApp webhook remained HTTP 403.
+- The live homepage search and employer sign-in controls have identical computed background, foreground and 18px radius. Their text sizes retain their page context (hero 16px, form 14px); both use the same font family.
+- Public health reports the database up; web, import worker, social worker and applicant channel timer are active.
+- Live proof: `shared-blue-theme-login-live-20261015.png`. Computed-style evidence: `shared-theme-live-comparison-20261015.json`, retained in the local audit evidence directory.
+- Temporary local preview tabs and dev server were closed; viewport overrides were reset.
