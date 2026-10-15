@@ -25,6 +25,12 @@ test('Wazifaha captures a dedicated email but preserves a reviewed destination',
   expect((await scraper.parseDetail({ title: 'Teacher', sourceUrl: url, sourceName: source.name, applyUrl: 'https://school.example/reviewed' })).applyUrl).toBe('https://school.example/reviewed');
 });
 
+test('Wazifaha prefers the exact employer vacancy to its generic jobs directory', async () => {
+  const scraper = new WazifahaScraper(source);
+  scraper.fetchText = async () => `<h1 class="wz-hero-title">Officer</h1><div class="wz-content-section"><h2 class="wz-section-heading">Submission Guidelines</h2><div class="wz-section-body"><p>Visit the announcement and click Apply Now:</p><a href="https://employer.example/en/opportunities/officer">https://employer.example/en/opportunities/officer</a></div></div><div class="wz-apply-email">https://employer.example/en/opportunities/jobs</div>`;
+  expect((await scraper.parseDetail({ title: 'Officer', sourceUrl: url, sourceName: source.name })).applyUrl).toBe('https://employer.example/en/opportunities/officer');
+});
+
 test('Wazifaha scopes fallback anchors to submission content and never promotes closed wrappers', async () => {
   const scraper = new WazifahaScraper(source);
   scraper.fetchText = async () => `<h1 class="wz-hero-title">Officer</h1><div class="wz-content-section"><h2 class="wz-section-heading">Submission Guidelines</h2><div class="wz-section-body"><p>Complete the form:</p><a href="https://forms.office.com/r/fixture">here</a></div></div><a href="/jobs/apply/1">Apply</a>`;
@@ -42,7 +48,7 @@ test('Jobs.af preserves a form href hidden behind a generic anchor label', async
 });
 
 test('application extraction rejects source emails, unsafe schemes and footer links', () => {
-  for (const html of ['info@wazifaha.org', '<a href="javascript:alert(1)">Apply</a>', '<footer><a href="https://forms.gle/list">Apply</a></footer>']) {
+  for (const html of ['info@wazifaha.org', 'http://127.0.0.1/private', '<a href="javascript:alert(1)">Apply</a>', '<footer><a href="https://forms.gle/list">Apply</a></footer>']) {
     expect(applicationDestination(html, url)).toBeNull();
   }
 });

@@ -19,7 +19,7 @@ const norm = (v: string) => v.replace(/\s+/g, ' ').trim();
 const reviewedHosts: Record<string, { url: string; programme: string; quote: string; country: string }> = {
   'maria-rosario-lazzati-niada-scholarship-for-afghan-women-2027-2028': { url: 'https://www.graduateinstitute.ch/afghan-scholarships', programme: 'Successful applicants will enrol in a two-year master programme from the Geneva Graduate Institute.', quote: 'CH - 1211 Geneva 1, Switzerland', country: 'Switzerland' },
   'cees-fellowship-program-2027': { url: 'https://www.cees.uzh.ch/de/CEES-Fellowship-Program.html', programme: 'four-month (one semester) residential fellowship', quote: 'contemporary Russian, Eastern European and Eurasian studies in Switzerland', country: 'Switzerland' },
-  'jean-monnet-fellowship-in-the-social-sciences-humanities-for-postdoctoral-researchers-2027-2028': { url: 'https://www.eui.eu/apply?id=jean-monnet-fellowships', programme: 'Jean Monnet Fellows are based at the Robert Schuman Centre', quote: 'I-50014 San Domenico di Fiesole (FI) - Italy', country: 'Italy' },
+  'jean-monnet-fellowship-2027-2028': { url: 'https://www.eui.eu/apply?id=jean-monnet-fellowships', programme: 'Jean Monnet Fellows are based at the Robert Schuman Centre', quote: 'I-50014 San Domenico di Fiesole (FI) - Italy', country: 'Italy' },
 };
 
 try {
