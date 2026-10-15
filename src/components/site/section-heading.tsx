@@ -44,7 +44,7 @@ export function SectionHeading({ eyebrow, title, subtitle, align = 'center', cla
       {/* Decorative underline */}
       {align === 'center' && (
         <div
-          className="mx-auto mt-5 h-1 w-12 rounded-full bg-gradient-to-r from-primary to-chart-2"
+          className="mx-auto mt-5 h-1 w-12 rounded-full bg-primary"
         />
       )}
     </div>

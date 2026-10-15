@@ -38,7 +38,7 @@ export function ComparisonSection({ lang: serverLang, rows }: { lang?: string; r
               {t('comparison.feature')}
             </div>
             <div className="text-center">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-primary to-chart-2 px-3 py-1 text-xs font-bold text-primary-foreground shadow-float">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-xs font-bold text-primary-foreground shadow-float">
                 <Sparkles className="h-3 w-3" />
                 {t('comparison.aria')}
               </span>

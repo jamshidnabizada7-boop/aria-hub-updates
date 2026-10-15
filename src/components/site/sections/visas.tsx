@@ -59,13 +59,13 @@ export function VisasSection({ visas }: { visas: Visa[] }) {
                 </motion.div>
               ))}
             </div>
-            
+
             {visas.length > visibleCount && (
               <div className="mt-12 flex justify-center">
-                <Button 
+                <Button
                   asChild
-                  size="lg" 
-                  className="rounded-full bg-gradient-to-r from-primary to-chart-2 px-8 font-semibold shadow-float"
+                  size="lg"
+                  className="rounded-full bg-primary px-8 font-semibold shadow-float"
                 >
                   <a href={hrefFn('/visas')} target="_blank" rel="noopener noreferrer">
                     {t('section.viewAll') || 'View All'}
@@ -86,11 +86,11 @@ export function VisasSection({ visas }: { visas: Visa[] }) {
 
 function VisaCard({ visa, t, onOpen }: { visa: Visa; t: (k: string) => string; onOpen: () => void }) {
   const lang = useEffectiveLang();
-  
+
   // Get localized content
   const country = getLocalizedContent(visa.country, visa.countryI18n as any, lang);
   const visaType = getLocalizedContent(visa.visaType, visa.visaTypeI18n as any, lang);
-  
+
   return (
     <Card className="group relative overflow-hidden border-border/60 p-0 shadow-premium transition-all duration-500 hover:-translate-y-1.5 hover:shadow-float">
       <button onClick={onOpen} className="block w-full text-left">
@@ -136,7 +136,7 @@ function VisaCard({ visa, t, onOpen }: { visa: Visa; t: (k: string) => string; o
           <Button onClick={onOpen} variant="outline" className="h-10 rounded-xl text-xs">
             <FileText className="me-1.5 h-3.5 w-3.5" />{t('detail.viewDetails')}
           </Button>
-          <Button asChild className="h-10 rounded-xl bg-gradient-to-r from-primary to-chart-2 text-xs group-hover:shadow-float">
+          <Button asChild className="h-10 rounded-xl bg-primary text-xs group-hover:shadow-float">
             <a href="#contact">
               <Plane className="me-1.5 h-3.5 w-3.5" />
               {t('visas.apply')}
@@ -150,14 +150,14 @@ function VisaCard({ visa, t, onOpen }: { visa: Visa; t: (k: string) => string; o
 
 function VisaDetail({ visa, t }: { visa: Visa; t: (k: string) => string }) {
   const lang = useEffectiveLang();
-  
+
   // Get localized content
   const country = getLocalizedContent(visa.country, visa.countryI18n as any, lang);
   const visaType = getLocalizedContent(visa.visaType, visa.visaTypeI18n as any, lang);
   const description = getLocalizedContent(visa.description, visa.descriptionI18n as any, lang);
   const eligibility = getLocalizedContent(visa.eligibility, visa.eligibilityI18n as any, lang);
   const applicationProcess = getLocalizedContent(visa.applicationProcess, visa.applicationProcessI18n as any, lang);
-  
+
   const requirements = getLocalizedArray(visa.requirements, visa.requirementsI18n as any, lang);
   const documents = getLocalizedArray(visa.documents, visa.documentsI18n as any, lang);
   const processSteps = applicationProcess ? applicationProcess.split('\n').filter(Boolean) : [];
@@ -256,7 +256,7 @@ function VisaDetail({ visa, t }: { visa: Visa; t: (k: string) => string }) {
         )}
 
         <div className="mt-6 flex flex-wrap gap-3">
-          <Button asChild className="h-11 rounded-xl bg-gradient-to-r from-primary to-chart-2">
+          <Button asChild className="h-11 rounded-xl bg-primary">
             <a href="#contact"><Plane className="me-2 h-4 w-4" />{t('visas.apply')}<ArrowRight className="ms-2 h-4 w-4 rtl-flip" /></a>
           </Button>
         </div>

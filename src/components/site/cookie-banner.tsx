@@ -52,7 +52,7 @@ export function CookieBanner() {
               <Button size="sm" variant="outline" className="rounded-lg text-xs" onClick={() => dismiss('essential')}>
                 {t('cookie.essentialOnly')}
               </Button>
-              <Button size="sm" className="rounded-lg bg-gradient-to-r from-primary to-chart-2 text-xs" onClick={() => dismiss('all')}>
+              <Button size="sm" className="rounded-lg bg-primary text-xs" onClick={() => dismiss('all')}>
                 <ShieldCheck className="me-1.5 h-3.5 w-3.5" /> {t('cookie.acceptAll')}
               </Button>
               <button onClick={() => dismiss('closed')} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-accent" aria-label={t('cookie.dismiss')}>

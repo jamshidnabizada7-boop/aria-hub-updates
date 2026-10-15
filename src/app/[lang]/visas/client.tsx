@@ -35,7 +35,7 @@ export function VisasClient({
   const router = useRouter();
   const lang = useLangStore((s) => s.code);
   const [selected, setSelected] = useState<Visa | null>(null);
-  
+
   const handlePageChange = (newPage: number) => {
     if (newPage < 1 || newPage > totalPages) return;
     router.push(`/${lang}/visas?page=${newPage}`);
@@ -83,7 +83,7 @@ export function VisasClient({
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            
+
             <div className="flex items-center gap-1 px-4 text-sm font-medium">
               <span>Page</span>
               <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
@@ -114,10 +114,10 @@ export function VisasClient({
 
 function VisaCard({ visa, t, onOpen }: { visa: Visa; t: (k: string) => string; onOpen: () => void }) {
   const lang = useLangStore((s) => s.code);
-  
+
   const country = getLocalizedContent(visa.country, visa.countryI18n as any, lang);
   const visaType = getLocalizedContent(visa.visaType, visa.visaTypeI18n as any, lang);
-  
+
   return (
     <Card className="group relative overflow-hidden border-border/60 p-0 shadow-premium transition-all duration-500 hover:-translate-y-1.5 hover:shadow-float h-full flex flex-col">
       <button onClick={onOpen} className="block w-full text-left">
@@ -172,11 +172,11 @@ function VisaCard({ visa, t, onOpen }: { visa: Visa; t: (k: string) => string; o
 function VisaDetail({ visa, t }: { visa: Visa; t: (k: string) => string }) {
   const lang = useLangStore((s) => s.code);
   const isRtl = lang === 'fa' || lang === 'ps';
-  
+
   const country = getLocalizedContent(visa.country, visa.countryI18n as any, lang);
   const visaType = getLocalizedContent(visa.visaType, visa.visaTypeI18n as any, lang);
   const description = getLocalizedContent(visa.description, visa.descriptionI18n as any, lang);
-  
+
   const reqsRaw = getLocalizedArray(visa.requirements, visa.requirementsI18n as any, lang);
   const requirements = Array.isArray(reqsRaw) ? reqsRaw : parseArr(reqsRaw as unknown as string);
 
@@ -202,7 +202,7 @@ function VisaDetail({ visa, t }: { visa: Visa; t: (k: string) => string }) {
                 <ReactMarkdown rehypePlugins={[rehypeRaw]}>{description}</ReactMarkdown>
               </div>
             )}
-            
+
             {requirements.length > 0 && (
               <div className="mt-8 rounded-2xl border border-primary/20 bg-primary/5 p-5 sm:p-6">
                 <h3 className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-foreground">
@@ -220,7 +220,7 @@ function VisaDetail({ visa, t }: { visa: Visa; t: (k: string) => string }) {
               </div>
             )}
           </div>
-          
+
           <div className="space-y-4">
             <div className="rounded-2xl border border-border/60 bg-accent/30 p-5">
               <h3 className="mb-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('detail.details')}</h3>
@@ -244,7 +244,7 @@ function VisaDetail({ visa, t }: { visa: Visa; t: (k: string) => string }) {
                   </div>
                 )}
               </div>
-              <Button className="mt-6 w-full rounded-xl bg-gradient-to-r from-primary to-chart-2 font-bold shadow-float" size="lg">
+              <Button className="mt-6 w-full rounded-xl bg-primary font-bold shadow-float" size="lg">
                 <Plane className="me-2 h-4 w-4" />{t('common.bookCall')}
               </Button>
             </div>

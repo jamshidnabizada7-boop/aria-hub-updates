@@ -227,7 +227,7 @@ export function EmployerPostForm({ lang }: { lang: Lang }) {
           <button
             type="button"
             onClick={() => {setStatus('idle');changeStep(0);}}
-            className="inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-chart-2 px-6 text-sm font-semibold text-primary-foreground shadow-float transition-opacity hover:opacity-90"
+            className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-float transition-opacity hover:bg-primary/90"
           >
             <Send className="h-4 w-4 rtl:-scale-x-100" aria-hidden="true" />
             {t('employers.post.success.another')}

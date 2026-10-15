@@ -93,7 +93,7 @@ export function OpportunitiesSection({
             </AnimatePresence>
           </div>
           <div className="mt-12 flex justify-center">
-            <Button asChild size="lg" className="rounded-full bg-gradient-to-r from-primary to-chart-2 px-8 font-semibold shadow-float">
+            <Button asChild size="lg" className="rounded-full bg-primary px-8 font-semibold shadow-float">
               <Link href={hrefFn('/opportunities')}>{t('opportunities.viewAll') || 'View All Opportunities'}</Link>
             </Button>
           </div>
@@ -173,7 +173,7 @@ function OpportunityCard({ opportunity, t }: { opportunity: Opportunity; t: (k: 
             <Link href={detailHref}>{t('detail.viewDetails')}</Link>
           </Button>
           {applyLink && (
-            <Button asChild size="sm" className="flex-1 rounded-lg bg-gradient-to-r from-primary to-chart-2 text-xs">
+            <Button asChild size="sm" className="flex-1 rounded-lg bg-primary text-xs">
               <a href={applyLink} target="_blank" rel="noopener noreferrer">
                 {t('opportunities.apply')}
                 <ArrowUpRight className="ms-1 h-3.5 w-3.5 rtl-flip" />

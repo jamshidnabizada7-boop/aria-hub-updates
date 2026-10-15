@@ -125,7 +125,7 @@ export function Footer({
                     aria-label={t('newsletter.placeholder')}
                     className="h-12 rounded-xl"
                   />
-                  <Button type="submit" disabled={loading} aria-label={t('newsletter.subscribe')} className="h-12 shrink-0 rounded-xl bg-gradient-to-r from-primary to-chart-2 px-5 shadow-float">
+                  <Button type="submit" disabled={loading} aria-label={t('newsletter.subscribe')} className="h-12 shrink-0 rounded-xl bg-primary px-5 shadow-float">
                     {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 rtl-flip" />}
                     <span className="ms-2 hidden sm:inline">{t('newsletter.subscribe')}</span>
                   </Button>

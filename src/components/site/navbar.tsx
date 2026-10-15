@@ -51,7 +51,7 @@ function DesktopMenuItem({ item }: { item: MenuItem }) {
   const hrefFn = useLangHref();
   const [expanded, setExpanded] = useState(false);
   const hasChildren = item.children && item.children.length > 0;
-  
+
   // Get localized label - correct parameter order: (baseValue, i18nValue, lang)
   const label = getLocalizedContent(item.label, item.labelI18n, code);
 
@@ -72,7 +72,7 @@ function DesktopMenuItem({ item }: { item: MenuItem }) {
         className="group relative flex items-center gap-1 px-2 xl:px-3 py-2 text-sm font-medium text-foreground/75 transition-colors hover:text-foreground"
       >
         {label}
-        <span className="absolute inset-x-3 -bottom-0.5 h-px origin-left scale-x-0 bg-gradient-to-r from-primary to-chart-2 transition-transform duration-300 group-hover:scale-x-100" />
+        <span className="absolute inset-x-3 -bottom-0.5 h-px origin-left scale-x-0 bg-primary transition-transform duration-300 group-hover:scale-x-100" />
       </a>
     );
   }
@@ -82,7 +82,7 @@ function DesktopMenuItem({ item }: { item: MenuItem }) {
       <button type="button" aria-expanded={expanded} onClick={() => setExpanded(!expanded)} className="flex min-h-11 items-center gap-1 px-2 xl:px-3 py-2 text-sm font-medium text-foreground/75 transition-colors hover:text-foreground">
         {label}
         <ChevronDown className={cn('h-3.5 w-3.5 transition-transform duration-300',expanded&&'rotate-180')} />
-        <span className="absolute inset-x-3 -bottom-0.5 h-px origin-left scale-x-0 bg-gradient-to-r from-primary to-chart-2 transition-transform duration-300 group-hover:scale-x-100" />
+        <span className="absolute inset-x-3 -bottom-0.5 h-px origin-left scale-x-0 bg-primary transition-transform duration-300 group-hover:scale-x-100" />
       </button>
       <div hidden={!expanded} className="absolute start-0 top-full z-50 pt-2">
         <div className="min-w-56 overflow-hidden rounded-2xl border border-border/60 bg-card/95 p-2 shadow-premium backdrop-blur-xl">
@@ -361,7 +361,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
               <AccountChoices lang={code} signedIn={applicantSignedIn} />
               <Button
                 size="sm"
-                className="hidden min-h-11 rounded-xl bg-primary px-4 text-sm font-semibold shadow-float hover:opacity-90 lg:inline-flex"
+                className="hidden min-h-11 rounded-xl bg-primary px-4 text-sm font-semibold shadow-float hover:bg-primary/90 lg:inline-flex"
                 asChild
               >
                 <a href={hrefFn('/get-started')}>{t('nav.getStarted')}</a>
@@ -388,7 +388,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
                   <div className="p-4 space-y-3">
                     {applicantSignedIn && notificationsAvailable && <a href={hrefFn('/portal/notifications')} onClick={() => setMobileOpen(false)} className="flex items-center justify-center gap-2 rounded-xl border p-3 text-center text-sm font-semibold"><Bell className="h-4 w-4"/>{code==='fa'?'اطلاع‌رسانی‌های من':code==='ps'?'زما خبرتیاوې':'My Notifications'}</a>}
                     <AccountChoices lang={code} signedIn={applicantSignedIn} mobile />
-                    <Button asChild className="min-h-[44px] w-full rounded-xl bg-gradient-to-r from-primary to-chart-2">
+                    <Button asChild className="min-h-[44px] w-full rounded-xl bg-primary">
                       <a href={hrefFn('/get-started')} onClick={() => setMobileOpen(false)}>{t('nav.getStarted')}</a>
                     </Button>
                   </div>

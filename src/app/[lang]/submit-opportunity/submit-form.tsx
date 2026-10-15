@@ -146,7 +146,7 @@ export function SubmitOpportunityForm({ lang }: { lang: Lang }) {
           <button
             type="button"
             onClick={() => setStatus('idle')}
-            className="inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-chart-2 px-6 text-sm font-semibold text-primary-foreground shadow-float transition-opacity hover:opacity-90"
+            className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-float transition-opacity hover:bg-primary/90"
           >
             <Send className="h-4 w-4" aria-hidden="true" />
             {t('submit.success.another')}
@@ -375,7 +375,7 @@ export function SubmitOpportunityForm({ lang }: { lang: Lang }) {
       <button
         type="submit"
         disabled={status === 'submitting'}
-        className="mt-7 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-chart-2 px-6 text-sm font-semibold text-primary-foreground shadow-float transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+        className="mt-7 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-float transition-opacity hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
       >
         {status === 'submitting' ? (
           <>

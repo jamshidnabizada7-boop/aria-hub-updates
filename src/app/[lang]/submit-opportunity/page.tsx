@@ -137,7 +137,7 @@ export default async function SubmitOpportunityPage({
                   </div>
                   <Link
                     href={`/${lang}/employers/post`}
-                    className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-gradient-to-r from-primary to-chart-2 px-4 text-xs font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90"
+                    className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-sm transition-opacity hover:bg-primary/90"
                   >
                     <Briefcase className="h-3.5 w-3.5" aria-hidden="true" />
                     {t('employers.post.title')}

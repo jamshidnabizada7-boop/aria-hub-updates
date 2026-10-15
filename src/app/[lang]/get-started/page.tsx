@@ -14,12 +14,12 @@ export default async function Page({params}:{params:Promise<{lang:string}>}) {
  const paths=['/opportunities','/cv-builder','/opportunity-matcher','/employers/post'];
  const icons=[Search,FileText,ScanSearch,Building2];
  return <JourneyShell><main id="main-content" className="mx-auto max-w-6xl px-5 pb-20 pt-8 sm:px-8 sm:pt-14" dir={lang==='en'?'ltr':'rtl'}>
-  <section className="relative overflow-hidden rounded-3xl bg-[#102c46] px-6 py-10 text-white sm:p-12">
-   <div aria-hidden="true" className="pointer-events-none absolute -end-20 -top-28 h-80 w-80 rounded-full border-[48px] border-white/[0.04]"/>
-   <div className="relative max-w-2xl"><p className="flex items-center gap-2 text-xs font-semibold tracking-widest text-sky-200"><Compass className="h-4 w-4"/>{t.eyebrow}</p>
+  <section className="relative overflow-hidden rounded-3xl brand-panel px-6 py-10 sm:p-12">
+   <div aria-hidden="true" className="pointer-events-none absolute -end-20 -top-28 h-80 w-80 rounded-full border-[48px] border-primary/[0.04]"/>
+   <div className="relative max-w-2xl"><p className="flex items-center gap-2 text-xs font-semibold tracking-widest text-primary"><Compass className="h-4 w-4"/>{t.eyebrow}</p>
     <h1 className="mt-5 text-balance text-4xl font-semibold leading-[1.12] tracking-tight sm:text-5xl">{t.title}</h1>
-    <p className="mt-5 max-w-xl text-base leading-7 text-slate-300">{t.intro}</p>
-    <div className="mt-7 flex flex-wrap gap-x-6 gap-y-3 text-xs font-medium text-sky-100"><span className="flex items-center gap-2"><Check className="h-4 w-4 text-teal-300"/>{t.free}</span><span dir="ltr">{t.languages}</span></div>
+    <p className="mt-5 max-w-xl text-base leading-7 text-muted-foreground">{t.intro}</p>
+    <div className="mt-7 flex flex-wrap gap-x-6 gap-y-3 text-xs font-medium text-muted-foreground"><span className="flex items-center gap-2"><Check className="h-4 w-4 text-primary"/>{t.free}</span><span dir="ltr">{t.languages}</span></div>
    </div>
   </section>
   <div className="mb-6 mt-10"><h2 className="text-2xl font-bold tracking-tight">{t.choose}</h2><p className="mt-2 text-sm text-muted-foreground">{t.hint}</p></div>

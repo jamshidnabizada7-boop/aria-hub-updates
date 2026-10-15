@@ -106,7 +106,7 @@ export function ContactSection({
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="h-12 w-full rounded-xl bg-gradient-to-r from-primary to-chart-2 text-base font-semibold shadow-float hover:opacity-90"
+                  className="h-12 w-full rounded-xl bg-primary text-base font-semibold shadow-float hover:bg-primary/90"
                 >
                   {loading ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <Send className="me-2 h-4 w-4 rtl-flip" />}
                   {loading ? t('contact.sending') : t('contact.send')}
@@ -147,7 +147,7 @@ export function ContactSection({
                     <p className="mt-1 text-xs text-muted-foreground" dir="auto">{b.address}</p>
                     {b.phone && <p className="mt-1 text-xs text-muted-foreground" dir="auto">{b.phone}</p>}
                     {b.mapEmbed && (
-                      <div 
+                      <div
                         className="mt-3 w-full h-40 [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-0 rounded-lg overflow-hidden border border-border/60"
                         dangerouslySetInnerHTML={{ __html: b.mapEmbed }}
                       />
@@ -159,7 +159,7 @@ export function ContactSection({
 
             {settings?.mapEmbed && (
               <Card className="overflow-hidden border-border/60 shadow-premium">
-                <div 
+                <div
                   className="w-full h-64 sm:h-80 [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-0"
                   dangerouslySetInnerHTML={{ __html: settings.mapEmbed }}
                 />

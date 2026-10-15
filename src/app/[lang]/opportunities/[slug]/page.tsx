@@ -762,7 +762,7 @@ export default async function OpportunityDetailPage({
         <div className="mx-auto flex max-w-3xl items-center gap-2">
           {apply.nativeSlug?<a href={'/'+lang+'/apply/'+encodeURIComponent(apply.nativeSlug)} className="flex min-h-11 flex-1 items-center justify-center rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground">{lang==='fa'?'درخواست در آریا هاب':lang==='ps'?'غوښتنلیک واستوئ':'Apply on ARIA HUB'}</a>:null}
           {apply.primaryHref ? (
-            <Button asChild className="h-11 flex-1 rounded-xl bg-gradient-to-r from-primary to-chart-2 font-bold shadow-float transition-opacity hover:opacity-90">
+            <Button asChild className="h-11 flex-1 rounded-xl bg-primary font-bold shadow-float transition-opacity hover:bg-primary/90">
               <a href={apply.primaryHref} target={apply.isPhone ? undefined : '_blank'} rel={apply.isPhone ? undefined : 'noopener noreferrer'}>
                 {apply.isMailto ? <Mail className="me-1.5 h-4 w-4" aria-hidden="true" /> : null}
                 {apply.isPhone ? (lang === 'fa' ? 'تماس با کارفرما' : lang === 'ps' ? 'له کار ورکوونکي سره اړیکه' : 'Call employer') : t(apply.primaryLabelKey)}
@@ -814,7 +814,7 @@ function ApplyCard({
   return (
     <Card className={cn('border-primary/25 bg-gradient-to-br from-primary/[0.08] via-card to-chart-2/[0.06] p-4 shadow-sm', className)}>
       <div className="flex flex-col gap-3">
-        <Button asChild size="lg" className="h-12 w-full rounded-xl bg-gradient-to-r from-primary to-chart-2 text-base font-bold shadow-float transition-opacity hover:opacity-90">
+        <Button asChild size="lg" className="h-12 w-full rounded-xl bg-primary text-base font-bold shadow-float transition-opacity hover:bg-primary/90">
           <a href={apply.primaryHref} target={apply.isPhone ? undefined : '_blank'} rel={apply.isPhone ? undefined : 'noopener noreferrer'}>
             {apply.isMailto ? <Mail className="me-1.5 h-4 w-4" aria-hidden="true" /> : null}
             {apply.isPhone ? (lang === 'fa' ? 'تماس با کارفرما' : lang === 'ps' ? 'له کار ورکوونکي سره اړیکه' : 'Call employer') : t(apply.primaryLabelKey)}

@@ -5,7 +5,7 @@ import { useTheme } from 'next-themes';
 
 export type HiringLang = 'en' | 'fa' | 'ps';
 export function HiringBrand({ lang }: { lang: HiringLang }) {
-  return <Link href={'/' + lang} className="hiring-brand" aria-label="ARIA HUB"><img src="/images/logo-mark.webp" alt="" width={38} height={38} /><span>ARIA HUB<small>{lang === 'fa' ? 'بخش کارفرما' : lang === 'ps' ? 'د کار ورکوونکي برخه' : 'Employer workspace'}</small></span></Link>;
+  return <Link href={'/' + lang} className="hiring-brand" aria-label="ARIA HUB"><img src="/images/logo-mark.webp" alt="" width={36} height={36} /><span>ARIA <span className="text-gradient-static">HUB</span><small>{lang === 'fa' ? 'بخش کارفرما' : lang === 'ps' ? 'د کار ورکوونکي برخه' : 'Employer workspace'}</small></span></Link>;
 }
 export function HiringLanguages({ lang, path }: { lang: HiringLang; path: string }) {
   return <nav className="hiring-languages" aria-label={lang === 'fa' ? 'زبان' : lang === 'ps' ? 'ژبه' : 'Language'}>{([['en', 'EN'], ['fa', 'فارسی'], ['ps', 'پښتو']] as const).map(([code, label]) => <a key={code} href={'/' + code + '/' + path} lang={code} aria-current={code === lang ? 'page' : undefined} onClick={event => {

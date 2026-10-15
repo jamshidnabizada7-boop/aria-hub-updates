@@ -131,7 +131,7 @@ export default async function InterviewPrepPage({ params }: { params: Promise<{ 
                     href={`/${lang}/interview-prep/category/${category.slug}`}
                     className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border bg-card p-6 shadow-sm transition-all hover:border-primary/50 hover:shadow-md"
                   >
-                    <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary to-chart-2 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                    <span className="absolute inset-x-0 top-0 h-1 bg-primary opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                     <div>
                       <div className="mb-4 inline-flex rounded-lg bg-primary/10 p-3 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
                         <Icon className="h-6 w-6" />

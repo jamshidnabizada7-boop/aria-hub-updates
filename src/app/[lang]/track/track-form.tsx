@@ -208,7 +208,7 @@ function TrackFormInner({ lang }: { lang: Lang }) {
             {result.status === 'approved' && result.publishedSlug && (
               <Link
                 href={`/${lang}/opportunities/${result.publishedSlug}`}
-                className="inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-chart-2 px-5 text-sm font-semibold text-primary-foreground shadow-float transition-opacity hover:opacity-90"
+                className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-float transition-opacity hover:bg-primary/90"
               >
                 <ExternalLink className="h-4 w-4" aria-hidden="true" />
                 {t('track.approved.view')}
@@ -217,7 +217,7 @@ function TrackFormInner({ lang }: { lang: Lang }) {
             {result.status === 'rejected' && (
               <Link
                 href={`/${lang}/submit-opportunity`}
-                className="inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-chart-2 px-5 text-sm font-semibold text-primary-foreground shadow-float transition-opacity hover:opacity-90"
+                className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-float transition-opacity hover:bg-primary/90"
               >
                 <RotateCcw className="h-4 w-4" aria-hidden="true" />
                 {t('submit.link')}
@@ -301,7 +301,7 @@ function TrackFormInner({ lang }: { lang: Lang }) {
         <button
           type="submit"
           disabled={phase === 'checking'}
-          className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-chart-2 text-sm font-bold text-primary-foreground shadow-float transition-opacity hover:opacity-90 disabled:opacity-60"
+          className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-float transition-opacity hover:bg-primary/90 disabled:opacity-60"
         >
           {phase === 'checking' ? (
             <>

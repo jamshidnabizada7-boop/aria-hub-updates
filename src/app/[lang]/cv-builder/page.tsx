@@ -73,7 +73,7 @@ export default async function CVBuilderPage({
   const returnTo = safeReturnTo(typeof query.returnTo === 'string' ? query.returnTo : undefined, lang);
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-900">
+    <div className="flex min-h-screen flex-col bg-background">
       <div className="print:hidden">
         <Navbar
           menu={data.menu}
@@ -85,8 +85,8 @@ export default async function CVBuilderPage({
 
       <main id="main-content" className="relative flex-1 overflow-x-hidden pb-16 pt-24 print:overflow-visible print:bg-white print:p-0">
         <div className="absolute inset-0 -z-10 overflow-hidden print:hidden" aria-hidden="true">
-          <div className="absolute left-[-10%] top-[-10%] h-[40%] w-[40%] rounded-full bg-blue-500/15 blur-[100px]" />
-          <div className="absolute bottom-[-10%] right-[-10%] h-[40%] w-[40%] rounded-full bg-indigo-500/15 blur-[100px]" />
+          <div className="absolute left-[-10%] top-[-10%] h-[40%] w-[40%] rounded-full bg-primary/15 blur-[100px]" />
+          <div className="absolute bottom-[-10%] right-[-10%] h-[40%] w-[40%] rounded-full bg-chart-2/15 blur-[100px]" />
         </div>
 
         <div data-clarity-mask="true">

@@ -294,7 +294,7 @@ export function AdvertiseOrderForm({ lang }: { lang: Lang }) {
       <Button
         type="submit"
         disabled={busy}
-        className="mt-6 h-12 w-full rounded-xl bg-gradient-to-r from-primary to-chart-2 text-sm font-semibold text-primary-foreground shadow-float hover:opacity-90 sm:w-auto sm:px-10"
+        className="mt-6 h-12 w-full rounded-xl bg-primary text-sm font-semibold text-primary-foreground shadow-float hover:bg-primary/90 sm:w-auto sm:px-10"
       >
         {busy ? (
           <>

@@ -54,7 +54,7 @@ export function PricingSection({ packages }: { packages: PricingPackage[] }) {
                   {isFeatured && (
                     <>
                       <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
-                      <div className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-primary to-chart-2 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-primary-foreground shadow-float">
+                      <div className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-primary-foreground shadow-float">
                         <Sparkles className="h-3 w-3" />
                         {pkg.badge || t('pricing.popular')}
                       </div>
@@ -92,7 +92,7 @@ export function PricingSection({ packages }: { packages: PricingPackage[] }) {
                     className={cn(
                       'mt-7 h-12 w-full rounded-xl text-sm font-semibold transition-all',
                       isFeatured
-                        ? 'bg-gradient-to-r from-primary to-chart-2 shadow-float hover:opacity-90'
+                        ? 'bg-primary shadow-float hover:bg-primary/90'
                         : 'bg-card border border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground'
                     )}
                   >

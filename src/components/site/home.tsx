@@ -486,7 +486,7 @@ export function Home({ data, lang, home }: { data: SiteData; lang: Lang; home: H
                   <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                     <Link
                       href={`/${lang}/contact`}
-                      className="inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-chart-2 px-6 text-sm font-semibold text-primary-foreground shadow-float transition-opacity hover:opacity-90"
+                      className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-float transition-opacity hover:bg-primary/90"
                     >
                       {t('contact.title')}
                       <ArrowRight className="h-4 w-4 rtl-flip" aria-hidden="true" />

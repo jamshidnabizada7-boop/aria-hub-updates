@@ -149,7 +149,7 @@ export function Hero({ lang, stats }: { lang: Lang; stats: HeroStats }) {
           </div>
           <button
             type="submit"
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-chart-2 px-7 text-base font-semibold text-primary-foreground shadow-float transition-opacity hover:opacity-90"
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-7 text-base font-semibold text-primary-foreground shadow-float transition-opacity hover:bg-primary/90"
           >
             <Search className="h-4 w-4" aria-hidden="true" />
             {t('common.search')}

@@ -86,10 +86,10 @@ export function LetterBuilderClient({ lang, initialKind }: { lang: LetterLanguag
   return (
     <div className="mx-auto max-w-7xl px-4 pb-16 pt-28 sm:px-6 print:max-w-none print:p-0" dir={rtl ? 'rtl' : 'ltr'} data-clarity-mask="true">
       <div className="print:hidden">
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-600">ARIA HUB · Tools</p>
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">ARIA HUB · Tools</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">{c.title}</h1>
         <p className="mt-3 max-w-3xl text-muted-foreground">{c.intro}</p>
-        <a href="#letter-preview" className="mt-4 inline-flex text-sm font-semibold text-blue-600 underline-offset-4 hover:underline lg:hidden">{c.preview} ↓</a>
+        <a href="#letter-preview" className="mt-4 inline-flex text-sm font-semibold text-primary underline-offset-4 hover:underline lg:hidden">{c.preview} ↓</a>
       </div>
 
       <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] print:mt-0 print:block">
@@ -103,7 +103,7 @@ export function LetterBuilderClient({ lang, initialKind }: { lang: LetterLanguag
             <h2 className="mt-4 text-sm font-semibold">{c.design}</h2>
             <div className="mt-2 grid grid-cols-3 gap-2">
               {(['classic', 'modern', 'formal'] as const).map(layout => (
-                <button key={layout} type="button" onClick={() => update('layout', layout)} aria-pressed={draft.layout === layout} className={`min-h-10 rounded-lg border px-2 text-center text-xs font-medium ${draft.layout === layout ? 'border-blue-500 bg-blue-500/10 ring-1 ring-blue-500' : ''}`}>
+                <button key={layout} type="button" onClick={() => update('layout', layout)} aria-pressed={draft.layout === layout} className={`min-h-10 rounded-lg border px-2 text-center text-xs font-medium ${draft.layout === layout ? 'border-primary bg-primary/10 ring-1 ring-ring' : ''}`}>
                   {c[layout]}
                 </button>
               ))}
@@ -113,23 +113,23 @@ export function LetterBuilderClient({ lang, initialKind }: { lang: LetterLanguag
           <div className="rounded-2xl border bg-card p-4 shadow-sm">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h2 className="font-semibold">{c.body}</h2>
-              <button type="button" className="text-xs font-medium text-blue-600 hover:underline" onClick={() => { if (window.confirm(c.resetConfirm)) setDraft(current => ({ ...current, subject: template.subject[lang], body: template.body[lang] })); }}>{c.reset}</button>
+              <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={() => { if (window.confirm(c.resetConfirm)) setDraft(current => ({ ...current, subject: template.subject[lang], body: template.body[lang] })); }}>{c.reset}</button>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               {(['sender', 'senderContact', 'recipient', 'date', 'salutation', 'subject'] as const).map(field => (
                 <label key={field} className={field === 'subject' ? 'sm:col-span-2' : ''}>
                   <span className="mb-1.5 block text-xs font-medium">{c[field]}</span>
-                  <input type={field === 'date' ? 'date' : 'text'} value={draft[field]} onChange={event => update(field, event.target.value)} placeholder={c.placeholder} className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                  <input type={field === 'date' ? 'date' : 'text'} value={draft[field]} onChange={event => update(field, event.target.value)} placeholder={c.placeholder} className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring" />
                 </label>
               ))}
               <label className="sm:col-span-2">
                 <span className="mb-1.5 block text-xs font-medium">{c.body}</span>
-                <textarea value={draft.body} onChange={event => update('body', event.target.value)} rows={7} className="w-full resize-y rounded-lg border bg-background p-3 text-sm leading-relaxed outline-none focus:ring-2 focus:ring-blue-500" />
+                <textarea value={draft.body} onChange={event => update('body', event.target.value)} rows={7} className="w-full resize-y rounded-lg border bg-background p-3 text-sm leading-relaxed outline-none focus:ring-2 focus:ring-ring" />
               </label>
               <div className="sm:col-span-2"><WritingAssistant key={`${kind}-${lang}`} tool="letter" lang={lang} text={draft.body} documentType={template.title.en} onApply={value => update('body', value)} /></div>
               <label className="sm:col-span-2">
                 <span className="mb-1.5 block text-xs font-medium">{c.closing}</span>
-                <input value={draft.closing} onChange={event => update('closing', event.target.value)} className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                <input value={draft.closing} onChange={event => update('closing', event.target.value)} className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring" />
               </label>
             </div>
             <p className="mt-4 text-xs text-muted-foreground">{c.note} {c.letterLanguage}</p>
@@ -142,7 +142,7 @@ export function LetterBuilderClient({ lang, initialKind }: { lang: LetterLanguag
             <h2 className="flex items-center gap-2 font-semibold"><FileText className="size-4" />{c.preview}</h2>
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={download} className="inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 text-sm font-medium hover:bg-accent"><Download className="size-4" />{c.download}</button>
-              <button type="button" onClick={() => window.print()} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white hover:bg-blue-700"><Printer className="size-4" />{c.print}</button>
+              <button type="button" onClick={() => window.print()} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90"><Printer className="size-4" />{c.print}</button>
             </div>
           </div>
           <article className={`letter-sheet letter-layout-${draft.layout} mx-auto min-h-[560px] w-full max-w-[794px] border bg-white p-5 text-sm text-slate-900 shadow-xl sm:min-h-[720px] sm:p-12 sm:text-base print:min-h-0 print:max-w-none print:border-0 print:p-0 print:text-base print:shadow-none`} lang={lang} dir={rtl ? 'rtl' : 'ltr'}>

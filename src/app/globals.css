@@ -91,6 +91,17 @@
   --sidebar-ring: oklch(0.48 0.18 258);
 }
 
+
+/* Shared brand surfaces reference the live theme in both color modes. */
+:root {
+  --brand-soft: color-mix(in oklab, var(--primary) 9%, var(--card));
+  --brand-panel-background: linear-gradient(135deg, color-mix(in oklab, var(--primary) 12%, var(--card)), var(--card));
+  --brand-panel-border: color-mix(in oklab, var(--primary) 20%, var(--border));
+  --brand-shadow: 0 12px 45px -24px color-mix(in oklab, var(--foreground) 20%, transparent);
+  --control-radius: calc(var(--radius) + 4px);
+}
+.brand-panel { background: var(--brand-panel-background); color: var(--foreground); border: 1px solid var(--brand-panel-border); }
+
 /* Persian (fa) and Pashto (ps) RTL contexts activate Vazirmatn as the primary font family */
 :root[dir="rtl"],
 :root[lang="fa"],
@@ -384,20 +395,20 @@
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--foreground) / 0.3);
+  background: color-mix(in oklab, var(--foreground) 30%, transparent);
   border-radius: 999px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--foreground) / 0.5);
+  background: color-mix(in oklab, var(--foreground) 50%, transparent);
   background-clip: padding-box;
 }
 
 /* Brand-tinted text selection */
 ::selection {
-  background: hsl(var(--primary) / 0.25);
-  color: hsl(var(--foreground));
+  background: color-mix(in oklab, var(--primary) 25%, transparent);
+  color: var(--foreground);
 }
 
 /* RTL support */
@@ -454,14 +465,14 @@
 .prose-listing h5 {
   margin: 1.35em 0 0.45em;
   font-weight: 700;
-  color: hsl(var(--foreground));
+  color: var(--foreground);
   line-height: 1.35;
 }
 .prose-listing h2 { font-size: 1.2rem; }
 .prose-listing h3 { font-size: 1.05rem; }
 .prose-listing h4 { font-size: 0.95rem; }
 .prose-listing h5 { font-size: 0.9rem; }
-.prose-listing strong, .prose-listing b { font-weight: 700; color: hsl(var(--foreground)); }
+.prose-listing strong, .prose-listing b { font-weight: 700; color: var(--foreground); }
 .prose-listing ul, .prose-listing ol {
   margin: 0.65em 0;
   padding-inline-start: 1.4em;
@@ -472,10 +483,10 @@
 .prose-listing ul { list-style: disc; }
 .prose-listing ol { list-style: decimal; }
 .prose-listing li { padding-inline-start: 0.15em; }
-.prose-listing li::marker { color: hsl(var(--primary)); }
+.prose-listing li::marker { color: var(--primary); }
 .prose-listing hr {
   margin: 1.4em 0;
-  border-color: hsl(var(--border));
+  border-color: var(--border);
 }
 .prose-listing table {
   width: 100%;
@@ -484,16 +495,16 @@
   font-size: 0.85em;
   overflow: hidden;
   border-radius: 0.5rem;
-  border: 1px solid hsl(var(--border));
+  border: 1px solid var(--border);
 }
 .prose-listing th, .prose-listing td {
-  border: 1px solid hsl(var(--border));
+  border: 1px solid var(--border);
   padding: 0.45em 0.7em;
   text-align: start;
   vertical-align: top;
 }
-.prose-listing th { background: hsl(var(--muted) / 0.6); font-weight: 700; }
-.prose-listing mark { background: hsl(var(--primary) / 0.15); color: inherit; border-radius: 0.25rem; padding: 0 0.2em; }
+.prose-listing th { background: color-mix(in oklab, var(--muted) 60%, transparent); font-weight: 700; }
+.prose-listing mark { background: color-mix(in oklab, var(--primary) 15%, transparent); color: inherit; border-radius: 0.25rem; padding: 0 0.2em; }
 
 /* ── Mobile Friendliness & Touch Optimization (INP & Tap Target Safety) ── */
 @media (max-width: 768px) {
@@ -606,18 +617,18 @@
 /* Applicant and employer journeys: touch targets, clear focus, quiet surfaces. */
 .journey-primary, .journey-secondary {
   display: inline-flex; min-height: 48px; align-items: center; justify-content: center;
-  gap: .625rem; padding: .75rem 1.25rem; border-radius: .75rem;
+  gap: .625rem; padding: .75rem 1.25rem; border-radius: var(--control-radius);
   font-size: .875rem; font-weight: 650; text-align: center; transition: background .15s, box-shadow .15s;
 }
 .journey-primary { background: var(--primary); color: var(--primary-foreground); }
-.journey-primary:hover { filter: brightness(1.08); }
+.journey-primary:hover { background: color-mix(in oklab, var(--primary) 90%, transparent); }
 .journey-secondary { border: 1px solid var(--border); background: var(--card); color: var(--foreground); }
 .journey-secondary:hover { background: var(--accent); }
 .journey :is(button,a,input,select,textarea):focus-visible,
-.posting-workspace :is(button,a,input,select,textarea):focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+.posting-workspace :is(button,a,input,select,textarea):focus-visible { outline: 3px solid var(--ring); outline-offset: 3px; }
 .journey button:disabled, .posting-workspace button:disabled { cursor: wait; opacity: .6; }
-.journey .account-panel { width: calc(100% - 2.5rem); max-width: 32rem; margin: 2rem auto 5rem; padding: 2rem; border: 1px solid var(--border); border-radius: 1.5rem; background: var(--card); box-shadow: 0 12px 45px -24px #102c4633; }
-.journey .account-panel input:not([type=checkbox]) { min-height: 48px; margin-top: .5rem; border-radius: .75rem; }
+.journey .account-panel { width: calc(100% - 2.5rem); max-width: 32rem; margin: 2rem auto 5rem; padding: 2rem; border: 1px solid var(--border); border-radius: 1.5rem; background: var(--card); box-shadow: var(--brand-shadow); }
+.journey .account-panel input:not([type=checkbox]) { min-height: 48px; margin-top: .5rem; border-radius: var(--control-radius); }
 .journey .account-panel label { font-weight: 550; }
 .posting-workspace input, .posting-workspace select, .posting-workspace textarea { font-size: 16px; }
 .posting-workspace :is(input,select,textarea) { scroll-margin-top: 8rem; }
