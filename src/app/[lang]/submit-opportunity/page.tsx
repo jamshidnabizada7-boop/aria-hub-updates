@@ -1,3 +1,4 @@
+import { PageBackLink } from '@/components/site/page-navigation';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { PenLine, ShieldCheck, Clock3, Globe2, Briefcase } from 'lucide-react';
@@ -83,7 +84,7 @@ export default async function SubmitOpportunityPage({
       />
 
       <main id="main-content" className="flex-1">
-        <section className="relative overflow-hidden py-14 sm:py-20">
+        <section className="relative overflow-hidden pb-14 pt-28 sm:pb-20 sm:pt-32">
           {/* soft background accents */}
           <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
             <div className="absolute -left-40 top-0 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
@@ -91,6 +92,7 @@ export default async function SubmitOpportunityPage({
           </div>
 
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <PageBackLink lang={lang} to="opportunities" className="mb-6" />
             <div className="grid gap-10 lg:grid-cols-5 lg:gap-12">
               {/* Introduction column */}
               <div className="lg:col-span-2">

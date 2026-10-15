@@ -1,3 +1,4 @@
+import { secondaryActionClass } from '@/components/site/page-navigation';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -726,7 +727,7 @@ export default async function OpportunityDetailPage({
                   </ul>
                   <Link
                     href={`/${lang}/opportunities`}
-                    className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                    className={secondaryActionClass+' mt-4'}
                   >
                     {t('detail.backToList')}
                     <ArrowUpRight className="h-3 w-3 rtl-flip" aria-hidden="true" />

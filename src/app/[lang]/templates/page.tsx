@@ -1,3 +1,4 @@
+import { PageBackLink } from '@/components/site/page-navigation';
 import type { Metadata } from 'next';
 import { PageShell } from '@/components/site/page-shell';
 import TemplatesClient from './templates-client';
@@ -111,9 +112,10 @@ export default async function TemplatesPage({ params }: { params: Promise<{ lang
   const lang: Lang = isLang(rawLang) ? rawLang : 'fa';
 
   return (
-    <PageShell lang={lang} className="pt-12 pb-16">
+    <PageShell lang={lang} className="pt-24 pb-16">
       {/* Server-rendered SEO & Intro Header */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mb-8">
+      <PageBackLink lang={lang} to="start" className="mb-5" />
         <div className="max-w-3xl">
           <span className="text-xs font-semibold uppercase tracking-wider text-primary">
             {lang === 'fa' ? 'مدارک و قالب‌های استاندارد' : lang === 'ps' ? 'معیاري اسناد او فارمټونه' : 'Application Document Library'}

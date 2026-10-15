@@ -1,4 +1,6 @@
 'use client';
+import { PageBackLink } from '@/components/site/page-navigation';
+
 
 import { useState, useEffect, startTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -7,8 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { TranslatedText } from '@/components/ui/translated-text';
-import { ArrowLeft, Play } from 'lucide-react';
-import Link from 'next/link';
+import { Play } from 'lucide-react';
 
 export default function VisaPracticeSetup({ countries, categories, lang }: { countries: any[], categories: any[], lang: string }) {
   const router = useRouter();
@@ -47,9 +48,7 @@ export default function VisaPracticeSetup({ countries, categories, lang }: { cou
     <Card className="shadow-lg">
       <CardHeader>
         <div className="mb-4">
-          <Link href={`/${lang}/visa-prep`} className="inline-flex items-center text-sm text-muted-foreground hover:text-primary">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Hub
-          </Link>
+          <PageBackLink lang={lang} to="visa" />
         </div>
         <CardTitle className="text-2xl">Setup Visa Interview Practice</CardTitle>
         <CardDescription>Configure your practice session to match your specific visa application.</CardDescription>

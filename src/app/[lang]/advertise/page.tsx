@@ -1,3 +1,4 @@
+import { PageBackLink } from '@/components/site/page-navigation';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
@@ -161,7 +162,7 @@ export default async function AdvertisePage({
 
       <main id="main-content" className="flex-1">
         {/* ── Hero ─────────────────────────────────────────────────────── */}
-        <section className="relative overflow-hidden py-16 sm:py-24">
+        <section className="relative overflow-hidden pb-16 pt-28 sm:pb-24 sm:pt-32">
           <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
             <div className="absolute -left-40 top-0 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
             <div className="absolute -right-40 bottom-0 h-96 w-96 rounded-full bg-chart-2/10 blur-3xl" />
@@ -172,6 +173,7 @@ export default async function AdvertisePage({
           />
 
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <PageBackLink lang={lang} to="home" className="mb-6" />
             <div className="mx-auto max-w-3xl text-center">
               <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-semibold text-primary">
                 <Megaphone className="h-3.5 w-3.5" aria-hidden="true" />

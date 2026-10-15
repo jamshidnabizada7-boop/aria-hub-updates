@@ -192,8 +192,8 @@ function sanitizeExportHtml(html: string): string {
       {/* Editor Top Bar */}
       <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 bg-card border-b border-border shadow-sm">
         <div className="flex items-center gap-4">
-          <Link href={`/${lang}/templates/${slug}`} className="p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors">
-            <ArrowLeft className="w-5 h-5" />
+          <Link href={`/${lang}/templates/${slug}`} aria-label={lang==='fa'?'بازگشت به قالب':lang==='ps'?'فارمټ ته ستنېدل':'Back to template'} className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl border bg-card text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+            <ArrowLeft className="w-5 h-5 rtl:rotate-180" aria-hidden="true" />
           </Link>
           <div>
             <h1 className="font-bold text-foreground line-clamp-1">{template?.title}</h1>

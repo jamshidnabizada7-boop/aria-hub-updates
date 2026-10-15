@@ -69,7 +69,7 @@ export default async function DynamicCmsPage({
   const html = getLocalizedContent(page.content, page.contentI18n as Record<string, string> | null, lang as Lang) || page.content;
 
   return (
-    <PageShell lang={lang}>
+    <PageShell lang={lang} backTo="home">
       <div className="mx-auto max-w-4xl px-4 pt-10 pb-16 sm:px-6 lg:px-8" dir="auto">
         <div className="rounded-2xl border border-border/60 bg-card/40 p-8 shadow-sm backdrop-blur-sm md:p-12">
           <h1 className="mb-8 text-3xl font-bold tracking-tight text-foreground md:text-4xl text-start">

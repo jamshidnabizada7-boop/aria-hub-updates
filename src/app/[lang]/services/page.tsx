@@ -1,3 +1,4 @@
+import { PageBackLink } from '@/components/site/page-navigation';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight, Tag, HelpCircle, CheckCircle2, FileText, Sparkles, Globe, ShieldCheck } from 'lucide-react';
@@ -182,6 +183,7 @@ export default async function ServicesPage({
 
       <main id="main-content" className="flex-1 pt-24 pb-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <PageBackLink lang={lang} to="home" className="mb-6" />
           {/* Page header */}
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase tracking-wider text-primary">

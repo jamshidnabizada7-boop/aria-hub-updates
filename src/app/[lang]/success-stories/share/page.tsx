@@ -59,7 +59,7 @@ export default async function ShareStoryPage({
   const t = (key: string) => translate(typedLang, key);
 
   return (
-    <PageShell lang={lang} className="pt-20 pb-16">
+    <PageShell lang={lang} backTo="stories" className="pt-24 pb-16">
       <div className="mx-auto max-w-3xl px-4 pt-8 pb-16 sm:px-6">
         <header className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl">

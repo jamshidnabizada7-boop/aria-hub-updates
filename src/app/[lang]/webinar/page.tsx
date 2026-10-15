@@ -53,7 +53,7 @@ export default async function WebinarPage({
   const { title, dbHtml } = await loadGrowthPage('webinar', safeLang, WEBINAR_DOC);
 
   return (
-    <PageShell lang={safeLang}>
+    <PageShell lang={safeLang} backTo="home">
       <StaticDocView doc={WEBINAR_DOC} lang={safeLang} title={title} dbHtml={dbHtml} />
       <div className="mx-auto max-w-4xl px-4 pb-20 sm:px-6 lg:px-8" dir="auto">
         <div className="rounded-2xl border border-border/60 bg-card/40 p-6 shadow-sm backdrop-blur-sm md:p-8">

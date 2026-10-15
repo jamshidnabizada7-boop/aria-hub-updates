@@ -1,3 +1,4 @@
+import { PageBackLink } from '@/components/site/page-navigation';
 import type { Metadata } from 'next';
 import { Building2, FileText, PenLine, Send } from 'lucide-react';
 import { getSiteData } from '@/lib/get-site';
@@ -72,6 +73,7 @@ export default async function EmployerPostPage({
           />
 
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <PageBackLink lang={lang} to="employers" className="mb-6" />
             <div className="grid items-start gap-8 lg:grid-cols-5 lg:gap-16">
               {/* Introduction column */}
               <div className="lg:sticky lg:top-28 lg:col-span-2">

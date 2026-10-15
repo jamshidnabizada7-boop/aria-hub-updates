@@ -52,7 +52,7 @@ export default async function PressPage({
   const { title, dbHtml } = await loadGrowthPage('press', safeLang, PRESS_DOC);
 
   return (
-    <PageShell lang={safeLang}>
+    <PageShell lang={safeLang} backTo="home">
       <StaticDocView doc={PRESS_DOC} lang={safeLang} title={title} dbHtml={dbHtml} />
     </PageShell>
   );

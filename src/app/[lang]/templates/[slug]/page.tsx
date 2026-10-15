@@ -1,3 +1,4 @@
+import { PageBackLink } from '@/components/site/page-navigation';
 import React from 'react';
 import type { Metadata } from 'next';
 import { PageShell } from '@/components/site/page-shell';
@@ -101,6 +102,7 @@ export default async function TemplateDetailPage({ params }: { params: Promise<{
       <div className="bg-background py-12" dir={lang === 'en' ? 'ltr' : 'rtl'}>
         <div className="container mx-auto px-4 max-w-6xl">
 
+      <PageBackLink lang={lang} to="templates" className="mb-5" />
           {/* Breadcrumb & Header */}
           <div className="mb-8">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">

@@ -1,3 +1,4 @@
+import { PageBackLink } from '@/components/site/page-navigation';
 import { notFound } from 'next/navigation';
 import { PageShell } from '@/components/site/page-shell';
 import { db as prisma } from '@/lib/db';
@@ -127,9 +128,7 @@ export default async function VisaCountryPage({ params }: { params: Promise<{ la
         {/* Header */}
         <div className="bg-primary px-4 py-12 text-primary-foreground">
           <div className="mx-auto max-w-5xl">
-            <Link href={`/${lang}/visa-prep`} className="inline-flex items-center text-sm font-medium hover:underline mb-6 text-primary-foreground/80">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back to All Countries
-            </Link>
+            <PageBackLink lang={lang} to="visa" inverse className="mb-6" />
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div>
                 <div className="inline-flex items-center rounded-full bg-primary-foreground/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider mb-4 border border-primary-foreground/20">

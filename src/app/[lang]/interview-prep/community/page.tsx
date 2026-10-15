@@ -1,10 +1,10 @@
+import { PageBackLink } from '@/components/site/page-navigation';
 import { TranslatedText } from '@/components/ui/translated-text';
 import { PageShell } from '@/components/site/page-shell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { db as prisma } from '@/lib/db';
-import { MessageSquare, Star, ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
+import { MessageSquare, Star } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 import type { Metadata } from 'next';
@@ -71,9 +71,7 @@ export default async function InterviewCommunityPage({ params }: { params: Promi
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8 flex items-center justify-between">
             <div>
-              <Link href={`/${lang}/interview-prep`} className="mb-4 inline-flex items-center text-sm font-medium text-muted-foreground hover:text-primary">
-                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Prep Center
-              </Link>
+              <PageBackLink lang={lang} to="interview" className="mb-6" />
               <h1 className="text-3xl font-bold tracking-tight">Community Experiences</h1>
               <p className="mt-2 text-muted-foreground">Learn from the real interview experiences of other students.</p>
             </div>

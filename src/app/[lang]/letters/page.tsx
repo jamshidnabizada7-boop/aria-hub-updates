@@ -17,5 +17,5 @@ export default async function LettersPage({ params, searchParams }: { params: Pr
   const lang: Lang = isLang(rawLang) ? rawLang : 'fa';
   const requested = query.type;
   const initialKind: LetterKind = LETTER_TEMPLATES.some(item => item.id === requested) ? requested as LetterKind : 'cover';
-  return <PageShell lang={lang} className="print:bg-white print:p-0"><LetterBuilderClient lang={lang} initialKind={initialKind} /></PageShell>;
+  return <PageShell lang={lang} backTo="start" className="pt-24 print:bg-white print:p-0"><LetterBuilderClient lang={lang} initialKind={initialKind} /></PageShell>;
 }

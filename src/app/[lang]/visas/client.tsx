@@ -1,9 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, DollarSign, Calendar, ArrowRight, Plane, FileText, CheckCircle2, MapPin, ListChecks, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Clock, DollarSign, Calendar, ArrowRight, Plane, FileText, CheckCircle2, MapPin, ListChecks } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import { Card } from '@/components/ui/card';
@@ -12,7 +11,8 @@ import { SectionHeading } from '@/components/site/section-heading';
 import { SmartImage } from '@/components/site/smart-image';
 import { DetailModal } from '@/components/site/detail-modal';
 import { useT } from '@/hooks/use-t';
-import { useLangStore } from '@/lib/lang-store';
+import { useEffectiveLang } from '@/components/site/lang-context';
+import { SitePagination } from '@/components/site/page-navigation';
 import { getLocalizedContent, getLocalizedArray } from '@/lib/i18n-content';
 import type { Visa } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -32,14 +32,8 @@ export function VisasClient({
   totalPages: number;
 }) {
   const t = useT();
-  const router = useRouter();
-  const lang = useLangStore((s) => s.code);
+  const lang = useEffectiveLang();
   const [selected, setSelected] = useState<Visa | null>(null);
-
-  const handlePageChange = (newPage: number) => {
-    if (newPage < 1 || newPage > totalPages) return;
-    router.push(`/${lang}/visas?page=${newPage}`);
-  };
 
   return (
     <section className="relative">
@@ -71,38 +65,7 @@ export function VisasClient({
           </div>
         )}
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="mt-12 flex items-center justify-center gap-2" dir="ltr">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="h-10 w-10 rounded-full"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-
-            <div className="flex items-center gap-1 px-4 text-sm font-medium">
-              <span>Page</span>
-              <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                {currentPage}
-              </span>
-              <span>of {totalPages}</span>
-            </div>
-
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="h-10 w-10 rounded-full"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
+        <SitePagination lang={lang} page={currentPage} totalPages={totalPages} previousHref={currentPage>1?`/${lang}/visas?page=${currentPage-1}`:undefined} nextHref={currentPage<totalPages?`/${lang}/visas?page=${currentPage+1}`:undefined}/>
       </div>
 
       <DetailModal open={!!selected} onClose={() => setSelected(null)}>
@@ -113,7 +76,7 @@ export function VisasClient({
 }
 
 function VisaCard({ visa, t, onOpen }: { visa: Visa; t: (k: string) => string; onOpen: () => void }) {
-  const lang = useLangStore((s) => s.code);
+  const lang = useEffectiveLang();
 
   const country = getLocalizedContent(visa.country, visa.countryI18n as any, lang);
   const visaType = getLocalizedContent(visa.visaType, visa.visaTypeI18n as any, lang);
@@ -170,7 +133,7 @@ function VisaCard({ visa, t, onOpen }: { visa: Visa; t: (k: string) => string; o
 }
 
 function VisaDetail({ visa, t }: { visa: Visa; t: (k: string) => string }) {
-  const lang = useLangStore((s) => s.code);
+  const lang = useEffectiveLang();
   const isRtl = lang === 'fa' || lang === 'ps';
 
   const country = getLocalizedContent(visa.country, visa.countryI18n as any, lang);

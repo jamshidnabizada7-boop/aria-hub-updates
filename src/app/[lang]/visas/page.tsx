@@ -1,3 +1,4 @@
+import { PageBackLink } from '@/components/site/page-navigation';
 import type { Metadata } from 'next';
 import { unstable_cache } from 'next/cache';
 import Link from 'next/link';
@@ -176,6 +177,7 @@ export default async function VisasPage({
         logoUrl={data.settings?.logoUrl ?? null}
       />
       <main id="main-content" className="flex-1 pt-24 pb-20">
+        <div className="mx-auto mb-6 max-w-7xl px-4 sm:px-6 lg:px-8"><PageBackLink lang={lang} to="home" /></div>
         <VisasClient
           visas={visas as any}
           currentPage={page}

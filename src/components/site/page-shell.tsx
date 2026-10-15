@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { getSiteData } from '@/lib/get-site';
 import { Navbar } from '@/components/site/navbar';
 import { Footer } from '@/components/site/footer';
-import { isLang, type Lang } from '@/lib/lang-route';
+import { PageBackLink, type BackDestination } from './page-navigation';
 
 /**
  * PageShell — shared server-rendered chrome (DB-driven Navbar + Footer) for
@@ -17,13 +17,14 @@ export async function PageShell({
   lang,
   children,
   className = 'pt-24 pb-16',
+  backTo,
 }: {
   lang: string;
   children: ReactNode;
   /** main padding classes — override when a page manages its own top spacing */
   className?: string;
+  backTo?: BackDestination;
 }) {
-  const l: Lang = isLang(lang) ? lang : 'fa';
   const data = await getSiteData();
 
   return (
@@ -34,7 +35,7 @@ export async function PageShell({
         siteName={data.settings?.siteName || 'ARIA HUB'}
         logoUrl={data.settings?.logoUrl ?? null}
       /></div>
-      <main id="main-content" className={`flex-1 ${className}`}>{children}</main>
+      <main id="main-content" className={`flex-1 ${className}`}>{backTo&&<div className="mx-auto mb-6 max-w-7xl px-4 sm:px-6 lg:px-8 print:hidden"><PageBackLink lang={lang} to={backTo}/></div>}{children}</main>
       <div className="print:hidden"><Footer settings={data.settings} footer={data.footer} socialLinks={data.socialLinks} /></div>
     </div>
   );

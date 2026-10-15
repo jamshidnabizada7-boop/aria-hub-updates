@@ -1,3 +1,4 @@
+import { PageBackLink } from '@/components/site/page-navigation';
 import { TranslatedText } from '@/components/ui/translated-text';
 import { PageShell } from '@/components/site/page-shell';
 import { Button } from '@/components/ui/button';
@@ -74,8 +75,9 @@ export default async function InterviewPrepPage({ params }: { params: Promise<{ 
     <PageShell lang={lang} className="pb-16">
       <div className="bg-slate-50 dark:bg-slate-950">
         {/* Hero Section */}
-        <div className="bg-primary px-4 py-20 text-center text-primary-foreground md:py-32">
+        <div className="bg-primary px-4 pb-20 pt-28 text-center text-primary-foreground md:pb-32 md:pt-32">
           <div className="mx-auto max-w-4xl space-y-6">
+            <PageBackLink lang={lang} inverse className="mb-4" />
             <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl">
               <TranslatedText tKey="interview.title" />
             </h1>

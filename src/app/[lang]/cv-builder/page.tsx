@@ -1,3 +1,4 @@
+import { PageBackLink } from '@/components/site/page-navigation';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getToolPageData } from '@/lib/get-site';
@@ -89,6 +90,7 @@ export default async function CVBuilderPage({
           <div className="absolute bottom-[-10%] right-[-10%] h-[40%] w-[40%] rounded-full bg-chart-2/15 blur-[100px]" />
         </div>
 
+      <div className="mx-auto mb-6 w-full max-w-7xl px-4 sm:px-6 print:hidden"><PageBackLink lang={lang} to="start" className="mb-5" /></div>
         <div data-clarity-mask="true">
           <CVBuilderClient
             initialLang={outputLang}

@@ -52,7 +52,7 @@ export default async function AmbassadorPage({
   const { title, dbHtml } = await loadGrowthPage('ambassador', safeLang, AMBASSADOR_DOC);
 
   return (
-    <PageShell lang={safeLang}>
+    <PageShell lang={safeLang} backTo="home">
       <StaticDocView doc={AMBASSADOR_DOC} lang={safeLang} title={title} dbHtml={dbHtml} />
     </PageShell>
   );

@@ -1,9 +1,9 @@
+import { PageBackLink } from '@/components/site/page-navigation';
 import React from 'react';
 import { PageShell } from '@/components/site/page-shell';
 import { db as prisma } from '@/lib/db';
 import { CalculatorClient } from './calculator-client';
 import { TranslatedText } from '@/components/ui/translated-text';
-import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -88,12 +88,7 @@ export default async function VisaCostCalculatorPage({ params }: { params: Promi
         
           {/* Header */}
           <div className="mb-8">
-            <Link href={`/${lang}/visa-prep`}>
-              <Button variant="ghost" className="mb-4 -ml-4 text-muted-foreground hover:text-foreground">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Visa Prep
-              </Button>
-            </Link>
+            <PageBackLink lang={lang} to="visa" className="mb-6" />
             <h1 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white mb-4">
               <TranslatedText tKey="visaPrep.calc.title" />
             </h1>

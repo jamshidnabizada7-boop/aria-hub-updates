@@ -1,10 +1,10 @@
+import { PageBackLink } from '@/components/site/page-navigation';
 import React from 'react';
 import { PageShell } from '@/components/site/page-shell';
 import { db as prisma } from '@/lib/db';
 import { CommunityClient } from './community-client';
 import { TranslatedText } from '@/components/ui/translated-text';
-import Link from 'next/link';
-import { ArrowLeft, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 import type { Metadata } from 'next';
@@ -72,12 +72,7 @@ export default async function VisaCommunityPage({
         
           {/* Header */}
           <div className="mb-10 text-center max-w-3xl mx-auto">
-            <Link href={`/${lang}/visa-prep`} className="inline-block mb-6">
-              <Button variant="outline" size="sm" className="rounded-full">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Visa Prep
-              </Button>
-            </Link>
+            <PageBackLink lang={lang} to="visa" className="mb-6" />
             <div className="flex justify-center mb-4">
               <div className="p-3 bg-primary/10 text-primary rounded-full">
                 <Users className="h-8 w-8" />

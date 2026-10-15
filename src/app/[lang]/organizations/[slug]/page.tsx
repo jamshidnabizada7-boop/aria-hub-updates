@@ -1,3 +1,4 @@
+import { PageBackLink, secondaryActionClass } from '@/components/site/page-navigation';
 import {OrganizationFollowButton} from '@/components/site/organization-follow';
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -5,7 +6,7 @@ import {PageShell} from '@/components/site/page-shell';
 import { notFound } from 'next/navigation';
 import { isLang, type Lang } from '@/lib/lang-route';
 import { getPublicOrganization } from '@/lib/organizations/public-profile';
-import { BadgeCheck, ExternalLink, MapPin } from 'lucide-react';
+import { BadgeCheck, Building2, ExternalLink, MapPin } from 'lucide-react';
 import { OriginalContentBadge } from '@/components/site/original-content-badge';
 import { translate } from '@/lib/i18n';
 
@@ -80,21 +81,23 @@ export default async function OrganizationPage({ params }: Props) {
   };
 
   return (
-    <PageShell lang={lang}><div className="mx-auto max-w-4xl px-4 py-10">
+    <PageShell lang={lang}><div className="mx-auto max-w-4xl px-4 sm:px-6">
+      <PageBackLink lang={lang} to="organizations" className="mb-6" />
+      <section className="rounded-3xl brand-panel p-6 sm:p-8">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g,'\\u003c') }} />
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex items-start gap-4">
         {org.logoUrl
           ? (
-            <img src={org.logoUrl} alt={`${org.name} logo`} className="h-14 w-14 rounded-lg object-contain" />
+            <img src={org.logoUrl} alt={`${org.name} logo`} className="h-16 w-16 shrink-0 rounded-2xl border bg-white object-contain" />
           )
           : (
-            <div className="grid h-14 w-14 place-items-center rounded-lg bg-primary/10 text-lg font-bold text-primary">
+            <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-primary/10 text-lg font-bold text-primary">
               {org.name.charAt(0)}
             </div>
           )}
-        <div>
-          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold">
+        <div className="min-w-0">
+          <h1 className="flex flex-wrap items-center gap-2 break-words text-2xl font-bold sm:text-3xl">
             {org.name}
             {org.verified && (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
@@ -102,21 +105,24 @@ export default async function OrganizationPage({ params }: Props) {
               </span>
             )}
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="mt-3 text-sm leading-7 text-muted-foreground">
             {org.organizationType?.replace(/_/g, ' ') ?? t('orgPage.organizationFallback')}
             {org.country ? ` · ${org.country}` : ''}
             {` · ${org.opportunities.length}${org.opportunities.length === 1 ? t('orgPage.activeSummary1') : t('orgPage.activeSummary')}`}
           </p>
         </div>
-        {org.website && (
-          <a href={org.website} target="_blank" rel="noreferrer noopener nofollow"
-            className="ms-auto inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-xs">
-            <ExternalLink className="h-3.5 w-3.5" /> {t('orgPage.officialWebsite')}
-          </a>
-        )}
       </div>
-
-      <div className="mt-5 flex flex-wrap items-center gap-3"><OrganizationFollowButton organizationId={org.id} lang={lang}/>{org.industry&&<span className="text-sm text-muted-foreground">{org.industry}</span>}<Link className="ms-auto text-xs text-primary underline" href={`/${lang}/employers/dashboard?claim=${encodeURIComponent(org.slug)}`}>{lang==='fa'?'این سازمان را مدیریت می‌کنید؟':lang==='ps'?'دا اداره اداره کوئ؟':'Manage this organization?'}</Link></div>
+      {org.industry&&<p className="mt-4 text-sm text-muted-foreground">{org.industry}</p>}
+      <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-primary/15 pt-5">
+        <OrganizationFollowButton organizationId={org.id} lang={lang}/>
+        {org.website&&<a href={org.website} target="_blank" rel="noreferrer noopener nofollow" className={secondaryActionClass}><ExternalLink className="h-4 w-4" aria-hidden="true"/>{t('orgPage.officialWebsite')}</a>}
+      </div>
+      </section>
+      <aside className="mt-5 flex flex-col items-start gap-4 rounded-2xl border bg-card p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div><p className="text-sm font-semibold">{lang==='fa'?'نمایندۀ این سازمان هستید؟':lang==='ps'?'د دې ادارې استازی یاست؟':'Represent this organization?'}</p>
+        <p className="mt-1 text-sm leading-6 text-muted-foreground">{lang==='fa'?'برای مدیریت مشخصات و نشر وظایف، درخواست دسترسی بدهید.':lang==='ps'?'د معلوماتو د سمون او دندو خپرولو لپاره د لاسرسي غوښتنه وکړئ.':'Request access to manage its profile and publish vacancies.'}</p></div>
+        <Link className={secondaryActionClass+' w-full shrink-0 sm:w-auto'} href={`/${lang}/employers/dashboard?claim=${encodeURIComponent(org.slug)}`}><Building2 className="h-4 w-4" aria-hidden="true"/>{lang==='fa'?'مدیریت این سازمان':lang==='ps'?'دا اداره مدیریت کړئ':'Manage organization'}</Link>
+      </aside>
 
       {org.description && (
         <p className="mt-5 whitespace-pre-line rounded-lg border bg-card p-4 text-sm leading-relaxed">
@@ -143,9 +149,7 @@ export default async function OrganizationPage({ params }: Props) {
           </Link>
         ))}
         {org.opportunities.length === 0 && (
-          <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-            {t('orgPage.none')}
-          </p>
+          <div className="rounded-2xl border border-dashed p-8 text-center"><p className="text-sm text-muted-foreground">{t('orgPage.none')}</p><PageBackLink lang={lang} to="opportunities" className="mt-5" /></div>
         )}
       </div>
     </div></PageShell>

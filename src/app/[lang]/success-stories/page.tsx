@@ -1,3 +1,4 @@
+import { SitePagination } from '@/components/site/page-navigation';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
@@ -87,8 +88,8 @@ export default async function SuccessStoriesPage({
   const typedLang: Lang = isLang(lang) ? lang : 'fa';
   const t = (key: string, p?: Record<string, string | number>) => translate(typedLang, key, p);
   const isRtl = typedLang !== 'en';
-  const FwdIcon = isRtl ? ArrowLeft : ArrowRight;
   const BackIcon = isRtl ? ArrowRight : ArrowLeft;
+  const FwdIcon = isRtl ? ArrowLeft : ArrowRight;
 
   const type = sp.type && sp.type !== 'all' ? sp.type : undefined;
   const page = Math.max(1, parseInt(sp.page || '1', 10) || 1);
@@ -275,32 +276,7 @@ export default async function SuccessStoriesPage({
           })}
         </div>
 
-        {/* Pagination */}
-        {list.totalPages > 1 && (
-          <nav aria-label="Pagination" className="mt-10 flex items-center justify-center gap-2">
-            {page > 1 && (
-              <Link
-                href={`${typeHref(type)}${type ? '&' : '?'}page=${page - 1}`}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
-                aria-label="Previous page"
-              >
-                <BackIcon className="h-4 w-4" aria-hidden="true" />
-              </Link>
-            )}
-            <span className="px-3 text-sm text-muted-foreground">
-              {page} / {list.totalPages}
-            </span>
-            {page < list.totalPages && (
-              <Link
-                href={`${typeHref(type)}${type ? '&' : '?'}page=${page + 1}`}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
-                aria-label="Next page"
-              >
-                <FwdIcon className="h-4 w-4" aria-hidden="true" />
-              </Link>
-            )}
-          </nav>
-        )}
+        <SitePagination lang={lang} page={page} totalPages={list.totalPages} previousHref={page>1?`${typeHref(type)}${type?'&':'?'}page=${page-1}`:undefined} nextHref={page<list.totalPages?`${typeHref(type)}${type?'&':'?'}page=${page+1}`:undefined}/>
 
         {/* CTA band */}
         {list.total > 0 && (

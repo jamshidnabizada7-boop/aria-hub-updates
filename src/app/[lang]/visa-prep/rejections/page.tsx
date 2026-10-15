@@ -1,7 +1,7 @@
+import { PageBackLink } from '@/components/site/page-navigation';
 import React from 'react';
 import { PageShell } from '@/components/site/page-shell';
-import Link from 'next/link';
-import { ArrowLeft, AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RejectionsClient } from './rejections-client';
 import { db as prisma } from '@/lib/db';
@@ -72,12 +72,7 @@ export default async function VisaRejectionsPage({
 
           {/* Header */}
           <div className="mb-10 text-center max-w-3xl mx-auto">
-            <Link href={`/${lang}/visa-prep`} className="inline-block mb-6">
-              <Button variant="outline" size="sm" className="rounded-full">
-                <ArrowLeft className="mr-2 h-4 w-4 rtl:mr-0 rtl:ml-2 rtl-flip" />
-                {t('visaRej.back')}
-              </Button>
-            </Link>
+            <PageBackLink lang={lang} to="visa" className="mb-6" />
             <div className="flex justify-center mb-4">
               <div className="p-3 bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-500 rounded-full">
                 <AlertTriangle className="h-8 w-8" />

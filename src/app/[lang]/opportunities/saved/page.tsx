@@ -1,3 +1,4 @@
+import { PageBackLink } from '@/components/site/page-navigation';
 import type { Metadata } from 'next';
 import { getSiteData } from '@/lib/get-site';
 import { Navbar } from '@/components/site/navbar';
@@ -29,6 +30,7 @@ export default async function SavedOpportunitiesPage({ params }: { params: Promi
         logoUrl={data.settings?.logoUrl ?? null}
       />
       <main id="main-content" className="flex-1 pt-24 pb-20">
+      <div className="mx-auto mb-6 w-full max-w-7xl px-4 sm:px-6 print:hidden"><PageBackLink lang={lang} to="opportunities" className="mb-5" /></div>
         <SavedOpportunities lang={lang} />
       </main>
       <Footer

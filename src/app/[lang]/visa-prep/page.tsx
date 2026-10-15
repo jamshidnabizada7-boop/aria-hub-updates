@@ -1,3 +1,4 @@
+import { PageBackLink } from '@/components/site/page-navigation';
 import { TranslatedText } from '@/components/ui/translated-text';
 import { PageShell } from '@/components/site/page-shell';
 import { Button } from '@/components/ui/button';
@@ -64,12 +65,13 @@ export default async function VisaPrepPage({ params }: { params: Promise<{ lang:
     <PageShell lang={lang} className="pb-16">
       <div className="bg-slate-50 dark:bg-slate-950">
         {/* Hero Section */}
-        <div className="bg-primary px-4 py-20 text-center text-primary-foreground md:py-32 relative overflow-hidden">
+        <div className="bg-primary px-4 pb-20 pt-28 text-center text-primary-foreground md:pb-32 md:pt-32 relative overflow-hidden">
           <div className="absolute inset-0 -z-10 bg-[url('https://images.unsplash.com/photo-1544252890-0909f2d1252f?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center opacity-10 mix-blend-overlay"></div>
           <div className="mx-auto max-w-4xl space-y-6 relative z-10">
             <div className="inline-flex items-center rounded-full border border-primary-foreground/30 bg-primary-foreground/10 px-3 py-1 text-sm font-medium backdrop-blur-sm">
               <Plane className="mr-2 h-4 w-4" /> {t('visaPrep.badge')}
             </div>
+            <PageBackLink lang={lang} inverse className="mb-4" />
             <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl">
               <TranslatedText tKey="visaPrep.title" />
             </h1>

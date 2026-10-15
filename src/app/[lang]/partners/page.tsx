@@ -52,7 +52,7 @@ export default async function PartnersPage({
   const { title, dbHtml } = await loadGrowthPage('partners', safeLang, PARTNERS_DOC);
 
   return (
-    <PageShell lang={safeLang}>
+    <PageShell lang={safeLang} backTo="home">
       <StaticDocView doc={PARTNERS_DOC} lang={safeLang} title={title} dbHtml={dbHtml} />
     </PageShell>
   );
