@@ -28,6 +28,8 @@ import { parseDate, stripHtml } from '../utils';
 import { hasPersistentProfile, renderHtmlPersistent } from './browser-fetch';
 import type { RawListing, ScrapePage } from '../types';
 import { classifyApplyUrl, isRealApplyLink, normalizeApplyUrl, shouldHealApplyLink } from '@/lib/apply';
+import { applicationDestination } from '../application-destination';
+import { isApplyEmail } from '@/lib/apply-extract';
 
 /** A job card object as embedded by jobs.af in its RSC flight payload. */
 interface JobsAfJob {
@@ -272,6 +274,9 @@ export class JobsAfScraper extends BaseScraper {
       }
     }
 
+    // Maintenance can audit the public endpoint without opening a saved login.
+    if (this.source.config.publicApiOnly === true) return listing;
+
     // Tier 1 — flight payload over plain HTTP.
     try {
       const html = await this.fetchText(listing.sourceUrl, { timeoutMs: 12000, retries: 1 });
@@ -332,7 +337,8 @@ export class JobsAfScraper extends BaseScraper {
     if (responsibilities) listing.responsibilities = responsibilities;
     const requirements = stripHtml(job.jobRequirements || '').trim();
     if (requirements) listing.requirements = requirements;
-    const guidelines = stripHtml(job.submissionGuidelines || job.howToApply || job.applyInstructions || '').trim();
+    const guidelineHtml = job.submissionGuidelines || job.howToApply || job.applyInstructions || '';
+    const guidelines = stripHtml(guidelineHtml).trim();
     if (guidelines) listing.guidelines = guidelines;
     if (typeof job.minimumExperience === 'number') {
       listing.experience = job.maximumExperience && job.maximumExperience > job.minimumExperience
@@ -355,13 +361,16 @@ export class JobsAfScraper extends BaseScraper {
 
     const explicit = [job.submissionEmail, job.submissionLink]
       .map((value) => normalizeApplyUrl(value))
-      .find((candidate) => isRealApplyLink(classifyApplyUrl(candidate, listing.sourceUrl, listing.originalUrl)));
-    const guidelineEmail = guidelines.match(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i)?.[0];
-    const candidate = explicit || (guidelineEmail ? `mailto:${guidelineEmail}` : null);
+      .find((candidate) => isRealApplyLink(classifyApplyUrl(candidate, listing.sourceUrl, listing.originalUrl)) &&
+        (!candidate?.startsWith('mailto:') || isApplyEmail(candidate.slice(7))));
+    const candidate = explicit || applicationDestination(guidelineHtml, listing.sourceUrl);
     if (candidate && shouldHealApplyLink(
       listing.applyUrl, listing.sourceUrl, listing.originalUrl,
       candidate, listing.sourceUrl, listing.originalUrl,
     )) listing.applyUrl = candidate;
+    if (candidate && guidelines && !guidelines.includes(candidate.replace(/^mailto:/i, ''))) {
+      listing.guidelines = `${guidelines}\n\nApplication destination: ${candidate}`;
+    }
     listing.extractedData = {
       ...(listing.extractedData || {}),
       reference: job.reference || listing.extractedData?.reference || null,

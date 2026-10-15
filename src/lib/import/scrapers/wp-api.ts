@@ -47,16 +47,20 @@ export function extractWpFacts(description: string): Pick<RawListing, 'eligibili
   const lines = description.split(/\n+/).map((line) => line.trim()).filter(Boolean);
   const sections: Record<string, string[]> = {};
   let active: string | null = null;
-  for (const line of lines) {
-    const heading = line.match(/^(eligibility|who can apply\??|who is eligible\??|requirements?|qualifications?|benefits?|what (?:are|will) the benefits\??|how to apply\??|application (?:process|procedure)|application(?=\s*[:?]?\s*$)|where (?:will|is).*?(?:taken|held)\??|location|host country|country)\s*[:?]?\s*(.*)$/i);
+  for (const rawLine of lines) {
+    const markedHeading = rawLine.startsWith('@@HEADING@@');
+    const line = rawLine.replace(/^@@HEADING@@/, '');
+    const heading = line.match(/^(eligibility(?: criteria)?|who can apply\??|who is eligible\??|requirements?|qualifications?|benefits?|scholarship(?: benefits)?|funding|costs?|what (?:are|will) the benefits\??|how to apply\??|application (?:process|procedure)|application(?=\s*[:?]?\s*$)|where (?:will|is).*?(?:taken|held)\??|location|host country|country)(?:\s*[:?]\s*(.*)|\s*)$/i);
     if (heading && heading[0].length < 140) {
       const key = /where|location|host country|^country$/i.test(heading[1]) ? 'location'
         : /eligib|who can apply/i.test(heading[1]) ? 'eligibility'
         : /require|qualif/i.test(heading[1]) ? 'requirements'
-        : /benefit/i.test(heading[1]) ? 'benefits' : 'guidelines';
+        : /benefit|scholarship|funding|cost/i.test(heading[1]) ? 'benefits' : 'guidelines';
       active = key;
       sections[key] ??= [];
       if (heading[2]) sections[key].push(heading[2]);
+    } else if (markedHeading) {
+      active = null;
     } else if (active) {
       sections[active].push(line);
     }
@@ -67,6 +71,49 @@ export function extractWpFacts(description: string): Pick<RawListing, 'eligibili
   const countryHint = location.match(/(?:,\s*|\bin\s+)(UK|U\.K\.|US|U\.S\.|Afghanistan|United Kingdom|United States|Canada|Australia|Germany|France|Pakistan|India)\b/i)?.[1]
     || location.match(/^(UK|U\.K\.|US|U\.S\.|Afghanistan|United Kingdom|United States|Canada|Australia|Germany|France|Pakistan|India)\b/i)?.[1];
   return { eligibility: fact('eligibility'), benefits: fact('benefits'), requirements: fact('requirements'), guidelines: fact('guidelines'), country: normalizeCountry(firstLocation) || normalizeCountry(countryHint) };
+}
+
+/** Preserve heading boundaries (including unknown headings) before stripping HTML. */
+export function extractWpHtmlFacts(html: string) {
+  const $ = cheerio.load(html);
+  $('script,style,nav,footer,ins').remove();
+  $('h1,h2,h3,h4,h5,h6,p').each((_, el) => {
+    const node = $(el);
+    const text = node.text().replace(/\s+/g, ' ').trim();
+    const bold = node.children('strong,b').text().replace(/\s+/g, ' ').trim();
+    if (text && text.length < 100 && (el.tagName !== 'p' || (bold === text && !node.find('a').length))) {
+      node.empty().text(`@@HEADING@@${text}`);
+    }
+  });
+  const text = stripHtml($.html());
+  const facts = extractWpFacts(text);
+  // Never turn "Afghan applicants" into an Afghanistan host location.
+  if (!facts.country) facts.country = explicitHostCountry(text.split(/@@HEADING@@(?:Eligibility|Who can|Requirements)/i)[0]);
+  return facts;
+}
+
+/** Country must be explicitly tied to the programme's physical host. */
+export function explicitHostCountry(text: string): string | null {
+  const found = new Set<string>();
+  const pattern = /\b(?:held|hosted|based|located|take place|takes place|study|studying|studies|undertaken|conducted)\s+(?:at\s+[^.\n]{0,90}?\s+)?in\s+([^.;\n]{2,80})/gi;
+  for (const match of text.matchAll(pattern)) {
+    const words = match[1].replace(/^the\s+/i, '').split(/\s+/);
+    for (let n = Math.min(5, words.length); n > 0; n--) {
+      const country = normalizeCountry(words.slice(0, n).join(' ').replace(/[,):]+$/, ''));
+      if (country) { found.add(country); break; }
+    }
+  }
+  return found.size === 1 ? [...found][0] : null;
+}
+
+/** Positive source evidence only; regional titles or absent restrictions prove nothing. */
+export function afghanEligibilityEvidence(eligibility: string | null | undefined): { scope: 'afghan' | 'worldwide'; quote: string } | null {
+  for (const line of (eligibility || '').split(/[\n]+/)) {
+    if (/\b(not eligible|ineligible|not open|excluding|except|restricted|only (?:citizens|nationals|residents) of)\b/i.test(line)) continue;
+    if (/\b(?:open|eligible|applications?|applicants?|candidates?)\b.{0,90}\bAfghan(?:istan)?\b|\bAfghan\s+(?:women|citizens|nationals)\b.{0,60}\b(?:eligible|apply)\b/i.test(line)) return { scope: 'afghan', quote: line.trim() };
+    if (/\b(?:open|applicants?|applications?|candidates?|students?|founders?|entrepreneurs?|teachers?|journalists?)\b.{0,150}\b(?:worldwide|globally|all nationalities|any country|every country|all countries|(?:all )?(?:around|over) the world)\b/i.test(line)) return { scope: 'worldwide', quote: line.trim() };
+  }
+  return null;
 }
 
 /** Minimal shape of the WP REST post payload we consume. */
@@ -300,7 +347,8 @@ export class WpApiScraper extends BaseScraper {
     const description =
       stripHtml(stripTextJunk(stripWpBoilerplate(rawContent))) ||
       htmlToExcerpt(post.excerpt?.rendered || '');
-    const facts = extractWpFacts(description);
+    const facts = extractWpHtmlFacts(rawContent);
+    const afghanEvidence = afghanEligibilityEvidence(facts.eligibility);
     if (applyUrl === link && facts.guidelines) {
       const email = facts.guidelines.match(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i);
       if (email) applyUrl = `mailto:${email[0]}`;
@@ -343,6 +391,8 @@ export class WpApiScraper extends BaseScraper {
       extractedData: {
         wpPostId: post.id ?? null,
         terms: termNames.slice(0, 10),
+        ...(afghanEvidence ? { afghanEligibilityEvidence: { ...afghanEvidence, sourceUrl: link },
+          eligibleNationalities: afghanEvidence.scope === 'afghan' ? ['Afghanistan'] : ['Worldwide'] } : {}),
       },
     } as RawListing;
   }

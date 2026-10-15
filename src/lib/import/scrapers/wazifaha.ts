@@ -31,6 +31,9 @@ import {
   stripTextJunk,
 } from '../utils';
 import type { RawListing, ScrapePage } from '../types';
+import { applicationDestination } from '../application-destination';
+import { shouldHealApplyLink } from '@/lib/apply';
+import { decodeProtectedEmails } from '@/lib/application-form';
 
 // ─── Section routing helpers ─────────────────────────────────────────────────
 // Wazifaha wraps content in section cards, but the important subsections
@@ -252,6 +255,8 @@ export class WazifahaScraper extends BaseScraper {
     try {
       const html = await this.fetchText(listing.sourceUrl);
       const $ = cheerio.load(html);
+      if (!$('.wz-hero-title').text().trim()) throw new Error('Vacancy detail missing');
+      decodeProtectedEmails($);
 
       // Title
       listing.title = this.text($('.wz-hero-title').first()) || listing.title;
@@ -287,15 +292,20 @@ export class WazifahaScraper extends BaseScraper {
       // Store ALL extracted fields for future reference (Nationality, Vacancy Number, Gender, City, etc.)
       listing.extractedData = { ...gridValues };
 
-      // Apply link
-      const applyHref = $('a[href*="/jobs/apply/"]').first().attr('href');
-      listing.applyUrl = applyHref ? resolveUrl(applyHref, listing.sourceUrl) : null;
-
-      // Also check for external apply links in the content
-      if (!listing.applyUrl) {
-        const externalLink = this.findExternalApplyLink($);
-        listing.applyUrl = externalLink;
+      // Wazifaha labels both plain emails and portal URLs "Submission Email".
+      // Its /jobs/apply/ link is only a redirect wrapper, never the destination.
+      let candidate = applicationDestination($('.wz-apply-email').html() || '', listing.sourceUrl);
+      if (!candidate) {
+        const applicationBodies: string[] = [];
+        $('.wz-content-section').each((_, el) => {
+          const heading = $(el).find('.wz-section-heading').first().text();
+          if (headingKind(heading) === 'guidelines') applicationBodies.push($(el).find('.wz-section-body').html() || '');
+        });
+        candidate = applicationDestination(applicationBodies.join('\n'), listing.sourceUrl);
       }
+      if (candidate && shouldHealApplyLink(listing.applyUrl, listing.sourceUrl, listing.originalUrl,
+          candidate, listing.sourceUrl, listing.originalUrl)) listing.applyUrl = candidate;
+      if (!listing.applyUrl) listing.applyUrl = listing.sourceUrl;
 
       // Description and specific sections. Each card body is routed by its
       // section heading; generic bodies are split on heading-like lines so
@@ -311,6 +321,10 @@ export class WazifahaScraper extends BaseScraper {
 
       if (descParts.length) {
         listing.description = cleanHtmlWhitespace(sanitizeListingFragment(descParts.join('\n\n')));
+      }
+
+      if (candidate && !listing.guidelines?.includes(candidate.replace(/^mailto:/i, ''))) {
+        listing.guidelines = [listing.guidelines, `Application destination: ${candidate}`].filter(Boolean).join('\n\n');
       }
 
       return listing;
@@ -394,29 +408,6 @@ export class WazifahaScraper extends BaseScraper {
       }
     });
     return result;
-  }
-
-  /** Find an external apply link (e.g., Microsoft Forms, Google Forms). */
-  private findExternalApplyLink($: cheerio.CheerioAPI): string | null {
-    let externalUrl: string | null = null;
-    $('a[href]').each(function () {
-      const href = $(this).attr('href') || '';
-      const text = $(this).text().trim().toLowerCase();
-      // External form links
-      if (
-        (href.includes('forms.') || href.includes('docs.google.com') || href.includes('survey')) &&
-        !href.startsWith('/')
-      ) {
-        externalUrl = href;
-        return false; // break
-      }
-      // Links with "apply" text pointing externally
-      if (text.includes('apply') && !href.startsWith('/') && !href.includes('wazifaha')) {
-        externalUrl = href;
-        return false; // break
-      }
-    });
-    return externalUrl;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
