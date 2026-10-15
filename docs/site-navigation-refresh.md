@@ -22,3 +22,12 @@
 - At 390px: no horizontal overflow; organization actions and pagination links measured 48px tall; keyboard Tab reached the next action with visible focus.
 - All synthetic organizations removed after verification; no real follows, claims, submissions or applications sent.
 - Oracle production build, preflight and live verification recorded after deployment below.
+
+## Live release
+
+- Runtime commit: `258268c`, `/opt/aria-hub/releases/20261015-navigation-258268c`.
+- Full Oracle standalone build passed. Preflight: organization directory/profile, templates and employer posting returned 200 in en/fa/ps; out-of-range filtered directory redirected to a valid page; absent organization returned 404; unauthenticated employer inbox and WhatsApp webhook remained 403.
+- Public health reported `ok: true`, database up. Web, import worker, social worker and applicant channel timer active; 3.3 GB disk available after release.
+- Production browser verified Aarhus management control, 48px action height, All organizations return and reopening the profile, plus Next opening directory page 2 of 8.
+- Screenshot proof: `../admin-audit-evidence/organization-navigation-live-20261015.png` and `../admin-audit-evidence/directory-pagination-live-20261015.png`.
+- Local preview server stopped, test database stopped, synthetic records removed, and temporary viewport reset. No real follows, applications, claims or subscriber messages were submitted.
