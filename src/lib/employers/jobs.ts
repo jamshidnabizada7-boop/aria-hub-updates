@@ -102,9 +102,7 @@ export async function createJob(db: JobsDb, userId: string, organizationId: stri
   const application=resolveEmployerApplication(input);
   const applyUrl=application.url;
 
-  const category = input.categorySlug
-    ? await db.opportunityCategory.findUnique({ where: { slug: input.categorySlug } })
-    : null;
+  const category = await db.opportunityCategory.findUnique({where:{slug:input.categorySlug||'job'}});
   const org = await db.organization.findUnique({ where: { id: organizationId }, select: { name: true } });
   const slug = await uniqueJobSlug(db, slugify(title));
 

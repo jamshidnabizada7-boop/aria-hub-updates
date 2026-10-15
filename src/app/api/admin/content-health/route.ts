@@ -143,7 +143,7 @@ export async function GET(req: NextRequest) {
     const eligibilitySignals = quality.evidenceCount;
 
     if (!quality.hasRealApply) noApplyLink++;
-    if (!o.applyUrl?.trim()) noStoredApplyLink++;
+    if (!o.applyUrl?.trim() && !quality.hasRealApply) noStoredApplyLink++;
     if (quality.applyType === 'source_article_fallback') sourceFallback++;
     if (!o.categoryId) noCategory++;
     if (!o.country?.trim()) noCountry++;

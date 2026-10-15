@@ -1,5 +1,6 @@
 'use client';
 import { useRef, useState } from 'react';
+import {applicantReturnPath} from '@/lib/applicants/navigation';
 import {AccountLane} from '@/components/site/account-choices';
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, LockKeyhole, Loader2, Eye, EyeOff, MailCheck } from 'lucide-react';
@@ -81,6 +82,8 @@ const copy = {
 
 export function AccountClient({lang,mode,enabled=true,emailAvailable=true}:{lang:Lang;mode:Mode;enabled?:boolean;emailAvailable?:boolean}) {
  const t=copy[lang], router=useRouter(), query=useSearchParams();
+ const destination=applicantReturnPath(query.get('next'),lang);
+ const authHref=(path:string)=>'/'+lang+'/'+path+(destination!=='/'+lang+'/portal'?'?next='+encodeURIComponent(destination):'');
  const [email,setEmail]=useState(''), [password,setPassword]=useState(''), [confirm,setConfirm]=useState(''), [name,setName]=useState('');
  const [busy,setBusy]=useState(false), [message,setMessage]=useState(''), [isError,setIsError]=useState(false);
  const [showPassword,setShowPassword]=useState(false), [needsVerification,setNeedsVerification]=useState(false), [checkEmail,setCheckEmail]=useState(false);
@@ -96,7 +99,7 @@ export function AccountClient({lang,mode,enabled=true,emailAvailable=true}:{lang
    const response=await fetch('/api/applicant/auth/'+mode,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password,name,token:query.get('token'),lang})});
    const data=await response.json().catch(()=>({}));
    if(!response.ok) {setNeedsVerification(data.error==='email_not_verified');setMessage(errorText(data.error));setIsError(true);return;}
-   if(mode==='login') {router.push('/'+lang+'/portal');router.refresh();}
+   if(mode==='login') {router.push(destination);router.refresh();}
    else if(mode==='reset-password') router.push('/'+lang+'/login?reset=yes');
    else if(mode==='register') setCheckEmail(true);
    else setMessage(t.resetSent);
@@ -123,11 +126,11 @@ export function AccountClient({lang,mode,enabled=true,emailAvailable=true}:{lang
   {query.get('deleted')==='yes'&&<p role="status" className="mt-4 rounded-xl border p-4 text-sm">{t.deleted}</p>}
   {query.get('verified')&&<p role="status" className="mt-4 rounded-xl border p-4 text-sm">{query.get('verified')==='yes'?t.verified:t.invalid}</p>}
   {query.get('reset')==='yes'&&<p role="status" className="mt-4 rounded-xl bg-emerald-500/10 p-4 text-sm">{t.resetDone}</p>}
-  {(mode==='login'||mode==='register')&&!checkEmail&&<nav aria-label={t.helper} className="mt-6 grid grid-cols-2 gap-1 rounded-xl bg-muted p-1 text-center text-sm">{(['login','register'] as const).map(tab=><Link key={tab} href={'/'+lang+'/'+tab} aria-current={mode===tab?'page':undefined} className={'rounded-lg px-3 py-3 font-semibold '+(mode===tab?'bg-card shadow-sm':'text-muted-foreground')}>{t[tab]}</Link>)}</nav>}
+  {(mode==='login'||mode==='register')&&!checkEmail&&<nav aria-label={t.helper} className="mt-6 grid grid-cols-2 gap-1 rounded-xl bg-muted p-1 text-center text-sm">{(['login','register'] as const).map(tab=><Link key={tab} href={authHref(tab)} aria-current={mode===tab?'page':undefined} className={'rounded-lg px-3 py-3 font-semibold '+(mode===tab?'bg-card shadow-sm':'text-muted-foreground')}>{t[tab]}</Link>)}</nav>}
   {blocked?<p role="status" className="my-6 rounded-xl border p-4 text-sm leading-7">{enabled?t.unavailable:t.accountsUnavailable}</p>:checkEmail?<div className="mt-6 space-y-3">
     <p className="break-all rounded-xl bg-muted p-4 text-sm font-medium" dir="ltr">{email}</p>
     <p className="text-sm leading-6 text-muted-foreground">{t.inbox}</p>
-    <Link href={'/'+lang+'/login'} className="journey-primary w-full">{t.login}<ArrowRight className="h-4 w-4 rtl:-scale-x-100"/></Link>
+    <Link href={authHref('login')} className="journey-primary w-full">{t.login}<ArrowRight className="h-4 w-4 rtl:-scale-x-100"/></Link>
     <button type="button" onClick={resend} disabled={busy} className="journey-secondary w-full">{busy?<Loader2 className="h-4 w-4 animate-spin"/>:null}{t.resend}</button>
     <button type="button" disabled={busy} className="min-h-11 w-full text-sm font-medium text-muted-foreground" onClick={()=>{setCheckEmail(false);setMessage('');}}>{t.edit}</button>
    </div>:<form onSubmit={submit} className="mt-6 space-y-5">
@@ -138,13 +141,13 @@ export function AccountClient({lang,mode,enabled=true,emailAvailable=true}:{lang
      {mode!=='forgot-password'&&<>
       <label className="block text-sm">{requiresNewPassword?t.newPassword:t.password}<input name="password" type={showPassword?'text':'password'} autoComplete={mode==='login'?'current-password':'new-password'} required minLength={requiresNewPassword?12:1} maxLength={128} value={password} onChange={e=>setPassword(e.target.value)} className={inputClass} dir="ltr" aria-describedby={requiresNewPassword?'password-hint':undefined}/></label>
       {requiresNewPassword&&<><p id="password-hint" className="text-xs text-muted-foreground">{t.passwordHint}</p><label className="block text-sm">{t.confirm}<input name="confirmPassword" type={showPassword?'text':'password'} autoComplete="new-password" required minLength={12} maxLength={128} value={confirm} onChange={e=>setConfirm(e.target.value)} className={inputClass} dir="ltr"/></label></>}
-      <div className="flex flex-wrap items-center justify-between gap-3 text-sm"><button type="button" aria-pressed={showPassword} onClick={()=>setShowPassword(!showPassword)} className="inline-flex min-h-11 items-center gap-2 text-muted-foreground">{showPassword?<EyeOff className="h-4 w-4"/>:<Eye className="h-4 w-4"/>}{showPassword?t.hide:t.show}</button>{mode==='login'&&<Link href={'/'+lang+'/forgot-password'} className="inline-flex min-h-11 items-center font-medium text-primary hover:underline">{t.forgot}</Link>}</div>
+      <div className="flex flex-wrap items-center justify-between gap-3 text-sm"><button type="button" aria-pressed={showPassword} onClick={()=>setShowPassword(!showPassword)} className="inline-flex min-h-11 items-center gap-2 text-muted-foreground">{showPassword?<EyeOff className="h-4 w-4"/>:<Eye className="h-4 w-4"/>}{showPassword?t.hide:t.show}</button>{mode==='login'&&<Link href={authHref('forgot-password')} className="inline-flex min-h-11 items-center font-medium text-primary hover:underline">{t.forgot}</Link>}</div>
      </>}
     </fieldset>
     <button type="submit" disabled={busy} aria-busy={busy} className="journey-primary w-full">{busy?<Loader2 className="h-4 w-4 animate-spin" aria-hidden="true"/>:null}{busy?t.working:mode==='login'?t.login:mode==='register'?t.register:mode==='forgot-password'?t.sendReset:t.updatePassword}</button>
    </form>}
   {message&&<p role={isError?'alert':'status'} className={'mt-5 rounded-xl border p-4 text-sm leading-6 '+(isError?'border-destructive/30 bg-destructive/5 text-destructive':'bg-muted/50')}>{message}</p>}
   {mode==='login'&&needsVerification&&emailAvailable&&<button type="button" onClick={resend} disabled={busy||!email} className="journey-secondary mt-4 w-full">{t.resend}</button>}
-  {mode!=='login'&&!checkEmail&&<Link href={'/'+lang+'/login'} className="mt-5 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline">{t.back}</Link>}
+  {mode!=='login'&&!checkEmail&&<Link href={authHref('login')} className="mt-5 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline">{t.back}</Link>}
  </main>;
 }
