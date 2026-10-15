@@ -42,3 +42,14 @@ Reviewed 15 October 2026. Evidence: the user's five authenticated screenshots, [
 - Existing employer vacancy, organization administration and password security tests retained; fixtures updated to include the now-required request origin.
 - Browser verification uses synthetic accounts and listings only in the isolated local database. No real applicant CV was sent and no real candidate was selected/rejected during testing.
 - Production release and live UI results are recorded after deployment below.
+
+### Deployed result
+
+- Code release `e6988d1`, on `main`, deployed to `/opt/aria-hub/releases/20261015-employer-workspace-final` on 15 October 2026. Additive migration `20261015130000_employer_discovery` applied successfully. Previous releases retained for application rollback.
+- **39 targeted tests passed, 163 assertions**: 25 workspace/navigation/vacancy/organization tests, 6 password security tests, and 8 shared-identity/privacy/deletion tests. Both optimized production builds completed with TypeScript validation. One existing PDF browser-path tracing warning remains unrelated to this change.
+- Browser flow verified in the isolated local environment: existing employer login → workspace; existing applicant login → dashboard → native vacancy → explicit consent → submitted confirmation → employer inbox containing that exact synthetic application. Private selected-CV retrieval and withdrawal tested against the real database/storage routes.
+- Live browser checks confirmed the employer login, account lanes, organization search/follow controls and authenticated applicant dashboard. The dashboard scholarship shortcut uses the verified production category slug `scholarship`; employer vacancies default to the verified `job` category. Safe application-return routes reject external URLs, traversal and locale changes.
+- Production English, Persian and Pashto employer entry pages responded successfully; RTL markup verified. Unauthenticated new application/organization APIs returned 401/403. Health reported database up; web, import worker, social worker and applicant-channel timer were active after deployment. No paid service, credentials, publishing permissions or scheduler configuration changed.
+- Temporary local preview accounts/listings were removed and the local test database stopped. Production tests did not create fake companies, vacancies or applications.
+
+Proof images are saved under `C:/Users/Computer House/Documents/Codex/2026-10-09/i-h/work/admin-audit-evidence/`: `employer-login-live-20261015.png`, `employer-workspace-local-20261015.png`, `native-application-success-local-20261015.png`, and `employer-inbox-local-20261015.png`. Local images explicitly show synthetic preview data.
