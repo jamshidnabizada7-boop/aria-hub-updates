@@ -6,16 +6,17 @@ import { readMcpState,putMcpState } from './mcp-state';
 import { opportunityHealth,matchesHealthIssue } from './opportunity-health';
 import { repairSourceHash,normalizeEvidence,commitRepairInput } from './repair-contract';
 import { fetchPublicImage,isPublicImageUrlSyntax } from './import/public-image-url';
-import { normalizeApplyUrl,classifyApplyUrl,isRealApplyLink } from './apply';
+import { normalizeApplyUrl,classifyApplyUrl,isRealApplyLink,applicationFormEvidence } from './apply';
+import { decodeProtectedEmails,embeddedApplicationForms,type EmbeddedApplicationForm } from './application-form';
 import type { Prisma } from '@prisma/client';
 import { categoryEvidence,matchEvidence } from './repair-evidence';
 
-const select={id:true,slug:true,title:true,description:true,sourceName:true,sourceUrl:true,originalUrl:true,applyUrl:true,applyUrlType:true,categoryId:true,country:true,deadline:true,status:true,eligibility:true,eligibilityI18n:true,educationReq:true,educationReqI18n:true,experience:true,experienceI18n:true,requirements:true,requirementsI18n:true,guidelines:true,guidelinesI18n:true,extractedData:true,faStatus:true,psStatus:true,translationOrigin:true,matchProfile:true} satisfies Prisma.OpportunitySelect;
+const select={id:true,slug:true,title:true,description:true,sourceName:true,sourceUrl:true,originalUrl:true,applyUrl:true,applyUrlType:true,applyUrlEvidence:true,categoryId:true,country:true,deadline:true,status:true,eligibility:true,eligibilityI18n:true,educationReq:true,educationReqI18n:true,experience:true,experienceI18n:true,requirements:true,requirementsI18n:true,guidelines:true,guidelinesI18n:true,extractedData:true,faStatus:true,psStatus:true,translationOrigin:true,matchProfile:true} satisfies Prisma.OpportunitySelect;
 type RepairRow=Prisma.OpportunityGetPayload<{select:typeof select}>;
 type Claim={client:string;ids:string[];expiresAt:string;done:string[]};
 type Attempt={id:string;sourceHash:string;attemptedAt:number};
 const attemptKey=(id:string)=>`repair-attempt:${id}`;
-type Source={url:string;text:string;links:{url:string;label:string}[];capturedAt:string};
+type Source={url:string;text:string;links:{url:string;label:string}[];capturedAt:string;applicationForms?:EmbeddedApplicationForm[]};
 const claimKey=(id:string)=>`repair-claim:${id}`;
 const sourceKey=(claim:string,id:string,url:string)=>`repair-source:${claim}:${id}:${createHash('sha256').update(url).digest('hex')}`;
 async function getClaim(claimId:string,client:string){const claim=await readMcpState<Claim>(claimKey(claimId));if(!claim||claim.client!==client)throw new Error('claim_invalid_or_expired');return claim;}
@@ -53,10 +54,11 @@ async function readHtml(url:string):Promise<Source>{
   const contentType=res.headers.get('content-type')||'';if(!/text\/html|application\/xhtml|text\/plain/.test(contentType)){await res.body?.cancel();throw new Error('source_requires_manual_document_review');}
   const reader=res.body?.getReader();if(!reader)throw new Error('empty_source');const parts:Uint8Array[]=[];let bytes=0;
   for(;;){const p=await reader.read();if(p.done)break;bytes+=p.value.length;if(bytes>2*1024*1024){await reader.cancel();throw new Error('source_too_large');}parts.push(p.value);}
-  const $=load(Buffer.concat(parts).toString('utf8'));$('script,style,noscript,iframe,svg,nav,footer,aside').remove();
+  const $=load(Buffer.concat(parts).toString('utf8'));decodeProtectedEmails($);const applicationForms=embeddedApplicationForms($,resolvedUrl);$('script,style,noscript,iframe,svg,nav,footer,aside').remove();
   const links:{url:string;label:string}[]=[];$('a[href]').each((_,el)=>{try{const href=new URL($(el).attr('href')!,resolvedUrl).href;if(isPublicImageUrlSyntax(href)||/^mailto:/i.test(href))links.push({url:href,label:$(el).text().replace(/\s+/g,' ').trim().slice(0,250)});}catch{/* Ignore malformed links. */}});
+  links.unshift(...applicationForms);
   const text=$('body').text().replace(/\s+/g,' ').trim().slice(0,100000);
-  return {url,text,links:[...new Map(links.map(l=>[l.url,l])).values()].slice(0,250),capturedAt:new Date().toISOString()};
+  return {url,text,applicationForms,links:[...new Map(links.map(l=>[l.url,l])).values()].slice(0,250),capturedAt:new Date().toISOString()};
 }
 export async function readRepairSource(client:string,claimId:string,id:string,url?:string){
   const claim=await getClaim(claimId,client);if(!claim.ids.includes(id)||claim.done.includes(id))throw new Error('row_not_in_active_claim');
@@ -73,6 +75,7 @@ export async function readRepairSource(client:string,claimId:string,id:string,ur
 async function validateRepair(client:string,input:unknown){
   const request=commitRepairInput.parse(input);const claim=await getClaim(request.claimId,client);if(!claim.ids.includes(request.id)||claim.done.includes(request.id))throw new Error('row_not_in_active_claim');
   const row=await db.opportunity.findUniqueOrThrow({where:{id:request.id},select});if(repairSourceHash(row as unknown as Record<string,unknown>)!==request.sourceHash)throw new Error('source_hash_changed');
+  let verifiedFormUrl:string|null=null;
   const fields: [string,unknown][]=[];
   for(const [field,value] of Object.entries(request.patch)) {
     if(field==='matchProfile') {for(const [name,v] of Object.entries(value!))fields.push([`matchProfile.${name}`,v]);}
@@ -80,13 +83,14 @@ async function validateRepair(client:string,input:unknown){
   }
   if(!fields.length)throw new Error('empty_patch');
   const changed=fields.some(([field,value])=>JSON.stringify(field.startsWith('matchProfile.')?row.matchProfile?.[field.slice(13) as keyof typeof row.matchProfile]:row[field as keyof RepairRow])!==JSON.stringify(value));
-  if(!changed)throw new Error('no_changes_to_save');
   for(const [field,value] of fields){
     const proof=request.evidence.find(e=>e.field===field);if(!proof)throw new Error(`evidence_required:${field}`);
     const source=await readMcpState<Source>(sourceKey(request.claimId,request.id,proof.sourceUrl));
     if(!source||!normalizeEvidence(source.text).includes(normalizeEvidence(proof.quote)))throw new Error(`source_quote_not_verified:${field}`);
     if(field==='applyUrl'){
-      const candidate=normalizeApplyUrl(String(value));const type=classifyApplyUrl(candidate,row.sourceUrl,row.originalUrl);
+      const candidate=normalizeApplyUrl(String(value));
+      const form=source.applicationForms?.find(f=>f.url===candidate);
+      const type=classifyApplyUrl(candidate,row.sourceUrl,row.originalUrl,form?.url);
       if(!candidate||!isRealApplyLink(type)||(!/^mailto:/i.test(candidate)&&!isPublicImageUrlSyntax(candidate)))throw new Error('application_destination_not_real');
       const listed=source.links.some(l=>l.url===candidate)||(/^mailto:/i.test(candidate)&&source.text.includes(candidate.slice(7).split('?')[0]));
       if(!listed||!/apply|application|submit|send|cv|resume|درخواست|ارسال|غوښتنلیک|نوملیکن/i.test(proof.quote))throw new Error('application_destination_not_in_source_instructions');
@@ -94,8 +98,10 @@ async function validateRepair(client:string,input:unknown){
         if(!proof.quote.toLowerCase().includes(candidate.slice(7).split('?')[0].toLowerCase()))throw new Error('application_email_not_in_quote');
       }else{
         const link=source.links.find(l=>l.url===candidate);
-        if(!link||!(/apply|application|submit|درخواست|غوښتنلیک/i.test(link.label)||proof.quote.includes(candidate)||(link.label.length>=4&&normalizeEvidence(proof.quote).includes(normalizeEvidence(link.label)))))throw new Error('application_link_not_associated_with_instructions');
-        if(!await readMcpState<Source>(sourceKey(request.claimId,request.id,candidate)))throw new Error('read_application_destination_before_saving');
+        if(!form&&(!link||!(/apply|application|submit|درخواست|غوښتنلیک/i.test(link.label)||proof.quote.includes(candidate)||(link.label.length>=4&&normalizeEvidence(proof.quote).includes(normalizeEvidence(link.label))))))throw new Error('application_link_not_associated_with_instructions');
+        const destination=await readMcpState<Source>(sourceKey(request.claimId,request.id,candidate));
+        if(!destination)throw new Error('read_application_destination_before_saving');
+        if(form){if(!destination.applicationForms?.some(f=>f.url===candidate))throw new Error('application_form_not_verified_at_destination');verifiedFormUrl=candidate;}
       }
     }else if(field==='categoryId'){
       const category=await db.opportunityCategory.findUnique({where:{id:String(value)}});if(!category)throw new Error('category_not_found');
@@ -103,18 +109,19 @@ async function validateRepair(client:string,input:unknown){
     }else if(!field.startsWith('matchProfile.')&&!normalizeEvidence(proof.quote).includes(normalizeEvidence(String(value))))throw new Error(`field_not_in_quote:${field}`);
     else if(field.startsWith('matchProfile.')&&!matchEvidence(field.slice(13),value,proof.quote))throw new Error(`match_fact_not_in_quote:${field}`);
   }
-  return {request,row,claim,fields};
+  if(!changed&&(!verifiedFormUrl||row.applyUrlEvidence===applicationFormEvidence(verifiedFormUrl)))throw new Error('no_changes_to_save');
+  return {request,row,claim,fields,verifiedFormUrl};
 }
 export async function previewRepair(client:string,input:unknown){const {request,row}=await validateRepair(client,input);return {valid:true,id:row.id,before:publicRow(row).fields,patch:request.patch,publicationStatusUnchanged:row.status,warning:'Source evidence validates provenance, not a guarantee that an application portal will accept an application. Do not invent missing facts.'};}
 export async function commitRepair(client:string,input:unknown){
-  const {request}=await validateRepair(client,input);
+  const {request,verifiedFormUrl}=await validateRepair(client,input);
   return db.$transaction(async tx=>{
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(742198)`;
     const claim=await readMcpState<Claim>(claimKey(request.claimId),tx);if(!claim||claim.client!==client||claim.done.includes(request.id))throw new Error('claim_invalid_or_completed');
     await tx.$queryRaw`SELECT id FROM "Opportunity" WHERE id = ${request.id} FOR UPDATE`;
     const row=await tx.opportunity.findUniqueOrThrow({where:{id:request.id},select});if(repairSourceHash(row as unknown as Record<string,unknown>)!==request.sourceHash)throw new Error('source_hash_changed');
     const {matchProfile,...patch}=request.patch;const data:Prisma.OpportunityUpdateInput={...patch};
-    if(patch.applyUrl)data.applyUrlType=classifyApplyUrl(patch.applyUrl,row.sourceUrl,row.originalUrl);
+    if(patch.applyUrl){data.applyUrl=normalizeApplyUrl(patch.applyUrl);data.applyUrlType=classifyApplyUrl(patch.applyUrl,row.sourceUrl,row.originalUrl,verifiedFormUrl);data.applyUrlEvidence=verifiedFormUrl?applicationFormEvidence(verifiedFormUrl):'chatgpt-source-reviewed';data.applyConfidence=verifiedFormUrl?95:75;data.applyVerifiedAt=new Date();}
     const changedText=(['eligibility','educationReq','experience','requirements','guidelines'] as const).some(key=>patch[key]!==undefined&&patch[key]!==row[key]);
     if(changedText){const origin=(row.translationOrigin||{}) as Record<string,string>;data.faStatus='pending';data.psStatus='pending';data.translationOrigin={...origin,...(origin.fa==='MANUAL'?{fa:'MANUAL_STALE'}:{}),...(origin.ps==='MANUAL'?{ps:'MANUAL_STALE'}:{})};
       for(const field of ['eligibility','educationReq','experience','requirements','guidelines'] as const){if(patch[field]!==undefined){const old=row[`${field}I18n`];Object.assign(data,{[`${field}I18n`]:{...(old&&typeof old==='object'&&!Array.isArray(old)?old:{}),en:patch[field]}});}}

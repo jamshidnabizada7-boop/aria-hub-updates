@@ -63,7 +63,7 @@ import { buildOpportunityFacts } from '@/lib/opportunity-facts';
 import { buildDetailSummary } from '@/lib/opportunity-summary';
 import { ensureSeoDescription } from '@/lib/seo-metadata';
 import { parseDate } from '@/lib/import/utils';
-import { classifyApplyUrl, isRealApplyLink, normalizeApplyUrl } from '@/lib/apply';
+import { classifyOpportunityApplyUrl, isRealApplyLink, normalizeApplyUrl } from '@/lib/apply';
 import { buildJobPostingPayload } from '@/lib/seo-job-schema';
 
 const SITE_URL = 'https://www.myariahub.com';
@@ -102,14 +102,14 @@ function getApplyInfo(opp: OpportunityDetail): ApplyInfo {
   const applyUrl = normalizeApplyUrl(opp.applyUrl);
   // Reclassify at render time so a stale stored type cannot expose a source
   // article as an Apply destination after an admin edits the URL.
-  const urlType = classifyApplyUrl(applyUrl, opp.sourceUrl, opp.originalUrl);
+  const urlType = classifyOpportunityApplyUrl(opp);
   const isMailto = !!applyUrl?.toLowerCase().startsWith('mailto:');
   const isPhone = !!applyUrl?.toLowerCase().startsWith('tel:');
   const isHttp = !!applyUrl && /^https?:\/\//i.test(applyUrl);
 
   let primaryLabelKey = 'detail.applyNow';
   if (isMailto) primaryLabelKey = 'detail.applyEmail';
-  else if (isHttp && FORM_URL_RE.test(applyUrl!)) primaryLabelKey = 'detail.applyForm';
+  else if (isHttp && (urlType === 'application_form' || FORM_URL_RE.test(applyUrl!))) primaryLabelKey = 'detail.applyForm';
 
   const email = isMailto ? applyUrl!.replace(/^mailto:/i, '').split('?')[0] : null;
 

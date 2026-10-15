@@ -27,7 +27,7 @@
  * chosen candidate. applyVerifiedAt is reserved for human/automated
  * verification and is never set automatically here.
  */
-import { classifyApplyUrl, FORM_URL_RE, isRealApplyLink } from './apply';
+import { applicationFormEvidence, classifyApplyUrl, FORM_URL_RE, isRealApplyLink } from './apply';
 import type { ApplyUrlType } from './apply';
 import { normalizeDomain, registrableDomain } from './organizations/domains';
 
@@ -106,6 +106,8 @@ export interface ApplyResolverInput {
    *  accepts the raw Json value from the Organization record (array or
    *  JSON-encoded string) and ignores anything else. */
   organizationDomains?: unknown;
+  /** Exact anchor URL of an applicant form inspected by the scraper. */
+  verifiedApplicationFormUrl?: string | null;
 }
 
 const DOMAINS_DEFAULT_RANK: Record<ApplyUrlType, number> = {
@@ -127,7 +129,7 @@ export function resolveApplyDestination(input: ApplyResolverInput): ApplyResolut
   if (!raw) {
     return { applyUrl: null, applyUrlType: 'unknown', confidence: 0, evidence: 'no-destination' };
   }
-  const type = classifyApplyUrl(raw, input.sourceUrl, input.originalUrl);
+  const type = classifyApplyUrl(raw, input.sourceUrl, input.originalUrl, input.verifiedApplicationFormUrl);
   const applyHost = hostOf(raw);
 
   const domains = Array.isArray(input.organizationDomains)
@@ -176,6 +178,7 @@ export function resolveApplyDestination(input: ApplyResolverInput): ApplyResolut
   }
 
   if (type === 'application_form') {
+    if (raw === input.verifiedApplicationFormUrl) return { applyUrl: raw, applyUrlType: type, confidence: 95, evidence: applicationFormEvidence(raw) };
     return { applyUrl: raw, applyUrlType: 'application_form', confidence: 88, evidence: 'application-form-url' };
   }
 

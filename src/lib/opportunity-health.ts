@@ -1,4 +1,4 @@
-import { classifyApplyUrl, isRealApplyLink } from './apply';
+import { classifyOpportunityApplyUrl, isRealApplyLink } from './apply';
 
 export type HealthIssue = 'apply' | 'core' | 'evidence' | 'translation';
 
@@ -9,6 +9,7 @@ export interface HealthOpportunity {
   sourceUrl: string | null;
   originalUrl: string | null;
   applyUrl: string | null;
+  applyUrlEvidence?: string | null;
   categoryId: string | null;
   country: string | null;
   eligibility: string | null;
@@ -32,7 +33,7 @@ function hasExtractedEligibility(value: unknown): boolean {
 }
 
 export function opportunityHealth(row: HealthOpportunity) {
-  const applyType = classifyApplyUrl(row.applyUrl, row.sourceUrl, row.originalUrl);
+  const applyType = classifyOpportunityApplyUrl(row);
   const missing: string[] = [];
   if (!row.categoryId) missing.push('category');
   if (!hasText(row.country)) missing.push('country');

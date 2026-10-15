@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { getCurrentAdmin, logAction } from '@/lib/admin-auth';
 import { Prisma } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
-import { classifyApplyUrl, normalizeApplyUrl } from '@/lib/apply';
+import { classifyApplyUrl, classifyOpportunityApplyUrl, normalizeApplyUrl } from '@/lib/apply';
 import {READ_ONLY_ADMIN_MODELS} from '@/lib/admin-catalog';
 import {revalidateSiteContent} from '@/lib/revalidate-site';
 
@@ -620,14 +620,15 @@ export async function PUT(req: NextRequest) {
   }
 
   if (model === 'opportunity' && ['applyUrl', 'sourceUrl', 'originalUrl'].some((field) => field in clean)) {
-    const previous = await db.opportunity.findUnique({ where: { id }, select: { applyUrl: true, sourceUrl: true, originalUrl: true } });
+    const previous = await db.opportunity.findUnique({ where: { id }, select: { applyUrl: true, sourceUrl: true, originalUrl: true, applyUrlEvidence: true } });
     if (!previous) return NextResponse.json({ error: 'Record not found.' }, { status: 404 });
     if (clean.applyUrl !== undefined) clean.applyUrl = normalizeApplyUrl(clean.applyUrl);
-    clean.applyUrlType = classifyApplyUrl(
-      clean.applyUrl === undefined ? previous.applyUrl : clean.applyUrl,
-      clean.sourceUrl === undefined ? previous.sourceUrl : clean.sourceUrl,
-      clean.originalUrl === undefined ? previous.originalUrl : clean.originalUrl,
-    );
+    clean.applyUrlType = classifyOpportunityApplyUrl({
+      applyUrl: clean.applyUrl === undefined ? previous.applyUrl : clean.applyUrl,
+      sourceUrl: clean.sourceUrl === undefined ? previous.sourceUrl : clean.sourceUrl,
+      originalUrl: clean.originalUrl === undefined ? previous.originalUrl : clean.originalUrl,
+      applyUrlEvidence: previous.applyUrlEvidence,
+    });
   }
 
   if (model === 'language' && clean.isDefault === true) {

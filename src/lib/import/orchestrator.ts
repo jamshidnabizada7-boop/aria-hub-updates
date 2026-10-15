@@ -26,10 +26,11 @@ import { runAIPipeline, ensureUniqueSlug, makeSlug } from '@/lib/ai/pipeline';
 import { ReliefWebPendingError } from './scrapers/reliefweb';
 import { isExpiredListingDeadline, sanitizeError, slugify } from './utils';
 import { buildLocationRows, resolveCountry } from '@/lib/geo/location-rows';
-import { classifyApplyUrl, isRealApplyLink, shouldHealApplyLink } from '@/lib/apply';
+import { applicationFormEvidence, classifyApplyUrl, classifyOpportunityApplyUrl, isRealApplyLink } from '@/lib/apply';
 import type { RawListing, SourceHandle } from './types';
 import { resolveImportedOpportunityStatus } from './publication-policy';
 import { reconcileImportedDrafts } from './automatic-publication';
+import { preserveRepairsAndTranslations } from './preserve-repairs';
 import { preserveAdminFields } from './preserve-admin-fields';
 import { PRIMARY_OPPORTUNITY_KEYS } from '@/lib/automation/import-selection';
 import { resolveCrossSource, mergeIntoCanonical, extractVacancyNumber } from './canonical-resolver';
@@ -495,18 +496,16 @@ async function processListing(
   // Apply anchor without changing article text, so heal a fallback before the
   // unchanged-content fast paths below return. Preserve existing real links.
   if (dedupe.action === 'update' && listing.applyUrl &&
-      isRealApplyLink(classifyApplyUrl(listing.applyUrl, listing.sourceUrl, listing.originalUrl))) {
+      isRealApplyLink(classifyApplyUrl(listing.applyUrl, listing.sourceUrl, listing.originalUrl, listing.verifiedApplicationFormUrl))) {
     const current = await db.opportunity.findUnique({
       where: { id: dedupe.existing.id },
-      select: { applyUrl: true, sourceUrl: true, originalUrl: true },
+      select: { applyUrl: true, sourceUrl: true, originalUrl: true, applyUrlEvidence: true },
     });
-    if (current && shouldHealApplyLink(
-      current.applyUrl, current.sourceUrl, current.originalUrl,
-      listing.applyUrl, listing.sourceUrl, listing.originalUrl,
-    )) {
+    if (current && !isRealApplyLink(classifyOpportunityApplyUrl(current))) {
       await db.opportunity.update({
         where: { id: dedupe.existing.id },
-        data: { applyUrl: listing.applyUrl, applyUrlType: classifyApplyUrl(listing.applyUrl, listing.sourceUrl, listing.originalUrl) },
+        data: { applyUrl: listing.applyUrl, applyUrlType: classifyApplyUrl(listing.applyUrl, listing.sourceUrl, listing.originalUrl, listing.verifiedApplicationFormUrl),
+          applyUrlEvidence: listing.verifiedApplicationFormUrl === listing.applyUrl ? applicationFormEvidence(listing.applyUrl) : null },
       });
     }
   }
@@ -589,7 +588,7 @@ async function processListing(
       console.error(`[import] detail failed (${listing.sourceUrl}):`, msg);
       // Soft-404: the detail page does not exist (site serves styled 404s).
       // Persisting the bare sitemap listing would create a junk row — skip.
-      if (SOFT_404_RE.test(msg)) {
+      if (SOFT_404_RE.test(msg) || parsedConfig.requireDetail === true) {
         counters.skipped++;
         errors.push({ url: listing.sourceUrl, message: `skipped: ${msg}`, ts: new Date().toISOString() });
         return;
@@ -600,18 +599,16 @@ async function processListing(
   // Detail pages often expose the application address outside the feed card.
   // Heal it before the unchanged-content guard: applyUrl is not in the hash.
   if (dedupe.action === 'update' && listing.applyUrl &&
-      isRealApplyLink(classifyApplyUrl(listing.applyUrl, listing.sourceUrl, listing.originalUrl))) {
+      isRealApplyLink(classifyApplyUrl(listing.applyUrl, listing.sourceUrl, listing.originalUrl, listing.verifiedApplicationFormUrl))) {
     const current = await db.opportunity.findUnique({
       where: { id: dedupe.existing.id },
-      select: { applyUrl: true, sourceUrl: true, originalUrl: true },
+      select: { applyUrl: true, sourceUrl: true, originalUrl: true, applyUrlEvidence: true },
     });
-    if (current && shouldHealApplyLink(
-      current.applyUrl, current.sourceUrl, current.originalUrl,
-      listing.applyUrl, listing.sourceUrl, listing.originalUrl,
-    )) {
+    if (current && !isRealApplyLink(classifyOpportunityApplyUrl(current))) {
       await db.opportunity.update({
         where: { id: dedupe.existing.id },
-        data: { applyUrl: listing.applyUrl, applyUrlType: classifyApplyUrl(listing.applyUrl, listing.sourceUrl, listing.originalUrl) },
+        data: { applyUrl: listing.applyUrl, applyUrlType: classifyApplyUrl(listing.applyUrl, listing.sourceUrl, listing.originalUrl, listing.verifiedApplicationFormUrl),
+          applyUrlEvidence: listing.verifiedApplicationFormUrl === listing.applyUrl ? applicationFormEvidence(listing.applyUrl) : null },
       });
     }
   }
@@ -672,7 +669,7 @@ async function processListing(
   const categoryId = resolveCategory(pipeline.categorySlugs, listing.category, listing.jobType, source.defaultCategory, categories);
 
   // Common import-tracking fields
-  let applyUrl = (pipeline.data.applyUrl as string | null) || listing.applyUrl || null;
+  let applyUrl = listing.verifiedApplicationFormUrl || (pipeline.data.applyUrl as string | null) || listing.applyUrl || null;
 
   // Apply Destination Resolver V2 (Phase 5): role/domain-aware classification
   // of the chosen candidate. Official sources linking to their own /apply/
@@ -685,6 +682,7 @@ async function processListing(
     originalUrl: listing.originalUrl || null,
     sourceRole: incomingRole,
     organizationDomains,
+    verifiedApplicationFormUrl: listing.verifiedApplicationFormUrl,
   });
 
   const finalCountry = resolveCountry(listing);
@@ -737,17 +735,18 @@ async function processListing(
         experience: true, experienceI18n: true, categoryId: true, image: true,
         seoTitle: true, seoDescription: true, seoTitleI18n: true, seoDescriptionI18n: true,
         ogTitle: true, ogDescription: true, ogTitleI18n: true, ogDescriptionI18n: true,
-        extractedData: true, extractedDataI18n: true,
+        extractedData: true, extractedDataI18n: true, translationOrigin: true, faStatus: true, psStatus: true,
+        aiSummaryI18n: true, tagsI18n: true, jobType: true, jobTypeI18n: true, seoKeywordsI18n: true,
         applyUrl: true, sourceUrl: true, originalUrl: true,
         applyUrlEvidence: true, applyConfidence: true,
         organizationId: true, status: true },
     });
     // A later import with only a source-article fallback must not erase an
     // application destination or country that an administrator verified.
-    if (existing && isRealApplyLink(classifyApplyUrl(existing.applyUrl, existing.sourceUrl, existing.originalUrl))) {
+    if (existing && isRealApplyLink(classifyOpportunityApplyUrl(existing))) {
       applyUrl = existing.applyUrl;
       importFields.applyUrl = existing.applyUrl;
-      importFields.applyUrlType = classifyApplyUrl(existing.applyUrl, existing.sourceUrl, existing.originalUrl);
+      importFields.applyUrlType = classifyOpportunityApplyUrl(existing);
       // keep the recorded provenance of a preserved destination
       importFields.applyUrlEvidence = existing.applyUrlEvidence ?? importFields.applyUrlEvidence;
       importFields.applyConfidence = existing.applyConfidence ?? importFields.applyConfidence;
@@ -772,9 +771,12 @@ async function processListing(
       newSlug = await ensureUniqueSlug(db, slugBase, dedupe.existing.id);
     }
     const sourceData = { ...pipeline.data, ...importFields, ...(categoryId ? { categoryId } : {}) };
-    const updateData = hasAdminEdit && existing
+    const curatedData = hasAdminEdit && existing
       ? preserveAdminFields(sourceData, existing as Record<string, unknown>)
       : sourceData;
+    const repairs = await db.auditLog.findMany({where:{entityId:dedupe.existing.id,action:'opportunity.source_repair'},select:{details:true}});
+    const repairedFields = [...new Set(repairs.flatMap(log=>{try{return Object.keys(JSON.parse(log.details || '{}').patch || {});}catch{return [];}}))];
+    const updateData = existing ? preserveRepairsAndTranslations(curatedData, existing as Record<string,unknown>, repairedFields) : curatedData;
     await db.opportunity.update({
       where: { id: dedupe.existing.id },
       data: {

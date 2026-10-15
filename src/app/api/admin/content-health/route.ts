@@ -97,7 +97,7 @@ export async function GET(req: NextRequest) {
       title: true,
       sourceUrl: true,
       originalUrl: true,
-      applyUrl: true,
+      applyUrl: true, applyUrlEvidence: true,
       faStatus: true,
       psStatus: true,
       categoryId: true,

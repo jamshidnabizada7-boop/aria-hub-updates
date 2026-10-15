@@ -8,6 +8,6 @@ export const repairEvidence=z.array(z.object({field:z.string().max(100),sourceUr
 export const commitRepairInput=z.object({claimId:z.string().uuid(),id:z.string().max(100),sourceHash:z.string().regex(/^[a-f0-9]{64}$/),patch:repairPatch,evidence:repairEvidence}).strict();
 export const normalizeEvidence=(s:string)=>s.replace(/\s+/g,' ').trim().toLowerCase();
 export function repairSourceHash(row:Record<string,unknown>){
-  const keys=['id','title','description','sourceUrl','originalUrl','applyUrl','country','categoryId','eligibility','educationReq','experience','requirements','guidelines','deadline','extractedData','matchProfile'];
+  const keys=['id','title','description','sourceUrl','originalUrl','applyUrl','applyUrlEvidence','country','categoryId','eligibility','educationReq','experience','requirements','guidelines','deadline','extractedData','matchProfile'];
   return createHash('sha256').update(JSON.stringify(Object.fromEntries(keys.map(k=>[k,row[k]])))).digest('hex');
 }

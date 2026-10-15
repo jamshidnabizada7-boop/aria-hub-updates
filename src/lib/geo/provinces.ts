@@ -214,6 +214,7 @@ const KNOWN_COUNTRIES = new Set(
     'mozambique', 'botswana', 'namibia', 'angola', 'congo',
     'democratic republic of the congo', 'cameroon', 'chad', 'niger',
     'mali', 'mauritania', 'senegal', 'gambia', 'guinea', 'sierra leone',
+    'occupied palestinian territory', 'occupied palestinian territories', 'palestine',
     'liberia', 'cote divoire', "côte d'ivoire", 'burkina faso', 'togo',
     'benin', 'gabon', 'central african republic', 'south sudan',
   ].map((c) => c)

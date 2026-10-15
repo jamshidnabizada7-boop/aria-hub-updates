@@ -60,6 +60,7 @@ export function classifyApplyUrl(
   applyUrl: string | null | undefined,
   sourceUrl: string | null | undefined,
   originalUrl?: string | null,
+  verifiedApplicationFormUrl?: string | null,
 ): ApplyUrlType {
   const url = normalizeApplyUrl(applyUrl);
   if (!url) return 'unknown';
@@ -72,12 +73,26 @@ export function classifyApplyUrl(
   if (!/^https?:\/\//i.test(url)) return 'unknown';
   const applyHost = hostOf(url);
   if (!applyHost) return 'unknown';
+  // Supplied only after the source HTML's actual applicant form was inspected.
+  if (url === verifiedApplicationFormUrl && new URL(url).hash) return 'application_form';
   const sourceHosts = [sourceUrl, originalUrl]
     .map((u) => (u ? hostOf(u) : ''))
     .filter(Boolean);
   if (sourceHosts.includes(applyHost)) return 'source_article_fallback';
   if (FORM_URL_RE.test(url)) return 'application_form';
   return 'direct_application';
+}
+
+export function applicationFormEvidence(url: string): string { return `verified-embedded-application-form:${url}`; }
+
+/** Revalidate stored evidence against the exact URL; stale types alone are insufficient. */
+export function classifyOpportunityApplyUrl(row: {
+  applyUrl?: string | null; sourceUrl?: string | null; originalUrl?: string | null;
+  applyUrlEvidence?: string | null;
+}): ApplyUrlType {
+  const url = normalizeApplyUrl(row.applyUrl);
+  const verified = url && row.applyUrlEvidence === applicationFormEvidence(url) ? url : null;
+  return classifyApplyUrl(url, row.sourceUrl, row.originalUrl, verified);
 }
 
 /** Allow a newly discovered real destination to replace an unusable stored one. */

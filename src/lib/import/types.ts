@@ -32,6 +32,8 @@ export interface RawListing {
   experience?: string | null;
   // Links
   applyUrl?: string | null;
+  /** Internal provenance: exact embedded form URL verified from applicant fields. */
+  verifiedApplicationFormUrl?: string | null;
   sourceUrl: string;                // canonical listing/detail URL on the source
   originalUrl?: string | null;      // deep link (defaults to sourceUrl)
   website?: string | null;

@@ -29,6 +29,8 @@ import * as cheerio from 'cheerio';
 import { BaseScraper } from '../base-scraper';
 import { parseDate, sanitizeListingFragment, stripHtml } from '../utils';
 import type { RawListing, ScrapePage } from '../types';
+import { decodeProtectedEmails, embeddedApplicationForms } from '@/lib/application-form';
+import { normalizeCountry } from '@/lib/geo/provinces';
 
 interface Selectors {
   card?: string;
@@ -36,17 +38,25 @@ interface Selectors {
   url?: string;
   organization?: string;
   location?: string;
+  country?: string;
   deadline?: string;
   apply?: string;
   description?: string;
   requirements?: string;
   responsibilities?: string;
+  eligibility?: string;
+  benefits?: string;
+  guidelines?: string;
+  experience?: string;
+  educationReq?: string;
+  salary?: string;
 }
 
 function textOf($: cheerio.CheerioAPI, el: any, sel?: string): string {
   if (!el || !sel) return ''; // optional selectors stay empty — never the whole card
   const target = $(el).find(sel).first();
-  return target.text().replace(/\s+/g, ' ').trim();
+  const copy = target.clone(); copy.find('.material-icons,svg').remove();
+  return copy.text().replace(/\s+/g, ' ').trim();
 }
 
 function hrefOf($: cheerio.CheerioAPI, el: any, sel?: string): string {
@@ -121,28 +131,51 @@ export class OfficialHtmlScraper extends BaseScraper {
     let html: string;
     try {
       html = await this.fetchText(listing.sourceUrl);
-    } catch {
+    } catch (error) {
+      if (cfg.requireDetail === true) throw error;
       return listing; // detail is enrichment — never fail the listing over it
     }
     const $ = cheerio.load(html);
+    decodeProtectedEmails($);
     const pick = (selector?: string): string | undefined => {
       if (!selector) return undefined;
-      const el = $(selector).first();
-      if (!el.length) return undefined;
-      const fragment = sanitizeListingFragment(el.html() || '');
-      const text = stripHtml(fragment).replace(/\n{3,}/g, '\n\n').trim();
+      const elements = $(selector);
+      if (!elements.length) return undefined;
+      const text = elements.toArray().map(element => {
+        const copy = $(element).clone();
+        copy.find('script,style,form,nav,footer').remove();
+        // Keep public document/application URLs that plain-text conversion used to lose.
+        copy.find('a[href]').each((_, anchor) => {
+          try {
+            const url = new URL($(anchor).attr('href')!, listing.sourceUrl);
+            if (url.protocol === 'mailto:') $(anchor).text(url.pathname);
+            else if (/^https?:$/.test(url.protocol)) $(anchor).text(`${$(anchor).text().trim()} (${url.href})`);
+          } catch { /* Ignore malformed links. */ }
+        });
+        return stripHtml(sanitizeListingFragment(copy.html() || '')).trim();
+      }).filter(Boolean).join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
       return text || undefined;
     };
-    const description = pick(sel.description);
-    const requirements = pick(sel.requirements);
-    const responsibilities = pick(sel.responsibilities);
-      const deadline = parseDate(textOf($, $('body').get(0), sel.deadline)) || listing.deadline;
-    return {
-      ...listing,
-      description: description || listing.description,
-      requirements: requirements || listing.requirements,
-      responsibilities: responsibilities || listing.responsibilities,
-      deadline,
-    };
+    const result = { ...listing };
+    const found = new Set<string>();
+    for (const field of ['description','requirements','responsibilities','eligibility','benefits','guidelines','experience','educationReq','salary'] as const) {
+      const value = pick(sel[field]);
+      if (value) found.add(field);
+      result[field] = value || listing[field];
+    }
+    const forms = embeddedApplicationForms($, listing.sourceUrl);
+    if (forms[0]) { result.applyUrl = forms[0].url; result.verifiedApplicationFormUrl = forms[0].url; }
+    else {
+      const candidate = hrefOf($, $('body').get(0), sel.apply);
+      if (candidate) result.applyUrl = absolute(candidate, listing.sourceUrl);
+    }
+    result.location = textOf($, $('body').get(0), sel.location) || listing.location;
+    result.country = normalizeCountry(textOf($, $('body').get(0), sel.country).replace(/\s+-\s+[A-Z]{2,3}$/, '')) || listing.country;
+    result.deadline = parseDate(textOf($, $('body').get(0), sel.deadline)) || listing.deadline;
+    const required = Array.isArray(cfg.requiredDetailFields) ? cfg.requiredDetailFields : [];
+    for (const field of required) {
+      if (typeof field === 'string' && !found.has(field)) throw new Error(`incomplete-detail: missing ${field}`);
+    }
+    return result;
   }
 }
