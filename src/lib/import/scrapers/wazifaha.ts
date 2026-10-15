@@ -295,10 +295,10 @@ export class WazifahaScraper extends BaseScraper {
       // Wazifaha labels both plain emails and portal URLs "Submission Email".
       // Its /jobs/apply/ link is only a redirect wrapper, never the destination.
       const applicationBodies: string[] = [];
-        $('.wz-content-section').each((_, el) => {
-          const heading = $(el).find('.wz-section-heading').first().text();
-          if (headingKind(heading) === 'guidelines') applicationBodies.push($(el).find('.wz-section-body').html() || '');
-        });
+      $('.wz-content-section').each((_, el) => {
+        const heading = $(el).find('.wz-section-heading').first().text();
+        if (headingKind(heading) === 'guidelines') applicationBodies.push($(el).find('.wz-section-body').html() || '');
+      });
       // A precise vacancy/form in instructions outranks a generic jobs directory.
       const candidate = applicationDestination(applicationBodies.join('\n'), listing.sourceUrl)
         || applicationDestination($('.wz-apply-email').html() || '', listing.sourceUrl);

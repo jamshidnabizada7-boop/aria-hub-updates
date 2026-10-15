@@ -64,6 +64,10 @@ test('WordPress facts stop at unknown headings and capture Scholarship funding',
 
 test('Afghan relevance is positive eligibility evidence, not a host-country guess', () => {
   expect(afghanEligibilityEvidence('Open to students worldwide.')?.scope).toBe('worldwide');
+  expect(afghanEligibilityEvidence('Any early-stage founder, anywhere in the world.')?.scope).toBe('worldwide');
+  expect(afghanEligibilityEvidence('The accelerator is agnostic to geography.')?.scope).toBe('worldwide');
+  expect(afghanEligibilityEvidence('Open to candidates worldwide.\nApplicants from Afghanistan are not eligible.')).toBeNull();
+  expect(afghanEligibilityEvidence('Open to researchers worldwide.\nApplicants must be citizens of Canada.')).toBeNull();
   for (const text of ['Open to African citizens only.', 'Not open to Afghan applicants.', 'Afghanistan has educational challenges.', 'Open worldwide except Afghanistan.']) expect(afghanEligibilityEvidence(text)).toBeNull();
   expect(explicitHostCountry('The programme will be held in Switzerland.')).toBe('Switzerland');
   expect(explicitHostCountry('Applicants from Afghanistan can study abroad.')).toBeNull();

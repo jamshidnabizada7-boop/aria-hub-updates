@@ -12,6 +12,7 @@ import type { Prisma } from '@prisma/client';
 
 const root = '/opt/aria-hub/private/source-destination-repair';
 const applyPath = process.argv.find(a => a.startsWith('--apply-plan='))?.slice(13);
+const onlyIds = process.argv.find(a => a.startsWith('--ids='))?.slice(6).split(',').filter(Boolean);
 const plans: Array<{ id: string; updatedAt: string; before: Record<string, unknown>; data: Record<string, unknown>; sourceUrl: string }> = [];
 const skipped: Array<{ id: string; reason: string }> = [];
 const norm = (v: string) => v.replace(/\s+/g, ' ').trim();
@@ -50,7 +51,8 @@ try {
     for (const source of sources) {
       const handle: SourceHandle = { ...source, config: { ...JSON.parse(source.config || '{}'), publicApiOnly: true } };
       const scraper = source.scraperKey === 'jobsaf' ? new JobsAfScraper(handle) : source.scraperKey === 'wazifaha' ? new WazifahaScraper(handle) : new WpApiScraper(handle);
-      const rows = await db.opportunity.findMany({ where: { sourceName: source.name, status: { in: ['published', 'draft'] } }, orderBy: { id: 'asc' } });
+      const rows = await db.opportunity.findMany({ where: { sourceName: source.name, status: { in: ['published', 'draft'] }, ...(onlyIds ? { id: { in: onlyIds } } : {}) }, orderBy: { id: 'asc' } });
+      if (!rows.length) continue;
       let wpListings: RawListing[] = [];
       if (scraper instanceof WpApiScraper) {
         // Bulk public API reads; only exact existing rows can become a plan.

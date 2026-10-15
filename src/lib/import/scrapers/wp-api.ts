@@ -108,10 +108,12 @@ export function explicitHostCountry(text: string): string | null {
 
 /** Positive source evidence only; regional titles or absent restrictions prove nothing. */
 export function afghanEligibilityEvidence(eligibility: string | null | undefined): { scope: 'afghan' | 'worldwide'; quote: string } | null {
+  if (/\b(?:excluding|except|not open to|not eligible[^.\n]{0,20})\s+Afghan(?:istan)?\b|\bAfghan(?:istan)?\b[^.\n]{0,40}\b(?:not eligible|ineligible|excluded)\b/i.test(eligibility || '')) return null;
+  const nationalityRestricted = /\b(?:only|must (?:be|hold))[^.\n]{0,50}\b(?:citizens?|nationals?|residents?|passport)\b/i.test(eligibility || '');
   for (const line of (eligibility || '').split(/[\n]+/)) {
     if (/\b(not eligible|ineligible|not open|excluding|except|restricted|only (?:citizens|nationals|residents) of)\b/i.test(line)) continue;
     if (/\b(?:open|eligible|applications?|applicants?|candidates?)\b.{0,90}\bAfghan(?:istan)?\b|\bAfghan\s+(?:women|citizens|nationals)\b.{0,60}\b(?:eligible|apply)\b/i.test(line)) return { scope: 'afghan', quote: line.trim() };
-    if (/\b(?:open|applicants?|applications?|candidates?|students?|founders?|entrepreneurs?|teachers?|journalists?)\b.{0,150}\b(?:worldwide|globally|all nationalities|any country|every country|all countries|(?:all )?(?:around|over) the world)\b/i.test(line)) return { scope: 'worldwide', quote: line.trim() };
+    if (!nationalityRestricted && (/\b(?:open|applicants?|applications?|candidates?|students?|founders?|entrepreneurs?|teachers?|journalists?)\b.{0,150}\b(?:worldwide|globally|all nationalities|any country|every country|all countries|anywhere in the world|(?:all )?(?:around|over) the world)\b/i.test(line) || /\b(?:geograph(?:y|ically)[ -]agnostic|agnostic to geography)\b/i.test(line))) return { scope: 'worldwide', quote: line.trim() };
   }
   return null;
 }
