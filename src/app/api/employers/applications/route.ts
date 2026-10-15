@@ -6,8 +6,9 @@ export async function GET(req:Request){
  const user=await employerFromRequest(req),query=new URL(req.url).searchParams,id=query.get('organizationId')||'';
  // Viewers can see vacancy counts, never applicant contact details.
  if(!user||!await requireMembership(db,user.id,id,'recruiter'))return json({error:'Recruiter access required'},403);
- const cursor=query.get('cursor');
- const items=await db.employerApplication.findMany({where:{organizationId:id,withdrawnAt:null,...(query.get('jobId')?{opportunityId:query.get('jobId')!}:{})},orderBy:[{createdAt:'desc'},{id:'desc'}],take:31,...(cursor?{cursor:{id:cursor},skip:1}:{}),select:{id:true,name:true,email:true,coverLetter:true,status:true,createdAt:true,history:true,opportunity:{select:{title:true,slug:true}},document:{select:{id:true,originalName:true}}}});
+ const cursor=query.get('cursor'),stage=query.get('status')||'',search=(query.get('q')||'').trim().slice(0,120);
+ if(stage&&!['submitted','reviewing','shortlisted','interview','offered','hired','rejected'].includes(stage))return json({error:'Invalid application stage'},400);
+ const items=await db.employerApplication.findMany({where:{organizationId:id,withdrawnAt:null,...(stage?{status:stage}:{}),...(search?{OR:[{name:{contains:search,mode:'insensitive' as const}},{opportunity:{title:{contains:search,mode:'insensitive' as const}}}]}:{}),...(query.get('jobId')?{opportunityId:query.get('jobId')!}:{})},orderBy:[{createdAt:'desc'},{id:'desc'}],take:31,...(cursor?{cursor:{id:cursor},skip:1}:{}),select:{id:true,name:true,email:true,coverLetter:true,status:true,createdAt:true,history:true,opportunity:{select:{title:true,slug:true}},document:{select:{id:true,originalName:true}}}});
  return json({items:items.slice(0,30),nextCursor:items.length>30?items[29].id:null});
 }
 export async function PATCH(req:Request){

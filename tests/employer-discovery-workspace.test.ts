@@ -85,6 +85,14 @@ describe('Employer discovery and consented applications: real DB and route bound
   expect((await docRoute.GET(req('/cv','GET',undefined,viewerCookie),ctx)).status).toBe(404);
   const cv=await docRoute.GET(req('/cv','GET',undefined,ownerCookie),ctx);expect(cv.status).toBe(200);expect(await cv.text()).toBe('synthetic application CV bytes');
  });
+ test('inbox search and stage filters stay scoped to the authorized organization',async()=>{
+  const path='/api/employers/applications?organizationId='+org;
+  const matching=await inbox.GET(req(path+'&q=test%20candidate&status=submitted','GET',undefined,ownerCookie));expect(matching.status).toBe(200);expect((await matching.json()).items).toHaveLength(1);
+  expect((await (await inbox.GET(req(path+'&q=nonexistent-vacancy','GET',undefined,ownerCookie))).json()).items).toHaveLength(0);
+  expect((await (await inbox.GET(req(path+'&status=rejected','GET',undefined,ownerCookie))).json()).items).toHaveLength(0);
+  expect((await inbox.GET(req(path+'&status=invalid','GET',undefined,ownerCookie))).status).toBe(400);
+  expect((await inbox.GET(req(path+'&q=test%20candidate&status=submitted','GET',undefined,foreignCookie))).status).toBe(403);
+ });
  test('stage appears to applicant; withdrawal revokes CV and contact, exporting keeps only own data',async()=>{
   const changed=await inbox.PATCH(req('/api/employers/applications','PATCH',{id:submission,status:'shortlisted'},ownerCookie));expect(changed.status).toBe(200);
   const mine=await submits.GET(req('/api/applicant/submissions','GET',undefined,candidateCookie));expect((await mine.json()).items[0].status).toBe('shortlisted');
