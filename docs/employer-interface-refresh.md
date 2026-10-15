@@ -23,3 +23,14 @@
 ## Scope
 
 This release improves employer access, onboarding and the hiring workspace. Public jobseeker tools, public browsing, private CV access controls and existing publisher schedules keep their established behavior.
+
+## Production release
+
+- Runtime commit: `3236818` (main), built successfully on Oracle with Next 16.3.8 and TypeScript.
+- Active release: `/opt/aria-hub/releases/20261015-hiring-ui-253b521`; the release marker contains the final runtime commit above.
+- Preflight: database healthy; localized employer pages en/fa/ps HTTP 200; unauthorized application inbox and WhatsApp webhook HTTP 403.
+- After switch: public health reports `ok: true`, database up. Web, import worker, social worker and applicant channel timer all active.
+- Live browser confirmed the new sign-in form and no page overflow. No UI/browser errors; existing optional Vercel analytics scripts are unavailable on the Oracle host.
+- Existing PDF browser-path tracing warning remains in the successful build.
+- Temporary synthetic preview users, vacancies, applications and organization were removed from the isolated local test database; the local preview and database were stopped.
+- Browser viewport overrides were reset. Live proof saved locally as `employer-ui-redesign-live-20261015.png`; phone and Persian RTL proof retained in the audit evidence directory.
