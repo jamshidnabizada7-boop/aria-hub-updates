@@ -2,7 +2,7 @@
 
 ## Delivered
 
-- Branded employer sign-in and registration with a single mode switch, a distinct jobseeker link, language controls, appearance toggle and explicit support-assisted recovery.
+- Branded employer sign-in and registration with a single mode switch, a distinct jobseeker link, a form-first mobile layout, language controls, appearance toggle and explicit support-assisted recovery.
 - Responsive workspace shell with section selector on phones, organization roles, real vacancy counts, next steps and recent activity.
 - Searchable vacancy list, status filters including closing within seven days, readable actions and corrected location display.
 - Labeled vacancy form with optional details, visible in-person instructions and a review step. Unsaved form state survives section changes within the current organization and resets after successful submission.

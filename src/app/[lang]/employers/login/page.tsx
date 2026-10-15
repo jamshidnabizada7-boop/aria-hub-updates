@@ -83,7 +83,7 @@ export default function EmployerLoginPage() {
     <main id="main-content" className="auth-layout">
       <section className="auth-story">
         <div className="auth-story-top"><span className="hiring-eyebrow"><span className="hiring-dot" />{c.label}</span><Building2 size={24} aria-hidden="true" /></div>
-        <h1>{c.title}</h1><p className="auth-story-description">{c.body}</p>
+        <h2>{c.title}</h2><p className="auth-story-description">{c.body}</p>
         <ol className="auth-steps">{c.steps.map((step, index) => <li key={step}><span>{String(index + 1).padStart(2, '0')}</span><p>{step}</p><Check size={17} aria-hidden="true" /></li>)}</ol>
         <p className="auth-story-note"><ShieldCheck size={20} aria-hidden="true" />{c.note}</p>
       </section>
@@ -91,7 +91,7 @@ export default function EmployerLoginPage() {
         <p className="auth-audience"><UserRound size={15} aria-hidden="true" />{c.jobseeker} <Link href={'/' + lang + '/login'}>{c.seekerLink}<ArrowUpRight size={14} aria-hidden="true" /></Link></p>
         <div className="auth-form-inner">
           <div className="hiring-mode" aria-label={c.label}>{(['login', 'register'] as const).map(value => <button disabled={busy} type="button" key={value} aria-pressed={!forgot && mode === value} onClick={() => changeMode(value)}>{c[value]}</button>)}</div>
-          <h2>{forgot ? c.reset : mode === 'login' ? c.loginTitle : c.registerTitle}</h2>
+          <h1>{forgot ? c.reset : mode === 'login' ? c.loginTitle : c.registerTitle}</h1>
           <p className="hiring-subtitle">{forgot ? c.resetBody : mode === 'login' ? c.loginBody : c.registerBody}</p>
           <form onSubmit={submit} className="hiring-form">
             <fieldset disabled={busy}><legend className="sr-only">{forgot ? c.reset : c[mode]}</legend>
