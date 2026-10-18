@@ -50,7 +50,7 @@ export default async function AriaWorkspaceLayout({children,params}:{
   return (
     <div className={ariaSans.variable+' '+ariaRtl.variable}>
       <div className="aria-v2 aria-portal" lang={lang} dir={lang==='en'?'ltr':'rtl'}>
-        <AriaPreviewNav lang={lang} preview />
+        <AriaPreviewNav lang={lang} preview authenticatedUser />
         <div className="aria-container">
           <header className="aria-workspace-heading">
             <div>
