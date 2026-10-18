@@ -31,9 +31,9 @@ const languages: { lang: Lang; label: string }[] = [
   { lang: 'en', label: 'English' }, { lang: 'fa', label: 'فارسی (افغانستان)' }, { lang: 'ps', label: 'پښتو' }
 ];
 
-export function AriaPreviewNav({ lang, preview = true }: { lang: Lang; preview?: boolean }) {
+export function AriaPreviewNav({ lang, preview = true, authenticatedUser = false }: { lang: Lang; preview?: boolean; authenticatedUser?: boolean }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [authenticated, setAuthenticated] = useState(false);
+  const [authenticated, setAuthenticated] = useState(authenticatedUser);
   const w = words[lang];
   const pathname = usePathname();
   // Preview links stay inside the isolated redesign, while ordinary public
@@ -69,13 +69,14 @@ export function AriaPreviewNav({ lang, preview = true }: { lang: Lang; preview?:
     ]}
   ];
   useEffect(() => {
+    if (authenticatedUser) { setAuthenticated(true); return; }
     const controller = new AbortController();
     fetch('/api/applicant/auth/me', { credentials:'same-origin', cache:'no-store', signal:controller.signal })
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (!controller.signal.aborted) setAuthenticated(Boolean(data?.user)); })
       .catch(() => {});
     return () => controller.abort();
-  }, []);
+  }, [authenticatedUser]);
   useEffect(() => { setMobileOpen(false); }, [lang, preview]);
   // Preserve the current preview section when changing languages.
   const langHref = (code: Lang) => `/${code}${preview ? (pathname?.replace(/^\/(en|fa|ps)(?=\/|$)/, '') || '/redesign-preview') : ''}`;
