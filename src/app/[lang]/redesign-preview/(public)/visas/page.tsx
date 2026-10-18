@@ -13,10 +13,7 @@ const copy={
 } as const;
 function items(value:string|null,localized:Record<string,unknown>|null|undefined,lang:'en'|'fa'|'ps'){
  const raw=getLocalizedArray(value,localized as Record<string,any[]>|null,lang);
- if(Array.isArray(raw))return raw.map(x=>String(x).trim()).filter(Boolean).slice(0,15);
- if(typeof raw!=='string')return [];
- try{const arr=JSON.parse(raw);if(Array.isArray(arr))return arr.map(String).slice(0,15)}catch{}
- return raw.split('\n').map(x=>x.trim()).filter(Boolean).slice(0,15);
+ return Array.isArray(raw) ? raw.map(x=>String(x).trim()).filter(Boolean).slice(0,15) : [];
 }
 function VisaItem({v,lang,w}:{v:Visa,lang:'en'|'fa'|'ps',w:typeof copy.en|typeof copy.fa|typeof copy.ps}){
  const country=getLocalizedContent(v.country,v.countryI18n,lang),type=getLocalizedContent(v.visaType,v.visaTypeI18n,lang);
