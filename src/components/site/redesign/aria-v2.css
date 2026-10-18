@@ -1,0 +1,93 @@
+/*
+ * ARIA HUB 2026 redesign — opt-in scoped tokens.
+ * No existing page changes until the Oracle production commit is verified.
+ */
+.aria-v2 {
+  --aria-ink: #0b1426;
+  --aria-navy: #142c4b;
+  --aria-blue: #1646a3;
+  --aria-orange: #f68b24;
+  --aria-orange-soft: #fff0da;
+  --aria-cream: #faf7f1;
+  --aria-card: #ffffff;
+  --aria-line: #e3d8c8;
+  --aria-muted: #5c6b80;
+  --aria-radius-card: 20px;
+  --aria-radius-control: 14px;
+  --aria-shadow: 0 14px 32px -26px rgba(11, 20, 38, .46);
+  color: var(--aria-ink);
+  background: var(--aria-cream);
+  font-family: var(--aria-font-sans, "Geist"), system-ui, sans-serif;
+  min-height: 100vh;
+}
+.aria-v2[dir="rtl"] { font-family: var(--aria-font-rtl, "Vazirmatn"), "Noto Sans Arabic", Tahoma, sans-serif; }
+.aria-v2 *, .aria-v2 *::before, .aria-v2 *::after { box-sizing: border-box; }
+.aria-v2 a { color: inherit; }
+.aria-v2 .aria-container { width: min(100% - 40px, 1200px); margin-inline: auto; }
+.aria-v2 .aria-topbar { background: var(--aria-cream); border-bottom: 1px solid var(--aria-line); }
+.aria-v2 .aria-topbar__inner { min-height: 64px; display:flex; align-items:center; justify-content:space-between; gap:20px; }
+.aria-v2 .aria-logo { display:inline-flex; gap:10px; align-items:center; text-decoration:none; font-size:17px; font-weight:800; letter-spacing:-.03em; }
+.aria-v2 .aria-logo-mark { display:grid; place-items:center; width:32px; height:32px; border-radius:9px; background:var(--aria-ink); color:var(--aria-orange); }
+.aria-v2 .aria-nav { display:flex; flex-wrap:wrap; align-items:center; gap:24px; font-size:13px; font-weight:600; }
+.aria-v2 .aria-nav a { text-decoration:none; color:var(--aria-muted); }
+.aria-v2 .aria-nav a:hover { color:var(--aria-ink); }
+.aria-v2 .aria-button { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; border-radius:999px; padding:10px 18px; background:var(--aria-ink); color:#fff; font:inherit; font-weight:700; font-size:13px; text-decoration:none; border:0; cursor:pointer; }
+.aria-v2 .aria-button--orange { background:var(--aria-orange); color:var(--aria-ink); }
+.aria-v2 .aria-button--outline { color:var(--aria-ink); background:transparent; border:1px solid var(--aria-line); }
+.aria-v2 .aria-hero { margin-block:26px 44px; background:var(--aria-ink); color:#fff; overflow:hidden; border-radius:24px; position:relative; }
+.aria-v2 .aria-hero::before { content:""; position:absolute; inset:0; background:linear-gradient(108deg, #091325 2%, #0b1426 54%, #18314d 100%); pointer-events:none; }
+.aria-v2 .aria-hero__inner { position:relative; display:grid; grid-template-columns: 1.08fr .92fr; align-items:center; gap:42px; padding:58px; }
+.aria-v2 .aria-hero__eyebrow { color:var(--aria-orange); text-transform:uppercase; font-size:11px; letter-spacing:.12em; font-weight:800; }
+.aria-v2 .aria-hero h1 { max-width:650px; font-size:clamp(38px,4.5vw,64px); letter-spacing:-.055em; line-height:1.08; font-weight:850; margin:16px 0 20px; }
+.aria-v2[dir="rtl"] .aria-hero h1 { letter-spacing:normal; line-height:1.45; }
+.aria-v2 .aria-hero h1 em { color:var(--aria-orange); font-style:normal; }
+.aria-v2 .aria-hero p { color:#d2dbea; line-height:1.7; margin:0 0 24px; font-size:15px; }
+.aria-v2 .aria-search { display:flex; align-items:center; background:#fff; color:var(--aria-ink); border-radius:999px; padding:6px; max-width:550px; box-shadow:0 10px 24px rgba(0,0,0,.13); }
+.aria-v2 .aria-search input { min-width:0; flex:1; height:42px; border:0; background:transparent; padding:0 15px; font:inherit; font-size:14px; outline-offset:-2px; }
+.aria-v2 .aria-search button { min-height:42px; }
+.aria-v2 .aria-hero__fineprint { color:#aebdd2; font-size:12px; margin-top:12px; }
+.aria-v2 .aria-hero__photo { position:relative; min-height:355px; overflow:hidden; border-radius:24px; background:#253b50; }
+.aria-v2 .aria-hero__photo img { position:absolute; width:100%; height:100%; object-fit:cover; inset:0; }
+.aria-v2 .aria-hero__photo::after { content:""; position:absolute; inset:0; background:linear-gradient(180deg,transparent 45%,rgba(5,12,25,.88)); }
+.aria-v2 .aria-hero__photo-caption { position:absolute; z-index:1; bottom:20px; inset-inline:20px; font-size:16px; font-weight:800; }
+.aria-v2 .aria-section { margin-block:38px; }
+.aria-v2 .aria-section__head { display:flex; align-items:end; justify-content:space-between; flex-wrap:wrap; gap:18px; margin-bottom:18px; }
+.aria-v2 .aria-eyebrow { font-size:11px; color:#1750a8; text-transform:uppercase; letter-spacing:.07em; font-weight:800; }
+.aria-v2 .aria-section h2 { font-size:clamp(23px,2.8vw,30px); font-weight:800; letter-spacing:-.04em; line-height:1.28; margin:4px 0 0; }
+.aria-v2[dir="rtl"] .aria-section h2 { letter-spacing:normal; line-height:1.45; }
+.aria-v2 .aria-muted { color:var(--aria-muted); }
+.aria-v2 .aria-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+.aria-v2 .aria-card { display:flex; flex-direction:column; min-height:167px; border:1px solid var(--aria-line); border-radius:var(--aria-radius-card); background:var(--aria-card); text-decoration:none; padding:16px; transition:transform .16s,box-shadow .16s,border-color .16s; }
+.aria-v2 .aria-card:hover, .aria-v2 .aria-card:focus-visible { transform:translateY(-2px); border-color:#adc0df; box-shadow:var(--aria-shadow); }
+.aria-v2 .aria-card__badges { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
+.aria-v2 .aria-tag { display:inline-flex; align-items:center; max-width:100%; border-radius:999px; background:#f2ede4; padding:4px 9px; color:#1b477f; font-size:11px; font-weight:750; }
+.aria-v2 .aria-tag--orange { background:#ffb22f; color:#111d30; }
+.aria-v2 .aria-card h3 { margin:0 0 6px; font-size:15px; font-weight:750; line-height:1.45; overflow-wrap:anywhere; }
+.aria-v2 .aria-card__meta { font-size:12px; color:var(--aria-muted); line-height:1.5; }
+.aria-v2 .aria-card__footer { display:flex; justify-content:space-between; gap:12px; margin-top:auto; padding-top:13px; border-top:1px solid var(--aria-line); font-size:12px; }
+.aria-v2 .aria-bands { display:grid; grid-template-columns: .95fr 1.35fr; gap:16px; margin-block:38px; }
+.aria-v2 .aria-spotlight { display:flex; flex-direction:column; background:var(--aria-blue); color:#fff; padding:28px; min-height:320px; border-radius:24px; }
+.aria-v2 .aria-spotlight h3 { font-size:clamp(23px,2.8vw,32px); font-weight:850; line-height:1.25; margin:24px 0 8px; }
+.aria-v2 .aria-deadlines { background:#fff; border:1px solid var(--aria-line); border-radius:24px; padding:24px; }
+.aria-v2 .aria-deadlines__row { display:flex; justify-content:space-between; align-items:center; gap:18px; border-bottom:1px solid var(--aria-line); padding-block:13px; text-decoration:none; }
+.aria-v2 .aria-deadlines__row:last-child { border:0; }
+.aria-v2 .aria-deadlines__row strong { display:block; font-size:13px; line-height:1.4; }
+.aria-v2 .aria-deadlines__row small { color:var(--aria-muted); font-size:11px; }
+.aria-v2 .aria-countdown { white-space:nowrap; color:#b00014; background:#fff0f2; border-radius:99px; padding:5px 9px; font-size:11px; font-weight:750; }
+.aria-v2 .aria-footer-cta { display:flex; justify-content:space-between; align-items:center; gap:18px; margin-block:36px 54px; background:var(--aria-navy); border-radius:20px; padding:24px; color:#fff; }
+.aria-v2 .aria-footer-cta p { font-size:13px; color:#c8d5e5; margin-top:5px; }
+.aria-v2 :where(a,button,input):focus-visible { outline:3px solid var(--aria-orange); outline-offset:3px; }
+@media(max-width:1000px) { .aria-v2 .aria-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .aria-v2 .aria-hero__inner { padding:40px; gap:22px; } .aria-v2 .aria-hero__photo { min-height:300px; } }
+@media(max-width:720px) {
+  .aria-v2 .aria-container { width:min(100% - 28px,1200px); }
+  .aria-v2 .aria-nav { display:none; }
+  .aria-v2 .aria-hero { margin-block:14px 32px; border-radius:18px; }
+  .aria-v2 .aria-hero__inner { display:flex; flex-direction:column; align-items:stretch; padding:24px; gap:24px; }
+  .aria-v2 .aria-hero h1 { font-size:clamp(32px,9vw,44px); }
+  .aria-v2 .aria-hero__photo { min-height:230px; }
+  .aria-v2 .aria-grid { grid-template-columns:1fr; }
+  .aria-v2 .aria-bands { grid-template-columns:1fr; }
+  .aria-v2 .aria-spotlight { min-height:270px; }
+  .aria-v2 .aria-footer-cta { flex-direction:column; align-items:stretch; }
+}
+@media(prefers-reduced-motion: reduce) { .aria-v2 .aria-card { transition:none; } .aria-v2 .aria-card:hover { transform:none; } }
