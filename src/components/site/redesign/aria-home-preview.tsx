@@ -33,7 +33,7 @@ const copy = {
     urgentSub: 'Deadlines in the next few days.', deadlines: 'All deadlines',
     today: 'Last day', days: 'days left', noUrgent: 'No upcoming deadlines in this selection.',
     cta: 'Find opportunities matched to you', ctaInfo: 'Create a free account, save a search and choose the alerts you want.',
-    start: 'Create free account', detail: 'Explore the listing'
+    start: 'Create free account', detail: 'Explore the listing', browse: 'Browse all'
   },
   fa: {
     navOpp: 'فرصت‌ها', navServices: 'خدمات', dashboard: 'داشبورد',
@@ -50,7 +50,7 @@ const copy = {
     urgentSub: 'فرصت‌هایی که در چند روز آینده پایان می‌یابند.', deadlines: 'همه مهلت‌ها',
     today: 'روز آخر', days: 'روز باقی مانده', noUrgent: 'در این بخش مهلت نزدیکی وجود ندارد.',
     cta: 'فرصت‌های متناسب با خود را بیابید', ctaInfo: 'حساب رایگان بسازید، جستجو را ذخیره و هشدارهای دلخواه خود را فعال کنید.',
-    start: 'ایجاد حساب رایگان', detail: 'مشاهده فرصت'
+    start: 'ایجاد حساب رایگان', detail: 'مشاهده فرصت', browse: 'مشاهدۀ همه'
   },
   ps: {
     navOpp: 'فرصتونه', navServices: 'خدمتونه', dashboard: 'زما حساب',
@@ -67,7 +67,7 @@ const copy = {
     urgentSub: 'په راتلونکو څو ورځو کې ختمېدونکي فرصتونه.', deadlines: 'ټولې نېټې',
     today: 'وروستۍ ورځ', days: 'ورځې پاتې', noUrgent: 'په دې لړ کې نږدې وروستۍ نېټه نشته.',
     cta: 'خپل مناسب فرصتونه ومومئ', ctaInfo: 'وړیا حساب جوړ کړئ، لټون خوندي او خپلې خبرتیاوې فعالې کړئ.',
-    start: 'وړیا حساب جوړ کړئ', detail: 'فرصت وګورئ'
+    start: 'وړیا حساب جوړ کړئ', detail: 'فرصت وګورئ', browse: 'ټول وګورئ'
   }
 } as const;
 
