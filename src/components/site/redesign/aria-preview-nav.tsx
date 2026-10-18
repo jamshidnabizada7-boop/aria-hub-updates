@@ -36,7 +36,17 @@ export function AriaPreviewNav({ lang, preview = true }: { lang: Lang; preview?:
   const [authenticated, setAuthenticated] = useState(false);
   const w = words[lang];
   const pathname = usePathname();
-  const href = (path: string) => `/${lang}${preview && (path === '/opportunities' || path.startsWith('/opportunities?')) ? '/redesign-preview' : ''}${path}`;
+  // Preview links stay inside the isolated redesign, while ordinary public
+  // services continue to use their working production routes.
+  const href = (path: string) => {
+    if (!preview) return '/' + lang + path;
+    if (path === '/cv-builder') return '/' + lang + '/redesign-preview/portal/cv-builder';
+    if (path === '/portal' || path.startsWith('/portal/') ||
+        path === '/opportunities' || path.startsWith('/opportunities?')) {
+      return '/' + lang + '/redesign-preview' + path;
+    }
+    return '/' + lang + path;
+  };
   const groups: NavGroup[] = [
     { label: w.opportunities, links: [
       {label:w.browse,path:'/opportunities'},
