@@ -53,7 +53,7 @@ export function AriaPreviewNav({ lang, preview = true }: { lang: Lang; preview?:
     ]},
     { label: w.services, links: [{label:w.services,path:'/services'}]},
     { label: w.more, links: [
-      {label:w.news,path:'/news'}, {label:w.employers,path:'/employers/dashboard'}
+      {label:w.news,path:'/blog'}, {label:w.employers,path:'/employers/dashboard'}
     ]}
   ];
   useEffect(() => {
