@@ -86,11 +86,11 @@ const toolsCopy: Record<Lang, { title:string; subtitle:string; items: {title:str
     {title:'غوښتنلیکونه تعقیب کړئ',summary:'وروستۍ نېټې او شخصي یادښتونه وساتئ.',path:'/portal/career'}]}
 };
 
-function Card({ item, lang }: { item: OpportunityCardData; lang: Lang }) {
+function Card({ item, lang, preview = false }: { item: OpportunityCardData; lang: Lang; preview?: boolean }) {
   const c = copy[lang];
   const days = item.deadline ? daysUntilDeadline(item.deadline) : null;
   return (
-    <Link href={'/' + lang + '/opportunities/' + item.slug} className="aria-card">
+    <Link href={'/' + lang + (preview ? '/redesign-preview/opportunities/' : '/opportunities/') + item.slug} className="aria-card">
       <div className="aria-card__badges">
         <span className="aria-tag">{item.categoryLabel}</span>
         {item.featured ? <span className="aria-tag aria-tag--orange">{c.promoted}</span> :
@@ -126,7 +126,7 @@ export function AriaHomePreview({ lang, activeCount, latest, closingSoon, spotli
               <span className="aria-hero__eyebrow">{c.eyebrow}</span>
               <h1 id="aria-v2-title">{c.headline} <em>{c.highlight}</em></h1>
               <p>{c.summary}</p>
-              <form action={'/' + lang + '/opportunities'} method="get" role="search" className="aria-search">
+              <form action={'/' + lang + (preview ? '/redesign-preview/opportunities' : '/opportunities')} method="get" role="search" className="aria-search">
                 <Search size={19} style={{ marginInlineStart: 12, flexShrink: 0 }} aria-hidden="true" />
                 <input name="q" type="search" aria-label={c.searchPlaceholder} placeholder={c.searchPlaceholder}/>
                 <button className="aria-button" type="submit">{c.search}</button>
@@ -144,7 +144,7 @@ export function AriaHomePreview({ lang, activeCount, latest, closingSoon, spotli
         {categories.some(category => category.count > 0) && (
           <nav className="aria-categories" aria-label={c.categories}>
             {categories.filter(category => category.count > 0).slice(0,8).map(category => (
-              <Link key={category.slug} className="aria-category-chip" href={`/${lang}/opportunities?category=${encodeURIComponent(category.slug)}`}>
+              <Link key={category.slug} className="aria-category-chip" href={`/${lang}${preview ? '/redesign-preview' : ''}/opportunities?category=${encodeURIComponent(category.slug)}`}>
                 {category.name} <span>{category.count.toLocaleString(numberLocale)}</span>
               </Link>
             ))}
@@ -158,11 +158,11 @@ export function AriaHomePreview({ lang, activeCount, latest, closingSoon, spotli
               <h2 id="aria-v2-listings">{c.latest}</h2>
               <p className="aria-muted" style={{ fontSize: 13, marginTop: 5 }}>{c.latestSub}</p>
             </div>
-            <Link className="aria-button aria-button--outline" href={'/' + lang + '/opportunities'}>
+            <Link className="aria-button aria-button--outline" href={'/' + lang + (preview ? '/redesign-preview/opportunities' : '/opportunities')}>
               {c.viewAll}<DirArrow size={16} aria-hidden="true"/>
             </Link>
           </div>
-          {latest.length ? <div className="aria-grid">{latest.slice(0,8).map(item => <Card key={item.id} item={item} lang={lang}/>)}</div> :
+          {latest.length ? <div className="aria-grid">{latest.slice(0,8).map(item => <Card key={item.id} item={item} lang={lang} preview={preview}/>)}</div> :
             <p className="aria-muted">{c.noItems}</p>}
         </section>
 
@@ -172,7 +172,7 @@ export function AriaHomePreview({ lang, activeCount, latest, closingSoon, spotli
             <h3 dir="auto">{spotlight.title}</h3>
             <p style={{ color:'#d4e0ff', fontSize:13 }}>{[spotlight.organization, spotlight.categoryLabel].filter(Boolean).join(' · ')}</p>
             {spotlight.summary ? <p dir="auto" style={{ fontSize:13, lineHeight:1.7, marginTop:12 }}>{spotlight.summary}</p> : null}
-            <Link style={{ marginTop:'auto', color:'#ffbd64', textDecoration:'none', fontWeight:750, display:'flex', alignItems:'center', gap:10 }} href={'/' + lang + '/opportunities/' + spotlight.slug}>
+            <Link style={{ marginTop:'auto', color:'#ffbd64', textDecoration:'none', fontWeight:750, display:'flex', alignItems:'center', gap:10 }} href={'/' + lang + (preview ? '/redesign-preview/opportunities/' : '/opportunities/') + spotlight.slug}>
               {c.viewApply}<DirArrow size={16} aria-hidden="true"/>
             </Link>
           </section> : <section className="aria-spotlight"><h3>{c.noItems}</h3></section>}
@@ -184,7 +184,7 @@ export function AriaHomePreview({ lang, activeCount, latest, closingSoon, spotli
             {closingSoon.length ? closingSoon.slice(0,4).map(item => {
               const days = item.deadline ? daysUntilDeadline(item.deadline) : null;
               return (
-                <Link href={'/' + lang + '/opportunities/' + item.slug} className="aria-deadlines__row" key={item.id}>
+                <Link href={'/' + lang + (preview ? '/redesign-preview/opportunities/' : '/opportunities/') + item.slug} className="aria-deadlines__row" key={item.id}>
                   <span><strong dir="auto">{item.title}</strong><small dir="auto">{item.organization}</small></span>
                   {days !== null && days >= 0 ? <span className="aria-countdown">{days <= 0 ? c.today : days + ' ' + c.days}</span> : null}
                 </Link>
