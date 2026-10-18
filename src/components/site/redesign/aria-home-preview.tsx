@@ -197,7 +197,7 @@ export function AriaHomePreview({ lang, activeCount, latest, closingSoon, spotli
           </div>
           <div className="aria-tools-grid">
             {toolsCopy[lang].items.map((tool,index) => {
-              const Icon = [FileText,ScanSearch,ClipboardList][index];
+              const Icon = index === 0 ? FileText : index === 1 ? ScanSearch : ClipboardList;
               return <Link key={tool.path} href={`/${lang}${tool.path}`} className="aria-tool-card">
                 <Icon size={24} aria-hidden="true"/>
                 <strong>{tool.title}</strong><span>{tool.summary}</span>
