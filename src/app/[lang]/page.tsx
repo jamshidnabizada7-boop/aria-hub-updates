@@ -5,6 +5,10 @@ import { Home } from '@/components/site/home';
 import { AriaHomePreview } from '@/components/site/redesign/aria-home-preview';
 import { ariaSans, ariaRtl } from '@/components/site/redesign/aria-fonts';
 import '@/components/site/redesign/aria-v2.css';
+import { VisitTracker } from '@/components/site/visit-tracker';
+import { CookieBanner } from '@/components/site/cookie-banner';
+import { FloatingSocial } from '@/components/site/floating-social';
+import { ScrollToTop } from '@/components/site/scroll-to-top';
 import { JsonLd } from '@/components/site/json-ld';
 import { isLang, type Lang } from '@/lib/lang-route';
 import {
@@ -111,6 +115,8 @@ export default async function Page({
   if (process.env.ARIA_REDESIGN_HOME_ENABLED === 'true') {
     return (
       <div className={ariaSans.variable + ' ' + ariaRtl.variable}>
+        <JsonLd />
+        <VisitTracker />
         <AriaHomePreview
           lang={lang}
           activeCount={facets.totalActive}
@@ -120,6 +126,9 @@ export default async function Page({
           categories={facets.categories}
           preview={false}
         />
+        <FloatingSocial socials={data.socialLinks} settings={data.settings} />
+        <ScrollToTop />
+        <CookieBanner />
       </div>
     );
   }
