@@ -42,7 +42,8 @@ export function AriaPreviewNav({ lang, preview = true, authenticatedUser = false
     if (!preview) return '/' + lang + path;
     if (path === '/cv-builder') return '/' + lang + '/redesign-preview/portal/cv-builder';
     if (path === '/portal' || path.startsWith('/portal/') ||
-        path === '/opportunities' || path.startsWith('/opportunities?')) {
+        path === '/opportunities' || path.startsWith('/opportunities?') ||
+        ['/services','/visas','/blog','/organizations','/employers','/about','/contact','/success-stories'].includes(path)) {
       return '/' + lang + '/redesign-preview' + path;
     }
     return '/' + lang + path;
@@ -65,7 +66,7 @@ export function AriaPreviewNav({ lang, preview = true, authenticatedUser = false
     ]},
     { label: w.services, links: [{label:w.services,path:'/services'}]},
     { label: w.more, links: [
-      {label:w.news,path:'/blog'}, {label:w.employers,path:'/employers/dashboard'}
+      {label:w.news,path:'/blog'}, {label:w.employers,path:'/employers'}
     ]}
   ];
   useEffect(() => {
