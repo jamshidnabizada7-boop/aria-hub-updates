@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowUpRight, Search, ArrowRight, ArrowLeft, FileText, ScanSearch, ClipboardList } from 'lucide-react';
+import { ArrowUpRight, Search, ArrowRight, ArrowLeft, FileText, ScanSearch, ClipboardList, Globe2, BookOpen, Building2, Users } from 'lucide-react';
 import { daysUntilDeadline, type OpportunityCardData, type CategoryFacet } from '@/lib/opportunity-shared';
 import { AriaPreviewNav } from './aria-preview-nav';
 import { AriaNewsletter } from './aria-newsletter';
@@ -84,6 +84,30 @@ const toolsCopy: Record<Lang, { title:string; subtitle:string; items: {title:str
     {title:'سي وي جوړ کړئ',summary:'خپل مسلکي سي وي جوړ او سم کړئ.',path:'/cv-builder'},
     {title:'زما مناسب فرصتونه',summary:'د فرصتونو شرطونه له خپلو معلوماتو سره پرتله کړئ.',path:'/portal/matcher'},
     {title:'غوښتنلیکونه تعقیب کړئ',summary:'وروستۍ نېټې او شخصي یادښتونه وساتئ.',path:'/portal/career'}]}
+};
+
+const discoveryCopy:Record<Lang,{title:string;description:string;items:{name:string;path:string;desc:string}[]}> = {
+ en:{title:'More to explore',description:'Helpful guides, organizations and resources across ARIA HUB.',items:[
+  {name:'Services',path:'/services',desc:'Explore guidance and professional support'},
+  {name:'Visa guidance',path:'/visas',desc:'Review published visa information'},
+  {name:'Articles & guides',path:'/blog',desc:'Read practical career and education articles'},
+  {name:'Organizations',path:'/organizations',desc:'Discover organizations and their open opportunities'},
+  {name:'Community stories',path:'/success-stories',desc:'Read published experiences from the community'},
+  {name:'For employers',path:'/employers',desc:'Post and manage opportunities'}]},
+ fa:{title:'بخش‌های بیشتر آریا هاب',description:'رهنماها، خدمات و سازمان‌ها را کشف کنید.',items:[
+  {name:'خدمات',path:'/services',desc:'رهنمایی و خدمات تخصصی'},
+  {name:'رهنمای ویزه',path:'/visas',desc:'معلومات نشرشده و شرایط ویزه'},
+  {name:'مقالات و رهنماها',path:'/blog',desc:'نکات کاربردی تحصیل و کار'},
+  {name:'سازمان‌ها',path:'/organizations',desc:'سازمان‌ها و فرصت‌های فعال'},
+  {name:'داستان‌های موفقیت',path:'/success-stories',desc:'تجربه‌های نشرشدۀ جامعه'},
+  {name:'برای کارفرمایان',path:'/employers',desc:'نشر و مدیریت فرصت‌ها'}]},
+ ps:{title:'د آریا هاب نورې برخې',description:'لارښودونه، خدمتونه او ادارې ومومئ.',items:[
+  {name:'خدمتونه',path:'/services',desc:'مسلکي لارښوونې او خدمتونه'},
+  {name:'د ویزې لارښود',path:'/visas',desc:'خپاره شوي معلومات او شرطونه'},
+  {name:'مقالې او لارښودونه',path:'/blog',desc:'د کار او زده کړو عملي مشورې'},
+  {name:'ادارې',path:'/organizations',desc:'ادارې او فعال فرصتونه'},
+  {name:'د بریا کیسې',path:'/success-stories',desc:'د ټولنې خپرې شوې تجربې'},
+  {name:'کار ورکوونکي',path:'/employers',desc:'د فرصتونو خپرول او اداره'}]}
 };
 
 function Card({ item, lang, preview = false }: { item: OpportunityCardData; lang: Lang; preview?: boolean }) {
@@ -200,10 +224,22 @@ export function AriaHomePreview({ lang, activeCount, latest, closingSoon, spotli
           <div className="aria-tools-grid">
             {toolsCopy[lang].items.map((tool,index) => {
               const Icon = index === 0 ? FileText : index === 1 ? ScanSearch : ClipboardList;
-              return <Link key={tool.path} href={`/${lang}${tool.path}`} className="aria-tool-card">
+              return <Link key={tool.path} href={`/${lang}${preview && (tool.path === '/cv-builder' || tool.path.startsWith('/portal/')) ? '/redesign-preview/portal' + (tool.path === '/cv-builder' ? '/cv-builder' : tool.path.slice('/portal'.length)) : tool.path}`} className="aria-tool-card">
                 <Icon size={24} aria-hidden="true"/>
                 <strong>{tool.title}</strong><span>{tool.summary}</span>
                 <ArrowUpRight size={16} aria-hidden="true" style={{ marginTop:'auto' }}/>
+              </Link>;
+            })}
+          </div>
+        </section>
+
+        <section className="aria-section" aria-labelledby="aria-v2-explore">
+          <div className="aria-section__head"><div><span className="aria-eyebrow">ARIA HUB</span><h2 id="aria-v2-explore">{discoveryCopy[lang].title}</h2><p className="aria-muted" style={{fontSize:13}}>{discoveryCopy[lang].description}</p></div></div>
+          <div className="aria-tools-grid">
+            {discoveryCopy[lang].items.map((item,i)=>{
+              const Icon=[FileText,Globe2,BookOpen,Building2,Users,ClipboardList][i];
+              return <Link key={item.path} href={'/'+lang+(preview?'/redesign-preview':'')+item.path} className="aria-tool-card">
+                <Icon size={21} aria-hidden="true"/><strong>{item.name}</strong><span>{item.desc}</span><ArrowUpRight size={15} aria-hidden="true" style={{marginTop:'auto'}}/>
               </Link>;
             })}
           </div>
@@ -217,9 +253,9 @@ export function AriaHomePreview({ lang, activeCount, latest, closingSoon, spotli
         <footer className="aria-site-footer">
           <span>© {new Date().getFullYear()} ARIA HUB</span>
           <nav aria-label={c.categories}>
-            <Link href={`/${lang}/opportunities`}>{c.browse}</Link>
-            <Link href={`/${lang}/services`}>{c.navServices}</Link>
-            <Link href={`/${lang}/contact`}>{lang === 'en' ? 'Contact' : lang === 'fa' ? 'تماس' : 'اړیکه'}</Link>
+            <Link href={`/${lang}${preview?'/redesign-preview':''}/opportunities`}>{c.browse}</Link>
+            <Link href={`/${lang}${preview?'/redesign-preview':''}/services`}>{c.navServices}</Link>
+            <Link href={`/${lang}${preview?'/redesign-preview':''}/contact`}>{lang === 'en' ? 'Contact' : lang === 'fa' ? 'تماس' : 'اړیکه'}</Link>
           </nav>
         </footer>
       </main>
