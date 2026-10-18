@@ -113,6 +113,7 @@ function Card({ item, lang }: { item: OpportunityCardData; lang: Lang }) {
 export function AriaHomePreview({ lang, activeCount, latest, closingSoon, spotlight, categories, preview = true }: Props) {
   const c = copy[lang];
   const rtl = lang !== 'en';
+  const numberLocale = lang === 'fa' ? 'fa-AF' : lang === 'ps' ? 'ps-AF' : 'en-US';
   const DirArrow = rtl ? ArrowLeft : ArrowRight;
   return (
     <div className="aria-v2" dir={rtl ? 'rtl' : 'ltr'} lang={lang}>
@@ -130,7 +131,7 @@ export function AriaHomePreview({ lang, activeCount, latest, closingSoon, spotli
                 <input name="q" type="search" aria-label={c.searchPlaceholder} placeholder={c.searchPlaceholder}/>
                 <button className="aria-button" type="submit">{c.search}</button>
               </form>
-              <div className="aria-hero__fineprint">{c.searchHint} · {activeCount.toLocaleString('en-US')} {c.navOpp}</div>
+              <div className="aria-hero__fineprint">{c.searchHint} · {activeCount.toLocaleString(numberLocale)} {c.navOpp}</div>
             </div>
             <div className="aria-hero__photo">
               {/* Uses the existing ARIA HUB asset until the approved student photograph is supplied. */}
@@ -144,7 +145,7 @@ export function AriaHomePreview({ lang, activeCount, latest, closingSoon, spotli
           <nav className="aria-categories" aria-label={c.categories}>
             {categories.filter(category => category.count > 0).slice(0,8).map(category => (
               <Link key={category.slug} className="aria-category-chip" href={`/${lang}/opportunities?category=${encodeURIComponent(category.slug)}`}>
-                {category.name} <span>{category.count.toLocaleString('en-US')}</span>
+                {category.name} <span>{category.count.toLocaleString(numberLocale)}</span>
               </Link>
             ))}
           </nav>
