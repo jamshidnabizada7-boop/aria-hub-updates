@@ -20,11 +20,20 @@ import { describe, test, expect, beforeAll, afterAll, mock } from 'bun:test';
 
 mock.module('server-only', () => ({}));
 mock.module('@/lib/ai/failover', () => ({
-  chatWithFailover: async (_slots: unknown, system: string) => {
+  chatWithFailover: async (_slots: unknown, system: string, prompt: string) => {
     const lang: 'fa' | 'ps' = system.includes('Persian') ? 'fa' : 'ps';
-    const filler = lang === 'fa' ? 'ترجمه فارسی متن شغلی آزمایشی. ' : 'ژباړه پښتو د ازموینې کار متن. ';
+    const sourceGuess = prompt?.length || 40;
+    const filler = lang === 'fa'
+      ? 'این بخش از متن شغلی به زبان فارسی ترجمه شده است. '
+      : 'دا د کار متن په پښتو ژباړل شوی برخه ده. ';
     let out = '';
-    while (out.length < 60) out += filler;
+    while (out.length < Math.max(40, Math.floor(sourceGuess * 0.6))) out += filler;
+    const nums = prompt?.match(/\d+(?:[.,]\d+)*/g) || [];
+    if (nums.length) out += ` اعداد: ${nums.join(' ')}`;
+    const urls = prompt?.match(/https?:\/\/[^\s<>"')\]]+/gi) || [];
+    if (urls.length) out += ` ${urls.join(' ')}`;
+    const emails = prompt?.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g) || [];
+    if (emails.length) out += ` ${emails.join(' ')}`;
     return { text: JSON.stringify({ t: out.trim() }) };
   },
   getProviderSlots: () => [{ name: 'scripted', provider: async () => ({ text: '' }) }],
