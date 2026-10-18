@@ -4,6 +4,7 @@ import { ArrowUpRight, Search, ArrowRight, ArrowLeft, FileText, ScanSearch, Clip
 import { daysUntilDeadline, type OpportunityCardData, type CategoryFacet } from '@/lib/opportunity-shared';
 import { AriaPreviewNav } from './aria-preview-nav';
 import { AriaNewsletter } from './aria-newsletter';
+import { AriaPublicFooter } from './aria-public-footer';
 import { formatDateShort } from '@/lib/date-format';
 import type { Lang } from '@/lib/lang-route';
 
@@ -250,14 +251,7 @@ export function AriaHomePreview({ lang, activeCount, latest, closingSoon, spotli
           <Link href={'/' + lang + '/get-started'} className="aria-button aria-button--orange">{c.start} <DirArrow size={16} aria-hidden="true"/></Link>
         </section>
         <AriaNewsletter lang={lang} />
-        <footer className="aria-site-footer">
-          <span>© {new Date().getFullYear()} ARIA HUB</span>
-          <nav aria-label={c.categories}>
-            <Link href={`/${lang}${preview?'/redesign-preview':''}/opportunities`}>{c.browse}</Link>
-            <Link href={`/${lang}${preview?'/redesign-preview':''}/services`}>{c.navServices}</Link>
-            <Link href={`/${lang}${preview?'/redesign-preview':''}/contact`}>{lang === 'en' ? 'Contact' : lang === 'fa' ? 'تماس' : 'اړیکه'}</Link>
-          </nav>
-        </footer>
+        <AriaPublicFooter lang={lang} preview={preview}/>
       </main>
     </div>
   );
