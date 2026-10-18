@@ -10,13 +10,14 @@ const copy={
 export default async function EmployersPreview({params}:{params:Promise<{lang:string}>}){
  const {lang:raw}=await params,lang=isLang(raw)?raw:'en',w=copy[lang];
  const icons=[Building2,FilePenLine,SearchCheck];
+ const steps:ReadonlyArray<readonly [string,string]>=w.items;
  return <main id="main-content" className="aria-container aria-public-main">
   <header className="aria-public-hero"><div><span className="aria-public-hero__eyebrow">{w.eyebrow}</span><h1>{w.title}</h1><p>{w.desc}</p></div><div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
    <Link className="aria-button aria-button--orange" href={'/'+lang+'/employers/post'}>{w.post}<ArrowUpRight size={16}/></Link>
    <Link className="aria-button aria-button--outline" href={'/'+lang+'/employers/dashboard'}>{w.dashboard}</Link>
   </div></header>
   <div className="aria-public-head"><h2>{w.steps}</h2></div>
-  <div className="aria-public-grid">{w.items.map(([title,desc],i)=>{const Icon=icons[i];return <article className="aria-public-card" key={title}>
+  <div className="aria-public-grid">{steps.map(([title,desc],i)=>{const Icon=icons[i];return <article className="aria-public-card" key={title}>
    <span className="aria-public-card__icon"><Icon size={24}/></span><span className="aria-public-card__label">0{i+1}</span><h3>{title}</h3><p>{desc}</p>
   </article>;})}</div>
   <div className="aria-public-notice">{w.notice}</div>
