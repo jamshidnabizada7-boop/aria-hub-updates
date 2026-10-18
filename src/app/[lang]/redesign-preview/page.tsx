@@ -5,6 +5,7 @@ import { isLang, type Lang } from '@/lib/lang-route';
 import { getClosingSoon, getDailySpotlight, getFacets, listOpportunities } from '@/lib/opportunity-queries';
 import { AriaHomePreview } from '@/components/site/redesign/aria-home-preview';
 import '@/components/site/redesign/aria-v2.css';
+import '@/components/site/redesign/aria-public.css';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
