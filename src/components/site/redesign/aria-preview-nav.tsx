@@ -51,8 +51,8 @@ export function AriaPreviewNav({ lang, preview = true, authenticatedUser = false
   const groups: NavGroup[] = [
     { label: w.opportunities, links: [
       {label:w.browse,path:'/opportunities'},
-      {label:w.jobs,path:'/opportunities?category=jobs'},
-      {label:w.scholarships,path:'/opportunities?category=scholarships'},
+      {label:w.jobs,path:'/opportunities?category=job'},
+      {label:w.scholarships,path:'/opportunities?category=scholarship'},
       {label:w.deadlines,path:'/deadlines'}
     ]},
     { label: w.tools, links: [
