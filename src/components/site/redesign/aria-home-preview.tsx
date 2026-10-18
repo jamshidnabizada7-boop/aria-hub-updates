@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowUpRight, Search, ArrowRight, ArrowLeft, FileText, ScanSearch, ClipboardList } from 'lucide-react';
 import { daysUntilDeadline, type OpportunityCardData, type CategoryFacet } from '@/lib/opportunity-shared';
