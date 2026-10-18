@@ -56,6 +56,8 @@ export default async function RedesignPreviewPage({
         latest={list.items}
         closingSoon={deadlines}
         spotlight={spotlight}
+        categories={facets.categories}
+        preview
       />
     </div>
   );
