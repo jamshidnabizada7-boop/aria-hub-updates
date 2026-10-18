@@ -65,3 +65,12 @@
 @media(max-width:960px){.aria-v2 .aria-public-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.aria-v2 .aria-public-footer__grid{grid-template-columns:repeat(2,minmax(0,1fr))}.aria-v2 .aria-public-two-pane{grid-template-columns:1fr}}
 @media(max-width:650px){.aria-v2 .aria-public-hero{flex-direction:column;align-items:stretch;padding:23px}.aria-v2 .aria-public-main{padding-top:15px}.aria-v2 .aria-public-grid,.aria-v2 .aria-public-grid--two{grid-template-columns:1fr}.aria-v2 .aria-public-footer__grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:23px}.aria-v2 .aria-public-card{padding:18px}.aria-v2 .aria-public-article{padding:20px}.aria-v2 .aria-public-search{flex-wrap:wrap}.aria-v2 .aria-public-search input{flex:1 1 160px}.aria-v2 .aria-public-search button{flex:0 0 auto}}
 @media(prefers-reduced-motion:reduce){.aria-v2 .aria-public-card{transition:none}}
+
+.aria-v2 .aria-public-contact-form{display:grid;gap:15px;padding-top:6px}
+.aria-v2 .aria-public-contact-form label{display:grid;gap:7px;font-size:12px;font-weight:800;color:#263c57}
+.aria-v2 .aria-public-contact-form :is(input,textarea){width:100%;border:1px solid var(--aria-line);border-radius:12px;background:#faf7f1;color:#0b1426;font:inherit;font-size:14px;padding:12px;min-height:45px;resize:vertical}
+.aria-v2 .aria-public-contact-form :is(input,textarea):focus-visible{outline:3px solid #f68b24;outline-offset:2px}
+.aria-v2 .aria-public-contact-form .aria-button{justify-self:start}
+.aria-v2 .aria-public-contact-form button:disabled{opacity:.6;cursor:wait}
+.aria-v2 .aria-contact-success{color:#136440;background:#e5f6ed;border:1px solid #b6dfc6;border-radius:11px;padding:12px;font-size:12px}
+.aria-v2 .aria-contact-error{color:#9e2432;background:#fff0f1;border:1px solid #efc9d0;border-radius:11px;padding:12px;font-size:12px}
