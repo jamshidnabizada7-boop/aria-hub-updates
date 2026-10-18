@@ -1,0 +1,88 @@
+name: ARIA Redesign Release Gate
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ui-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ariahub_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      REQUIRE_TEST_DATABASE: '1'
+      ARIA_DISABLE_SCHEDULER: '1'
+      ARIA_REDESIGN_PREVIEW_ENABLED: 'true'
+      APPLICANT_AUTH_ENABLED: 'false'
+      APPLICANT_MATCHER_V3_ENABLED: 'false'
+      APPLICANT_NOTIFICATIONS_ENABLED: 'false'
+      APPLICANT_CAREER_V5_ENABLED: 'false'
+      CLOUD_CV_STORAGE_ENABLED: 'false'
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5433/ariahub_test?sslmode=disable
+      DIRECT_URL: postgresql://postgres:postgres@127.0.0.1:5433/ariahub_test?sslmode=disable
+      ADMIN_SESSION_SECRET: isolated-release-test-only-2026-aria-hub-ui-not-prod
+      EMPLOYER_SESSION_SECRET: isolated-release-test-only-2026-aria-hub-employer
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install frozen dependencies
+        run: bun install --frozen-lockfile
+      - name: Validate ORM and create isolated test schema
+        run: |
+          bunx prisma validate
+          bun run db:generate
+          bun run db:deploy
+      # The existing independent CI drift check remains blocking. This job
+      # explicitly exercises compilation and preview routes even when the
+      # repository's raw SQL security-state table needs a schema reconciliation.
+      - name: TypeScript check
+        run: bunx tsc --noEmit
+      - name: Build standalone production app
+        run: |
+          STANDALONE=1 bun run build
+          test -s .next/standalone/server.js
+      - name: Install isolated Chromium
+        run: bunx playwright-core install --with-deps chromium
+      - name: Public and synthetic-account private trilingual browser acceptance
+        timeout-minutes: 12
+        run: |
+          PORT=3107 HOSTNAME=127.0.0.1 NODE_ENV=production APPLICANT_AUTH_ENABLED=true APPLICANT_MATCHER_V3_ENABLED=true APPLICANT_NOTIFICATIONS_ENABLED=true APPLICANT_CAREER_V5_ENABLED=true CLOUD_CV_STORAGE_ENABLED=true node .next/standalone/server.js > /tmp/aria-redesign-preview-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 45); do
+            if curl -fsS -o /dev/null http://127.0.0.1:3107/en/redesign-preview/services; then break; fi
+            sleep 2
+          done
+          if ! curl -fsS -o /dev/null http://127.0.0.1:3107/en/redesign-preview/services; then
+            echo 'Preview server unavailable'
+            tail -70 /tmp/aria-redesign-preview-server.log
+            exit 1
+          fi
+          ARIA_RED_PREVIEW_ORIGIN=http://127.0.0.1:3107 bun scripts/tests/aria-redesign-preview-acceptance.ts
+          ARIA_RED_PREVIEW_ORIGIN=http://127.0.0.1:3107 bun scripts/tests/aria-redesign-private-acceptance.ts
+      - name: Upload sanitized preview screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aria-redesign-preview-${{ github.sha }}
+          path: /tmp/aria-redesign-preview/*.png
+          if-no-files-found: ignore
+          retention-days: 4

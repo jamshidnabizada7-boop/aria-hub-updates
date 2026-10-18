@@ -298,7 +298,7 @@ export function Navbar({ menu, languages, siteName, logoUrl }: NavbarProps) {
             </a>
 
             {/* Desktop nav */}
-            <nav aria-label={t('nav.menu')} className="hidden min-w-0 flex-1 items-center justify-center lg:flex">
+            <nav aria-label={t('nav.menu')} className="hidden min-w-0 flex-1 self-stretch items-center justify-center lg:flex">
               {navigation.map((item) => (
                 <DesktopMenuItem key={item.id} item={item} />
               ))}
