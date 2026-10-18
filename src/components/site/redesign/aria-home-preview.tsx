@@ -1,7 +1,8 @@
-import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowUpRight, Search, ArrowRight, ArrowLeft } from 'lucide-react';
-import { daysUntilDeadline, type OpportunityCardData } from '@/lib/opportunity-shared';
+import { ArrowUpRight, Search, ArrowRight, ArrowLeft, FileText, ScanSearch, ClipboardList } from 'lucide-react';
+import { daysUntilDeadline, type OpportunityCardData, type CategoryFacet } from '@/lib/opportunity-shared';
+import { AriaPreviewNav } from './aria-preview-nav';
+import { AriaNewsletter } from './aria-newsletter';
 import { formatDateShort } from '@/lib/date-format';
 import type { Lang } from '@/lib/lang-route';
 
@@ -11,6 +12,8 @@ type Props = {
   latest: OpportunityCardData[];
   closingSoon: OpportunityCardData[];
   spotlight: OpportunityCardData | null;
+  categories: CategoryFacet[];
+  preview?: boolean;
 };
 
 const copy = {
@@ -67,6 +70,21 @@ const copy = {
   }
 } as const;
 
+const toolsCopy: Record<Lang, { title:string; subtitle:string; items: {title:string; summary:string; path:string}[] }> = {
+  en: { title:'Career tools, made simpler.', subtitle:'Organize each step of your opportunity search in one place.', items:[
+    {title:'Build your CV',summary:'Prepare and edit a professional CV for your next application.',path:'/cv-builder'},
+    {title:'Find my matches',summary:'Compare real opportunity requirements with your own profile.',path:'/portal/matcher'},
+    {title:'Track applications',summary:'Save deadlines and keep private notes on your progress.',path:'/portal/career'}]},
+  fa: { title:'ابزارهای کاری، ساده‌تر از همیشه.', subtitle:'مراحل جستجو و درخواست فرصت‌ها را در یک‌جا مدیریت کنید.', items:[
+    {title:'ساخت سی‌وی',summary:'سی‌وی حرفه‌ای خود را برای درخواست‌ها آماده و ویرایش کنید.',path:'/cv-builder'},
+    {title:'فرصت‌های مناسب من',summary:'شرایط فرصت‌های واقعی را با مشخصات خود مقایسه کنید.',path:'/portal/matcher'},
+    {title:'پیگیری درخواست‌ها',summary:'مهلت‌ها و یادداشت‌های شخصی خود را مدیریت کنید.',path:'/portal/career'}]},
+  ps: { title:'مسلکي وسيلې په ساده بڼه.', subtitle:'د فرصتونو لټون او غوښتنلیکونه په یوه ځای کې تنظیم کړئ.', items:[
+    {title:'سي وي جوړ کړئ',summary:'خپل مسلکي سي وي جوړ او سم کړئ.',path:'/cv-builder'},
+    {title:'زما مناسب فرصتونه',summary:'د فرصتونو شرطونه له خپلو معلوماتو سره پرتله کړئ.',path:'/portal/matcher'},
+    {title:'غوښتنلیکونه تعقیب کړئ',summary:'وروستۍ نېټې او شخصي یادښتونه وساتئ.',path:'/portal/career'}]}
+};
+
 function Card({ item, lang }: { item: OpportunityCardData; lang: Lang }) {
   const c = copy[lang];
   const days = item.deadline ? daysUntilDeadline(item.deadline) : null;
@@ -91,26 +109,13 @@ function Card({ item, lang }: { item: OpportunityCardData; lang: Lang }) {
   );
 }
 
-export function AriaHomePreview({ lang, activeCount, latest, closingSoon, spotlight }: Props) {
+export function AriaHomePreview({ lang, activeCount, latest, closingSoon, spotlight, categories, preview = true }: Props) {
   const c = copy[lang];
   const rtl = lang !== 'en';
   const DirArrow = rtl ? ArrowLeft : ArrowRight;
   return (
     <div className="aria-v2" dir={rtl ? 'rtl' : 'ltr'} lang={lang}>
-      <header className="aria-topbar">
-        <div className="aria-container aria-topbar__inner">
-          <Link href={'/' + lang} className="aria-logo" aria-label="ARIA HUB">
-            <span className="aria-logo-mark"><Image src="/images/logo-mark.webp" alt="" width={28} height={28}/></span>
-            <span>ARIA <span style={{ color: '#f68b24' }}>HUB</span></span>
-          </Link>
-          <nav className="aria-nav" aria-label="Main navigation">
-            <Link href={'/' + lang + '/opportunities'}>{c.navOpp}</Link>
-            <Link href={'/' + lang + '/services'}>{c.navServices}</Link>
-            <Link href={'/' + lang + '/portal'}>{c.dashboard}</Link>
-          </nav>
-          <Link href={'/' + lang + '/get-started'} className="aria-button">{c.start}</Link>
-        </div>
-      </header>
+      <AriaPreviewNav lang={lang} preview={preview}/>
 
       <main id="main-content" className="aria-container">
         <section className="aria-hero" aria-labelledby="aria-v2-title">
@@ -133,6 +138,16 @@ export function AriaHomePreview({ lang, activeCount, latest, closingSoon, spotli
             </div>
           </div>
         </section>
+
+        {categories.some(category => category.count > 0) && (
+          <nav className="aria-categories" aria-label={c.categories}>
+            {categories.filter(category => category.count > 0).slice(0,8).map(category => (
+              <Link key={category.slug} className="aria-category-chip" href={`/${lang}/opportunities?category=${encodeURIComponent(category.slug)}`}>
+                {category.name} <span>{category.count.toLocaleString('en-US')}</span>
+              </Link>
+            ))}
+          </nav>
+        )}
 
         <section className="aria-section" aria-labelledby="aria-v2-listings">
           <div className="aria-section__head">
@@ -176,10 +191,35 @@ export function AriaHomePreview({ lang, activeCount, latest, closingSoon, spotli
           </section>
         </div>
 
+        <section className="aria-section" aria-labelledby="aria-v2-tools">
+          <div className="aria-section__head">
+            <div><span className="aria-eyebrow">{c.categories}</span><h2 id="aria-v2-tools">{toolsCopy[lang].title}</h2><p className="aria-muted" style={{ fontSize:13, marginTop:6 }}>{toolsCopy[lang].subtitle}</p></div>
+          </div>
+          <div className="aria-tools-grid">
+            {toolsCopy[lang].items.map((tool,index) => {
+              const Icon = [FileText,ScanSearch,ClipboardList][index];
+              return <Link key={tool.path} href={`/${lang}${tool.path}`} className="aria-tool-card">
+                <Icon size={24} aria-hidden="true"/>
+                <strong>{tool.title}</strong><span>{tool.summary}</span>
+                <ArrowUpRight size={16} aria-hidden="true" style={{ marginTop:'auto' }}/>
+              </Link>;
+            })}
+          </div>
+        </section>
+
         <section className="aria-footer-cta">
           <div><h2 style={{ fontSize:22, fontWeight:800 }}>{c.cta}</h2><p>{c.ctaInfo}</p></div>
           <Link href={'/' + lang + '/get-started'} className="aria-button aria-button--orange">{c.start} <DirArrow size={16} aria-hidden="true"/></Link>
         </section>
+        <AriaNewsletter lang={lang} />
+        <footer className="aria-site-footer">
+          <span>© {new Date().getFullYear()} ARIA HUB</span>
+          <nav aria-label={c.categories}>
+            <Link href={`/${lang}/opportunities`}>{c.browse}</Link>
+            <Link href={`/${lang}/services`}>{c.navServices}</Link>
+            <Link href={`/${lang}/contact`}>{lang === 'en' ? 'Contact' : lang === 'fa' ? 'تماس' : 'اړیکه'}</Link>
+          </nav>
+        </footer>
       </main>
     </div>
   );
