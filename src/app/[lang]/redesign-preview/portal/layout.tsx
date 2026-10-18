@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { BriefcaseBusiness, Bell, FileText, ScanSearch, Settings, UserRound, Files } from 'lucide-react';
@@ -33,7 +34,7 @@ const tabs=[
 ] as const;
 
 export default async function AriaWorkspaceLayout({children,params}:{
-  children:React.ReactNode;
+  children:ReactNode;
   params:Promise<{lang:string}>;
 }) {
   if (process.env.ARIA_REDESIGN_PREVIEW_ENABLED!=='true') notFound();
