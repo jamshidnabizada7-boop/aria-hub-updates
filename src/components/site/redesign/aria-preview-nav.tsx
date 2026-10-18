@@ -11,20 +11,20 @@ const words: Record<Lang, {
   home: string; opportunities: string; tools: string; preparation: string; services: string;
   more: string; jobs: string; scholarships: string; deadlines: string; cv: string;
   matcher: string; applications: string; interview: string; visas: string; news: string;
-  employers: string; browse: string; account: string; start: string; menu: string; language: string; notifications: string;
+  employers: string; browse: string; account: string; start: string; menu: string; language: string; notifications: string; closeMenu: string;
 }> = {
   en: {home:'Home', opportunities:'Opportunities', tools:'Tools', preparation:'Preparation', services:'Services', more:'More',
     jobs:'Jobs', scholarships:'Scholarships', deadlines:'Deadlines', cv:'CV Builder', matcher:'Opportunity Matcher',
     applications:'Applications & Assistant', interview:'Interview preparation', visas:'Visa guidance', news:'News',
-    employers:'Employers', browse:'Browse all', account:'My dashboard', start:'Get started', menu:'Open menu', language:'Language', notifications:'Notifications'},
+    employers:'Employers', browse:'Browse all', account:'My dashboard', start:'Get started', menu:'Open menu', language:'Language', notifications:'Notifications', closeMenu:'Close menu'},
   fa: {home:'خانه', opportunities:'فرصت‌ها', tools:'ابزارها', preparation:'آمادگی', services:'خدمات', more:'بیشتر',
     jobs:'وظایف', scholarships:'بورسیه‌ها', deadlines:'مهلت‌ها', cv:'ساخت سی‌وی', matcher:'پیداکنندۀ فرصت مناسب',
     applications:'درخواست‌ها و دستیار', interview:'آمادگی مصاحبه', visas:'رهنمای ویزه', news:'اخبار',
-    employers:'کارفرمایان', browse:'همۀ فرصت‌ها', account:'داشبورد من', start:'شروع رایگان', menu:'باز کردن فهرست', language:'زبان', notifications:'اطلاع‌رسانی‌ها'},
+    employers:'کارفرمایان', browse:'همۀ فرصت‌ها', account:'داشبورد من', start:'شروع رایگان', menu:'باز کردن فهرست', language:'زبان', notifications:'اطلاع‌رسانی‌ها', closeMenu:'بستن فهرست'},
   ps: {home:'کور', opportunities:'فرصتونه', tools:'وسیلې', preparation:'چمتووالی', services:'خدمتونه', more:'نور',
     jobs:'دندې', scholarships:'بورسونه', deadlines:'وروستۍ نېټې', cv:'سي وي جوړول', matcher:'مناسب فرصتونه',
     applications:'غوښتنلیکونه او مرستیال', interview:'د مرکې چمتووالی', visas:'د ویزې لارښوونې', news:'خبرونه',
-    employers:'کار ورکوونکي', browse:'ټول فرصتونه', account:'زما ډشبورډ', start:'وړیا پیل', menu:'مینو پرانیزئ', language:'ژبه', notifications:'خبرتیاوې'}
+    employers:'کار ورکوونکي', browse:'ټول فرصتونه', account:'زما ډشبورډ', start:'وړیا پیل', menu:'مینو پرانیزئ', language:'ژبه', notifications:'خبرتیاوې', closeMenu:'مینو وتړئ'}
 };
 const languages: { lang: Lang; label: string }[] = [
   { lang: 'en', label: 'English' }, { lang: 'fa', label: 'فارسی (افغانستان)' }, { lang: 'ps', label: 'پښتو' }
@@ -96,7 +96,7 @@ export function AriaPreviewNav({ lang, preview = true }: { lang: Lang; preview?:
           </details>
           {authenticated && <Link href={href('/portal/notifications')} aria-label={w.notifications} className="aria-icon-action"><Bell size={18}/></Link>}
           <Link href={href(accountPath)} className="aria-button aria-header-cta">{authenticated ? w.account : w.start}</Link>
-          <button type="button" className="aria-mobile-toggle" aria-label={mobileOpen ? w.menu : w.menu} aria-expanded={mobileOpen} aria-controls="aria-mobile-navigation" onClick={() => setMobileOpen(!mobileOpen)}>
+          <button type="button" className="aria-mobile-toggle" aria-label={mobileOpen ? w.closeMenu : w.menu} aria-expanded={mobileOpen} aria-controls="aria-mobile-navigation" onClick={() => setMobileOpen(!mobileOpen)}>
             {mobileOpen ? <X size={21}/> : <Menu size={21}/>}
           </button>
         </div>
