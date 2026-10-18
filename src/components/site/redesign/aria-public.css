@@ -74,3 +74,6 @@
 .aria-v2 .aria-public-contact-form button:disabled{opacity:.6;cursor:wait}
 .aria-v2 .aria-contact-success{color:#136440;background:#e5f6ed;border:1px solid #b6dfc6;border-radius:11px;padding:12px;font-size:12px}
 .aria-v2 .aria-contact-error{color:#9e2432;background:#fff0f1;border:1px solid #efc9d0;border-radius:11px;padding:12px;font-size:12px}
+
+.aria-v2 .aria-public-hero .aria-button--outline{color:#fff;border-color:#899aaf;background:rgba(255,255,255,.07)}
+.aria-v2 .aria-public-hero .aria-button--outline:hover{background:rgba(255,255,255,.16)}
