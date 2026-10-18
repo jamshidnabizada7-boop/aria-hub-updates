@@ -2,6 +2,9 @@ import type { Metadata } from 'next';
 import { getSiteData } from '@/lib/get-site';
 import { translate } from '@/lib/i18n';
 import { Home } from '@/components/site/home';
+import { AriaHomePreview } from '@/components/site/redesign/aria-home-preview';
+import { ariaSans, ariaRtl } from '@/components/site/redesign/aria-fonts';
+import '@/components/site/redesign/aria-v2.css';
 import { JsonLd } from '@/components/site/json-ld';
 import { isLang, type Lang } from '@/lib/lang-route';
 import {
@@ -102,6 +105,24 @@ export default async function Page({
   ]);
 
   const organizations = homeStats.organizations;
+
+  // Staging-only rollout. Absent/false keeps the original site and database flows.
+  // Roll out only after production/Oracle commit parity, browser testing, and approval.
+  if (process.env.ARIA_REDESIGN_HOME_ENABLED === 'true') {
+    return (
+      <div className={ariaSans.variable + ' ' + ariaRtl.variable}>
+        <AriaHomePreview
+          lang={lang}
+          activeCount={facets.totalActive}
+          latest={latest.items}
+          closingSoon={closingSoon}
+          spotlight={spotlight}
+          categories={facets.categories}
+          preview={false}
+        />
+      </div>
+    );
+  }
 
   return (
     <>
