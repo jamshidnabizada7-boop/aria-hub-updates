@@ -77,7 +77,6 @@ export default async function DashboardPreview({params}:{params:Promise<{lang:st
   const enable=[true,process.env.APPLICANT_MATCHER_V3_ENABLED==='true',process.env.CLOUD_CV_STORAGE_ENABLED==='true',true,process.env.APPLICANT_CAREER_V5_ENABLED==='true',process.env.APPLICANT_NOTIFICATIONS_ENABLED==='true'];
   const nextAction=completion<100?'/profile':p._count.savedSearches===0&&enable[1]?'/matcher':p._count.documents===0&&enable[2]?'/cvs':enable[5]&&!p.notificationPreference?.emailEnabled?'/notifications':'/career';
   const linkNext=base+(enable.findIndex((e,i)=>pathMap[i]===nextAction)>-1?nextAction:'/profile');
-  const factLabel=(v:string)=>v===lang?'':v;
   return <main id="main-content" className="aria-dashboard">
     <div className="aria-dashboard-top">
       <section className="aria-dashboard-welcome">
