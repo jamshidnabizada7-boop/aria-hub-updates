@@ -120,3 +120,5 @@
 }
 @media print { .aria-v2 .aria-topbar,.aria-v2 .aria-portal-tabs,.aria-v2 .aria-workspace-heading,.aria-v2 .aria-workspace-footer { display:none!important; } .aria-v2 { background:#fff!important; } }
 @media(prefers-reduced-motion:reduce){.aria-v2 .aria-dashboard-actions a {transition:none;}}
+
+.aria-v2 .aria-portal-tabs a[aria-current="page"] { background:#142c4b; border-color:#142c4b; color:#fff; }
