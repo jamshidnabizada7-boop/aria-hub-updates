@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { Plus_Jakarta_Sans, Estedad } from 'next/font/google';
+import { ariaSans, ariaRtl } from '@/components/site/redesign/aria-fonts';
 import { isLang, type Lang } from '@/lib/lang-route';
 import { getClosingSoon, getDailySpotlight, getFacets, listOpportunities } from '@/lib/opportunity-queries';
 import { AriaHomePreview } from '@/components/site/redesign/aria-home-preview';
@@ -11,18 +11,6 @@ export const metadata: Metadata = {
   title: 'ARIA HUB 2026 — Private UI preview',
   robots: { index: false, follow: false },
 };
-
-const jakarta = Plus_Jakarta_Sans({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--aria-font-sans',
-});
-
-const estedad = Estedad({
-  subsets: ['arabic', 'latin'],
-  display: 'swap',
-  variable: '--aria-font-rtl',
-});
 
 /**
  * Opt-in comparison route for a staging environment only.
@@ -49,7 +37,7 @@ export default async function RedesignPreviewPage({
   ]);
 
   return (
-    <div className={jakarta.variable + ' ' + estedad.variable}>
+    <div className={ariaSans.variable + ' ' + ariaRtl.variable}>
       <AriaHomePreview
         lang={lang}
         activeCount={facets.totalActive}
