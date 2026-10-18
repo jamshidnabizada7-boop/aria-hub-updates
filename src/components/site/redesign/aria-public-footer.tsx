@@ -6,10 +6,10 @@ const copy={
  fa:{explore:'کشف فرصت‌ها',company:'آریا هاب',help:'رهنمایی',links:['فرصت‌ها','خدمات','رهنمای ویزه','مقالات','سازمان‌ها','داستان‌های موفقیت','برای کارفرمایان','دربارۀ ما','تماس','حریم خصوصی','شرایط استفاده'],disclaimer:'معلومات برای رهنمایی است؛ مهلت و شرایط را با منبع اصلی بررسی کنید.',account:'حساب من'},
  ps:{explore:'فرصتونه',company:'آریا هاب',help:'ملاتړ',links:['فرصتونه','خدمتونه','د ویزې لارښود','مقالې','ادارې','د بریا کیسې','کار ورکوونکي','زموږ په اړه','اړیکه','محرمیت','د کارولو شرطونه'],disclaimer:'معلومات د لارښوونې لپاره دي؛ نېټې او شرایط له اصلي سرچینې سره تایید کړئ.',account:'زما حساب'},
 } as const;
-const paths=['/opportunities','/services','/visas','/blog','/organizations','/success-stories','/employers','/about','/contact','/privacy','/terms'] as const;
+const paths=['/opportunities','/services','/visas','/blog','/organizations','/success-stories','/employers','/about','/contact','/privacy-policy','/terms-of-service'] as const;
 export function AriaPublicFooter({lang,preview=true}:{lang:Lang;preview?:boolean}){
  const w=copy[lang];
- const href=(p:string)=>'/'+lang+(preview && !['/privacy','/terms'].includes(p)?'/redesign-preview':'')+p;
+ const href=(p:string)=>'/'+lang+(preview && !['/privacy-policy','/terms-of-service'].includes(p)?'/redesign-preview':'')+p;
  return <footer className="aria-public-footer">
    <div className="aria-container">
     <div className="aria-public-footer__grid">
