@@ -7,6 +7,7 @@ import { applicantEnabled, currentApplicant } from '@/lib/applicant-auth';
 import { isLang, type Lang } from '@/lib/lang-route';
 import { ariaRtl, ariaSans } from '@/components/site/redesign/aria-fonts';
 import { AriaPreviewNav } from '@/components/site/redesign/aria-preview-nav';
+import { AriaActiveLink } from '@/components/site/redesign/aria-active-link';
 import '@/components/site/redesign/aria-v2.css';
 import '@/components/site/redesign/aria-portal.css';
 
@@ -63,9 +64,9 @@ export default async function AriaWorkspaceLayout({children,params}:{
             {tabs.map((tab,i)=>{
               if(tab.requires && process.env[tab.requires]!=='true') return null;
               const Icon=tab.icon;
-              return <Link key={tab.path} href={base+tab.path}>
+              return <AriaActiveLink key={tab.path} href={base+tab.path}>
                 <Icon size={16} aria-hidden="true"/><span>{t.tabs[i]}</span>
-              </Link>;
+              </AriaActiveLink>;
             })}
           </nav>
           <div className="aria-workspace-body">{children}</div>
