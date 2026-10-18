@@ -72,3 +72,14 @@ Updated:
 Known not-yet-redesigned elements: existing employer management internals, admin/Brand Studio tools, long-form legal pages and remaining specialist workflows. Their current live UIs and actions remain intact. They should be assessed in Phase 6 before claiming whole-site visual parity.
 
 No production deployment occurred as part of Phase 5.
+
+## GitHub Actions observation (2026-10-18)
+
+The PR branch workflows **CI** and **Applicant Candidate Verification** both reached PostgreSQL migration deployment but failed the isolated database drift check before TypeScript checking and production compilation.
+
+Captured drift report included:
+- Removed `McpSecurityState` table
+- Changed `EmployerApplication` foreign keys
+- Changed `OrganizationFollow` foreign keys
+
+The migration CLI said all existing migrations were applied, but the schema drift check exited code 2. Subsequent steps (Type check, tests, production build, browser QA) were skipped, so **Phase 5 is not build-verified**. These files do not modify Prisma schema or migrations. Reconcile the repository schema/migration history against the isolated test database, then rerun CI before any Phase 6 release. **Do not apply database repairs to Oracle production as part of this UI change.**
