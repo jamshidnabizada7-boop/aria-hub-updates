@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { Bell, ChevronDown, Globe2, Menu, X } from 'lucide-react';
 import type { Lang } from '@/lib/lang-route';
 
@@ -34,7 +35,8 @@ export function AriaPreviewNav({ lang, preview = true }: { lang: Lang; preview?:
   const [mobileOpen, setMobileOpen] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
   const w = words[lang];
-  const href = (path: string) => `/${lang}${path}`;
+  const pathname = usePathname();
+  const href = (path: string) => `/${lang}${preview && (path === '/opportunities' || path.startsWith('/opportunities?')) ? '/redesign-preview' : ''}${path}`;
   const groups: NavGroup[] = [
     { label: w.opportunities, links: [
       {label:w.browse,path:'/opportunities'},
@@ -65,7 +67,8 @@ export function AriaPreviewNav({ lang, preview = true }: { lang: Lang; preview?:
     return () => controller.abort();
   }, []);
   useEffect(() => { setMobileOpen(false); }, [lang, preview]);
-  const langHref = (code: Lang) => `/${code}${preview ? '/redesign-preview' : ''}`;
+  // Preserve the current preview section when changing languages.
+  const langHref = (code: Lang) => `/${code}${preview ? (pathname?.replace(/^\/(en|fa|ps)(?=\/|$)/, '') || '/redesign-preview') : ''}`;
   const accountPath = authenticated ? '/portal' : '/get-started';
 
   return (
